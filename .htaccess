@@ -1,0 +1,27 @@
+# Impedisce l'accesso diretto ai file di configurazione
+<Files "ardy-config.php">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# Blocca accesso a file sensibili
+<FilesMatch "\.(log|txt|json|md|sql)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Blocca accesso diretto a file PHP interni (non API)
+<FilesMatch "^ardy-db\.php$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Blocca directory listing
+Options -Indexes
+
+# php -- BEGIN cPanel-generated handler, do not edit
+# Set the "ea-php83" package as the default "PHP" programming language.
+<IfModule mime_module>
+  AddHandler application/x-httpd-ea-php83 .php .php8 .phtml
+</IfModule>
+# php -- END cPanel-generated handler, do not edit

@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ardy Lab — Outreach</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e0e; --surface: #161616; --surface2: #1e1e1e;
+    --border: #2a2a2a; --accent: #c8a96e; --accent2: #8b6f3e;
+    --text: #e8e2d9; --text-dim: #7a7470; --text-mid: #b0a89e;
+    --red: #c0392b; --green: #27ae60; --orange: #e67e22; --blue: #2980b9;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; font-size:14px; min-height:100vh; overflow-x:hidden; }
+
+  /* HEADER */
+  header { background:var(--surface); border-bottom:1px solid var(--border); padding:0 24px; height:56px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
+  .logo { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:3px; color:var(--accent); }
+  .logo span { color:var(--text-dim); font-family:'DM Mono',monospace; font-size:11px; margin-left:8px; }
+  .header-right { display:flex; gap:10px; align-items:center; }
+  .btn-header { background:none; border:1px solid var(--border); color:var(--text-mid); font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1px; padding:6px 14px; cursor:pointer; border-radius:2px; transition:.2s; }
+  .btn-header:hover { border-color:var(--accent); color:var(--accent); }
+  .btn-header.active { background:var(--accent); color:#000; border-color:var(--accent); }
+
+  /* STATS BAR */
+  .stats-bar { display:grid; grid-template-columns:repeat(4,1fr); border-bottom:1px solid var(--border); }
+  .stat-cell { padding:12px 20px; border-right:1px solid var(--border); }
+  .stat-cell:last-child { border-right:none; }
+  .stat-label { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; color:var(--text-dim); text-transform:uppercase; margin-bottom:6px; }
+  .stat-nums { display:flex; gap:10px; align-items:baseline; }
+  .stat-total { font-family:'Bebas Neue',sans-serif; font-size:24px; color:var(--accent); }
+  .stat-detail { font-size:11px; color:var(--text-dim); }
+  .stat-dot { display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:3px; }
+  .dot-green { background:var(--green); }
+  .dot-orange { background:var(--orange); }
+  .dot-blue { background:var(--blue); }
+
+  /* LAYOUT */
+  .layout { display:grid; grid-template-columns:300px 1fr; height:calc(100vh - 56px - 57px); }
+
+  /* SIDEBAR */
+  .sidebar { background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
+  .sidebar-top { padding:16px; border-bottom:1px solid var(--border); }
+  .search-box { display:flex; align-items:center; gap:8px; background:var(--surface2); border:1px solid var(--border); border-radius:2px; padding:8px 12px; margin-bottom:12px; }
+  .search-box input { background:none; border:none; color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; width:100%; outline:none; }
+  .search-box input::placeholder { color:var(--text-dim); }
+  .filter-row { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { background:none; border:1px solid var(--border); color:var(--text-dim); font-family:'DM Mono',monospace; font-size:9px; letter-spacing:1px; padding:5px 10px; cursor:pointer; border-radius:2px; transition:.2s; white-space:nowrap; }
+  .chip:hover { border-color:var(--accent); color:var(--accent); }
+  .chip.active { background:var(--accent); color:#000; border-color:var(--accent); }
+  .contact-list { flex:1; overflow-y:auto; }
+  .contact-list::-webkit-scrollbar { width:4px; }
+  .contact-list::-webkit-scrollbar-track { background:var(--surface); }
+  .contact-list::-webkit-scrollbar-thumb { background:var(--border); }
+  .contact-card { padding:12px 16px; border-bottom:1px solid var(--border); cursor:pointer; transition:.15s; }
+  .contact-card:hover { background:var(--surface2); }
+  .contact-card.selected { background:var(--surface2); border-left:2px solid var(--accent); }
+  .contact-name { font-size:13px; font-weight:500; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .contact-meta { display:flex; gap:8px; align-items:center; }
+  .contact-cat { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:1px; color:var(--text-dim); text-transform:uppercase; }
+  .stato-badge { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:1px; padding:2px 6px; border-radius:2px; }
+  .stato-da_contattare { background:#1a2a1a; color:#4a9; }
+  .stato-inviato       { background:#1a1a2a; color:#6af; }
+  .stato-risposto      { background:#2a2a0a; color:#cc0; }
+  .stato-partner       { background:#2a1a0a; color:var(--accent); }
+  .stato-non_interessato { background:#2a1a1a; color:#c44; }
+  .sidebar-bottom { padding:12px 16px; border-top:1px solid var(--border); display:flex; gap:8px; }
+  .btn-add { flex:1; background:none; border:1px solid var(--accent); color:var(--accent); font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1px; padding:8px; cursor:pointer; border-radius:2px; transition:.2s; }
+  .btn-add:hover { background:var(--accent); color:#000; }
+  .empty-list { padding:24px 16px; text-align:center; color:var(--text-dim); font-size:13px; }
+
+  /* MAIN PANEL */
+  .main { overflow-y:auto; background:var(--bg); }
+  .main::-webkit-scrollbar { width:4px; }
+  .main::-webkit-scrollbar-track { background:var(--bg); }
+  .main::-webkit-scrollbar-thumb { background:var(--border); }
+
+  /* EMPTY STATE */
+  .empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--text-dim); gap:16px; }
+  .empty-state .big { font-family:'Bebas Neue',sans-serif; font-size:48px; color:var(--border); letter-spacing:4px; }
+
+  /* DETAIL PANEL */
+  .detail-panel { padding:28px 32px; max-width:800px; }
+  .detail-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; }
+  .detail-nome { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:2px; line-height:1; }
+  .detail-sub { color:var(--text-dim); font-family:'DM Mono',monospace; font-size:10px; letter-spacing:2px; margin-top:4px; }
+  .detail-actions { display:flex; gap:8px; }
+  .btn-sm { background:none; border:1px solid var(--border); color:var(--text-mid); font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1px; padding:7px 14px; cursor:pointer; border-radius:2px; transition:.2s; }
+  .btn-sm:hover { border-color:var(--accent); color:var(--accent); }
+  .btn-sm.danger:hover { border-color:var(--red); color:var(--red); }
+  .btn-sm.primary { background:var(--accent); color:#000; border-color:var(--accent); }
+  .btn-sm.primary:hover { background:var(--accent2); border-color:var(--accent2); }
+
+  /* INFO GRID */
+  .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--border); border:1px solid var(--border); margin-bottom:24px; }
+  .info-cell { background:var(--surface); padding:12px 16px; }
+  .info-cell.full { grid-column:1/-1; }
+  .info-label { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; color:var(--text-dim); margin-bottom:6px; }
+  .info-value { font-size:13px; color:var(--text); }
+  .info-value a { color:var(--accent); text-decoration:none; }
+  .info-value a:hover { text-decoration:underline; }
+  .info-input { background:none; border:none; color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; width:100%; outline:none; }
+  .info-textarea { background:none; border:none; color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; width:100%; outline:none; resize:vertical; min-height:60px; }
+  .info-select { background:var(--surface); border:none; color:var(--text); font-family:'DM Mono',monospace; font-size:11px; outline:none; width:100%; cursor:pointer; }
+
+  /* STATO ROW */
+  .stato-row { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:24px; }
+  .stato-btn { background:none; border:1px solid var(--border); color:var(--text-dim); font-family:'DM Mono',monospace; font-size:9px; letter-spacing:1px; padding:6px 12px; cursor:pointer; border-radius:2px; transition:.2s; }
+  .stato-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .stato-btn.active { border-color:var(--accent); color:var(--accent); background:rgba(200,169,110,.1); }
+
+  /* EMAIL COMPOSER */
+  .composer { background:var(--surface); border:1px solid var(--border); border-radius:2px; padding:20px; margin-bottom:24px; }
+  .composer-title { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:2px; color:var(--accent); margin-bottom:16px; }
+  .tpl-select { background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:'DM Mono',monospace; font-size:11px; padding:8px 12px; width:100%; margin-bottom:12px; border-radius:2px; outline:none; cursor:pointer; }
+  .composer-oggetto { background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; padding:10px 12px; width:100%; margin-bottom:10px; border-radius:2px; outline:none; }
+  .composer-body { background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:'DM Mono',monospace; font-size:12px; line-height:1.7; padding:12px; width:100%; height:200px; border-radius:2px; outline:none; resize:vertical; }
+  .btn-send { background:var(--accent); color:#000; border:none; font-family:'DM Mono',monospace; font-size:11px; letter-spacing:1px; padding:12px 24px; cursor:pointer; border-radius:2px; margin-top:12px; transition:.2s; width:100%; }
+  .btn-send:hover { background:var(--accent2); }
+  .btn-send:disabled { opacity:.4; cursor:not-allowed; }
+
+  /* CAMPAIGN PANEL */
+  .campaign-panel { padding:28px 32px; max-width:800px; }
+  .campaign-title { font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:2px; margin-bottom:24px; }
+  .campaign-section { margin-bottom:24px; }
+  .campaign-label { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; color:var(--text-dim); margin-bottom:10px; }
+  .contact-check-list { max-height:300px; overflow-y:auto; border:1px solid var(--border); border-radius:2px; }
+  .contact-check-list::-webkit-scrollbar { width:4px; }
+  .contact-check-list::-webkit-scrollbar-thumb { background:var(--border); }
+  .check-item { display:flex; align-items:center; gap:12px; padding:10px 14px; border-bottom:1px solid var(--border); cursor:pointer; transition:.15s; }
+  .check-item:last-child { border-bottom:none; }
+  .check-item:hover { background:var(--surface2); }
+  .check-item input[type=checkbox] { accent-color:var(--accent); width:14px; height:14px; cursor:pointer; }
+  .check-nome { font-size:13px; flex:1; }
+  .check-email { font-size:11px; color:var(--text-dim); font-family:'DM Mono',monospace; }
+  .campaign-summary { background:var(--surface); border:1px solid var(--border); padding:16px; border-radius:2px; margin-bottom:16px; }
+  .campaign-summary p { font-size:13px; color:var(--text-mid); margin-bottom:4px; }
+  .campaign-summary strong { color:var(--accent); }
+  .select-all-row { display:flex; justify-content:flex-end; margin-bottom:8px; }
+  .btn-select-all { background:none; border:none; color:var(--text-dim); font-family:'DM Mono',monospace; font-size:10px; cursor:pointer; text-decoration:underline; }
+
+  /* TOAST */
+  .toast { position:fixed; bottom:24px; right:24px; background:var(--surface); border:1px solid var(--border); padding:12px 20px; border-radius:2px; font-family:'DM Mono',monospace; font-size:12px; z-index:1000; opacity:0; transition:.3s; pointer-events:none; max-width:320px; }
+  .toast.show { opacity:1; }
+  .toast.ok  { border-color:var(--green); color:var(--green); }
+  .toast.err { border-color:var(--red);   color:var(--red); }
+
+  /* MODAL */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:200; display:none; align-items:center; justify-content:center; }
+  .modal-overlay.open { display:flex; }
+  .modal { background:var(--surface); border:1px solid var(--border); border-radius:2px; padding:28px; width:560px; max-width:90vw; max-height:90vh; overflow-y:auto; }
+  .modal-title { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; margin-bottom:20px; color:var(--accent); }
+  .form-group { margin-bottom:14px; }
+  .form-label { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; color:var(--text-dim); margin-bottom:6px; display:block; }
+  .form-input { background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; padding:9px 12px; width:100%; border-radius:2px; outline:none; }
+  .form-input:focus { border-color:var(--accent); }
+  .form-select { background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:'DM Mono',monospace; font-size:11px; padding:9px 12px; width:100%; border-radius:2px; outline:none; cursor:pointer; }
+  .form-textarea { background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:'DM Mono',monospace; font-size:12px; line-height:1.7; padding:10px 12px; width:100%; border-radius:2px; outline:none; resize:vertical; min-height:120px; }
+  .modal-footer { display:flex; gap:10px; margin-top:20px; justify-content:flex-end; }
+
+  /* MOBILE */
+  @media (max-width:768px) {
+    .stats-bar { grid-template-columns:repeat(2,1fr); }
+    .layout { grid-template-columns:1fr; position:relative; overflow:hidden; }
+    .sidebar { position:absolute; inset:0; z-index:10; transition:transform .3s; }
+    .main { position:absolute; inset:0; z-index:20; background:var(--bg); transform:translateX(100%); transition:transform .3s; }
+    .mobile-detail-open .sidebar { transform:translateX(-100%); }
+    .mobile-detail-open .main { transform:translateX(0); }
+    .btn-back-mobile { display:flex !important; }
+    .detail-panel, .campaign-panel { padding:20px 16px; }
+    .info-grid { grid-template-columns:1fr; }
+    .info-cell.full { grid-column:1; }
+    .detail-header { flex-direction:column; gap:12px; }
+  }
+  .btn-back-mobile { display:none; align-items:center; gap:8px; background:none; border:none; color:var(--text-dim); font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1px; cursor:pointer; padding:0; margin-bottom:16px; }
+  .btn-back-mobile:hover { color:var(--accent); }
+
+  /* TEMPLATE LIST */
+  .tpl-list-item { background:var(--surface); border:1px solid var(--border); border-radius:2px; padding:14px 16px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:.15s; }
+  .tpl-list-item:hover { border-color:var(--accent); }
+  .tpl-nome { font-size:13px; font-weight:500; }
+  .tpl-cat { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:1px; color:var(--text-dim); margin-top:3px; }
+  .tpl-actions { display:flex; gap:8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">ARDY LAB <span>// OUTREACH</span></div>
+  <div class="header-right">
+    <a href="/ardy-michela-app.html" style="text-decoration:none;">
+      <button class="btn-header">← DASHBOARD</button>
+    </a>
+    <button class="btn-header" id="btnModeContatti" onclick="setMode('contatti')" class="active">CONTATTI</button>
+    <button class="btn-header" id="btnModeCampagna" onclick="setMode('campagna')">📣 CAMPAGNA</button>
+    <button class="btn-header" id="btnModeTemplate" onclick="setMode('template')">TEMPLATE</button>
+  </div>
+</header>
+
+<!-- STATS BAR -->
+<div class="stats-bar" id="statsBar">
+  <div class="stat-cell" id="stat-antiquari">
+    <div class="stat-label">Antiquari</div>
+    <div class="stat-nums"><span class="stat-total">—</span></div>
+  </div>
+  <div class="stat-cell" id="stat-mercatini">
+    <div class="stat-label">Mercatini</div>
+    <div class="stat-nums"><span class="stat-total">—</span></div>
+  </div>
+  <div class="stat-cell" id="stat-interior_designer">
+    <div class="stat-label">Interior Designer</div>
+    <div class="stat-nums"><span class="stat-total">—</span></div>
+  </div>
+  <div class="stat-cell" id="stat-bb">
+    <div class="stat-label">B&amp;B</div>
+    <div class="stat-nums"><span class="stat-total">—</span></div>
+  </div>
+</div>
+
+<div class="layout" id="layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-top">
+      <div class="search-box">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--text-dim);flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="searchInput" placeholder="Cerca nome, email..." oninput="filterContacts()">
+      </div>
+      <div class="filter-row">
+        <button class="chip active" onclick="setFilter('')">TUTTI</button>
+        <button class="chip" onclick="setFilter('antiquari')">ANTIQUARI</button>
+        <button class="chip" onclick="setFilter('mercatini')">MERCATINI</button>
+        <button class="chip" onclick="setFilter('interior_designer')">DESIGNER</button>
+        <button class="chip" onclick="setFilter('bb')">B&amp;B</button>
+      </div>
+    </div>
+    <div class="contact-list" id="contactList">
+      <div class="empty-list">Caricamento...</div>
+    </div>
+    <div class="sidebar-bottom">
+      <button class="btn-add" onclick="openAddModal()">+ AGGIUNGI</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main" id="mainPanel">
+
+    <!-- CONTATTI MODE -->
+    <div id="viewContatti">
+      <div class="empty-state" id="emptyState">
+        <div class="big">OUTREACH</div>
+        <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;">Seleziona un contatto dalla lista</div>
+      </div>
+      <div class="detail-panel" id="detailPanel" style="display:none">
+        <button class="btn-back-mobile" onclick="closeMobileDetail()">← LISTA</button>
+        <div class="detail-header">
+          <div>
+            <div class="detail-nome" id="detNome">—</div>
+            <div class="detail-sub" id="detSub">—</div>
+          </div>
+          <div class="detail-actions">
+            <button class="btn-sm" onclick="saveContact()">SALVA</button>
+            <button class="btn-sm danger" onclick="deleteContact()">ELIMINA</button>
+          </div>
+        </div>
+
+        <div class="stato-row" id="statoRow"></div>
+
+        <div class="info-grid">
+          <div class="info-cell"><div class="info-label">NOME</div><input class="info-input" id="editNome" onchange="markDirty()"></div>
+          <div class="info-cell"><div class="info-label">REFERENTE</div><input class="info-input" id="editReferente" placeholder="es. Mario Rossi" onchange="markDirty()"></div>
+          <div class="info-cell"><div class="info-label">EMAIL</div><input class="info-input" id="editEmail" type="email" onchange="markDirty()"></div>
+          <div class="info-cell"><div class="info-label">TELEFONO</div><input class="info-input" id="editTelefono" onchange="markDirty()"></div>
+          <div class="info-cell full"><div class="info-label">SITO</div><input class="info-input" id="editSito" type="url" onchange="markDirty()"></div>
+          <div class="info-cell full"><div class="info-label">INDIRIZZO</div><input class="info-input" id="editIndirizzo" onchange="markDirty()"></div>
+          <div class="info-cell"><div class="info-label">CATEGORIA</div>
+            <select class="info-select" id="editCategoria" onchange="markDirty()">
+              <option value="antiquari">Antiquari</option>
+              <option value="mercatini">Mercatini</option>
+              <option value="interior_designer">Interior Designer</option>
+              <option value="bb">B&amp;B</option>
+            </select>
+          </div>
+          <div class="info-cell"><div class="info-label">DATA CONTATTO</div><input class="info-input" id="editDataContatto" type="date" onchange="markDirty()"></div>
+          <div class="info-cell full"><div class="info-label">NOTE</div><textarea class="info-textarea" id="editNote" onchange="markDirty()"></textarea></div>
+        </div>
+
+        <!-- EMAIL COMPOSER -->
+        <div class="composer">
+          <div class="composer-title">✉ INVIA EMAIL</div>
+          <select class="tpl-select" id="tplSelect" onchange="loadTemplate()">
+            <option value="">— Seleziona template —</option>
+          </select>
+          <input class="composer-oggetto" id="compOggetto" placeholder="Oggetto email...">
+          <textarea class="composer-body" id="compBody" placeholder="Corpo email..."></textarea>
+          <button class="btn-send" id="btnSend" onclick="sendEmail()">📤 INVIA A QUESTO CONTATTO</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CAMPAGNA MODE -->
+    <div id="viewCampagna" style="display:none">
+      <div class="campaign-panel">
+        <div class="campaign-title">INVIA CAMPAGNA</div>
+
+        <div class="campaign-section">
+          <div class="campaign-label">1 — SELEZIONA TEMPLATE</div>
+          <select class="tpl-select" id="campTplSelect" onchange="loadCampTemplate()">
+            <option value="">— Seleziona template —</option>
+          </select>
+          <div id="campOggPreview" style="font-size:12px;color:var(--text-dim);font-family:'DM Mono',monospace;margin-top:6px;"></div>
+        </div>
+
+        <div class="campaign-section">
+          <div class="campaign-label">2 — FILTRA E SELEZIONA DESTINATARI</div>
+          <div class="filter-row" style="margin-bottom:10px;">
+            <button class="chip active" onclick="filterCampContacts('')">TUTTI</button>
+            <button class="chip" onclick="filterCampContacts('antiquari')">ANTIQUARI</button>
+            <button class="chip" onclick="filterCampContacts('mercatini')">MERCATINI</button>
+            <button class="chip" onclick="filterCampContacts('interior_designer')">DESIGNER</button>
+            <button class="chip" onclick="filterCampContacts('bb')">B&amp;B</button>
+          </div>
+          <div class="select-all-row">
+            <button class="btn-select-all" onclick="toggleSelectAll()">Seleziona/deseleziona tutti</button>
+          </div>
+          <div class="contact-check-list" id="campContactList">
+            <div style="padding:16px;color:var(--text-dim);font-size:13px;">Seleziona un filtro per vedere i contatti</div>
+          </div>
+        </div>
+
+        <div class="campaign-summary" id="campSummary">
+          <p>Destinatari selezionati: <strong id="campCount">0</strong></p>
+          <p style="font-size:11px;color:var(--text-dim);margin-top:4px;">Solo i contatti con email vengono inclusi nell'invio</p>
+        </div>
+
+        <button class="btn-send" id="btnCampSend" onclick="sendCampaign()">📤 INVIA CAMPAGNA</button>
+      </div>
+    </div>
+
+    <!-- TEMPLATE MODE -->
+    <div id="viewTemplate" style="display:none">
+      <div class="campaign-panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <div class="campaign-title" style="margin:0">TEMPLATE EMAIL</div>
+          <button class="btn-sm primary" onclick="openTplModal(null)">+ NUOVO</button>
+        </div>
+        <div id="tplList">
+          <div style="color:var(--text-dim);font-size:13px;">Caricamento...</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MODAL AGGIUNGI CONTATTO -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <div class="modal-title">AGGIUNGI CONTATTO</div>
+    <div class="form-group">
+      <label class="form-label">NOME *</label>
+      <input class="form-input" id="addNome" placeholder="Nome azienda o persona">
+    </div>
+    <div class="form-group">
+      <label class="form-label">REFERENTE</label>
+      <input class="form-input" id="addReferente" placeholder="Nome del referente">
+    </div>
+    <div class="form-group">
+      <label class="form-label">CATEGORIA *</label>
+      <select class="form-select" id="addCategoria">
+        <option value="antiquari">Antiquari</option>
+        <option value="mercatini">Mercatini</option>
+        <option value="interior_designer">Interior Designer</option>
+        <option value="bb">B&amp;B</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">EMAIL</label>
+      <input class="form-input" id="addEmail" type="email" placeholder="email@esempio.it">
+    </div>
+    <div class="form-group">
+      <label class="form-label">TELEFONO</label>
+      <input class="form-input" id="addTelefono" placeholder="+39 06...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">SITO</label>
+      <input class="form-input" id="addSito" type="url" placeholder="https://...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">INDIRIZZO</label>
+      <input class="form-input" id="addIndirizzo" placeholder="Via, numero, città">
+    </div>
+    <div class="form-group">
+      <label class="form-label">NOTE</label>
+      <textarea class="form-textarea" id="addNote" placeholder="Note libere..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm" onclick="closeAddModal()">ANNULLA</button>
+      <button class="btn-sm primary" onclick="saveNewContact()">AGGIUNGI</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL TEMPLATE -->
+<div class="modal-overlay" id="tplModal">
+  <div class="modal">
+    <div class="modal-title" id="tplModalTitle">NUOVO TEMPLATE</div>
+    <input type="hidden" id="tplEditId">
+    <div class="form-group">
+      <label class="form-label">NOME TEMPLATE *</label>
+      <input class="form-input" id="tplNome" placeholder="es. Antiquari — Prima email">
+    </div>
+    <div class="form-group">
+      <label class="form-label">CATEGORIA</label>
+      <select class="form-select" id="tplCategoria">
+        <option value="antiquari">Antiquari</option>
+        <option value="mercatini">Mercatini</option>
+        <option value="interior_designer">Interior Designer</option>
+        <option value="bb">B&amp;B</option>
+        <option value="">Tutte</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">OGGETTO EMAIL *</label>
+      <input class="form-input" id="tplOggetto" placeholder="Oggetto della email">
+    </div>
+    <div class="form-group">
+      <label class="form-label">CORPO EMAIL * (usa {{nome}} e {{azienda}} come variabili)</label>
+      <textarea class="form-textarea" id="tplCorpo" style="min-height:200px;" placeholder="Gentile {{nome}},&#10;&#10;..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm" onclick="closeTplModal()">ANNULLA</button>
+      <button class="btn-sm primary" onclick="saveTpl()">SALVA</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '/ardy-outreach-api.php';
+let allContacts = [];
+let currentContact = null;
+let allTemplates = [];
+let currentFilter = '';
+let campFilter = '';
+let isDirty = false;
+let mode = 'contatti';
+
+async function api(action, data={}) {
+  const r = await fetch(API, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action,...data}) });
+  return r.json();
+}
+
+// ============================================================
+// INIT
+// ============================================================
+async function init() {
+  await api('init_templates');
+  const imp = await api('import_antiquari');
+  if (!imp.skipped) toast('✓ Importati ' + imp.imported + ' antiquari', 'ok');
+  await Promise.all([loadContacts(), loadTemplates(), loadStats()]);
+}
+
+async function loadStats() {
+  const s = await api('get_stats');
+  const cats = ['antiquari','mercatini','interior_designer','bb'];
+  cats.forEach(cat => {
+    const el = document.getElementById('stat-' + cat);
+    if (!el || !s[cat]) return;
+    const d = s[cat];
+    el.innerHTML = `
+      <div class="stat-label">${cat.replace('_',' ')}</div>
+      <div class="stat-nums">
+        <span class="stat-total">${d.totale||0}</span>
+        <span class="stat-detail">
+          <span class="stat-dot dot-green"></span>${d.da_fare||0} da fare&nbsp;
+          <span class="stat-dot dot-blue"></span>${d.inviati||0} inviati&nbsp;
+          <span class="stat-dot dot-orange"></span>${d.risposto||0} risposto
+        </span>
+      </div>`;
+  });
+}
+
+async function loadContacts() {
+  allContacts = await api('get_contacts', { categoria: currentFilter });
+  renderList();
+}
+
+async function loadTemplates() {
+  allTemplates = await api('get_templates');
+  renderTplOptions();
+  renderTplList();
+}
+
+// ============================================================
+// MODE
+// ============================================================
+function setMode(m) {
+  mode = m;
+  document.getElementById('viewContatti').style.display  = m==='contatti'  ? 'block' : 'none';
+  document.getElementById('viewCampagna').style.display  = m==='campagna'  ? 'block' : 'none';
+  document.getElementById('viewTemplate').style.display  = m==='template'  ? 'block' : 'none';
+  ['Contatti','Campagna','Template'].forEach(x => {
+    const b = document.getElementById('btnMode'+x);
+    if(b) b.classList.toggle('active', m===x.toLowerCase());
+  });
+  if (m==='campagna') renderCampContacts('');
+  if (m==='template') renderTplList();
+}
+
+// ============================================================
+// FILTERS
+// ============================================================
+function setFilter(cat) {
+  currentFilter = cat;
+  document.querySelectorAll('.sidebar-top .chip').forEach(c => {
+    c.classList.toggle('active', c.textContent.trim() === (cat ? cat.replace('_',' ').toUpperCase() : 'TUTTI') || (cat==='' && c.textContent.trim()==='TUTTI'));
+  });
+  loadContacts();
+}
+
+function filterContacts() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  renderList(q);
+}
+
+function renderList(q='') {
+  const list = document.getElementById('contactList');
+  let filtered = allContacts;
+  if (q) filtered = filtered.filter(c => c.nome.toLowerCase().includes(q) || (c.email||'').toLowerCase().includes(q));
+  if (!filtered.length) { list.innerHTML = '<div class="empty-list">Nessun contatto trovato</div>'; return; }
+  list.innerHTML = filtered.map(c => `
+    <div class="contact-card ${currentContact?.id==c.id?'selected':''}" onclick="selectContact(${c.id})">
+      <div class="contact-name">${c.nome}</div>
+      <div class="contact-meta">
+        <span class="contact-cat">${c.categoria.replace('_',' ')}</span>
+        <span class="stato-badge stato-${c.stato}">${c.stato.replace('_',' ')}</span>
+      </div>
+    </div>`).join('');
+}
+
+// ============================================================
+// SELECT CONTACT
+// ============================================================
+function selectContact(id) {
+  currentContact = allContacts.find(c => c.id==id);
+  if (!currentContact) return;
+  isDirty = false;
+  document.getElementById('emptyState').style.display  = 'none';
+  document.getElementById('detailPanel').style.display = 'block';
+  document.getElementById('detNome').textContent = currentContact.nome;
+  document.getElementById('detSub').textContent  = currentContact.categoria.replace('_',' ').toUpperCase() + (currentContact.indirizzo ? ' · ' + currentContact.indirizzo : '');
+  document.getElementById('editNome').value        = currentContact.nome       || '';
+  document.getElementById('editReferente').value   = currentContact.referente  || '';
+  document.getElementById('editEmail').value       = currentContact.email      || '';
+  document.getElementById('editTelefono').value    = currentContact.telefono   || '';
+  document.getElementById('editSito').value        = currentContact.sito       || '';
+  document.getElementById('editIndirizzo').value   = currentContact.indirizzo  || '';
+  document.getElementById('editNote').value        = currentContact.note       || '';
+  document.getElementById('editCategoria').value   = currentContact.categoria  || 'antiquari';
+  document.getElementById('editDataContatto').value= currentContact.data_contatto || '';
+  renderStatoRow();
+  renderList(document.getElementById('searchInput').value.toLowerCase());
+  if (window.innerWidth <= 768) document.getElementById('layout').classList.add('mobile-detail-open');
+}
+
+function renderStatoRow() {
+  const stati = ['da_contattare','inviato','risposto','partner','non_interessato'];
+  document.getElementById('statoRow').innerHTML = stati.map(s =>
+    `<button class="stato-btn ${currentContact.stato===s?'active':''}" onclick="setStato('${s}')">${s.replace('_',' ').toUpperCase()}</button>`
+  ).join('');
+}
+
+async function setStato(stato) {
+  if (!currentContact) return;
+  await api('update_contact', { id: currentContact.id, stato });
+  currentContact.stato = stato;
+  renderStatoRow();
+  await loadContacts();
+  await loadStats();
+  toast('✓ Stato aggiornato', 'ok');
+}
+
+function markDirty() { isDirty = true; }
+
+async function saveContact() {
+  if (!currentContact) return;
+  const fields = {
+    id:           currentContact.id,
+    nome:         document.getElementById('editNome').value,
+    referente:    document.getElementById('editReferente').value,
+    email:        document.getElementById('editEmail').value,
+    telefono:     document.getElementById('editTelefono').value,
+    sito:         document.getElementById('editSito').value,
+    indirizzo:    document.getElementById('editIndirizzo').value,
+    note:         document.getElementById('editNote').value,
+    categoria:    document.getElementById('editCategoria').value,
+    data_contatto:document.getElementById('editDataContatto').value,
+  };
+  await api('update_contact', fields);
+  isDirty = false;
+  // Aggiorna contatto in memoria
+  Object.assign(currentContact, fields);
+  await loadContacts();
+  toast('✓ Contatto salvato', 'ok');
+}
+
+async function deleteContact() {
+  if (!currentContact || !confirm('Eliminare ' + currentContact.nome + '?')) return;
+  await api('delete_contact', { id: currentContact.id });
+  currentContact = null;
+  document.getElementById('emptyState').style.display  = 'block';
+  document.getElementById('detailPanel').style.display = 'none';
+  await loadContacts();
+  await loadStats();
+  toast('✓ Eliminato', 'ok');
+}
+
+function closeMobileDetail() {
+  document.getElementById('layout').classList.remove('mobile-detail-open');
+}
+
+// ============================================================
+// EMAIL COMPOSER
+// ============================================================
+function renderTplOptions() {
+  const selects = [document.getElementById('tplSelect'), document.getElementById('campTplSelect')];
+  const opts = '<option value="">— Seleziona template —</option>' +
+    allTemplates.map(t => `<option value="${t.id}">${t.nome}</option>`).join('');
+  selects.forEach(s => { if(s) s.innerHTML = opts; });
+}
+
+function loadTemplate() {
+  const id = document.getElementById('tplSelect').value;
+  const t   = allTemplates.find(x => x.id==id);
+  if (!t) return;
+  document.getElementById('compOggetto').value = t.oggetto;
+  document.getElementById('compBody').value    = t.corpo;
+}
+
+async function sendEmail() {
+  if (!currentContact) return;
+  const oggetto = document.getElementById('compOggetto').value;
+  const corpo   = document.getElementById('compBody').value;
+  const tplId   = document.getElementById('tplSelect').value;
+  if (!oggetto || !corpo) { toast('Inserisci oggetto e corpo', 'err'); return; }
+  if (!currentContact.email) { toast('Questo contatto non ha email', 'err'); return; }
+  const btn = document.getElementById('btnSend');
+  btn.disabled = true; btn.textContent = 'Invio in corso...';
+  const r = await api('send_email', { contact_id: currentContact.id, template_id: tplId, oggetto, corpo });
+  btn.disabled = false; btn.textContent = '📤 INVIA A QUESTO CONTATTO';
+  if (r.success) {
+    toast('✓ Email inviata a ' + currentContact.email, 'ok');
+    currentContact.stato = 'inviato';
+    renderStatoRow();
+    await loadContacts();
+    await loadStats();
+  } else {
+    toast('Errore: ' + (r.error||'sconosciuto'), 'err');
+  }
+}
+
+// ============================================================
+// CAMPAGNA
+// ============================================================
+function loadCampTemplate() {
+  const id = document.getElementById('campTplSelect').value;
+  const t   = allTemplates.find(x => x.id==id);
+  document.getElementById('campOggPreview').textContent = t ? 'Oggetto: ' + t.oggetto : '';
+}
+
+async function filterCampContacts(cat) {
+  campFilter = cat;
+  document.querySelectorAll('#viewCampagna .chip').forEach(c => {
+    c.classList.toggle('active', c.textContent.trim() === (cat ? cat.replace('_',' ').toUpperCase() : 'TUTTI') || (cat==='' && c.textContent.trim()==='TUTTI'));
+  });
+  const contacts = await api('get_contacts', { categoria: cat });
+  renderCampContacts(cat, contacts);
+}
+
+function renderCampContacts(cat, contacts) {
+  if (!contacts) { contacts = allContacts.filter(c => !cat || c.categoria===cat); }
+  const el = document.getElementById('campContactList');
+  if (!contacts.length) { el.innerHTML='<div style="padding:16px;color:var(--text-dim);font-size:13px;">Nessun contatto</div>'; return; }
+  el.innerHTML = contacts.map(c => `
+    <label class="check-item">
+      <input type="checkbox" class="camp-check" value="${c.id}" ${c.email?'':'disabled'} onchange="updateCampCount()">
+      <div style="flex:1">
+        <div class="check-nome">${c.nome} ${!c.email?'<span style="color:var(--red);font-size:11px;">(no email)</span>':''}</div>
+        <div class="check-email">${c.email||'—'} · <span class="stato-badge stato-${c.stato}">${c.stato.replace('_',' ')}</span></div>
+      </div>
+    </label>`).join('');
+  updateCampCount();
+}
+
+function toggleSelectAll() {
+  const checks = document.querySelectorAll('.camp-check:not(:disabled)');
+  const allChecked = [...checks].every(c => c.checked);
+  checks.forEach(c => c.checked = !allChecked);
+  updateCampCount();
+}
+
+function updateCampCount() {
+  const n = document.querySelectorAll('.camp-check:checked').length;
+  document.getElementById('campCount').textContent = n;
+}
+
+async function sendCampaign() {
+  const tplId = document.getElementById('campTplSelect').value;
+  if (!tplId) { toast('Seleziona un template', 'err'); return; }
+  const ids = [...document.querySelectorAll('.camp-check:checked')].map(c => parseInt(c.value));
+  if (!ids.length) { toast('Seleziona almeno un contatto', 'err'); return; }
+  if (!confirm(`Inviare a ${ids.length} contatti?`)) return;
+  const btn = document.getElementById('btnCampSend');
+  btn.disabled = true; btn.textContent = 'Invio in corso...';
+  const r = await api('send_campaign', { contact_ids: ids, template_id: tplId });
+  btn.disabled = false; btn.textContent = '📤 INVIA CAMPAGNA';
+  if (r.success) {
+    toast(`✓ Inviati: ${r.sent} | Falliti: ${r.failed}`, r.failed?'err':'ok');
+    await loadContacts(); await loadStats();
+  } else {
+    toast('Errore: ' + (r.error||'sconosciuto'), 'err');
+  }
+}
+
+// ============================================================
+// TEMPLATE MANAGER
+// ============================================================
+function renderTplList() {
+  const el = document.getElementById('tplList');
+  if (!allTemplates.length) { el.innerHTML='<div style="color:var(--text-dim);font-size:13px;">Nessun template</div>'; return; }
+  el.innerHTML = allTemplates.map(t => `
+    <div class="tpl-list-item">
+      <div>
+        <div class="tpl-nome">${t.nome}</div>
+        <div class="tpl-cat">${t.categoria||'TUTTE LE CATEGORIE'}</div>
+      </div>
+      <div class="tpl-actions">
+        <button class="btn-sm" onclick="openTplModal(${t.id})">MODIFICA</button>
+        <button class="btn-sm danger" onclick="deleteTpl(${t.id})">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function openTplModal(id) {
+  const t = id ? allTemplates.find(x => x.id==id) : null;
+  document.getElementById('tplModalTitle').textContent = t ? 'MODIFICA TEMPLATE' : 'NUOVO TEMPLATE';
+  document.getElementById('tplEditId').value    = t?.id || '';
+  document.getElementById('tplNome').value      = t?.nome || '';
+  document.getElementById('tplCategoria').value = t?.categoria || 'antiquari';
+  document.getElementById('tplOggetto').value   = t?.oggetto || '';
+  document.getElementById('tplCorpo').value     = t?.corpo || '';
+  document.getElementById('tplModal').classList.add('open');
+}
+
+function closeTplModal() { document.getElementById('tplModal').classList.remove('open'); }
+
+async function saveTpl() {
+  const id     = document.getElementById('tplEditId').value;
+  const nome   = document.getElementById('tplNome').value;
+  const ogg    = document.getElementById('tplOggetto').value;
+  const corpo  = document.getElementById('tplCorpo').value;
+  const cat    = document.getElementById('tplCategoria').value;
+  if (!nome || !ogg || !corpo) { toast('Compila tutti i campi obbligatori', 'err'); return; }
+  await api('save_template', { id: id||null, nome, categoria:cat, oggetto:ogg, corpo });
+  closeTplModal();
+  await loadTemplates();
+  toast('✓ Template salvato', 'ok');
+}
+
+async function deleteTpl(id) {
+  if (!confirm('Eliminare questo template?')) return;
+  await api('delete_template', { id });
+  await loadTemplates();
+  toast('✓ Template eliminato', 'ok');
+}
+
+// ============================================================
+// AGGIUNGI CONTATTO
+// ============================================================
+function openAddModal() { document.getElementById('addModal').classList.add('open'); }
+function closeAddModal() { document.getElementById('addModal').classList.remove('open'); }
+
+async function saveNewContact() {
+  const nome = document.getElementById('addNome').value;
+  if (!nome) { toast('Il nome è obbligatorio', 'err'); return; }
+  await api('add_contact', {
+    nome, referente: document.getElementById('addReferente').value,
+    categoria: document.getElementById('addCategoria').value,
+    email:     document.getElementById('addEmail').value,
+    telefono:  document.getElementById('addTelefono').value,
+    sito:      document.getElementById('addSito').value,
+    indirizzo: document.getElementById('addIndirizzo').value,
+    note:      document.getElementById('addNote').value,
+  });
+  closeAddModal();
+  await loadContacts(); await loadStats();
+  toast('✓ Contatto aggiunto', 'ok');
+  ['addNome','addReferente','addEmail','addTelefono','addSito','addIndirizzo','addNote'].forEach(id => document.getElementById(id).value='');
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function toast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast ' + type + ' show';
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// Close modals on overlay click
+document.getElementById('addModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeAddModal(); });
+document.getElementById('tplModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeTplModal(); });
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+# Dipendenze PHP
+vendor/
+composer.phar
+composer.lock
+
+# File sensibili
+ardy-config.php
+ardy-gcal-token.json
+
+# Cartelle con dati
+preventivi_pdf/
+preventivi-pdf/
+ardy-uploads/
+ardy-rate-limit/
+
+# Log e cache
+error_log
+*.log
+*.tmp
+
+# Sistema
+cgi-bin/

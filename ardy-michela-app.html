@@ -1,0 +1,2738 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ardy Lab — Dashboard Michela</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e0e;
+    --surface: #161616;
+    --surface2: #1e1e1e;
+    --border: #2a2a2a;
+    --accent: #c8a96e;
+    --accent2: #8b6f3e;
+    --text: #e8e2d9;
+    --text-dim: #7a7470;
+    --text-mid: #b0a89e;
+    --red: #c0392b;
+    --green: #27ae60;
+    --blue: #2980b9;
+    --orange: #e67e22;
+    --yellow: #f1c40f;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo img {
+    height: 34px;
+    width: auto;
+    object-fit: contain;
+    display: block;
+    filter: brightness(0) invert(1);
+  }
+
+  .logo span {
+    color: var(--text-dim);
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 2px;
+    margin-left: 12px;
+    vertical-align: middle;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .btn-refresh {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+
+  .btn-refresh:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* LAYOUT */
+  .layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    height: calc(100vh - 56px);
+  }
+
+  /* SIDEBAR — lista lead */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-header {
+    padding: 20px 20px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .search-box {
+    position: relative;
+  }
+
+  .search-box input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px 8px 32px;
+    border-radius: 4px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-box input:focus { border-color: var(--accent); }
+  .search-box input::placeholder { color: var(--text-dim); }
+
+  .search-box::before {
+    content: '⌕';
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim);
+    font-size: 16px;
+  }
+
+  /* FILTRI STATO */
+  .filters {
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .filter-chip {
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text-dim);
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .filter-chip.active, .filter-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(200,169,110,0.08);
+  }
+
+  /* LEAD LIST */
+  .lead-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+  }
+
+  .lead-list::-webkit-scrollbar { width: 4px; }
+  .lead-list::-webkit-scrollbar-track { background: transparent; }
+  .lead-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .lead-item {
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(42,42,42,0.5);
+    cursor: pointer;
+    transition: background 0.15s;
+    position: relative;
+  }
+
+  .lead-item:hover { background: var(--surface2); }
+  .lead-item.active { background: rgba(200,169,110,0.08); border-left: 2px solid var(--accent); }
+
+  .lead-nome {
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 4px;
+    font-size: 13px;
+  }
+
+  .lead-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .stato-badge {
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    font-weight: 500;
+  }
+
+  .stato-LEAD        { background: rgba(41,128,185,0.2);  color: #5dade2; }
+  .stato-SOPRALLUOGO { background: rgba(230,126,34,0.2);  color: #f39c12; }
+  .stato-PREVENTIVO  { background: rgba(142,68,173,0.2);  color: #bb8fce; }
+  .stato-ACCONTO     { background: rgba(39,174,96,0.2);   color: #58d68d; }
+  .stato-STANDBY     { background: rgba(127,140,141,0.2); color: #95a5a6; }
+  .stato-PERSO       { background: rgba(192,57,43,0.2);   color: #ec7063; }
+
+  .lead-zona {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+  }
+
+  /* LOADING / EMPTY */
+  .list-message {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 12px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* MAIN — dettaglio */
+  .main {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .main-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+  }
+
+  .main-empty .big-letter {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 120px;
+    color: var(--surface2);
+    line-height: 1;
+    margin-bottom: 16px;
+  }
+
+  .main-empty p {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+  }
+
+  /* DETAIL PANEL */
+  .detail-panel {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px;
+    display: none;
+  }
+
+  .detail-panel.visible { display: block; }
+  .detail-panel::-webkit-scrollbar { width: 4px; }
+  .detail-panel::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .detail-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+
+  .detail-nome {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    letter-spacing: 2px;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  .detail-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+
+  /* STATO SELECTOR */
+  .stato-selector {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .stato-btn {
+    padding: 6px 14px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .stato-btn:hover { border-color: var(--accent2); color: var(--text); }
+  .stato-btn.current { border-color: var(--accent); color: var(--accent); background: rgba(200,169,110,0.1); }
+
+  /* GRID INFO */
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  .info-cell {
+    background: var(--surface);
+    padding: 16px 20px;
+  }
+
+  .info-cell.full { grid-column: 1 / -1; }
+
+  .info-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .info-value {
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 400;
+  }
+
+  .info-value.editable {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 6px 10px;
+    width: 100%;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: vertical;
+  }
+
+  .info-value.editable:focus { border-color: var(--accent); }
+
+  /* AZIONI */
+  .azioni-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  .azioni-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+
+  .azione-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .azione-btn:hover {
+    border-color: var(--accent2);
+    background: var(--surface2);
+    transform: translateY(-1px);
+  }
+
+  .azione-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .azione-icon { font-size: 20px; }
+
+  .azione-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  /* SAVE BAR */
+  .save-bar {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    display: none;
+  }
+
+  .save-bar.visible { display: flex; }
+
+  .save-info {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .btn-save {
+    background: var(--accent);
+    color: #0e0e0e;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-save:hover { background: #d4b87a; }
+  .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 200;
+    max-width: 320px;
+  }
+
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: var(--green); color: #58d68d; }
+  .toast.error { border-color: var(--red); color: #ec7063; }
+
+  /* CONTATORE */
+  .count-badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 2px 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-left: 8px;
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 300;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 28px;
+    width: 480px;
+    max-width: 90vw;
+  }
+
+  .modal-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    margin-bottom: 20px;
+  }
+
+  .modal textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px;
+    border-radius: 4px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    resize: vertical;
+    min-height: 120px;
+    outline: none;
+    margin-bottom: 16px;
+  }
+
+  .modal textarea:focus { border-color: var(--accent); }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+
+  .btn-cancel {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 8px 18px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+  }
+
+  .modal-result {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
+    white-space: pre-wrap;
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 16px;
+    display: none;
+  }
+
+  .modal-result.visible { display: block; }
+
+  /* SEZIONE LAVORAZIONI */
+  .lavorazioni-section { margin-top:32px; border-top:1px solid var(--border); padding-top:28px; display:none; }
+  .lavorazioni-section.visible { display:block; }
+  .lav-title { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:2px; color:var(--text-dim); text-transform:uppercase; margin-bottom:16px; display:flex; align-items:center; gap:12px; }
+  .lav-post-link { font-size:11px; color:var(--accent); text-decoration:none; border:1px solid var(--accent2); padding:3px 10px; border-radius:3px; font-family:'DM Mono',monospace; }
+  .lav-form { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:20px; margin-bottom:16px; }
+  .lav-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+  .lav-input { background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:8px 12px; border-radius:4px; font-family:'DM Sans',sans-serif; font-size:13px; outline:none; width:100%; transition:border-color 0.2s; }
+  .lav-input:focus { border-color:var(--accent); }
+  .lav-input::placeholder { color:var(--text-dim); }
+  .lav-textarea { background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:10px 12px; border-radius:4px; font-family:'DM Sans',sans-serif; font-size:13px; outline:none; width:100%; resize:vertical; min-height:90px; margin-bottom:12px; transition:border-color 0.2s; }
+  .lav-textarea:focus { border-color:var(--accent); }
+  .lav-textarea::placeholder { color:var(--text-dim); }
+  .lav-foto-area { border:2px dashed var(--border); border-radius:6px; padding:20px; text-align:center; cursor:pointer; transition:border-color 0.2s; margin-bottom:12px; position:relative; }
+  .lav-foto-area:hover { border-color:var(--accent2); }
+  .lav-foto-area input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+  .lav-foto-label { font-family:'DM Mono',monospace; font-size:11px; color:var(--text-dim); letter-spacing:1px; pointer-events:none; }
+  .lav-preview { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .lav-preview img { width:80px; height:80px; object-fit:cover; border-radius:4px; border:1px solid var(--border); }
+  .btn-pubblica { background:var(--accent); color:#0e0e0e; border:none; padding:12px 28px; border-radius:4px; font-family:'DM Mono',monospace; font-size:11px; letter-spacing:1px; font-weight:500; cursor:pointer; transition:all 0.2s; width:100%; }
+  .btn-pubblica:hover { background:#d4b87a; }
+  .btn-pubblica:disabled { opacity:0.5; cursor:not-allowed; }
+  .lav-result { background:var(--surface2); border:1px solid var(--green); border-radius:6px; padding:16px; font-size:13px; line-height:1.6; color:#58d68d; display:none; margin-top:12px; }
+  .lav-result.visible { display:block; }
+
+  /* ============================================================
+     MOBILE RESPONSIVE — aggiunto per tablet e smartphone
+     ============================================================ */
+
+  /* Bottone torna indietro — visibile solo su mobile */
+  .btn-back-mobile {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 20px;
+  }
+
+  .btn-back-mobile:hover { color: var(--accent); }
+
+  @media (max-width: 768px) {
+
+    /* Layout: colonna singola */
+    .layout {
+      grid-template-columns: 1fr;
+      height: calc(100vh - 56px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Sidebar: full width */
+    .sidebar {
+      width: 100%;
+      height: calc(100vh - 56px);
+      position: absolute;
+      left: 0; top: 0;
+      transition: transform 0.3s ease;
+      z-index: 10;
+    }
+
+    /* Main: slide da destra */
+    .main {
+      position: absolute;
+      inset: 0;
+      background: var(--bg);
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      z-index: 20;
+      overflow-y: auto;
+    }
+
+    /* Quando lead selezionato su mobile */
+    .mobile-detail-open .sidebar { transform: translateX(-100%); }
+    .mobile-detail-open .main    { transform: translateX(0); }
+
+    /* Mostra bottone back */
+    .btn-back-mobile { display: flex; }
+
+    /* Detail panel padding ridotto */
+    .detail-panel { padding: 20px 16px; }
+
+    /* Info grid: colonna singola */
+    .info-grid { grid-template-columns: 1fr; }
+    .info-cell.full { grid-column: 1; }
+
+    /* Lav row: colonna singola */
+    .lav-row { grid-template-columns: 1fr; }
+
+    /* Stato selector: wrap */
+    .detail-top { flex-direction: column; gap: 16px; }
+    .stato-selector { flex-wrap: wrap; }
+    .stato-btn { padding: 8px 14px; font-size: 11px; }
+
+    /* Azioni: 2 colonne */
+    .azioni-grid { grid-template-columns: repeat(2, 1fr); }
+    .azione-btn { padding: 14px 10px; }
+
+    /* Filter chips: più grandi per touch */
+    .filter-chip { padding: 7px 12px; font-size: 11px; }
+
+    /* Save bar */
+    .save-bar { padding: 12px 16px; }
+
+    /* Header padding ridotto */
+    header { padding: 0 16px; }
+
+    /* Toast centrato in basso */
+    .toast { right: 16px; left: 16px; max-width: none; }
+    .modal { width: 100%; max-width: 100%; margin: 16px; }
+    .lav-preview img { width: 100px; height: 100px; }
+  }
+
+  /* ── STORICO PREVENTIVI ─────────────────────────────────────────────────── */
+  .storico-prev-section {
+    margin-top: 28px;
+    border-top: 1px solid var(--border);
+    padding-top: 22px;
+  }
+  .storico-prev-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    margin-bottom: 8px;
+    gap: 12px;
+    background: var(--surface2);
+    flex-wrap: wrap;
+  }
+  .storico-prev-info { flex: 1; min-width: 0; }
+  .storico-prev-numero {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 3px;
+  }
+  .storico-prev-oggetto {
+    font-size: 12px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
+  }
+  .storico-prev-meta {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 2px;
+    font-family: 'DM Mono', monospace;
+  }
+  .storico-prev-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .storico-prev-totale {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .storico-prev-actions { display: flex; gap: 6px; align-items: center; }
+  .storico-stato-sel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    outline: none;
+  }
+  .storico-stato-sel.bozza    { color: var(--text-dim); }
+  .storico-stato-sel.inviato  { color: #60a5fa; border-color: #60a5fa44; }
+  .storico-stato-sel.accettato{ color: var(--green); border-color: #22c55e44; }
+  .storico-stato-sel.rifiutato{ color: var(--red); border-color: #ef444444; }
+  .storico-empty {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+  }
+  .lib-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.7);
+    z-index: 400;
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 16px;
+    overflow-y: auto;
+  }
+  .lib-overlay.open { display: flex; }
+
+  .lib-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 100%;
+    max-width: 780px;
+    overflow: hidden;
+  }
+
+  .lib-head {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .lib-head h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    margin: 0;
+  }
+  .lib-head-actions { display: flex; gap: 8px; align-items: center; }
+
+  .lib-search {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    width: 180px;
+    transition: border-color .2s;
+  }
+  .lib-search:focus { border-color: var(--accent); }
+
+  .lib-cat-filter {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .lib-body { max-height: 460px; overflow-y: auto; }
+  .lib-body::-webkit-scrollbar { width: 4px; }
+  .lib-body::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .lib-item {
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(42,42,42,.5);
+    cursor: pointer;
+    transition: background .15s;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .lib-item:hover { background: var(--surface2); }
+  .lib-item-info { flex: 1; min-width: 0; }
+  .lib-item-nome {
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 3px;
+  }
+  .lib-item-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 480px;
+  }
+  .lib-item-cat {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    background: rgba(200,169,110,.12);
+    color: var(--accent);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .lib-item-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+    align-items: center;
+  }
+  .lib-btn-use {
+    background: var(--accent);
+    color: #0e0e0e;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 3px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .lib-btn-edit {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 5px 10px;
+    border-radius: 3px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .lib-btn-edit:hover { border-color: var(--accent2); color: var(--text); }
+  .lib-btn-del {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px 6px;
+  }
+  .lib-btn-del:hover { color: var(--red); }
+
+  .lib-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+
+  /* Form nuova fase */
+  .lib-form {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--surface2);
+    display: none;
+  }
+  .lib-form.open { display: block; }
+  .lib-form-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .lib-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 16px;
+    margin-bottom: 12px;
+  }
+  .lib-form-grid .full { grid-column: 1 / -1; }
+  .lib-form-field { display: flex; flex-direction: column; gap: 4px; }
+  .lib-form-field label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .lib-form-field input,
+  .lib-form-field select,
+  .lib-form-field textarea {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 10px;
+    border-radius: 4px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .lib-form-field input:focus,
+  .lib-form-field select:focus,
+  .lib-form-field textarea:focus { border-color: var(--accent); }
+  .lib-form-field textarea { resize: vertical; min-height: 80px; }
+  .lib-form-field select option { background: var(--surface2); }
+  .lib-form-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+    /* Btn pubblica: touch friendly */
+    .btn-pubblica { padding: 16px; font-size: 13px; }
+
+    /* Save bar stack su mobile */
+    .save-bar { flex-direction: column; gap: 10px; align-items: stretch; }
+    .btn-save { text-align: center; padding: 12px; }
+  }
+  /* ── BOTTONE NUOVO CLIENTE ── */
+  .btn-nuovo-cliente {
+    background: none;
+    border: 1px solid var(--accent2);
+    color: var(--accent);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-nuovo-cliente:hover {
+    background: rgba(200,169,110,0.1);
+    border-color: var(--accent);
+  }
+
+  /* ── MODAL GENERICO (nuovo cliente + preventivo) ── */
+  .modal-lg {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 600px;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .modal-lg::-webkit-scrollbar { width: 4px; }
+  .modal-lg::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .modal-lg-head {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  .modal-lg-head h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    margin: 0;
+  }
+  .modal-lg-close {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px 8px;
+    line-height: 1;
+  }
+  .modal-lg-close:hover { color: var(--text); }
+  .modal-lg-body { padding: 24px; }
+
+  /* Form campi dark */
+  .dark-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 20px;
+  }
+  .dark-form-grid .full { grid-column: 1 / -1; }
+  .dark-field { display: flex; flex-direction: column; gap: 5px; }
+  .dark-field label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .dark-field input,
+  .dark-field select,
+  .dark-field textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 12px;
+    border-radius: 4px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+  .dark-field input:focus,
+  .dark-field select:focus,
+  .dark-field textarea:focus { border-color: var(--accent); }
+  .dark-field input::placeholder,
+  .dark-field textarea::placeholder { color: var(--text-dim); }
+  .dark-field select option { background: var(--surface2); }
+  .dark-field textarea { resize: vertical; min-height: 70px; }
+
+  .dark-sep {
+    grid-column: 1 / -1;
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 4px 0;
+  }
+  .dark-section-label {
+    grid-column: 1 / -1;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Voci preventivo */
+  .prev-voci-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+  .prev-voci-table th {
+    background: var(--surface2);
+    padding: 7px 8px;
+    text-align: left;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+  .prev-voci-table td {
+    padding: 5px 4px;
+    border-bottom: 1px solid rgba(42,42,42,0.5);
+    vertical-align: middle;
+  }
+  .prev-voci-table input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 7px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    width: 100%;
+    outline: none;
+  }
+  .prev-voci-table input:focus { border-color: var(--accent); }
+  .prev-voci-importo {
+    text-align: right;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    white-space: nowrap;
+    padding-right: 8px;
+  }
+  .btn-add-voce-dark {
+    background: none;
+    border: 1px dashed var(--border);
+    color: var(--text-dim);
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 6px;
+    transition: all 0.15s;
+  }
+  .btn-add-voce-dark:hover { border-color: var(--accent2); color: var(--accent); }
+  .btn-del-voce-dark {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0 4px;
+  }
+  .btn-del-voce-dark:hover { color: var(--red); }
+
+  /* Totale live preventivo */
+  .prev-totale-row {
+    display: flex;
+    justify-content: flex-end;
+    margin: 12px 0 20px;
+  }
+  .prev-totale-box {
+    background: var(--surface2);
+    border: 1px solid var(--accent2);
+    border-radius: 4px;
+    padding: 10px 20px;
+    font-family: 'DM Mono', monospace;
+    text-align: right;
+  }
+  .prev-totale-box .lbl { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
+  .prev-totale-box .val { font-size: 16px; color: var(--accent); font-weight: 500; margin-top: 2px; }
+
+  /* Azioni modal */
+  .modal-lg-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    background: var(--surface2);
+    position: sticky;
+    bottom: 0;
+  }
+
+  @media (max-width: 768px) {
+    .dark-form-grid { grid-template-columns: 1fr; }
+    .dark-form-grid .full { grid-column: 1; }
+    .modal-lg { width: 100%; max-width: 100%; margin: 8px; max-height: 95vh; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">
+      <img src="assets/logo.png" alt="Ardy Lab" onerror="this.style.display='none';this.nextElementSibling.style.display='inline';">
+      <span style="display:none;">ARDY LAB</span>
+      <span>// MICHELA</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="status-dot"></div>
+    <button class="btn-refresh" onclick="loadLeads()">↻ AGGIORNA</button>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div style="margin-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div class="sidebar-title" style="margin-bottom:0;">Clienti / Lead <span class="count-badge" id="count">—</span></div>
+        </div>
+        <div style="display:flex;gap:5px;">
+          <button class="btn-nuovo-cliente" onclick="openNuovoCliente()" style="flex:1;text-align:center;background:none;border:1px solid #8b6f3e;color:#c8a96e;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">+ NUOVO</button>
+          <button class="btn-nuovo-cliente" onclick="openGestioneLibreria()" style="flex:1;text-align:center;background:none;border:1px solid #444;color:#888;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">LIBRERIA</button>
+        </div>
+      </div>
+      <div class="search-box">
+        <input type="text" id="search" placeholder="Cerca nome, zona, servizio..." oninput="filterLeads()">
+      </div>
+    </div>
+
+    <div class="filters" id="filters">
+      <button class="filter-chip active" data-stato="TUTTI" onclick="setFilter(this)">TUTTI</button>
+      <button class="filter-chip" data-stato="LEAD" onclick="setFilter(this)">LEAD</button>
+      <button class="filter-chip" data-stato="SOPRALLUOGO" onclick="setFilter(this)">SOPRALLUOGO</button>
+      <button class="filter-chip" data-stato="PREVENTIVO" onclick="setFilter(this)">PREVENTIVO</button>
+      <button class="filter-chip" data-stato="ACCONTO" onclick="setFilter(this)">ACCONTO</button>
+      <button class="filter-chip" data-stato="STANDBY" onclick="setFilter(this)">STANDBY</button>
+      <button class="filter-chip" data-stato="PERSO" onclick="setFilter(this)">PERSO</button>
+    </div>
+
+    <div class="lead-list" id="leadList">
+      <div class="list-message">
+        <div class="spinner"></div>
+        CARICAMENTO...
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- Empty state -->
+    <div class="main-empty" id="emptyState">
+      <div class="big-letter">A</div>
+      <p>SELEZIONA UN CLIENTE</p>
+    </div>
+
+    <!-- Detail panel -->
+    <div class="detail-panel" id="detailPanel">
+
+      <button class="btn-back-mobile" onclick="closeMobileDetail()">← LISTA CLIENTI</button>
+
+      <div class="detail-top">
+        <div>
+          <div class="detail-nome" id="dNome">—</div>
+          <div class="detail-sub" id="dSub">—</div>
+        </div>
+        <div class="stato-selector" id="statoSelector"></div>
+      </div>
+
+      <!-- INFO GRID -->
+      <div class="info-grid" style="margin-bottom: 24px;">
+        <div class="info-cell">
+          <div class="info-label">Telefono</div>
+          <div class="info-value" id="dTelefono">—</div>
+        </div>
+        <div class="info-cell">
+          <div class="info-label">Email</div>
+          <div class="info-value" id="dEmail">—</div>
+        </div>
+        <div class="info-cell">
+          <div class="info-label">Servizio</div>
+          <div class="info-value" id="dServizio">—</div>
+        </div>
+        <div class="info-cell">
+          <div class="info-label">Zona</div>
+          <div class="info-value" id="dZona">—</div>
+        </div>
+        <div class="info-cell">
+          <div class="info-label">Mobile / Pezzo</div>
+          <div class="info-value" id="dMobile">—</div>
+        </div>
+        <div class="info-cell">
+          <div class="info-label">Budget</div>
+          <div class="info-value" id="dBudget">—</div>
+        </div>
+        <div class="info-cell full">
+          <div class="info-label">Indirizzo</div>
+          <div class="info-value" id="dIndirizzo">—</div>
+        </div>
+        <div class="info-cell full">
+          <div class="info-label">Note <small style="color:var(--text-dim);font-size:9px;">(modificabile)</small></div>
+          <textarea class="info-value editable" id="dNote" rows="3" oninput="markDirty()"></textarea>
+        </div>
+        <div class="info-cell">
+          <div class="info-label">Data followup</div>
+          <input type="date" class="info-value editable" id="dDataFollowup" oninput="markDirty()" style="width:100%;">
+        </div>
+        <div class="info-cell">
+          <div class="info-label">Session ID</div>
+          <div class="info-value" id="dSessionId" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-dim);">—</div>
+        </div>
+      </div>
+
+      <!-- AZIONI -->
+      <div class="azioni-title">Azioni rapide</div>
+      <div class="azioni-grid">
+        <button class="azione-btn" onclick="openModal('contenuto')">
+          <span class="azione-icon">✍️</span>
+          <span class="azione-label">Genera contenuto</span>
+        </button>
+        <button class="azione-btn" onclick="openModal('post')">
+          <span class="azione-icon">📱</span>
+          <span class="azione-label">Post social</span>
+        </button>
+        <button class="azione-btn" onclick="openModal('proforma')">
+          <span class="azione-icon">📄</span>
+          <span class="azione-label">Proforma</span>
+        </button>
+        <button class="azione-btn" onclick="openModal('email')">
+          <span class="azione-icon">📧</span>
+          <span class="azione-label">Email cliente</span>
+        </button>
+        <button class="azione-btn" onclick="openModal('whatsapp')">
+          <span class="azione-icon">💬</span>
+          <span class="azione-label">Messaggio WA</span>
+        </button>
+        <button class="azione-btn" onclick="openModal('note_interne')">
+          <span class="azione-icon">📋</span>
+          <span class="azione-label">Note interne</span>
+        </button>
+        <button class="azione-btn" onclick="openPreventivoPanel()" style="border-color:var(--accent2);">
+          <span class="azione-icon">📑</span>
+          <span class="azione-label">Preventivo PDF</span>
+        </button>
+      </div>
+
+      <!-- SEZIONE STORICO PREVENTIVI -->
+      <div class="storico-prev-section" id="storicoPrevSection" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div class="lav-title" style="margin-bottom:0;">📑 Storico Preventivi</div>
+          <button class="btn-nuovo-cliente" onclick="openPreventivoPanel()">+ PREVENTIVO</button>
+        </div>
+        <div id="storicoPrevList"></div>
+      </div>
+
+      <!-- SEZIONE LAVORAZIONI -->
+      <div class="lavorazioni-section" id="lavSection">
+        <div class="lav-title">
+          🪵 Lavorazione in corso
+          <a href="#" class="lav-post-link" id="lavPostLink" target="_blank" style="display:none;">Vedi post →</a>
+        </div>
+        <div class="lav-form">
+          <div class="lav-row">
+            <input class="lav-input" id="lavFase" placeholder="Nome fase (es. Sverniciatura)">
+            <input class="lav-input" id="lavMobile" placeholder="Mobile (es. Credenza anni 60)">
+          </div>
+          <textarea class="lav-textarea" id="lavNote" placeholder="Scrivi 2-3 righe su cosa hai fatto — Claude le espande in testo professionale..."></textarea>
+          <div class="lav-foto-area" id="lavFotoArea" onclick="document.getElementById('lavFotoInput').click()">
+            <input type="file" id="lavFotoInput" accept="image/*" multiple style="display:none;">
+            <div class="lav-foto-label">📸 TOCCA PER AGGIUNGERE FOTO</div>
+          </div>
+          <div class="lav-preview" id="lavPreview"></div>
+          <button class="btn-pubblica" id="btnPubblica" onclick="pubblicaFase()">
+            ✦ PUBBLICA FASE + NOTIFICA CLIENTE
+          </button>
+          <div class="lav-result" id="lavResult"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- SAVE BAR -->
+    <div class="save-bar" id="saveBar">
+      <div class="save-info">⚠ Modifiche non salvate</div>
+      <button class="btn-save" id="btnSave" onclick="saveLead()">SALVA MODIFICHE</button>
+    </div>
+
+  </main>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MODAL AZIONI AI -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title" id="modalTitle">GENERA</div>
+    <textarea id="modalPrompt" placeholder="Aggiungi istruzioni specifiche (opzionale)..."></textarea>
+    <div class="modal-result" id="modalResult"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">ANNULLA</button>
+      <button class="btn-save" id="btnGenera" onclick="generaContenuto()">GENERA CON AI</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────
+const BASE_URL        = 'https://ardyagent.ardy-lab.it';
+const CRM_API_URL     = BASE_URL + '/ardy-crm-api.php';
+const UPDATE_URL      = BASE_URL + '/ardy-update-lead.php';
+const AI_URL          = BASE_URL + '/ardy-proxy.php';
+const LAVORAZIONE_URL = BASE_URL + '/ardy-pubblica-lavorazione.php';
+
+// ─── STATE ────────────────────────────────────────────────
+let allLeads       = [];
+let currentLead    = null;
+let currentFilter  = 'TUTTI';
+let isDirty        = false;
+let currentAction  = null;
+
+// ─── INIT ─────────────────────────────────────────────────
+loadLeads();
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('lavFotoInput');
+  if (input) input.addEventListener('change', handleFotoUpload);
+});
+
+async function loadLeads() {
+  document.getElementById('leadList').innerHTML = `
+    <div class="list-message"><div class="spinner"></div>CARICAMENTO...</div>`;
+
+  try {
+    const res  = await fetch(CRM_API_URL);
+    const data = await res.json();
+    // n8n restituisce array di oggetti con le colonne dello sheet
+    allLeads = Array.isArray(data) ? data : (data.data ?? []);
+    renderList();
+  } catch(e) {
+    document.getElementById('leadList').innerHTML =
+      `<div class="list-message">⚠ ERRORE CARICAMENTO</div>`;
+  }
+}
+
+// ─── RENDER LIST ──────────────────────────────────────────
+function renderList() {
+  const search = document.getElementById('search').value.toLowerCase();
+  let filtered = allLeads.filter(l => {
+    const matchFilter = currentFilter === 'TUTTI' || (l.Stato ?? '').toUpperCase() === currentFilter;
+    const matchSearch = !search ||
+      (l.Nome   ?? '').toLowerCase().includes(search) ||
+      (l.Cognome?? '').toLowerCase().includes(search) ||
+      (l.Zona   ?? '').toLowerCase().includes(search) ||
+      (l.Servizio??'').toLowerCase().includes(search);
+    return matchFilter && matchSearch;
+  });
+
+  document.getElementById('count').textContent = filtered.length;
+
+  if (!filtered.length) {
+    document.getElementById('leadList').innerHTML =
+      `<div class="list-message">NESSUN RISULTATO</div>`;
+    return;
+  }
+
+  document.getElementById('leadList').innerHTML = filtered.map((l, i) => `
+    <div class="lead-item ${currentLead && currentLead.Session_ID === l.Session_ID ? 'active' : ''}"
+         onclick="selectLead(${allLeads.indexOf(l)})">
+      <div class="lead-nome">${l.Nome ?? ''} ${l.Cognome ?? ''}</div>
+      <div class="lead-meta">
+        <span class="stato-badge stato-${(l.Stato??'LEAD').toUpperCase()}">${l.Stato ?? 'LEAD'}</span>
+        <span class="lead-zona">${l.Zona ?? ''}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── FILTER ───────────────────────────────────────────────
+function setFilter(el) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  currentFilter = el.dataset.stato;
+  renderList();
+}
+
+function filterLeads() { renderList(); }
+
+// ─── SELECT LEAD ──────────────────────────────────────────
+function selectLead(idx) {
+  if (isDirty && !confirm('Hai modifiche non salvate. Continuare?')) return;
+  currentLead = allLeads[idx];
+  isDirty = false;
+  document.getElementById('saveBar').classList.remove('visible');
+  renderDetail();
+  renderList();
+  // Carica storico preventivi del cliente
+  caricaStoricoPrev(currentLead.Session_ID ?? '');
+  // Mobile: apri pannello dettaglio
+  if (window.innerWidth <= 768) {
+    document.querySelector('.layout').classList.add('mobile-detail-open');
+  }
+}
+
+function closeMobileDetail() {
+  document.querySelector('.layout').classList.remove('mobile-detail-open');
+}
+
+function renderDetail() {
+  const l = currentLead;
+  document.getElementById('emptyState').style.display  = 'none';
+  document.getElementById('detailPanel').classList.add('visible');
+
+  document.getElementById('dNome').textContent      = `${l.Nome ?? ''} ${l.Cognome ?? ''}`.trim();
+  document.getElementById('dSub').textContent       = `${l.Servizio ?? ''} · ${l.Zona ?? ''} · ${l.Session_ID ?? ''}`;
+  document.getElementById('dTelefono').textContent  = l.Telefono  ?? '—';
+  document.getElementById('dEmail').textContent     = l.Email     ?? '—';
+  document.getElementById('dServizio').textContent  = l.Servizio  ?? '—';
+  document.getElementById('dZona').textContent      = l.Zona      ?? '—';
+  document.getElementById('dMobile').textContent    = l.Mobile    ?? '—';
+  document.getElementById('dBudget').textContent    = l.Budget    ?? '—';
+  document.getElementById('dIndirizzo').textContent = l.Indirizzo ?? '—';
+  document.getElementById('dNote').value            = l.Note      ?? '';
+  document.getElementById('dDataFollowup').value    = l.Data_followup ?? '';
+  document.getElementById('dSessionId').textContent = l.Session_ID ?? '—';
+
+  // Sezione lavorazioni — visibile da ACCONTO in poi
+  const statiLav = ['ACCONTO'];
+  const lavSection = document.getElementById('lavSection');
+  if (statiLav.includes((l.Stato ?? '').toUpperCase())) {
+    lavSection.classList.add('visible');
+    document.getElementById('lavMobile').value = l.Mobile ?? '';
+    // Reset stato lavorazione
+    lavWpPostId   = l.wp_post_id   ?? null;
+    lavWpPostLink = l.wp_post_link ?? null;
+    const linkEl = document.getElementById('lavPostLink');
+    if (lavWpPostLink) { linkEl.href = lavWpPostLink; linkEl.style.display = 'inline'; }
+    else { linkEl.style.display = 'none'; }
+    document.getElementById('lavResult').classList.remove('visible');
+    document.getElementById('lavPreview').innerHTML = '';
+    lavImmagini = [];
+  } else {
+    lavSection.classList.remove('visible');
+  }
+
+  // Stato buttons
+  const stati = ['LEAD','SOPRALLUOGO','PREVENTIVO','ACCONTO','STANDBY','PERSO'];
+  document.getElementById('statoSelector').innerHTML = stati.map(s => `
+    <button class="stato-btn ${(l.Stato??'').toUpperCase() === s ? 'current' : ''}"
+            onclick="setStato('${s}')">
+      ${s}
+    </button>
+  `).join('');
+}
+
+// ─── STATO ────────────────────────────────────────────────
+function setStato(s) {
+  currentLead.Stato = s;
+  markDirty();
+  document.querySelectorAll('.stato-btn').forEach(b => {
+    b.classList.toggle('current', b.textContent.trim() === s);
+  });
+}
+
+// ─── DIRTY ────────────────────────────────────────────────
+function markDirty() {
+  isDirty = true;
+  document.getElementById('saveBar').classList.add('visible');
+}
+
+// ─── SAVE ─────────────────────────────────────────────────
+async function saveLead() {
+  const btn = document.getElementById('btnSave');
+  btn.disabled = true;
+  btn.textContent = 'SALVATAGGIO...';
+
+  const payload = {
+    session_id:     currentLead.Session_ID,
+    stato:          currentLead.Stato,
+    note:           document.getElementById('dNote').value,
+    data_followup:  document.getElementById('dDataFollowup').value,
+    nome:           currentLead.Nome,
+    cognome:        currentLead.Cognome,
+    telefono:       currentLead.Telefono,
+    email:          currentLead.Email,
+    servizio:       currentLead.Servizio,
+    mobile:         currentLead.Mobile,
+    zona:           currentLead.Zona,
+    budget:         currentLead.Budget,
+    indirizzo:      currentLead.Indirizzo,
+  };
+
+  try {
+    const res  = await fetch(UPDATE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      isDirty = false;
+      document.getElementById('saveBar').classList.remove('visible');
+      showToast('✓ Salvato correttamente', 'success');
+      // Aggiorna lead in memoria
+      const idx = allLeads.findIndex(l => l.Session_ID === currentLead.Session_ID);
+      if (idx >= 0) {
+        allLeads[idx].Stato = currentLead.Stato;
+        allLeads[idx].Note  = payload.note;
+        allLeads[idx].Data_followup = payload.data_followup;
+      }
+      renderList();
+    } else {
+      showToast('⚠ Errore salvataggio', 'error');
+    }
+  } catch(e) {
+    showToast('⚠ Errore di rete', 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'SALVA MODIFICHE';
+}
+
+// ─── MODAL AI ─────────────────────────────────────────────
+const modalConfig = {
+  contenuto:     { title: 'GENERA CONTENUTO',     prompt: ctx => `Genera un contenuto professionale per Ardy Lab sul lavoro di restauro per ${ctx.nome} — servizio: ${ctx.servizio}, mobile: ${ctx.mobile}. Tono artigianale, caldo, esperto.` },
+  post:          { title: 'POST SOCIAL',           prompt: ctx => `Scrivi un post Instagram/Facebook per Ardy Lab sul restauro di ${ctx.mobile} per un cliente in zona ${ctx.zona}. Max 150 parole, con 5 hashtag pertinenti. Tono autentico e artigianale.` },
+  proforma:      { title: 'PREVENTIVO PROFORMA',  prompt: ctx => `Genera un testo per preventivo proforma Ardy Lab per: cliente ${ctx.nome}, servizio: ${ctx.servizio}, mobile: ${ctx.mobile}, zona: ${ctx.zona}, budget indicato: ${ctx.budget}. Includi voci tipiche di un restauro.` },
+  email:         { title: 'EMAIL CLIENTE',        prompt: ctx => `Scrivi una email professionale da Ardy Lab per ${ctx.nome} riguardo al servizio: ${ctx.servizio}. Tono cordiale e professionale.` },
+  whatsapp:      { title: 'MESSAGGIO WHATSAPP',   prompt: ctx => `Scrivi un messaggio WhatsApp breve e cordiale da Ardy Lab per ${ctx.nome} riguardo a: ${ctx.servizio}. Max 3 righe.` },
+  note_interne:  { title: 'NOTE INTERNE',         prompt: ctx => `Scrivi un riepilogo interno per Michela di Ardy Lab su questo cliente: ${ctx.nome}, servizio: ${ctx.servizio}, mobile: ${ctx.mobile}, zona: ${ctx.zona}, budget: ${ctx.budget}, stato: ${ctx.stato}. Note esistenti: ${ctx.note}.` },
+};
+
+function openModal(action) {
+  if (!currentLead) return;
+  currentAction = action;
+  const cfg = modalConfig[action];
+  document.getElementById('modalTitle').textContent = cfg.title;
+  document.getElementById('modalPrompt').value = '';
+  document.getElementById('modalResult').classList.remove('visible');
+  document.getElementById('modalResult').textContent = '';
+  document.getElementById('btnGenera').textContent = 'GENERA CON AI';
+  document.getElementById('btnGenera').disabled = false;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modalOverlay')) {
+    document.getElementById('modalOverlay').classList.remove('open');
+  }
+}
+
+async function generaContenuto() {
+  const btn = document.getElementById('btnGenera');
+  btn.disabled = true;
+  btn.textContent = 'GENERAZIONE...';
+
+  const l   = currentLead;
+  const ctx = {
+    nome:     `${l.Nome ?? ''} ${l.Cognome ?? ''}`.trim(),
+    servizio: l.Servizio ?? '',
+    mobile:   l.Mobile   ?? '',
+    zona:     l.Zona     ?? '',
+    budget:   l.Budget   ?? '',
+    stato:    l.Stato    ?? '',
+    note:     l.Note     ?? '',
+  };
+
+  const cfg    = modalConfig[currentAction];
+  const extra  = document.getElementById('modalPrompt').value;
+  const prompt = cfg.prompt(ctx) + (extra ? `\n\nIstruzioni aggiuntive: ${extra}` : '');
+
+  try {
+    const res  = await fetch(AI_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: prompt,
+        history: [],
+        sessionId: 'michela_' + Date.now()
+      })
+    });
+    const data = await res.json();
+    const result = document.getElementById('modalResult');
+    result.textContent = data.reply ?? 'Errore nella generazione.';
+    result.classList.add('visible');
+  } catch(e) {
+    document.getElementById('modalResult').textContent = '⚠ Errore di rete.';
+    document.getElementById('modalResult').classList.add('visible');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'RIGENERA';
+}
+
+// ─── LAVORAZIONI ──────────────────────────────────────────
+let lavImmagini   = []; // array base64
+let lavWpPostId   = null;
+let lavWpPostLink = null;
+
+function handleFotoUpload(event) {
+  const files   = Array.from(event.target.files);
+  const preview = document.getElementById('lavPreview');
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const base64 = e.target.result.split(',')[1];
+      lavImmagini.push(base64);
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      preview.appendChild(img);
+      document.getElementById('lavFotoArea').querySelector('.lav-foto-label').textContent = `📸 ${lavImmagini.length} FOTO AGGIUNTE`;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function pubblicaFase() {
+  const fase  = document.getElementById('lavFase').value.trim();
+  const note  = document.getElementById('lavNote').value.trim();
+  const mobile = document.getElementById('lavMobile').value.trim() || (currentLead.Mobile ?? '');
+
+  if (!fase || !note) {
+    showToast('⚠ Inserisci fase e note', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btnPubblica');
+  btn.disabled = true;
+  btn.textContent = '⏳ PUBBLICAZIONE IN CORSO...';
+
+  const payload = {
+    session_id:  currentLead.Session_ID,
+    fase_nome:   fase,
+    note_brevi:  note,
+    mobile:      mobile,
+    email:       currentLead.Email    ?? '',
+    nome:        `${currentLead.Nome ?? ''} ${currentLead.Cognome ?? ''}`.trim(),
+    wp_post_id:  lavWpPostId,
+    immagini:    lavImmagini,
+  };
+
+  try {
+    const res  = await fetch(LAVORAZIONE_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      lavWpPostId   = data.wp_post_id;
+      lavWpPostLink = data.post_link;
+
+      const linkEl = document.getElementById('lavPostLink');
+      linkEl.href = lavWpPostLink;
+      linkEl.style.display = 'inline';
+
+      const result = document.getElementById('lavResult');
+      result.innerHTML = `<strong>✓ Pubblicato!</strong><br><br>${data.testo}<br><br><a href="${data.post_link}" target="_blank" style="color:var(--accent);">→ ${data.post_link}</a>`;
+      result.classList.add('visible');
+
+      // Reset form
+      document.getElementById('lavFase').value  = '';
+      document.getElementById('lavNote').value  = '';
+      document.getElementById('lavPreview').innerHTML = '';
+      lavImmagini = [];
+
+      showToast('✓ Fase pubblicata e cliente notificato', 'success');
+    } else {
+      showToast('⚠ Errore: ' + (data.error ?? 'sconosciuto'), 'error');
+    }
+  } catch(e) {
+    showToast('⚠ Errore di rete', 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '✦ PUBBLICA FASE + NOTIFICA CLIENTE';
+}
+
+// ══════════════════════════════════════════════════════════
+// NUOVO CLIENTE MANUALE
+// ══════════════════════════════════════════════════════════
+
+function openNuovoCliente() {
+  document.getElementById('nc-result').style.display = 'none';
+  document.getElementById('nuovoClienteOverlay').classList.add('open');
+}
+
+function closeNuovoCliente() {
+  document.getElementById('nuovoClienteOverlay').classList.remove('open');
+}
+
+async function salvaNuovoCliente() {
+  const nome    = document.getElementById('nc-nome').value.trim();
+  const cognome = document.getElementById('nc-cognome').value.trim();
+  if (!nome && !cognome) {
+    showResult('nc-result', '⚠ Inserisci almeno nome o cognome.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btn-nc-salva');
+  btn.disabled = true;
+  btn.textContent = 'SALVATAGGIO...';
+
+  const payload = {
+    nome:          nome,
+    cognome:       cognome,
+    telefono:      document.getElementById('nc-telefono').value.trim(),
+    email:         document.getElementById('nc-email').value.trim(),
+    indirizzo:     document.getElementById('nc-indirizzo').value.trim(),
+    servizio:      document.getElementById('nc-servizio').value,
+    zona:          document.getElementById('nc-zona').value.trim(),
+    mobile:        document.getElementById('nc-mobile').value.trim(),
+    budget:        document.getElementById('nc-budget').value.trim(),
+    stato:         document.getElementById('nc-stato').value,
+    data_followup: document.getElementById('nc-followup').value,
+    note:          document.getElementById('nc-note').value.trim(),
+    source:        'manuale_dashboard',
+  };
+
+  try {
+    const res  = await fetch(UPDATE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    if (data.success || data.ok) {
+      showResult('nc-result', '✓ Cliente salvato correttamente!', 'success');
+      // Aggiunge il lead in memoria per visualizzarlo subito
+      const nuovoLead = {
+        Nome: nome, Cognome: cognome,
+        Telefono: payload.telefono, Email: payload.email,
+        Indirizzo: payload.indirizzo, Servizio: payload.servizio,
+        Zona: payload.zona, Mobile: payload.mobile,
+        Budget: payload.budget, Stato: payload.stato,
+        Data_followup: payload.data_followup, Note: payload.note,
+        Session_ID: data.session_id ?? ('MAN-' + Date.now()),
+      };
+      allLeads.unshift(nuovoLead);
+      renderList();
+      setTimeout(() => {
+        closeNuovoCliente();
+        // Reset form
+        ['nc-nome','nc-cognome','nc-telefono','nc-email','nc-indirizzo',
+         'nc-zona','nc-mobile','nc-budget','nc-note','nc-followup'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = '';
+        });
+        document.getElementById('nc-servizio').selectedIndex = 0;
+        document.getElementById('nc-stato').selectedIndex = 0;
+        showToast('✓ Nuovo cliente aggiunto', 'success');
+      }, 1200);
+    } else {
+      showResult('nc-result', '⚠ Errore: ' + (data.error ?? 'risposta non valida'), 'error');
+    }
+  } catch(e) {
+    showResult('nc-result', '⚠ Errore di rete — cliente salvato localmente.', 'error');
+    // Fallback locale se API non disponibile
+    const nuovoLead = {
+      Nome: nome, Cognome: cognome,
+      Telefono: payload.telefono, Email: payload.email,
+      Indirizzo: payload.indirizzo, Servizio: payload.servizio,
+      Zona: payload.zona, Mobile: payload.mobile,
+      Budget: payload.budget, Stato: payload.stato,
+      Data_followup: payload.data_followup, Note: payload.note,
+      Session_ID: 'MAN-' + Date.now(),
+    };
+    allLeads.unshift(nuovoLead);
+    renderList();
+  }
+
+  btn.disabled = false;
+  btn.textContent = '✦ SALVA CLIENTE';
+}
+
+function showResult(id, msg, type) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.color   = type === 'error' ? 'var(--red)' : 'var(--green)';
+  el.style.background = type === 'error' ? 'rgba(192,57,43,0.1)' : 'rgba(39,174,96,0.1)';
+  el.style.border = '1px solid ' + (type === 'error' ? 'var(--red)' : 'var(--green)');
+}
+
+// ══════════════════════════════════════════════════════════
+// PREVENTIVO PDF
+// ══════════════════════════════════════════════════════════
+
+const PREVENTIVO_URL = BASE_URL + '/ardy-preventivo.php';
+let pvVoci = [];
+
+let pvCurrentSessionId = '';
+
+function openPreventivoPanel() {
+  if (!currentLead) { showToast('⚠ Seleziona prima un cliente', 'error'); return; }
+
+  // Salva session_id prima che currentLead possa cambiare
+  pvCurrentSessionId = currentLead.Session_ID ?? '';
+
+  // Pre-compila con i dati del lead corrente
+  const l = currentLead;
+  document.getElementById('pv-numero').value          = pvGeneraNumero();
+  document.getElementById('pv-data-emissione').value  = new Date().toISOString().split('T')[0];
+  document.getElementById('pv-data-scadenza').value   = pvDataScadenza(30);
+  document.getElementById('pv-oggetto').value         = l.Servizio ? 'Preventivo per: ' + l.Servizio : '';
+  document.getElementById('pv-cl-nome').value         = ((l.Nome??'') + ' ' + (l.Cognome??'')).trim();
+  document.getElementById('pv-cl-email').value        = l.Email     ?? '';
+  document.getElementById('pv-cl-indirizzo').value    = l.Indirizzo ?? '';
+
+  // Reset voci
+  pvVoci = [];
+  pvAddVoce();
+
+  document.getElementById('preventivoOverlay').classList.add('open');
+}
+
+function closePreventivoPanel() {
+  document.getElementById('preventivoOverlay').classList.remove('open');
+}
+
+function pvGeneraNumero() {
+  const y = new Date().getFullYear();
+  return 'ARD-' + y + '-' + String(Math.floor(Math.random()*9000)+1000);
+}
+
+function pvDataScadenza(giorni) {
+  const d = new Date();
+  d.setDate(d.getDate() + giorni);
+  return d.toISOString().split('T')[0];
+}
+
+function pvAddVoce() {
+  pvVoci.push({ id: Date.now(), desc: '', qty: 1, um: 'h', prezzo: 0, sconto: 0 });
+  pvRenderVoci();
+}
+
+function pvDelVoce(id) {
+  pvVoci = pvVoci.filter(v => v.id !== id);
+  pvRenderVoci();
+}
+
+function pvUpdateVoce(id, campo, val) {
+  const v = pvVoci.find(x => x.id === id);
+  if (!v) return;
+  v[campo] = (campo === 'desc' || campo === 'um') ? val : parseFloat(val) || 0;
+  // Aggiorna solo la cella importo della riga, senza ri-renderizzare tutto
+  const imp = v.qty * v.prezzo * (1 - v.sconto / 100);
+  const valuta = document.getElementById('pv-valuta').value;
+  const row = document.querySelector(`[data-voce-id="${id}"]`);
+  if (row) row.querySelector('.prev-voci-importo').textContent = pvFmt(imp, valuta);
+  pvAggiornaTotale();
+}
+
+function pvRenderVoci() {
+  const tbody  = document.getElementById('pv-voci-tbody');
+  const valuta = document.getElementById('pv-valuta').value;
+  tbody.innerHTML = pvVoci.map(v => {
+    const imp = v.qty * v.prezzo * (1 - v.sconto / 100);
+    return `<tr data-voce-id="${v.id}">
+      <td><input type="text" value="${v.desc}" placeholder="Descrizione..."
+        oninput="pvUpdateVoce(${v.id},'desc',this.value)"
+        onchange="pvUpdateVoce(${v.id},'desc',this.value)"></td>
+      <td><input type="number" value="${v.qty}" min="0" step="0.5" style="width:52px"
+        oninput="pvUpdateVoce(${v.id},'qty',this.value)"
+        onchange="pvUpdateVoce(${v.id},'qty',this.value)"></td>
+      <td><input type="text" value="${v.um}" style="width:36px"
+        oninput="pvUpdateVoce(${v.id},'um',this.value)"
+        onchange="pvUpdateVoce(${v.id},'um',this.value)"></td>
+      <td><input type="number" value="${v.prezzo}" min="0" step="0.01"
+        oninput="pvUpdateVoce(${v.id},'prezzo',this.value)"
+        onchange="pvUpdateVoce(${v.id},'prezzo',this.value)"></td>
+      <td><input type="number" value="${v.sconto}" min="0" max="100" style="width:44px"
+        oninput="pvUpdateVoce(${v.id},'sconto',this.value)"
+        onchange="pvUpdateVoce(${v.id},'sconto',this.value)"></td>
+      <td class="prev-voci-importo">${pvFmt(imp, valuta)}</td>
+      <td><button class="btn-del-voce-dark" onclick="pvDelVoce(${v.id})">✕</button></td>
+    </tr>`;
+  }).join('');
+  pvAggiornaTotale();
+}
+
+function pvAggiornaTotale() {
+  const valuta = document.getElementById('pv-valuta').value;
+  const sub    = pvVoci.reduce((s, v) => s + v.qty * v.prezzo * (1 - v.sconto / 100), 0);
+  document.getElementById('pv-totale-live').textContent = pvFmt(sub, valuta);
+}
+
+function pvFmt(val, valuta) {
+  return new Intl.NumberFormat('it-IT', {
+    style:'currency', currency: valuta||'EUR', minimumFractionDigits:2
+  }).format(val);
+}
+
+function pvRaccogliFormData() {
+  const fd = new FormData();
+  const map = {
+    tipo_preventivo: 'pv-tipo', numero_preventivo: 'pv-numero',
+    data_emissione: 'pv-data-emissione', data_scadenza: 'pv-data-scadenza',
+    oggetto: 'pv-oggetto',
+    azienda_nome: 'pv-az-nome', azienda_piva: 'pv-az-piva',
+    azienda_cf: 'pv-az-cf',
+    azienda_indirizzo: 'pv-az-indirizzo', azienda_email: 'pv-az-email',
+    azienda_tel: 'pv-az-tel',
+    cliente_nome: 'pv-cl-nome', cliente_azienda: 'pv-cl-azienda',
+    cliente_piva: 'pv-cl-piva', cliente_email: 'pv-cl-email',
+    cliente_indirizzo: 'pv-cl-indirizzo',
+    aliquota_iva: 'pv-iva', valuta: 'pv-valuta',
+    note: 'pv-note', condizioni: 'pv-condizioni',
+  };
+  Object.entries(map).forEach(([name, id]) => {
+    const el = document.getElementById(id);
+    if (el) fd.append(name, el.value);
+  });
+  // Formatta date in italiano
+  ['data_emissione','data_scadenza'].forEach(key => {
+    const iso = fd.get(key);
+    if (iso && iso.includes('-')) {
+      const [y,m,g] = iso.split('-');
+      fd.set(key, `${g}/${m}/${y}`);
+    }
+  });
+  fd.append('mostra_storia', document.getElementById('pv-storia') ? (document.getElementById('pv-storia').checked ? '1' : '0') : '1');
+  fd.append('mostra_firma',  document.getElementById('pv-firma').checked  ? '1' : '0');
+  // Session ID del cliente corrente
+  fd.append('session_id', pvCurrentSessionId || (currentLead?.Session_ID ?? ''));
+  // Aggiungi anche bollo e spedizione
+  fd.append('bollo',      '2');
+  fd.append('spedizione', 'gratis');
+  fd.append('acconto_perc', '30');
+  fd.append('tempi_consegna', '20 giorni lavorativi');
+  // Voci con indice esplicito per PHP
+  pvVoci.forEach((v, i) => {
+    fd.append('voci[' + i + '][descrizione]', v.desc || '');
+    fd.append('voci[' + i + '][quantita]',    v.qty  || 1);
+    fd.append('voci[' + i + '][unita]',       v.um   || '');
+    fd.append('voci[' + i + '][prezzo]',      v.prezzo || 0);
+    fd.append('voci[' + i + '][sconto]',      v.sconto || 0);
+  });
+  return fd;
+}
+
+function pvAnteprima() {
+  const fd = pvRaccogliFormData();
+  fetch(PREVENTIVO_URL + '?mode=preview', { method:'POST', body:fd })
+    .then(r => r.text())
+    .then(html => { const w = window.open('','_blank'); w.document.write(html); w.document.close(); })
+    .catch(() => showToast('⚠ Errore anteprima', 'error'));
+}
+
+async function pvGeneraPDF() {
+  const btn = document.getElementById('btn-pv-genera');
+  btn.disabled = true;
+  btn.textContent = '⏳ GENERAZIONE...';
+
+  try {
+    const fd   = pvRaccogliFormData();
+    const res  = await fetch(PREVENTIVO_URL + '?mode=save', { method:'POST', body:fd });
+    const data = await res.json();
+
+    if (data.error) {
+      showToast('⚠ ' + data.error, 'error');
+      btn.disabled = false;
+      btn.textContent = '⬇ GENERA PDF';
+      return;
+    }
+
+    // Scarica il PDF già salvato sul server — nessuna seconda chiamata
+    const a = document.createElement('a');
+    a.href     = PREVENTIVO_URL + '?mode=download&file=' + encodeURIComponent(data.file);
+    a.download = data.file || 'preventivo.pdf';
+    a.target   = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    showToast('✓ PDF generato: ' + data.numero, 'success');
+    closePreventivoPanel();
+    caricaStoricoPrev(pvCurrentSessionId);
+
+    // Aggiorna stato lead
+    const statiDaAggiornare = ['LEAD','SOPRALLUOGO'];
+    if (currentLead && statiDaAggiornare.includes((currentLead.Stato??'').toUpperCase())) {
+      setStato('PREVENTIVO');
+    }
+  } catch(e) {
+    showToast('⚠ Errore generazione PDF', 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '⬇ GENERA PDF';
+}
+
+// Aggiorna totale quando cambia valuta
+const pvValutaEl = document.getElementById('pv-valuta');
+if (pvValutaEl) pvValutaEl.addEventListener('change', () => pvRenderVoci());
+
+// ══════════════════════════════════════════════════════════
+// STORICO PREVENTIVI
+// ══════════════════════════════════════════════════════════
+
+const PREV_API = '/ardy-preventivo.php';
+
+async function caricaStoricoPrev(sessionId) {
+  const section = document.getElementById('storicoPrevSection');
+  const list    = document.getElementById('storicoPrevList');
+  if (!sessionId) { section.style.display = 'none'; return; }
+
+  section.style.display = 'block';
+  list.innerHTML = '<div class="storico-empty">CARICAMENTO...</div>';
+
+  try {
+    const res  = await fetch(PREV_API + '?mode=lista&session_id=' + encodeURIComponent(sessionId));
+    const data = await res.json();
+    renderStoricoPrev(data);
+  } catch(e) {
+    list.innerHTML = '<div class="storico-empty">Errore caricamento storico.</div>';
+  }
+}
+
+function renderStoricoPrev(preventivi) {
+  const list = document.getElementById('storicoPrevList');
+  if (!preventivi.length) {
+    list.innerHTML = '<div class="storico-empty">NESSUN PREVENTIVO — clicca + NUOVO per crearne uno</div>';
+    return;
+  }
+
+  const statiLabel = { bozza:'BOZZA', inviato:'INVIATO', accettato:'ACCETTATO', rifiutato:'RIFIUTATO' };
+  list.innerHTML = preventivi.map(p => {
+    const totale = p.grand_total ? '€ ' + parseFloat(p.grand_total).toLocaleString('it-IT', {minimumFractionDigits:2}) : '—';
+    const oggetto = p.oggetto || p.tipo || '—';
+    return `<div class="storico-prev-item">
+      <div class="storico-prev-info">
+        <div class="storico-prev-numero">${p.numero}</div>
+        <div class="storico-prev-oggetto">${oggetto}</div>
+        <div class="storico-prev-meta">${p.data_emissione || ''}</div>
+      </div>
+      <div class="storico-prev-right">
+        <div class="storico-prev-totale">${totale}</div>
+        <div class="storico-prev-actions">
+          <select class="storico-stato-sel ${p.stato}" onchange="aggiornaStatoPrev(${p.id}, this.value, this)">
+            ${Object.entries(statiLabel).map(([k,v]) =>
+              `<option value="${k}" ${k===p.stato?'selected':''}>${v}</option>`
+            ).join('')}
+          </select>
+          ${p.file_pdf ? `<button class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="scaricaPrevDB('${p.file_pdf}')">⬇ PDF</button>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function aggiornaStatoPrev(id, stato, sel) {
+  try {
+    const res  = await fetch(PREV_API + '?mode=stato&id=' + id + '&stato=' + stato);
+    const data = await res.json();
+    if (data.success) {
+      sel.className = 'storico-stato-sel ' + stato;
+      showToast('Stato aggiornato: ' + stato, 'success');
+    }
+  } catch(e) {
+    showToast('Errore aggiornamento stato', 'error');
+  }
+}
+
+function scaricaPrevDB(file) {
+  window.open(PREV_API + '?mode=download&file=' + encodeURIComponent(file), '_blank');
+}
+
+// ══════════════════════════════════════════════════════════
+// LIBRERIA FASI LAVORATIVE
+// ══════════════════════════════════════════════════════════
+
+const LIB_KEY = 'ardy_libreria_fasi';
+const LIB_CATS = ['Tutte','Preparazione','Verniciatura','Finitura','Falegnameria','Restauro','Logistica','Altro'];
+
+// Fasi predefinite di partenza
+const FASI_DEFAULT = [
+  { id: 'def1', nome: 'Carteggiatura manuale grana fine',        cat: 'Preparazione', desc: 'Carteggiatura superficiale a mano con carta abrasiva a grana fine (180-240) per aprire il poro del legno e garantire l\'ancoraggio dei successivi strati di finitura.' },
+  { id: 'def2', nome: 'Sverniciatura completa',                  cat: 'Preparazione', desc: 'Rimozione totale a mano dei vecchi strati di finitura mediante applicazione di sverniciatore specifico e successiva raschiatura meccanica, per preservare le fibre e l\'integrità del legno antico senza stress termici o chimici aggressivi.' },
+  { id: 'def3', nome: 'Stuccatura e chiusura imperfezioni',      cat: 'Preparazione', desc: 'Chiusura di eventuali fori, crepe o piccole imperfezioni del legno con stucco specifico a base acqua o vinilico, carteggiatura a secco dopo asciugatura completa.' },
+  { id: 'def4', nome: 'Applicazione primer ancorante',           cat: 'Verniciatura', desc: 'Applicazione di fondo ancorante specifico per legno a pennello o rullo a pelo corto, per garantire l\'adesione degli strati di finitura successivi e uniformare l\'assorbimento del supporto.' },
+  { id: 'def5', nome: 'Laccatura a Chalky Paint',                cat: 'Verniciatura', desc: 'Applicazione di Chalky Paint (vernice gessosa) in 2-3 mani con carteggiatura intermedia a grana finissima. Garantisce finitura opaca e materica tipica del gusto contemporaneo.' },
+  { id: 'def6', nome: 'Verniciatura con smalto a pennello',      cat: 'Verniciatura', desc: 'Stesura di smalto sintetico o all\'acqua con pennello di qualità o rullo a pelo corto. Minimo 2 mani con carteggiatura intermedia per finitura liscia e uniforme.' },
+  { id: 'def7', nome: 'Finitura con protettivo vetrificante',    cat: 'Finitura',     desc: 'Applicazione di protettivo vetrificante opaco o satinato per sigillare e proteggere la finitura, rendendola idrorepellente e resistente ai graffi e alle macchie.' },
+  { id: 'def8', nome: 'Patinatura con cera vergine d\'api',      cat: 'Finitura',     desc: 'Applicazione di cera vergine d\'api pregiata a tampone su tutta la superficie. Lavorazione circolare seguita da tiratura per ottenere effetto satinato, morbido e duraturo con proprietà protettive naturali.' },
+  { id: 'def9', nome: 'Lucidatura a gommalacca e tampone',       cat: 'Finitura',     desc: 'Applicazione di gommalacca decerata di alta qualità con tecnica a tampone. Lavorazione manuale in più passaggi per ottenere finitura brillante, profonda e tradizionale tipica del restauro conservativo.' },
+  { id: 'def10', nome: 'Pulizia e lucidatura ottoni originali',  cat: 'Restauro',     desc: 'Smontaggio, pulizia profonda e lucidatura a specchio di tutta la ferramenta originale (pomelli, cerniere, chiavi). Rimontaggio con verifica allineamento ante e cassetti.' },
+  { id: 'def11', nome: 'Consolidamento strutturale',             cat: 'Falegnameria', desc: 'Interventi di falegnameria fine per il ripristino strutturale: serraggio giunzioni, incollaggio fessure, ricostruzione parti degradate con legno della stessa essenza dell\'originale.' },
+  { id: 'def12', nome: 'Smontaggio, imballaggio e trasporto',    cat: 'Logistica',    desc: 'Smontaggio accurato del manufatto in loco, imballaggio protettivo professionale con materiali imbottiti e trasporto presso il laboratorio. Incluso rimontaggio e messa in bolla a fine lavorazione.' },
+];
+
+function libLoad() {
+  const raw = localStorage.getItem(LIB_KEY);
+  if (!raw) {
+    localStorage.setItem(LIB_KEY, JSON.stringify(FASI_DEFAULT));
+    return [...FASI_DEFAULT];
+  }
+  return JSON.parse(raw);
+}
+
+function libSave(fasi) {
+  localStorage.setItem(LIB_KEY, JSON.stringify(fasi));
+}
+
+let libCatAttiva = 'Tutte';
+
+// ── PICKER (dal form preventivo) ──────────────────────────────────────────────
+
+function openLibreria() {
+  libCatAttiva = 'Tutte';
+  document.getElementById('lib-picker-search').value = '';
+  renderLibCats('lib-picker-cats', false);
+  renderLibPicker();
+  document.getElementById('libPickerOverlay').classList.add('open');
+}
+
+function closeLibreria() {
+  document.getElementById('libPickerOverlay').classList.remove('open');
+}
+
+function renderLibCats(containerId, conGestione) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = LIB_CATS.map(c =>
+    `<button class="filter-chip ${c === libCatAttiva ? 'active' : ''}"
+      onclick="libCatAttiva='${c}';renderLibCats('${containerId}',${conGestione});${conGestione ? 'renderLibGestione()' : 'renderLibPicker()'}">
+      ${c}
+    </button>`
+  ).join('');
+}
+
+function renderLibPicker() {
+  const fasi    = libLoad();
+  const search  = document.getElementById('lib-picker-search').value.toLowerCase();
+  const body    = document.getElementById('lib-picker-body');
+  const filtered = fasi.filter(f => {
+    const matchCat  = libCatAttiva === 'Tutte' || f.cat === libCatAttiva;
+    const matchSearch = !search || f.nome.toLowerCase().includes(search) || f.desc.toLowerCase().includes(search);
+    return matchCat && matchSearch;
+  });
+  if (!filtered.length) {
+    body.innerHTML = '<div class="lib-empty">NESSUNA FASE TROVATA</div>';
+    return;
+  }
+  body.innerHTML = filtered.map(f => `
+    <div class="lib-item">
+      <div class="lib-item-info">
+        <div class="lib-item-nome">${f.nome}</div>
+        <div class="lib-item-desc">${f.desc}</div>
+      </div>
+      <div class="lib-item-actions">
+        <span class="lib-item-cat">${f.cat}</span>
+        <button class="lib-btn-use" onclick="usaFaseDaLibreria('${f.id}')">USA</button>
+      </div>
+    </div>`).join('');
+}
+
+function usaFaseDaLibreria(id) {
+  const fasi = libLoad();
+  const f    = fasi.find(x => x.id === id);
+  if (!f) return;
+  // Aggiunge una voce nel preventivo con la descrizione della fase
+  const nuovaVoce = { id: Date.now(), desc: f.nome + (f.desc ? ' — ' + f.desc : ''), qty: 1, um: '', prezzo: 0, sconto: 0 };
+  pvVoci.push(nuovaVoce);
+  pvRenderVoci();
+  closeLibreria();
+  showToast('✓ Fase aggiunta: ' + f.nome, 'success');
+}
+
+// ── GESTIONE COMPLETA ─────────────────────────────────────────────────────────
+
+function openGestioneLibreria() {
+  libCatAttiva = 'Tutte';
+  document.getElementById('lib-gest-search').value = '';
+  toggleLibForm(false);
+  renderLibCats('lib-gest-cats', true);
+  renderLibGestione();
+  document.getElementById('libGestioneOverlay').classList.add('open');
+}
+
+function closeGestioneLibreria() {
+  document.getElementById('libGestioneOverlay').classList.remove('open');
+}
+
+function toggleLibForm(forza) {
+  const form = document.getElementById('libForm');
+  const apri = (forza !== undefined) ? forza : !form.classList.contains('open');
+  if (apri) {
+    form.classList.add('open');
+    document.getElementById('libFormTitle').textContent = 'Nuova fase';
+    document.getElementById('lib-edit-id').value = '';
+    document.getElementById('lib-f-nome').value  = '';
+    document.getElementById('lib-f-desc').value  = '';
+    document.getElementById('lib-f-cat').value   = 'Preparazione';
+    document.getElementById('lib-f-nome').focus();
+  } else {
+    form.classList.remove('open');
+  }
+}
+
+function editFase(id) {
+  const fasi = libLoad();
+  const f    = fasi.find(x => x.id === id);
+  if (!f) return;
+  const form = document.getElementById('libForm');
+  form.classList.add('open');
+  document.getElementById('libFormTitle').textContent = 'Modifica fase';
+  document.getElementById('lib-edit-id').value = f.id;
+  document.getElementById('lib-f-nome').value  = f.nome;
+  document.getElementById('lib-f-desc').value  = f.desc;
+  document.getElementById('lib-f-cat').value   = f.cat;
+  document.getElementById('lib-f-nome').focus();
+  form.scrollIntoView({ behavior: 'smooth' });
+}
+
+function eliminaFase(id) {
+  if (!confirm('Eliminare questa fase dalla libreria?')) return;
+  const fasi = libLoad().filter(f => f.id !== id);
+  libSave(fasi);
+  renderLibGestione();
+  showToast('Fase eliminata', '');
+}
+
+function salvaFaseLibreria() {
+  const nome = document.getElementById('lib-f-nome').value.trim();
+  const desc = document.getElementById('lib-f-desc').value.trim();
+  const cat  = document.getElementById('lib-f-cat').value;
+  const editId = document.getElementById('lib-edit-id').value;
+
+  if (!nome) { showToast('⚠ Inserisci il nome della fase', 'error'); return; }
+
+  const fasi = libLoad();
+  if (editId) {
+    const idx = fasi.findIndex(f => f.id === editId);
+    if (idx >= 0) { fasi[idx].nome = nome; fasi[idx].desc = desc; fasi[idx].cat = cat; }
+  } else {
+    fasi.push({ id: 'custom_' + Date.now(), nome, cat, desc });
+  }
+  libSave(fasi);
+  toggleLibForm(false);
+  renderLibGestione();
+  showToast('✓ Fase salvata', 'success');
+}
+
+function renderLibGestione() {
+  const fasi   = libLoad();
+  const search = document.getElementById('lib-gest-search').value.toLowerCase();
+  const body   = document.getElementById('lib-gest-body');
+  renderLibCats('lib-gest-cats', true);
+  const filtered = fasi.filter(f => {
+    const matchCat    = libCatAttiva === 'Tutte' || f.cat === libCatAttiva;
+    const matchSearch = !search || f.nome.toLowerCase().includes(search) || f.desc.toLowerCase().includes(search);
+    return matchCat && matchSearch;
+  });
+  if (!filtered.length) {
+    body.innerHTML = '<div class="lib-empty">NESSUNA FASE TROVATA</div>';
+    return;
+  }
+  body.innerHTML = filtered.map(f => `
+    <div class="lib-item">
+      <div class="lib-item-info">
+        <div class="lib-item-nome">${f.nome}</div>
+        <div class="lib-item-desc">${f.desc || '—'}</div>
+      </div>
+      <div class="lib-item-actions">
+        <span class="lib-item-cat">${f.cat}</span>
+        <button class="lib-btn-edit" onclick="editFase('${f.id}')">✎ Modifica</button>
+        <button class="lib-btn-del" onclick="eliminaFase('${f.id}')" title="Elimina">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+// ─── TOAST ────────────────────────────────────────────────
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+<!-- MODAL NUOVO CLIENTE -->
+<div class="modal-overlay" id="nuovoClienteOverlay" onclick="if(event.target===this)closeNuovoCliente()">
+  <div class="modal-lg" onclick="event.stopPropagation()">
+    <div class="modal-lg-head">
+      <h3>NUOVO CLIENTE</h3>
+      <button class="modal-lg-close" onclick="closeNuovoCliente()">✕</button>
+    </div>
+    <div class="modal-lg-body">
+      <div class="dark-form-grid">
+        <div class="dark-section-label">Dati anagrafici</div>
+        <div class="dark-field">
+          <label>Nome *</label>
+          <input type="text" id="nc-nome" placeholder="Mario">
+        </div>
+        <div class="dark-field">
+          <label>Cognome *</label>
+          <input type="text" id="nc-cognome" placeholder="Rossi">
+        </div>
+        <div class="dark-field">
+          <label>Telefono</label>
+          <input type="tel" id="nc-telefono" placeholder="+39 340 000 0000">
+        </div>
+        <div class="dark-field">
+          <label>Email</label>
+          <input type="email" id="nc-email" placeholder="mario@email.it">
+        </div>
+        <div class="dark-field full">
+          <label>Indirizzo</label>
+          <input type="text" id="nc-indirizzo" placeholder="Via Roma 1, Città">
+        </div>
+
+        <hr class="dark-sep">
+        <div class="dark-section-label">Richiesta</div>
+
+        <div class="dark-field">
+          <label>Servizio richiesto</label>
+          <select id="nc-servizio">
+            <option value="">— seleziona —</option>
+            <option>Restauro mobile</option>
+            <option>Verniciatura</option>
+            <option>Tappezzeria</option>
+            <option>Consulenza</option>
+            <option>Altro</option>
+          </select>
+        </div>
+        <div class="dark-field">
+          <label>Zona</label>
+          <input type="text" id="nc-zona" placeholder="es. Milano Nord">
+        </div>
+        <div class="dark-field">
+          <label>Mobile / Pezzo</label>
+          <input type="text" id="nc-mobile" placeholder="es. Credenza anni 60">
+        </div>
+        <div class="dark-field">
+          <label>Budget indicativo</label>
+          <input type="text" id="nc-budget" placeholder="es. 500-800€">
+        </div>
+        <div class="dark-field">
+          <label>Stato iniziale</label>
+          <select id="nc-stato">
+            <option value="LEAD">LEAD</option>
+            <option value="SOPRALLUOGO">SOPRALLUOGO</option>
+            <option value="PREVENTIVO">PREVENTIVO</option>
+          </select>
+        </div>
+        <div class="dark-field">
+          <label>Data followup</label>
+          <input type="date" id="nc-followup">
+        </div>
+        <div class="dark-field full">
+          <label>Note</label>
+          <textarea id="nc-note" placeholder="Note iniziali sul cliente o sulla richiesta..."></textarea>
+        </div>
+      </div>
+      <div id="nc-result" style="display:none;margin-top:12px;padding:10px 14px;border-radius:4px;font-family:'DM Mono',monospace;font-size:11px;"></div>
+    </div>
+    <div class="modal-lg-actions">
+      <button class="btn-cancel" onclick="closeNuovoCliente()">ANNULLA</button>
+      <button class="btn-save" id="btn-nc-salva" onclick="salvaNuovoCliente()">✦ SALVA CLIENTE</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PREVENTIVO PDF -->
+<div class="modal-overlay" id="preventivoOverlay" onclick="if(event.target===this)closePreventivoPanel()">
+  <div class="modal-lg" style="width:700px" onclick="event.stopPropagation()">
+    <div class="modal-lg-head">
+      <h3>PREVENTIVO PDF</h3>
+      <button class="modal-lg-close" onclick="closePreventivoPanel()">✕</button>
+    </div>
+    <div class="modal-lg-body">
+      <div class="dark-form-grid">
+        <div class="dark-section-label">Intestazione</div>
+        <div class="dark-field">
+          <label>Tipo preventivo</label>
+          <select id="pv-tipo">
+            <option>Preventivo Servizi</option>
+            <option>Preventivo Consulenza</option>
+            <option>Preventivo Manutenzione</option>
+            <option>Preventivo Formazione</option>
+            <option>Preventivo Sviluppo</option>
+          </select>
+        </div>
+        <div class="dark-field">
+          <label>Numero preventivo</label>
+          <input type="text" id="pv-numero">
+        </div>
+        <div class="dark-field">
+          <label>Data emissione</label>
+          <input type="date" id="pv-data-emissione">
+        </div>
+        <div class="dark-field">
+          <label>Scadenza offerta</label>
+          <input type="date" id="pv-data-scadenza">
+        </div>
+        <div class="dark-field full">
+          <label>Oggetto</label>
+          <input type="text" id="pv-oggetto" placeholder="Breve descrizione dell'offerta...">
+        </div>
+
+        <hr class="dark-sep">
+        <div class="dark-section-label">Azienda emittente</div>
+
+        <div class="dark-field full" style="grid-column:1/-1;">
+          <div style="background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--accent2);border-radius:4px;padding:14px 16px;font-family:'DM Mono',monospace;font-size:11px;line-height:1.9;color:var(--text-mid);">
+            <span style="display:block;color:var(--accent);font-size:12px;font-weight:500;margin-bottom:4px;">Ardy di Michela Panella</span>
+            Via Kafka 14 — 00143 Roma (RM), IT<br>
+            C.F. PNLMHL99A48H501E<br>
+            P.IVA 17633931005<br>
+            <span style="color:var(--text-dim);font-size:10px;letter-spacing:1px;margin-top:4px;display:block;">REGIME FORFETTARIO — operazione esente IVA art. 1 c. 54-89 L. 190/2014</span>
+          </div>
+          <!-- campi hidden per il PHP -->
+          <input type="hidden" id="pv-az-nome"      value="Ardy di Michela Panella">
+          <input type="hidden" id="pv-az-piva"      value="17633931005">
+          <input type="hidden" id="pv-az-cf"        value="PNLMHL99A48H501E">
+          <input type="hidden" id="pv-az-indirizzo" value="Via Kafka 14, 00143 Roma (RM)">
+          <input type="hidden" id="pv-az-email"     value="">
+          <input type="hidden" id="pv-az-tel"       value="">
+        </div>
+
+        <hr class="dark-sep">
+        <div class="dark-section-label">Cliente (pre-compilato)</div>
+
+        <div class="dark-field">
+          <label>Nome cliente</label>
+          <input type="text" id="pv-cl-nome">
+        </div>
+        <div class="dark-field">
+          <label>Azienda cliente</label>
+          <input type="text" id="pv-cl-azienda">
+        </div>
+        <div class="dark-field">
+          <label>P.IVA cliente</label>
+          <input type="text" id="pv-cl-piva">
+        </div>
+        <div class="dark-field">
+          <label>Email cliente</label>
+          <input type="email" id="pv-cl-email">
+        </div>
+        <div class="dark-field full">
+          <label>Indirizzo cliente</label>
+          <input type="text" id="pv-cl-indirizzo">
+        </div>
+
+        <hr class="dark-sep">
+        <div class="dark-section-label">Opzioni</div>
+
+        <!-- IVA fissa 0% regime forfettario — hidden -->
+        <input type="hidden" id="pv-iva" value="0">
+
+        <div class="dark-field">
+          <label>Valuta</label>
+          <select id="pv-valuta">
+            <option value="EUR">EUR €</option>
+            <option value="USD">USD $</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Voci -->
+      <div style="margin-top:20px;">
+        <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);">Voci / Servizi</div>
+        <table class="prev-voci-table">
+          <thead>
+            <tr>
+              <th style="width:36%">Descrizione</th>
+              <th style="width:9%">Qtà</th>
+              <th style="width:8%">UM</th>
+              <th style="width:15%">Prezzo unit.</th>
+              <th style="width:8%">Sc.%</th>
+              <th style="width:14%">Importo</th>
+              <th style="width:10%"></th>
+            </tr>
+          </thead>
+          <tbody id="pv-voci-tbody"></tbody>
+        </table>
+        <button class="btn-add-voce-dark" onclick="pvAddVoce()">+ AGGIUNGI VOCE</button>
+        <button class="btn-add-voce-dark" onclick="openLibreria()" style="margin-top:6px;border-color:var(--accent2);color:var(--accent);">📚 SCEGLI DA LIBRERIA</button>
+      </div>
+
+      <div class="prev-totale-row">
+        <div class="prev-totale-box">
+          <div class="lbl">Totale (esente IVA)</div>
+          <div class="val" id="pv-totale-live">€ 0,00</div>
+        </div>
+      </div>
+
+      <div class="dark-form-grid">
+        <div class="dark-field full">
+          <label>Note</label>
+          <textarea id="pv-note" placeholder="Note per il cliente..."></textarea>
+        </div>
+        <div class="dark-field full">
+          <label>Condizioni di pagamento</label>
+          <textarea id="pv-condizioni" placeholder="Es: 50% all'accettazione, saldo a consegna."></textarea>
+        </div>
+        <div class="dark-field full" style="flex-direction:row;align-items:center;gap:10px;">
+          <input type="checkbox" id="pv-storia" checked style="width:auto;accent-color:var(--accent);">
+          <label for="pv-storia" style="text-transform:none;letter-spacing:0;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);">Includi pagina "Un po' di storia"</label>
+        </div>
+        <div class="dark-field full" style="flex-direction:row;align-items:center;gap:10px;">
+          <input type="checkbox" id="pv-firma" checked style="width:auto;accent-color:var(--accent);">
+          <label for="pv-firma" style="text-transform:none;letter-spacing:0;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);">Includi spazio firma nel PDF</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-lg-actions">
+      <button class="btn-cancel" onclick="closePreventivoPanel()">ANNULLA</button>
+      <button class="btn-cancel" onclick="pvAnteprima()" style="color:var(--accent);border-color:var(--accent2);">👁 ANTEPRIMA</button>
+      <button class="btn-save" id="btn-pv-genera" onclick="pvGeneraPDF()">⬇ GENERA PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL LIBRERIA — PICKER (dal form preventivo) -->
+<div class="lib-overlay" id="libPickerOverlay" onclick="if(event.target===this)closeLibreria()">
+  <div class="lib-panel" onclick="event.stopPropagation()">
+    <div class="lib-head">
+      <h3>LIBRERIA FASI</h3>
+      <div class="lib-head-actions">
+        <input type="text" class="lib-search" id="lib-picker-search" placeholder="Cerca fase..." oninput="renderLibPicker()">
+        <button class="btn-cancel" onclick="closeLibreria()">✕</button>
+      </div>
+    </div>
+    <div class="lib-cat-filter" id="lib-picker-cats"></div>
+    <div class="lib-body" id="lib-picker-body"></div>
+  </div>
+</div>
+
+<!-- MODAL LIBRERIA — GESTIONE COMPLETA -->
+<div class="lib-overlay" id="libGestioneOverlay" onclick="if(event.target===this)closeGestioneLibreria()">
+  <div class="lib-panel" style="max-width:860px" onclick="event.stopPropagation()">
+    <div class="lib-head">
+      <h3>GESTIONE LIBRERIA FASI</h3>
+      <div class="lib-head-actions">
+        <input type="text" class="lib-search" id="lib-gest-search" placeholder="Cerca..." oninput="renderLibGestione()">
+        <button class="btn-save" onclick="toggleLibForm()" id="btn-lib-nuova">+ NUOVA FASE</button>
+        <button class="btn-cancel" onclick="closeGestioneLibreria()">✕</button>
+      </div>
+    </div>
+
+    <!-- Form aggiungi/modifica -->
+    <div class="lib-form" id="libForm">
+      <div class="lib-form-title" id="libFormTitle">Nuova fase</div>
+      <input type="hidden" id="lib-edit-id">
+      <div class="lib-form-grid">
+        <div class="lib-form-field">
+          <label>Nome fase *</label>
+          <input type="text" id="lib-f-nome" placeholder="Es. Carteggiatura manuale grana fine">
+        </div>
+        <div class="lib-form-field">
+          <label>Categoria</label>
+          <select id="lib-f-cat">
+            <option value="Preparazione">Preparazione</option>
+            <option value="Verniciatura">Verniciatura</option>
+            <option value="Finitura">Finitura</option>
+            <option value="Falegnameria">Falegnameria</option>
+            <option value="Restauro">Restauro</option>
+            <option value="Logistica">Logistica</option>
+            <option value="Altro">Altro</option>
+          </select>
+        </div>
+        <div class="lib-form-field full">
+          <label>Descrizione tecnica</label>
+          <textarea id="lib-f-desc" placeholder="Descrizione dettagliata della fase lavorativa..."></textarea>
+        </div>
+      </div>
+      <div class="lib-form-actions">
+        <button class="btn-cancel" onclick="toggleLibForm(false)">Annulla</button>
+        <button class="btn-save" onclick="salvaFaseLibreria()">✦ SALVA FASE</button>
+      </div>
+    </div>
+
+    <div class="lib-cat-filter" id="lib-gest-cats"></div>
+    <div class="lib-body" id="lib-gest-body"></div>
+  </div>
+</div>
+
+</body>
+</html>
