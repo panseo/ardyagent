@@ -85,7 +85,7 @@ La dashboard li legge tramite API (session_id come chiave).
 
 ---
 
-## 🧩 Architettura sistema
+## 🧩 Architettura sistema completa
 
 ```
 [Chatbot pubblico ardy-lab.it]
@@ -98,7 +98,47 @@ La dashboard li legge tramite API (session_id come chiave).
         ↓ ardy-update-lead.php (aggiorna stato/note)
         ↓ ardy-preventivo.php (genera PDF con mPDF)
         ↓ ardy-gcal.php (Google Calendar)
+
+[Ardy Outreach — in costruzione]
+        ↓ ardy-outreach.html (dashboard newsletter B2B)
+        ↓ ardy-outreach-api.php
+        ↓ n8n (automazione flussi — credenziali attive)
+        ↓ Canali social (in integrazione)
 ```
+
+---
+
+## 📣 Canali social e integrazioni (stato attuale)
+
+| Canale | Stato | Note |
+|---|---|---|
+| **Google Business** | ⏳ In attesa | Autorizzazioni Google Console richieste — in attesa approvazione |
+| **n8n** | ✅ Credenziali attive | Automazione flussi pronta da collegare |
+| **Instagram** | ❌ Problemi Meta | Casini da risolvere lato Meta — problema non ancora identificato |
+| **Facebook** | ❌ Problemi Meta | Stesso problema Instagram |
+| **WhatsApp Business** | 🔧 Da connettere | Da integrare nella dashboard e nei flussi n8n |
+| **LinkedIn** | 🔧 Da connettere | Da integrare per outreach B2B |
+
+---
+
+## 📤 Ardy Outreach (secondo agente — in costruzione)
+
+Dashboard separata per la gestione newsletter e outreach verso aziende potenzialmente interessate ai servizi Ardy Lab.
+
+**File principali:**
+- `ardy-outreach.html` — dashboard outreach
+- `ardy-outreach-api.php` — API backend outreach
+- `ardy-email-finder.php` — ricerca email aziende target
+- `ardy-unsubscribe.php` — gestione unsubscribe
+
+**Flusso previsto:**
+1. Identificazione aziende target (interior design, arredamento, immobiliare)
+2. Ricerca contatti email
+3. Invio newsletter personalizzata tramite n8n
+4. Tracciamento aperture e risposte
+5. Gestione unsubscribe automatica
+
+**Stato:** In costruzione — in attesa di risolvere problemi Meta e connessione canali social
 
 ---
 
@@ -225,12 +265,31 @@ Dopo il push, caricare manualmente i file modificati via **cPanel File Manager**
 
 ## 🚧 TODO / Sviluppi futuri
 
+### Dashboard Michela
 - [ ] Layout PDF da rifinire graficamente
 - [ ] Pagina "I nostri lavori" con foto portfolio nel PDF
-- [ ] Fix chatbot pubblico (ardy-proxy.php — errore API)
+- [ ] **Proforma fatture** — generatore proforma da copiare su QuikFisco
 - [ ] Invio email automatico preventivo al cliente
-- [ ] Migrazione server (pianificata)
+- [ ] Fix chatbot pubblico (`ardy-proxy.php` — errore API)
 - [ ] Render AI mobile per preventivi (fase B — Stable Diffusion)
+
+### Integrazioni social e canali
+- [ ] **Google Business** — completare autorizzazioni Google Console
+- [ ] **WhatsApp Business** — connettere alla dashboard e a n8n
+- [ ] **Instagram** — risolvere problemi Meta
+- [ ] **Facebook** — risolvere problemi Meta (stesso issue Instagram)
+- [ ] **LinkedIn** — integrare per outreach B2B
+- [ ] Collegare n8n ai canali social una volta risolti i problemi Meta
+
+### Ardy Outreach
+- [ ] Completare dashboard `ardy-outreach.html`
+- [ ] Collegare flussi n8n per invio newsletter automatiche
+- [ ] Integrare tracciamento aperture email
+- [ ] Test end-to-end campagna outreach B2B
+
+### Infrastruttura
+- [ ] Migrazione server (pianificata — da definire tempistiche)
+- [ ] Automatizzare deploy da GitHub al server (ora manuale via cPanel)
 
 ---
 
