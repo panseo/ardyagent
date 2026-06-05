@@ -21,8 +21,9 @@ if (empty($sessionId)) {
     exit();
 }
 
-// IP del visitatore (passato dal proxy, o rilevato qui)
-$ip = $input['ip_address'] ?? ($_SERVER['REMOTE_ADDR'] ?? null);
+// IP del visitatore — sempre rilevato dal server, mai accettato dal client
+// (impedisce lo spoofing dell'indirizzo IP nei dati salvati)
+$ip = $_SERVER['REMOTE_ADDR'] ?? null;
 
 try {
     $db = ardyDB();
@@ -45,6 +46,10 @@ try {
     // Default stato
     if (empty($values['stato'])) {
         $values['stato'] = 'LEAD';
+    }
+    // Scarta email palesemente non valide (evita dati sporchi nel CRM)
+    if (!empty($values['email']) && !filter_var($values['email'], FILTER_VALIDATE_EMAIL)) {
+        $values['email'] = null;
     }
 
     // INSERT ... ON DUPLICATE KEY UPDATE
@@ -72,5 +77,5 @@ try {
 } catch (PDOException $e) {
     error_log('ARDY SAVE LEAD ERROR: ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    echo json_encode(['success' => false, 'error' => 'Errore interno']);
 }

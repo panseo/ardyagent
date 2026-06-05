@@ -43,6 +43,7 @@ try {
     echo json_encode($mapped);
 
 } catch (PDOException $e) {
+    error_log('ARDY CRM API ERROR: ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['error' => $e->getMessage()]);
+    echo json_encode(['error' => 'Errore interno']);
 }
