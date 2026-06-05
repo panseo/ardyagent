@@ -335,8 +335,18 @@ while ($iteration < $maxIterations) {
     $iteration++;
     $data = callAnthropic($messages, $system, $tools, ARDY_API_KEY);
 
+    // Ritenta in caso di intoppo momentaneo dell'API (sovraccarico/timeout):
+    // così il cliente non vede l'errore per un singhiozzo passeggero.
+    $retry = 0;
+    while (isset($data['error']) && $retry < 2) {
+        $retry++;
+        error_log('ARDY API retry ' . $retry . ': ' . json_encode($data));
+        usleep(800000); // 0,8 secondi
+        $data = callAnthropic($messages, $system, $tools, ARDY_API_KEY);
+    }
+
     if (isset($data['error'])) {
-        error_log('ARDY API ERROR: ' . json_encode($data));
+        error_log('ARDY API ERROR (dopo ' . $retry . ' ritentativi): ' . json_encode($data));
         $reply = 'Errore nella risposta AI. Riprova.';
         break;
     }
@@ -378,25 +388,25 @@ while ($iteration < $maxIterations) {
                 }
 
             } elseif ($toolName === 'fissa_appuntamento_calendario') {
-                // Estrai data e ora da ISO 8601
-                $startDt  = new DateTime($toolInput['start']);
-                $dateStr  = $startDt->format('Y-m-d');
-                $timeStr  = $startDt->format('H:i');
-                // Usa summary e description direttamente come li fornisce Claude
-                $summary  = $toolInput['summary']     ?? 'Sopralluogo Ardy Lab';
-                $desc     = $toolInput['description'] ?? '';
-                $r = gcal_create_event(
-                    $dateStr,
-                    $timeStr,
-                    $summary,
-                    '',
-                    '',
-                    '',
-                    $desc
-                );
-                $toolResult = $r
-                    ? 'Appuntamento creato con successo nel calendario di Michela.'
-                    : 'Errore nella creazione dell\'appuntamento. Riprova.';
+                try {
+                    if (empty($toolInput['start'])) {
+                        $toolResult = 'Errore: data/ora mancante. Chiedi al cliente di confermare giorno e ora.';
+                    } else {
+                        $startDt  = new DateTime($toolInput['start']);
+                        $dateStr  = $startDt->format('Y-m-d');
+                        $timeStr  = $startDt->format('H:i');
+                        // Usa summary e description direttamente come li fornisce Claude
+                        $summary  = $toolInput['summary']     ?? 'Sopralluogo Ardy Lab';
+                        $desc     = $toolInput['description'] ?? '';
+                        $r = gcal_create_event($dateStr, $timeStr, $summary, '', '', '', $desc);
+                        $toolResult = $r
+                            ? 'Appuntamento creato con successo nel calendario di Michela.'
+                            : 'Errore nella creazione dell\'appuntamento. Riprova.';
+                    }
+                } catch (Exception $e) {
+                    error_log('ARDY BOOKING ERROR: ' . $e->getMessage() . ' input=' . json_encode($toolInput));
+                    $toolResult = 'Errore tecnico nella prenotazione. Chiedi al cliente di riprovare.';
+                }
 
             } elseif ($toolName === 'salva_lead_crm') {
                 $ch = curl_init('https://ardyagent.ardy-lab.it/ardy-save-lead.php');
@@ -432,6 +442,7 @@ while ($iteration < $maxIterations) {
 }
 
 if (empty($reply)) {
+    error_log('ARDY EMPTY REPLY: iter=' . $iteration . ' stop=' . ($data['stop_reason'] ?? '?') . ' data=' . json_encode($data ?? null));
     $reply = 'Errore nella risposta AI. Riprova.';
 }
 
