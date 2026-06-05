@@ -40,8 +40,11 @@ ardyagent.ardy-lab.it/
 ├── ardy-email-finder.php      # Ricerca email lead
 ├── ardy-outreach.html         # Tool outreach
 ├── ardy-outreach-api.php      # API outreach
-├── ardy-pubblica-lavorazione.php  # Pubblica aggiornamenti lavorazioni + webhook n8n
+├── ardy-pubblica-lavorazione.php  # Pubblica fase: pagina WP + email cliente (NO social auto)
+├── ardy-pubblica-social.php   # Pubblica sui social (passo manuale, separato) → webhook n8n
 ├── ardy-get-fasi.php          # API fasi lavorative
+├── ardy-guida-michela.html    # Guida d'uso dashboard (HTML stampabile) — linkata dalla dashboard
+├── GUIDA-MICHELA.md           # Guida d'uso dashboard (versione testo)
 ├── ardy-unsubscribe.php       # Gestione unsubscribe email
 ├── ardy-rate-limit/           # ⚠️ NON in repo — rate limiting
 ├── ardy-system.txt            # Prompt sistema agente AI (chatbot pubblico)
@@ -109,6 +112,11 @@ file_pdf, stato, data_emissione, data_scadenza, created_at, updated_at
         ↓ ardy-pubblica-lavorazione.php
         ↓ WordPress (crea/aggiorna post)
         ↓ Email cliente (PHPMailer + Brevo SMTP)
+        ↓ (i social NON partono in automatico)
+
+[Pubblicazione Social — manuale dalla dashboard]
+        ↓ Michela rivede/modifica il testo → pubblica ora / salva per dopo / salta
+        ↓ ardy-pubblica-social.php
         ↓ Webhook n8n → Facebook + Instagram
 
 [n8n — Automazione Social]
@@ -259,13 +267,16 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
 
 ### Funzionalità
 - Lista clienti/lead con filtri per stato e ricerca
-- Dettaglio cliente con note modificabili
+- Dettaglio cliente con **tutti i campi modificabili** (nome, cognome, telefono, email, servizio, zona, mobile, budget, indirizzo, note, follow-up)
 - Cambio stato cliente (Lead → Sopralluogo → Preventivo → Acconto → Standby → Perso)
 - Azioni rapide: contenuto AI, post social, **proforma**, email, WhatsApp, note interne
 - **Generatore preventivi PDF** con form completo
 - **Generatore proforma** con 3 scenari
 - **Storico preventivi** per cliente (dal DB)
 - **Libreria fasi lavorative** (localStorage) con 12 fasi predefinite
+- **Pubblicazione fasi** con foto (scatta dal telefono o galleria)
+- **Pubblicazione social manuale**: dopo la fase, pannello per rivedere/modificare il post e scegliere *pubblica ora / salva per dopo / non pubblicare*; coda "post in attesa" (localStorage)
+- Pulsante **❓ Guida** che apre la guida d'uso
 - Aggiunta manuale clienti
 
 ### Stati cliente
@@ -395,6 +406,16 @@ Dopo il push, caricare manualmente i file modificati via **cPanel File Manager**
 
 **Giugno 2026 — Sessione 1**
 Costruita dashboard completa, generatore PDF con mPDF, libreria fasi, storico preventivi su DB, fix doppio salvataggio, bottoni sidebar, manuale utente Word.
+
+**Giugno 2026 — Sessione 3**
+- Tasto "Scatta foto" diretto nella dashboard lavorazioni (mobile)
+- **Sicurezza**: login Basic Auth su pagine/endpoint privati; hardening endpoint pubblici (save-lead, verify-client con rate limit, webhook WhatsApp con firma); anti-XSS dashboard; link disiscrizione firmato (HMAC); limiti/retry sui proxy AI; messaggi d'errore generici; fuso orario Europe/Rome
+- Chatbot: telefono ora raccolto sempre; email di conferma sopralluogo al cliente
+- Dashboard: campi cliente modificabili e salvabili
+- Widget fasi: il nome verificato viene passato all'AI (niente più richiesta del nome già noto)
+- n8n: nodo Code Meta corretto (foto su Facebook, Instagram con attesa contenitore)
+- **Social manuale**: `ardy-pubblica-social.php` + pannello dashboard (pubblica ora / salva per dopo / modifica / salta)
+- Guida d'uso per Michela (`GUIDA-MICHELA.md`, `ardy-guida-michela.html`, PDF) + pulsante Guida in dashboard
 
 **Giugno 2026 — Sessione 2**
 - App Ardyagent creata su Meta Developers (verifica Business completata)

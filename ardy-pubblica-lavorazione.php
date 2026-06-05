@@ -232,37 +232,22 @@ try {
 }
 
 // -----------------------------------------------------------
-// 12. WEBHOOK N8N → Google Business Profile
-// -----------------------------------------------------------
-$webhookUrl = 'https://n8n.ardy-lab.it/webhook/7d01db65-cc21-4192-ab15-0bdbfd070362';
-$webhookData = [
-    'testo'      => $testoGenerato,
-    'fase'       => $faseNome,
-    'mobile'     => $mobileTitolo,
-    'post_link'  => $postLink,
-    'immagini'   => $savedImageUrls,
-    'cliente'    => $clienteNome,
-    'testo_social' => $testoSocial,
-];
-$chW = curl_init($webhookUrl);
-curl_setopt($chW, CURLOPT_POST, true);
-curl_setopt($chW, CURLOPT_POSTFIELDS, json_encode($webhookData));
-curl_setopt($chW, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($chW, CURLOPT_TIMEOUT, 10);
-curl_setopt($chW, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-curl_exec($chW);
-curl_close($chW);
-
-
-// -----------------------------------------------------------
-// 13. RISPOSTA
+// 12. RISPOSTA
+// NB: la pubblicazione sui social NON è più automatica.
+// Avviene come passo separato e manuale dalla dashboard
+// (vedi ardy-pubblica-social.php), così Michela può rivedere,
+// modificare, posticipare o saltare il post.
 // -----------------------------------------------------------
 echo json_encode([
-    'success'    => true,
-    'wp_post_id' => (string)$wpPostId,
-    'post_link'  => $postLink,
-    'testo'      => $testoGenerato,
+    'success'      => true,
+    'wp_post_id'   => (string)$wpPostId,
+    'post_link'    => $postLink,
+    'testo'        => $testoGenerato,
     'testo_social' => $testoSocial,
+    'immagini'     => $savedImageUrls,
+    'fase'         => $faseNome,
+    'mobile'       => $mobileTitolo,
+    'cliente'      => $clienteNome,
 ]);
 
 // ============================================================

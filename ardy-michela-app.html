@@ -35,6 +35,7 @@
         <div style="display:flex;gap:5px;">
           <button class="btn-nuovo-cliente" onclick="openNuovoCliente()" style="flex:1;text-align:center;background:none;border:1px solid #8b6f3e;color:#c8a96e;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">+ NUOVO</button>
           <button class="btn-nuovo-cliente" onclick="openGestioneLibreria()" style="flex:1;text-align:center;background:none;border:1px solid #444;color:#888;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">LIBRERIA</button>
+          <button class="btn-nuovo-cliente" onclick="window.open('ardy-guida-michela.html','_blank')" style="flex:1;text-align:center;background:none;border:1px solid #444;color:#888;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">❓ GUIDA</button>
         </div>
       </div>
       <div class="search-box">
@@ -204,6 +205,25 @@
             ✦ PUBBLICA FASE + NOTIFICA CLIENTE
           </button>
           <div class="lav-result" id="lavResult"></div>
+
+          <!-- PANNELLO SOCIAL — compare dopo la pubblicazione della fase -->
+          <div id="socialPanel" style="display:none;margin-top:18px;border-top:1px dashed var(--border);padding-top:16px;">
+            <div class="lav-title" style="margin-bottom:4px;">📲 Vuoi pubblicare sui social?</div>
+            <p style="font-size:12px;color:var(--text-dim);margin:0 0 10px;">Rivedi e modifica il testo. Niente esce su Facebook/Instagram finché non premi tu.</p>
+            <textarea class="lav-textarea" id="socialText" style="min-height:150px;"></textarea>
+            <div class="lav-preview" id="socialThumbs"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+              <button class="btn-pubblica" style="flex:2 1 140px;" onclick="pubblicaSocialOra()">📲 PUBBLICA ORA</button>
+              <button class="btn-secondary" style="flex:1 1 110px;" onclick="salvaSocialDopo()">🕒 SALVA PER DOPO</button>
+              <button class="btn-secondary" style="flex:1 1 110px;" onclick="annullaSocial()">✕ NON PUBBLICARE</button>
+            </div>
+          </div>
+
+          <!-- POST SOCIAL IN ATTESA — salvati per dopo (in questo browser) -->
+          <div id="socialPending" style="display:none;margin-top:18px;">
+            <div class="lav-title" style="margin-bottom:8px;">🕒 Post social in attesa</div>
+            <div id="socialPendingList"></div>
+          </div>
         </div>
       </div>
 
@@ -241,6 +261,7 @@ const CRM_API_URL     = BASE_URL + '/ardy-crm-api.php';
 const UPDATE_URL      = BASE_URL + '/ardy-update-lead.php';
 const AI_URL          = BASE_URL + '/ardy-proxy.php';
 const LAVORAZIONE_URL = BASE_URL + '/ardy-pubblica-lavorazione.php';
+const SOCIAL_URL      = BASE_URL + '/ardy-pubblica-social.php';
 
 // ─── STATE ────────────────────────────────────────────────
 let allLeads       = [];
@@ -267,6 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const input = document.getElementById(id);
     if (input) input.addEventListener('change', handleFotoUpload);
   });
+  renderSocialPending();
 });
 
 async function loadLeads() {
@@ -383,6 +405,9 @@ function renderDetail() {
     document.getElementById('lavResult').classList.remove('visible');
     document.getElementById('lavPreview').innerHTML = '';
     lavImmagini = [];
+    document.getElementById('socialPanel').style.display = 'none';
+    pendingSocial = null;
+    renderSocialPending();
   } else {
     lavSection.classList.remove('visible');
   }
@@ -630,6 +655,8 @@ async function pubblicaFase() {
       lavImmagini = [];
       aggiornaContatoreFoto();
 
+      // Mostra il pannello social: la pubblicazione su FB/IG è ora manuale
+      mostraPannelloSocial(data);
       showToast('✓ Fase pubblicata e cliente notificato', 'success');
     } else {
       showToast('⚠ Errore: ' + (data.error ?? 'sconosciuto'), 'error');
@@ -640,6 +667,119 @@ async function pubblicaFase() {
 
   btn.disabled = false;
   btn.textContent = '✦ PUBBLICA FASE + NOTIFICA CLIENTE';
+}
+
+// ─── PUBBLICAZIONE SOCIAL (manuale) ───────────────────────
+const SOCIAL_PENDING_KEY = 'ardy_social_pending';
+let pendingSocial = null;
+
+function mostraPannelloSocial(data) {
+  pendingSocial = {
+    testo_social: data.testo_social || '',
+    testo:        data.testo || '',
+    immagini:     Array.isArray(data.immagini) ? data.immagini : [],
+    fase:         data.fase || '',
+    mobile:       data.mobile || '',
+    post_link:    data.post_link || '',
+    cliente:      data.cliente || '',
+  };
+  document.getElementById('socialText').value = pendingSocial.testo_social;
+  document.getElementById('socialThumbs').innerHTML =
+    pendingSocial.immagini.map(u => `<img src="${safeUrl(u)}">`).join('');
+  document.getElementById('socialPanel').style.display = 'block';
+}
+
+async function inviaSocial(payload) {
+  const res = await fetch(SOCIAL_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  return res.json();
+}
+
+async function pubblicaSocialOra() {
+  if (!pendingSocial) return;
+  const testo = document.getElementById('socialText').value.trim();
+  if (!testo) { showToast('⚠ Il testo è vuoto', 'error'); return; }
+  try {
+    const data = await inviaSocial({ ...pendingSocial, testo_social: testo });
+    if (data.success) {
+      document.getElementById('socialPanel').style.display = 'none';
+      pendingSocial = null;
+      showToast('✓ Pubblicato su Facebook e Instagram', 'success');
+    } else {
+      showToast('⚠ ' + (data.error || 'Errore social'), 'error');
+    }
+  } catch(e) { showToast('⚠ Errore di rete', 'error'); }
+}
+
+function salvaSocialDopo() {
+  if (!pendingSocial) return;
+  const testo = document.getElementById('socialText').value.trim();
+  const list = caricaSocialPending();
+  list.push({ ...pendingSocial, testo_social: testo, id: 'sp_' + Date.now(), data: new Date().toLocaleString('it-IT') });
+  salvaSocialPendingList(list);
+  document.getElementById('socialPanel').style.display = 'none';
+  pendingSocial = null;
+  renderSocialPending();
+  showToast('🕒 Salvato. Lo pubblichi quando vuoi.', 'success');
+}
+
+function annullaSocial() {
+  document.getElementById('socialPanel').style.display = 'none';
+  pendingSocial = null;
+}
+
+function caricaSocialPending() {
+  try { return JSON.parse(localStorage.getItem(SOCIAL_PENDING_KEY) || '[]'); }
+  catch(e) { return []; }
+}
+function salvaSocialPendingList(list) {
+  localStorage.setItem(SOCIAL_PENDING_KEY, JSON.stringify(list));
+}
+
+function renderSocialPending() {
+  const wrap = document.getElementById('socialPending');
+  const cont = document.getElementById('socialPendingList');
+  if (!wrap || !cont) return;
+  const list = caricaSocialPending();
+  if (!list.length) { wrap.style.display = 'none'; cont.innerHTML = ''; return; }
+  wrap.style.display = 'block';
+  cont.innerHTML = list.map(p => `
+    <div style="border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:10px;">
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;">${escHtml(p.mobile || '')} · ${escHtml(p.fase || '')} · ${escHtml(p.data || '')}</div>
+      <textarea class="lav-textarea" id="pendText_${escHtml(p.id)}" style="min-height:90px;">${escHtml(p.testo_social || '')}</textarea>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
+        <button class="btn-pubblica" style="flex:2 1 120px;" onclick="pubblicaPending('${escHtml(p.id)}')">📲 PUBBLICA</button>
+        <button class="btn-secondary" style="flex:1 1 90px;" onclick="eliminaPending('${escHtml(p.id)}')">🗑 ELIMINA</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function pubblicaPending(id) {
+  const item = caricaSocialPending().find(p => p.id === id);
+  if (!item) return;
+  const ta = document.getElementById('pendText_' + id);
+  const testo = (ta ? ta.value : item.testo_social).trim();
+  if (!testo) { showToast('⚠ Il testo è vuoto', 'error'); return; }
+  try {
+    const data = await inviaSocial({ ...item, testo_social: testo });
+    if (data.success) {
+      salvaSocialPendingList(caricaSocialPending().filter(p => p.id !== id));
+      renderSocialPending();
+      showToast('✓ Pubblicato su Facebook e Instagram', 'success');
+    } else {
+      showToast('⚠ ' + (data.error || 'Errore social'), 'error');
+    }
+  } catch(e) { showToast('⚠ Errore di rete', 'error'); }
+}
+
+function eliminaPending(id) {
+  if (!confirm('Eliminare questo post in attesa?')) return;
+  salvaSocialPendingList(caricaSocialPending().filter(p => p.id !== id));
+  renderSocialPending();
 }
 
 // ══════════════════════════════════════════════════════════

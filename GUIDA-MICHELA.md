@@ -32,6 +32,7 @@ Per aprire un cliente, **cliccaci sopra** nella lista a sinistra. La sua scheda 
 - 🔍 **Cerca**: scrivi un nome, una zona o un servizio per trovare un cliente al volo
 - **+ NUOVO**: aggiungi un cliente a mano (vedi punto 8)
 - **LIBRERIA**: gestisci le frasi pronte per le lavorazioni (vedi punto 7)
+- **❓ GUIDA**: riapre questa guida in qualsiasi momento
 - **I filtri** (TUTTI, LEAD, SOPRALLUOGO, ...): mostrano solo i clienti in quello stato
 
 ---
@@ -122,12 +123,30 @@ Questa è la parte che aggiorna il cliente **e** pubblica sui social.
    - 🖼️ **DALLA GALLERIA** → scegli foto già fatte
 4. Premi **✦ PUBBLICA FASE + NOTIFICA CLIENTE**
 
-**Cosa succede in automatico quando pubblichi:**
+**Cosa succede SUBITO e in automatico quando pubblichi:**
 - 📝 Si crea/aggiorna la **pagina della lavorazione** sul sito
 - ✉️ Il **cliente riceve un'email** con l'aggiornamento
-- 📘📸 Esce un **post su Facebook e Instagram** (con la foto)
 
-💡 *Da telefono funziona benissimo: sei in laboratorio, scatti, pubblichi.*
+**I social NON partono da soli.** Subito dopo, compare un riquadro
+**"📲 Vuoi pubblicare sui social?"** con il testo del post **già pronto e modificabile**.
+Da lì scegli tu:
+- **📲 PUBBLICA ORA** → pubblica subito su Facebook e Instagram (con la foto)
+- **🕒 SALVA PER DOPO** → lo metti da parte e lo pubblichi quando vuoi
+- **✕ NON PUBBLICARE** → niente social, solo il cliente è stato aggiornato
+
+👉 Puoi **modificare il testo** prima di pubblicare: cambia parole, hashtag,
+quello che vuoi, poi premi Pubblica.
+
+### Post social in attesa
+Se hai scelto "Salva per dopo", i post messi da parte compaiono nel riquadro
+**"🕒 Post social in attesa"** (in fondo alla sezione lavorazione). Lì puoi
+**modificarli ancora, pubblicarli** quando preferisci, o **eliminarli**.
+
+⚠️ *Nota: i post "in attesa" sono salvati nel browser che stai usando. Se ne
+salvi uno dal telefono, lo ritrovi sul telefono; se lo salvi dal computer, sul
+computer. Quelli da pubblicare "ora" invece non hanno questo limite.*
+
+💡 *Da telefono funziona benissimo: sei in laboratorio, scatti, pubblichi (o rimandi).*
 
 ---
 
