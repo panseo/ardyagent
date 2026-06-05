@@ -241,6 +241,17 @@ let currentFilter  = 'TUTTI';
 let isDirty        = false;
 let currentAction  = null;
 
+// ─── HELPER SICUREZZA ─────────────────────────────────────
+// Neutralizza eventuale codice HTML nei dati prima di inserirli nella pagina
+function escHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+// Accetta solo link http/https (blocca javascript: e simili)
+function safeUrl(u) {
+  return /^https?:\/\//i.test(String(u ?? '')) ? String(u) : '#';
+}
+
 // ─── INIT ─────────────────────────────────────────────────
 loadLeads();
 document.addEventListener('DOMContentLoaded', () => {
@@ -290,10 +301,10 @@ function renderList() {
   document.getElementById('leadList').innerHTML = filtered.map((l, i) => `
     <div class="lead-item ${currentLead && currentLead.Session_ID === l.Session_ID ? 'active' : ''}"
          onclick="selectLead(${allLeads.indexOf(l)})">
-      <div class="lead-nome">${l.Nome ?? ''} ${l.Cognome ?? ''}</div>
+      <div class="lead-nome">${escHtml(l.Nome)} ${escHtml(l.Cognome)}</div>
       <div class="lead-meta">
-        <span class="stato-badge stato-${(l.Stato??'LEAD').toUpperCase()}">${l.Stato ?? 'LEAD'}</span>
-        <span class="lead-zona">${l.Zona ?? ''}</span>
+        <span class="stato-badge stato-${(l.Stato??'LEAD').toUpperCase().replace(/[^A-Z]/g,'')}">${escHtml(l.Stato ?? 'LEAD')}</span>
+        <span class="lead-zona">${escHtml(l.Zona)}</span>
       </div>
     </div>
   `).join('');
@@ -586,7 +597,7 @@ async function pubblicaFase() {
       linkEl.style.display = 'inline';
 
       const result = document.getElementById('lavResult');
-      result.innerHTML = `<strong>✓ Pubblicato!</strong><br><br>${data.testo}<br><br><a href="${data.post_link}" target="_blank" style="color:var(--accent);">→ ${data.post_link}</a>`;
+      result.innerHTML = `<strong>✓ Pubblicato!</strong><br><br>${escHtml(data.testo)}<br><br><a href="${safeUrl(data.post_link)}" target="_blank" style="color:var(--accent);">→ ${escHtml(data.post_link)}</a>`;
       result.classList.add('visible');
 
       // Reset form
@@ -963,9 +974,9 @@ function renderStoricoPrev(preventivi) {
     const oggetto = p.oggetto || p.tipo || '—';
     return `<div class="storico-prev-item">
       <div class="storico-prev-info">
-        <div class="storico-prev-numero">${p.numero}</div>
-        <div class="storico-prev-oggetto">${oggetto}</div>
-        <div class="storico-prev-meta">${p.data_emissione || ''}</div>
+        <div class="storico-prev-numero">${escHtml(p.numero)}</div>
+        <div class="storico-prev-oggetto">${escHtml(oggetto)}</div>
+        <div class="storico-prev-meta">${escHtml(p.data_emissione || '')}</div>
       </div>
       <div class="storico-prev-right">
         <div class="storico-prev-totale">${totale}</div>

@@ -3,13 +3,26 @@ require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
 
 $email = $_GET['email'] ?? '';
+$token = $_GET['t'] ?? '';
 
-if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+// Verifica firma: solo chi ha ricevuto il link può disiscriversi
+// (impedisce di disiscrivere indirizzi altrui passandoli a mano)
+$secret   = defined('ARDY_UNSUB_SECRET') ? ARDY_UNSUB_SECRET : (defined('ARDY_API_KEY') ? ARDY_API_KEY : '');
+$expected = ($email !== '' && $secret !== '')
+    ? substr(hash_hmac('sha256', strtolower(trim($email)), $secret), 0, 20)
+    : '';
+$valid = $email !== '' && $token !== '' && $expected !== ''
+    && hash_equals($expected, $token)
+    && filter_var($email, FILTER_VALIDATE_EMAIL);
+
+if ($valid) {
     try {
         $db = ardyDB();
         $db->prepare("UPDATE outreach_contatti SET stato='non_interessato', updated_at=NOW() WHERE email=:email")
            ->execute([':email' => $email]);
-    } catch (Exception $e) {}
+    } catch (Exception $e) {
+        error_log('ARDY UNSUB ERROR: ' . $e->getMessage());
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -29,10 +42,10 @@ if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
 <body>
 <div class="box">
   <h2>ARDY LAB</h2>
-  <?php if ($email): ?>
+  <?php if ($valid): ?>
   <p>L'indirizzo <strong><?= htmlspecialchars($email) ?></strong> è stato rimosso dalla nostra lista di contatti.<br>Non riceverai altre comunicazioni da Ardy Lab.</p>
   <?php else: ?>
-  <p>Link di disiscrizione non valido.</p>
+  <p>Link di disiscrizione non valido o scaduto.<br>Per essere rimosso scrivi a <a href="mailto:marketing@ardy-lab.it">marketing@ardy-lab.it</a>.</p>
   <?php endif; ?>
   <p><a href="https://ardy-lab.it">Torna al sito →</a></p>
 </div>

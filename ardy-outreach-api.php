@@ -366,15 +366,18 @@ try {
     }
 
 } catch (PDOException $e) {
+    error_log('ARDY OUTREACH API ERROR: ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['error' => $e->getMessage()]);
+    echo json_encode(['error' => 'Errore interno']);
 }
 
 // ============================================================
 // FUNZIONE INVIO BREVO
 // ============================================================
 function brevoSend(string $toEmail, string $toName, string $oggetto, string $corpo): array {
-    $unsubLink  = 'https://ardy-lab.it/ardy-unsubscribe.php?email=' . urlencode($toEmail);
+    $unsubSecret = defined('ARDY_UNSUB_SECRET') ? ARDY_UNSUB_SECRET : (defined('ARDY_API_KEY') ? ARDY_API_KEY : '');
+    $unsubToken  = substr(hash_hmac('sha256', strtolower(trim($toEmail)), $unsubSecret), 0, 20);
+    $unsubLink   = 'https://ardy-lab.it/ardy-unsubscribe.php?email=' . urlencode($toEmail) . '&t=' . $unsubToken;
     $corpoHtml  = nl2br(htmlspecialchars($corpo));
     $htmlEmail  = '<!DOCTYPE html><html><body style="font-family:Georgia,serif;background:#f5f5f5;margin:0;padding:20px;">
 <div style="max-width:600px;margin:0 auto;background:#fff;padding:40px;border-radius:4px;">
