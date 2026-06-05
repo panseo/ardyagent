@@ -85,32 +85,40 @@
       <!-- INFO GRID -->
       <div class="info-grid" style="margin-bottom: 24px;">
         <div class="info-cell">
+          <div class="info-label">Nome</div>
+          <input class="info-value editable" id="dNomeEdit" oninput="markDirty()">
+        </div>
+        <div class="info-cell">
+          <div class="info-label">Cognome</div>
+          <input class="info-value editable" id="dCognomeEdit" oninput="markDirty()">
+        </div>
+        <div class="info-cell">
           <div class="info-label">Telefono</div>
-          <div class="info-value" id="dTelefono">—</div>
+          <input class="info-value editable" id="dTelefono" oninput="markDirty()">
         </div>
         <div class="info-cell">
           <div class="info-label">Email</div>
-          <div class="info-value" id="dEmail">—</div>
+          <input class="info-value editable" id="dEmail" oninput="markDirty()">
         </div>
         <div class="info-cell">
           <div class="info-label">Servizio</div>
-          <div class="info-value" id="dServizio">—</div>
+          <input class="info-value editable" id="dServizio" oninput="markDirty()">
         </div>
         <div class="info-cell">
           <div class="info-label">Zona</div>
-          <div class="info-value" id="dZona">—</div>
+          <input class="info-value editable" id="dZona" oninput="markDirty()">
         </div>
         <div class="info-cell">
           <div class="info-label">Mobile / Pezzo</div>
-          <div class="info-value" id="dMobile">—</div>
+          <input class="info-value editable" id="dMobile" oninput="markDirty()">
         </div>
         <div class="info-cell">
           <div class="info-label">Budget</div>
-          <div class="info-value" id="dBudget">—</div>
+          <input class="info-value editable" id="dBudget" oninput="markDirty()">
         </div>
         <div class="info-cell full">
           <div class="info-label">Indirizzo</div>
-          <div class="info-value" id="dIndirizzo">—</div>
+          <input class="info-value editable" id="dIndirizzo" oninput="markDirty()">
         </div>
         <div class="info-cell full">
           <div class="info-label">Note <small style="color:var(--text-dim);font-size:9px;">(modificabile)</small></div>
@@ -347,13 +355,15 @@ function renderDetail() {
 
   document.getElementById('dNome').textContent      = `${l.Nome ?? ''} ${l.Cognome ?? ''}`.trim();
   document.getElementById('dSub').textContent       = `${l.Servizio ?? ''} · ${l.Zona ?? ''} · ${l.Session_ID ?? ''}`;
-  document.getElementById('dTelefono').textContent  = l.Telefono  ?? '—';
-  document.getElementById('dEmail').textContent     = l.Email     ?? '—';
-  document.getElementById('dServizio').textContent  = l.Servizio  ?? '—';
-  document.getElementById('dZona').textContent      = l.Zona      ?? '—';
-  document.getElementById('dMobile').textContent    = l.Mobile    ?? '—';
-  document.getElementById('dBudget').textContent    = l.Budget    ?? '—';
-  document.getElementById('dIndirizzo').textContent = l.Indirizzo ?? '—';
+  document.getElementById('dNomeEdit').value        = l.Nome      ?? '';
+  document.getElementById('dCognomeEdit').value     = l.Cognome   ?? '';
+  document.getElementById('dTelefono').value        = l.Telefono  ?? '';
+  document.getElementById('dEmail').value           = l.Email     ?? '';
+  document.getElementById('dServizio').value        = l.Servizio  ?? '';
+  document.getElementById('dZona').value            = l.Zona      ?? '';
+  document.getElementById('dMobile').value          = l.Mobile    ?? '';
+  document.getElementById('dBudget').value          = l.Budget    ?? '';
+  document.getElementById('dIndirizzo').value       = l.Indirizzo ?? '';
   document.getElementById('dNote').value            = l.Note      ?? '';
   document.getElementById('dDataFollowup').value    = l.Data_followup ?? '';
   document.getElementById('dSessionId').textContent = l.Session_ID ?? '—';
@@ -413,15 +423,15 @@ async function saveLead() {
     stato:          currentLead.Stato,
     note:           document.getElementById('dNote').value,
     data_followup:  document.getElementById('dDataFollowup').value,
-    nome:           currentLead.Nome,
-    cognome:        currentLead.Cognome,
-    telefono:       currentLead.Telefono,
-    email:          currentLead.Email,
-    servizio:       currentLead.Servizio,
-    mobile:         currentLead.Mobile,
-    zona:           currentLead.Zona,
-    budget:         currentLead.Budget,
-    indirizzo:      currentLead.Indirizzo,
+    nome:           document.getElementById('dNomeEdit').value.trim(),
+    cognome:        document.getElementById('dCognomeEdit').value.trim(),
+    telefono:       document.getElementById('dTelefono').value.trim(),
+    email:          document.getElementById('dEmail').value.trim(),
+    servizio:       document.getElementById('dServizio').value.trim(),
+    mobile:         document.getElementById('dMobile').value.trim(),
+    zona:           document.getElementById('dZona').value.trim(),
+    budget:         document.getElementById('dBudget').value.trim(),
+    indirizzo:      document.getElementById('dIndirizzo').value.trim(),
   };
 
   try {
@@ -438,10 +448,23 @@ async function saveLead() {
       // Aggiorna lead in memoria
       const idx = allLeads.findIndex(l => l.Session_ID === currentLead.Session_ID);
       if (idx >= 0) {
-        allLeads[idx].Stato = currentLead.Stato;
-        allLeads[idx].Note  = payload.note;
-        allLeads[idx].Data_followup = payload.data_followup;
+        Object.assign(allLeads[idx], {
+          Stato: currentLead.Stato,
+          Note: payload.note,
+          Data_followup: payload.data_followup,
+          Nome: payload.nome,
+          Cognome: payload.cognome,
+          Telefono: payload.telefono,
+          Email: payload.email,
+          Servizio: payload.servizio,
+          Mobile: payload.mobile,
+          Zona: payload.zona,
+          Budget: payload.budget,
+          Indirizzo: payload.indirizzo,
+        });
+        currentLead = allLeads[idx];
       }
+      document.getElementById('dNome').textContent = `${currentLead.Nome ?? ''} ${currentLead.Cognome ?? ''}`.trim();
       renderList();
     } else {
       showToast('⚠ Errore salvataggio', 'error');
