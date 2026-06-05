@@ -3,6 +3,8 @@
 // ARDY LAB — Proxy AI v6.0
 // -----------------------------------------------------------
 
+date_default_timezone_set('Europe/Rome');
+
 // CORS dinamico: accetta sia ardy-lab.it che ardyagent
 $allowedOrigins = ['https://ardy-lab.it', 'https://www.ardy-lab.it', 'https://ardyagent.ardy-lab.it'];
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';

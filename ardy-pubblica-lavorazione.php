@@ -4,6 +4,8 @@
 // v2.0 — Ordine caricamento corretto + webhook n8n
 // -----------------------------------------------------------
 
+date_default_timezone_set('Europe/Rome');
+
 define('ARDY_WP_LOAD', '/home/micoperibg/public_html/archivio/wp-load.php');
 
 // -----------------------------------------------------------

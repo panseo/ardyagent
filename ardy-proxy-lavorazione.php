@@ -8,6 +8,8 @@ require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-gcal.php';
 
+date_default_timezone_set('Europe/Rome');
+
 header('Access-Control-Allow-Origin: https://ardy-lab.it');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');

@@ -11,6 +11,8 @@
 
 header('X-Content-Type-Options: nosniff');
 
+date_default_timezone_set('Europe/Rome');
+
 define('MPDF_VENDOR', __DIR__ . '/vendor/autoload.php');
 define('PDF_OUTPUT_DIR', __DIR__ . '/preventivi_pdf/');
 define('LOGO_PATH',      __DIR__ . '/assets/logo.png');
