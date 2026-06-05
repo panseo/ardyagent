@@ -41,12 +41,18 @@ $message = trim($input['message'] ?? '');
 $history = $input['history'] ?? [];
 $context = $input['context'] ?? '';
 $titolo  = $input['titolo'] ?? '';
+$nome    = trim($input['nome'] ?? '');
 
 // Limiti di sicurezza sugli input (anti-abuso e anti-prompt-injection)
 $message = mb_substr($message, 0, 2000);
 $context = mb_substr((string)$context, 0, 6000);
 $titolo  = mb_substr((string)$titolo, 0, 200);
+$nome    = mb_substr($nome, 0, 100);
 $history = is_array($history) ? array_slice($history, -20) : [];
+
+$nomeNota = $nome !== ''
+    ? "\nIl cliente con cui stai parlando si chiama {$nome}: rivolgiti a lui per nome e, quando prenoti una visita, usa questo nome SENZA richiederlo."
+    : '';
 
 if (empty($message) && empty($history)) {
     echo json_encode(['reply' => 'Ciao! Sono Ardy, posso aiutarti a capire meglio lo stato della lavorazione. Chiedimi pure!']);
@@ -59,7 +65,7 @@ Ti chiami Ardy, assistente di Ardy Lab — bottega artigianale a Roma EUR specia
 Ardy Lab è fondata da Michela (restauratrice e consulente interior design). Con lei collabora Andrea, suo padre, ebanista con oltre 30 anni di esperienza.
 
 ## RUOLO
-Sei l'assistente dedicato a questa lavorazione. Il cliente sta guardando la pagina di avanzamento del proprio lavoro.
+Sei l'assistente dedicato a questa lavorazione. Il cliente sta guardando la pagina di avanzamento del proprio lavoro.{$nomeNota}
 
 ## CONTESTO LAVORAZIONE
 Titolo: {$titolo}
@@ -167,7 +173,7 @@ function callClaude($systemPrompt, $messages, $tools) {
 }
 
 // Execute tool
-function executeTool($toolName, $toolInput, $titolo) {
+function executeTool($toolName, $toolInput, $titolo, $clientName = '') {
     error_log('ARDY LAV TOOL: ' . $toolName . ' input=' . json_encode($toolInput));
 
     if ($toolName === 'ottieni_disponibilita_visite') {
@@ -200,7 +206,7 @@ function executeTool($toolName, $toolInput, $titolo) {
     if ($toolName === 'prenota_visita') {
         $data_v = $toolInput['data'] ?? '';
         $ora_v  = $toolInput['ora'] ?? '';
-        $nome   = $toolInput['nome_cliente'] ?? 'Cliente';
+        $nome   = $toolInput['nome_cliente'] ?? ($clientName !== '' ? $clientName : 'Cliente');
 
         if ($data_v && $ora_v) {
             $result = gcal_create_event(
@@ -260,7 +266,7 @@ for ($i = 0; $i < $maxIterations; $i++) {
     foreach ($assistantContent as $block) {
         if ($block['type'] !== 'tool_use') continue;
 
-        $toolResult = executeTool($block['name'], $block['input'] ?? [], $titolo);
+        $toolResult = executeTool($block['name'], $block['input'] ?? [], $titolo, $nome);
         $toolResults[] = [
             'type' => 'tool_result',
             'tool_use_id' => $block['id'],
