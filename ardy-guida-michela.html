@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Guida alla Dashboard — Ardy Lab</title>
+<style>
+  @page { margin: 2cm; }
+  body { font-family: 'Liberation Sans', Arial, sans-serif; color: #2b2b2b; font-size: 11pt; line-height: 1.5; }
+  h1 { color: #b9954f; font-size: 22pt; margin-bottom: 2px; }
+  h2 { color: #8b6f3e; font-size: 14pt; margin-top: 22px; border-bottom: 2px solid #e3ddd0; padding-bottom: 3px; }
+  .sub { color: #888; font-size: 10pt; margin-top: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+  th, td { border: 1px solid #d8d2c4; padding: 6px 9px; text-align: left; font-size: 10.5pt; vertical-align: top; }
+  th { background: #f4efe4; color: #6b5a33; }
+  .tip { background: #fbf7ec; border-left: 4px solid #c8a96e; padding: 8px 12px; margin: 10px 0; font-size: 10.5pt; }
+  .warn { background: #fdf3e6; border-left: 4px solid #e0a83e; padding: 8px 12px; margin: 10px 0; font-size: 10.5pt; }
+  ol, ul { margin: 6px 0 6px 18px; }
+  li { margin: 3px 0; }
+  .url { font-family: 'Liberation Mono', monospace; color: #8b6f3e; }
+  .footer { margin-top: 28px; color: #aaa; font-size: 9pt; font-style: italic; border-top: 1px solid #eee; padding-top: 8px; }
+</style>
+</head>
+<body>
+
+<h1>Guida alla Dashboard — Ardy Lab</h1>
+<p class="sub">Una guida semplice per usare ogni giorno la tua dashboard. Niente termini tecnici: solo cosa vedi e cosa succede quando clicchi.</p>
+
+<h2>1. Come entrare</h2>
+<p>Apri nel browser:<br><span class="url">https://ardyagent.ardy-lab.it/ardy-michela-app.html</span></p>
+<p>Il computer ti chiederà <b>utente e password</b> (quelli che abbiamo impostato). Inseriscili una volta e sei dentro. È la "serratura" che protegge i dati dei clienti: nessuno può entrare senza la password.</p>
+<div class="tip">Consiglio: salva la pagina tra i preferiti e segnati utente e password in un posto sicuro.</div>
+
+<h2>2. Com'è fatta la dashboard</h2>
+<p>Lo schermo è diviso in due parti:</p>
+<ul>
+  <li><b>A sinistra</b> → la lista dei clienti (arrivati dal sito o aggiunti a mano)</li>
+  <li><b>A destra</b> → la scheda del cliente che hai selezionato</li>
+</ul>
+<p>Per aprire un cliente, <b>cliccaci sopra</b> nella lista a sinistra: la sua scheda compare a destra.</p>
+<p>La colonna di sinistra contiene: <b>Cerca</b> (per nome, zona o servizio), <b>+ NUOVO</b> (aggiungi cliente a mano), <b>LIBRERIA</b> (frasi pronte per le lavorazioni) e <b>i filtri</b> per stato.</p>
+
+<h2>3. Gli stati del cliente</h2>
+<p>Ogni cliente ha uno <b>stato</b>, che racconta a che punto è la trattativa. Lo cambi con i bottoni in alto nella sua scheda.</p>
+<table>
+  <tr><th>Stato</th><th>Significa</th></tr>
+  <tr><td><b>LEAD</b></td><td>Nuovo contatto, primo interesse</td></tr>
+  <tr><td><b>SOPRALLUOGO</b></td><td>Va fatto / è stato fissato un sopralluogo</td></tr>
+  <tr><td><b>PREVENTIVO</b></td><td>Gli hai mandato (o stai facendo) un preventivo</td></tr>
+  <tr><td><b>ACCONTO</b></td><td>Ha pagato l'acconto → il lavoro parte!</td></tr>
+  <tr><td><b>STANDBY</b></td><td>In pausa, da risentire più avanti</td></tr>
+  <tr><td><b>PERSO</b></td><td>Trattativa chiusa senza accordo</td></tr>
+</table>
+<p>Cambiare stato è utile anche per <b>ritrovare</b> i clienti con i filtri di sinistra.</p>
+
+<h2>4. Modificare i dati di un cliente</h2>
+<p>Nella scheda a destra trovi i campi: Nome, Cognome, Telefono, Email, Servizio, Zona, Mobile, Budget, Indirizzo, Note, Data follow-up. <b>Sono tutti modificabili.</b> Se un cliente ha sbagliato l'email, o manca il telefono, clicca nel campo e correggilo.</p>
+<div class="warn"><b>Importante:</b> dopo ogni modifica compare in basso la barra "Modifiche non salvate". Clicca <b>SALVA MODIFICHE</b> per registrarle. Se cambi cliente senza salvare, ti avvisa.</div>
+<div class="tip">Il telefono è importante: serve per il sopralluogo e per far riconoscere il cliente quando segue la sua lavorazione online.</div>
+
+<h2>5. Azioni rapide (scrive l'AI per te)</h2>
+<p>Sotto i dati del cliente ci sono sei bottoni. Ognuno apre una finestra dove <b>l'intelligenza artificiale ti scrive un testo già pronto</b>, che puoi copiare e usare.</p>
+<table>
+  <tr><th>Bottone</th><th>Cosa ti prepara</th></tr>
+  <tr><td>Genera contenuto</td><td>Un testo professionale sul lavoro di restauro</td></tr>
+  <tr><td>Post social</td><td>Un post pronto per Instagram / Facebook</td></tr>
+  <tr><td>Proforma</td><td>Apre il generatore di proforma</td></tr>
+  <tr><td>Email cliente</td><td>Una email cordiale già scritta</td></tr>
+  <tr><td>Messaggio WA</td><td>Un messaggio WhatsApp breve</td></tr>
+  <tr><td>Note interne</td><td>Un riepilogo del cliente, per te</td></tr>
+</table>
+<p>Come funziona: clicchi il bottone → (puoi aggiungere istruzioni) → <b>GENERA CON AI</b> → copi il testo. L'AI usa i dati del cliente per personalizzarlo.</p>
+
+<h2>6. Preventivi e Proforma</h2>
+<p><b>Preventivo PDF:</b> crei un preventivo completo in PDF (con i tuoi dati aziendali, IVA 0% regime forfettario, marca da bollo). Compili le voci, vedi l'anteprima, salvi il PDF.</p>
+<p><b>Proforma:</b> il bottone Proforma apre un generatore con 3 scenari pronti — (1) Prenotazione €50–100, (2) Acconto 50%, (3) Saldo a consegna. Scegli lo scenario, i dati del cliente si compilano da soli.</p>
+<p><b>Storico preventivi:</b> per ogni cliente vedi l'elenco dei preventivi già fatti, con il loro stato (bozza, inviato, accettato, rifiutato).</p>
+
+<h2>7. Pubblicare una fase di lavorazione</h2>
+<p>Questa è la parte che aggiorna il cliente <b>e</b> pubblica sui social. Compare nella scheda <b>solo quando il cliente è in stato ACCONTO</b> (cioè il lavoro è partito).</p>
+<p>Come si fa:</p>
+<ol>
+  <li>Scrivi il <b>nome della fase</b> (es. "Sverniciatura") e il <b>mobile</b></li>
+  <li>Scrivi <b>2-3 righe</b> su cosa hai fatto — l'AI le trasforma in un testo professionale</li>
+  <li>Aggiungi le <b>foto</b>: <b>SCATTA FOTO</b> (apre la fotocamera del telefono) oppure <b>DALLA GALLERIA</b> (foto già fatte)</li>
+  <li>Premi <b>PUBBLICA FASE + NOTIFICA CLIENTE</b></li>
+</ol>
+<p>Cosa succede in automatico quando pubblichi:</p>
+<ul>
+  <li>Si crea/aggiorna la <b>pagina della lavorazione</b> sul sito</li>
+  <li>Il <b>cliente riceve un'email</b> con l'aggiornamento</li>
+  <li>Esce un <b>post su Facebook e Instagram</b> (con la foto)</li>
+</ul>
+<div class="tip">Da telefono funziona benissimo: sei in laboratorio, scatti, pubblichi.</div>
+
+<h2>8. La Libreria delle fasi</h2>
+<p>Sono <b>frasi pronte</b> per le lavorazioni più comuni (così non riscrivi tutto ogni volta). Quando pubblichi una fase puoi premere <b>SCEGLI DA LIBRERIA</b>; col bottone <b>LIBRERIA</b> (in alto a sinistra) puoi aggiungerne di nuove o eliminarle.</p>
+
+<h2>9. Aggiungere un cliente a mano</h2>
+<p>Non tutti arrivano dal sito. Per inserirne uno tu: clicca <b>+ NUOVO</b>, compila almeno nome o cognome, salva → compare nella lista come gli altri.</p>
+
+<h2>10. Da dove arrivano i clienti "da soli"</h2>
+<p>Due strumenti automatici riempiono la dashboard senza che tu faccia niente:</p>
+<ul>
+  <li><b>Il chatbot del sito:</b> i visitatori chiacchierano con "Ardy", l'assistente. Quando lasciano i contatti, il cliente compare qui e tu ricevi un'email di avviso. Il chatbot può anche fissare un sopralluogo nel tuo Google Calendar.</li>
+  <li><b>Il widget sulle pagine di lavorazione:</b> il cliente, sulla pagina del suo mobile, inserisce il telefono per farsi riconoscere e può chiederti come procede o prenotare una visita in laboratorio.</li>
+</ul>
+<p>Tu non devi fare nulla per questi: lavorano da soli e ti portano i contatti già pronti.</p>
+
+<h2>In due righe</h2>
+<ol>
+  <li><b>Entri</b> con utente e password</li>
+  <li><b>Clicchi un cliente</b> a sinistra, <b>lo gestisci</b> a destra</li>
+  <li><b>Cambi lo stato</b> man mano che la trattativa avanza</li>
+  <li><b>Pubblichi le fasi</b> con le foto quando lavori → cliente e social aggiornati da soli</li>
+</ol>
+
+<p class="footer">Ardy Lab — Restauro e laccatura mobili · Roma</p>
+
+</body>
+</html>
