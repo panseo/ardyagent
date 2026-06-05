@@ -267,20 +267,26 @@ function callAnthropic(array $messages, string $system, array $tools, string $ap
 // SALVATAGGIO IMMAGINI
 // -----------------------------------------------------------
 $savedImages = [];
-if (!empty($images)) {
+if (!empty($images) && is_array($images)) {
     $sessionDir = ARDY_UPLOAD_DIR . $cleanSession . '/';
-    if (!is_dir($sessionDir)) mkdir($sessionDir, 0755, true);
-    foreach ($images as $idx => $img) {
-        $mimeType = $img['type'];
+    $dirOk      = is_dir($sessionDir) || mkdir($sessionDir, 0755, true) || is_dir($sessionDir);
+    $allowedImg = ['image/png', 'image/gif', 'image/webp', 'image/jpeg'];
+    $maxImgByte = 12 * 1024 * 1024;   // 12 MB per immagine
+    foreach (array_slice($images, 0, 8, true) as $idx => $img) {
+        if (!$dirOk) break;
+        $raw = base64_decode($img['data'] ?? '', true);
+        if ($raw === false || strlen($raw) > $maxImgByte) continue;
+        $mimeType = (new finfo(FILEINFO_MIME_TYPE))->buffer($raw);  // tipo reale, non quello dichiarato
+        if (!in_array($mimeType, $allowedImg, true)) continue;
         switch($mimeType) {
             case 'image/png':  $ext = 'png'; break;
             case 'image/gif':  $ext = 'gif'; break;
             case 'image/webp': $ext = 'webp'; break;
             default:           $ext = 'jpg';
         }
-        $filename = date('Ymd_His') . '_' . $idx . '.' . $ext;
+        $filename = date('Ymd_His') . '_' . uniqid() . '_' . $idx . '.' . $ext;
         $filepath = $sessionDir . $filename;
-        file_put_contents($filepath, base64_decode($img['data']));
+        if (file_put_contents($filepath, $raw) === false) continue;
         $savedImages[] = $filepath;
     }
 }

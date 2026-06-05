@@ -15,7 +15,11 @@ define('MPDF_VENDOR', __DIR__ . '/vendor/autoload.php');
 define('PDF_OUTPUT_DIR', __DIR__ . '/preventivi_pdf/');
 define('LOGO_PATH',      __DIR__ . '/assets/logo.png');
 
-if (!is_dir(PDF_OUTPUT_DIR)) mkdir(PDF_OUTPUT_DIR, 0755, true);
+if (!is_dir(PDF_OUTPUT_DIR) && !mkdir(PDF_OUTPUT_DIR, 0755, true) && !is_dir(PDF_OUTPUT_DIR)) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Impossibile creare la cartella PDF']);
+    exit;
+}
 if (!file_exists(MPDF_VENDOR)) {
     http_response_code(500);
     echo json_encode(['error' => 'mPDF non installato. Esegui: php composer.phar require mpdf/mpdf']);
@@ -277,8 +281,9 @@ function dbConnect(): mysqli {
     require_once __DIR__ . '/ardy-config.php';
     $db = new mysqli(ARDY_DB_HOST, ARDY_DB_USER, ARDY_DB_PASS, ARDY_DB_NAME);
     if ($db->connect_error) {
+        error_log('ARDY PREVENTIVO DB ERROR: ' . $db->connect_error);
         http_response_code(500);
-        echo json_encode(['error' => 'DB: ' . $db->connect_error]);
+        echo json_encode(['error' => 'Errore interno']);
         exit;
     }
     $db->set_charset('utf8mb4');
