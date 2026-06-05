@@ -180,10 +180,17 @@
             <input class="lav-input" id="lavMobile" placeholder="Mobile (es. Credenza anni 60)">
           </div>
           <textarea class="lav-textarea" id="lavNote" placeholder="Scrivi 2-3 righe su cosa hai fatto — Claude le espande in testo professionale..."></textarea>
-          <div class="lav-foto-area" id="lavFotoArea" onclick="document.getElementById('lavFotoInput').click()">
-            <input type="file" id="lavFotoInput" accept="image/*" multiple style="display:none;">
-            <div class="lav-foto-label">📸 TOCCA PER AGGIUNGERE FOTO</div>
+          <div class="lav-foto-buttons">
+            <label class="lav-foto-btn" for="lavFotoCamera">
+              📷 SCATTA FOTO
+              <input type="file" id="lavFotoCamera" accept="image/*" capture="environment" multiple>
+            </label>
+            <label class="lav-foto-btn lav-foto-btn-alt" for="lavFotoInput">
+              🖼️ DALLA GALLERIA
+              <input type="file" id="lavFotoInput" accept="image/*" multiple>
+            </label>
           </div>
+          <div class="lav-foto-count" id="lavFotoCount"></div>
           <div class="lav-preview" id="lavPreview"></div>
           <button class="btn-pubblica" id="btnPubblica" onclick="pubblicaFase()">
             ✦ PUBBLICA FASE + NOTIFICA CLIENTE
@@ -237,8 +244,10 @@ let currentAction  = null;
 // ─── INIT ─────────────────────────────────────────────────
 loadLeads();
 document.addEventListener('DOMContentLoaded', () => {
-  const input = document.getElementById('lavFotoInput');
-  if (input) input.addEventListener('change', handleFotoUpload);
+  ['lavFotoCamera', 'lavFotoInput'].forEach(id => {
+    const input = document.getElementById(id);
+    if (input) input.addEventListener('change', handleFotoUpload);
+  });
 });
 
 async function loadLeads() {
@@ -522,10 +531,17 @@ function handleFotoUpload(event) {
       const img = document.createElement('img');
       img.src = e.target.result;
       preview.appendChild(img);
-      document.getElementById('lavFotoArea').querySelector('.lav-foto-label').textContent = `📸 ${lavImmagini.length} FOTO AGGIUNTE`;
+      aggiornaContatoreFoto();
     };
     reader.readAsDataURL(file);
   });
+  // Azzera l'input così la stessa foto/scatto può essere riaggiunta
+  event.target.value = '';
+}
+
+function aggiornaContatoreFoto() {
+  const count = document.getElementById('lavFotoCount');
+  count.textContent = lavImmagini.length ? `📸 ${lavImmagini.length} foto pronte da pubblicare` : '';
 }
 
 async function pubblicaFase() {
@@ -578,6 +594,7 @@ async function pubblicaFase() {
       document.getElementById('lavNote').value  = '';
       document.getElementById('lavPreview').innerHTML = '';
       lavImmagini = [];
+      aggiornaContatoreFoto();
 
       showToast('✓ Fase pubblicata e cliente notificato', 'success');
     } else {
