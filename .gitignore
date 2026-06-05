@@ -18,5 +18,8 @@ error_log
 *.log
 *.tmp
 
+# Guide PDF generate (rigenerabili da ardy-guida-michela.html)
+Guida-Dashboard-Ardy-Michela.pdf
+
 # Sistema
 cgi-bin/
