@@ -332,6 +332,8 @@ $messages[] = ['role' => 'user', 'content' => $lastUserContent];
 $reply         = '';
 $maxIterations = 5;
 $iteration     = 0;
+$bookingMade   = false;   // diventa true se viene fissato un sopralluogo
+$bookingWhen   = null;    // DateTime dell'appuntamento
 
 while ($iteration < $maxIterations) {
     $iteration++;
@@ -401,6 +403,10 @@ while ($iteration < $maxIterations) {
                         $summary  = $toolInput['summary']     ?? 'Sopralluogo Ardy Lab';
                         $desc     = $toolInput['description'] ?? '';
                         $r = gcal_create_event($dateStr, $timeStr, $summary, '', '', '', $desc);
+                        if ($r) {
+                            $bookingMade = true;
+                            $bookingWhen = $startDt;
+                        }
                         $toolResult = $r
                             ? 'Appuntamento creato con successo nel calendario di Michela.'
                             : 'Errore nella creazione dell\'appuntamento. Riprova.';
@@ -503,6 +509,48 @@ if ($userEmail || $userPhone) {
         $mail->send();
     } catch (Exception $e) {
         error_log('ARDY MAIL ERROR: ' . $mail->ErrorInfo);
+    }
+}
+
+// -----------------------------------------------------------
+// CONFERMA SOPRALLUOGO AL CLIENTE (se prenotato e email disponibile)
+// -----------------------------------------------------------
+if ($bookingMade && $bookingWhen instanceof DateTime && $userEmail && filter_var($userEmail, FILTER_VALIDATE_EMAIL)) {
+    $giorni = ['Monday'=>'lunedì','Tuesday'=>'martedì','Wednesday'=>'mercoledì','Thursday'=>'giovedì','Friday'=>'venerdì','Saturday'=>'sabato','Sunday'=>'domenica'];
+    $mesi   = ['January'=>'gennaio','February'=>'febbraio','March'=>'marzo','April'=>'aprile','May'=>'maggio','June'=>'giugno','July'=>'luglio','August'=>'agosto','September'=>'settembre','October'=>'ottobre','November'=>'novembre','December'=>'dicembre'];
+    $gg     = $giorni[$bookingWhen->format('l')] ?? '';
+    $mm     = $mesi[$bookingWhen->format('F')] ?? '';
+    $quando = trim(ucfirst($gg) . ' ' . $bookingWhen->format('j') . ' ' . $mm . ' ' . $bookingWhen->format('Y') . ' alle ' . $bookingWhen->format('H:i'));
+
+    try {
+        $mailC = new PHPMailer(true);
+        $mailC->isSMTP();
+        $mailC->Host       = 'smtp-relay.brevo.com';
+        $mailC->SMTPAuth   = true;
+        $mailC->Username   = ARDY_SMTP_USER;
+        $mailC->Password   = ARDY_SMTP_PASSWORD;
+        $mailC->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mailC->Port       = 587;
+        $mailC->CharSet    = 'UTF-8';
+        $mailC->setFrom('noreply@ardy-lab.it', 'Ardy Lab');
+        $mailC->addAddress($userEmail);
+        $mailC->Subject = '✅ Sopralluogo Ardy Lab — ' . $quando;
+        $mailC->isHTML(true);
+        $mailC->Body = '
+<div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:32px;color:#333;">
+  <h2 style="font-family:sans-serif;color:#c8a96e;font-size:20px;margin-bottom:4px;">Ardy Lab</h2>
+  <p style="color:#999;font-size:13px;margin-bottom:24px;">Conferma sopralluogo</p>
+  <p style="font-size:15px;line-height:1.7;">Ciao,<br>abbiamo fissato il tuo sopralluogo. Ecco il riepilogo:</p>
+  <div style="border-left:3px solid #c8a96e;padding:12px 20px;background:#fafaf8;margin:20px 0;font-size:16px;">
+    <strong>' . htmlspecialchars($quando) . '</strong>
+  </div>
+  <p style="font-size:15px;line-height:1.7;">Per qualsiasi modifica o domanda puoi rispondere a questa email oppure chiamarci al <strong>351 967 7973</strong>. A presto!</p>
+  <p style="margin-top:32px;font-size:12px;color:#bbb;">Ardy Lab — Restauro e laccatura mobili · Roma</p>
+</div>';
+        $mailC->send();
+        error_log('ARDY CONFERMA CLIENTE OK: ' . $userEmail);
+    } catch (Exception $e) {
+        error_log('ARDY CONFERMA CLIENTE ERROR: ' . $mailC->ErrorInfo);
     }
 }
 
