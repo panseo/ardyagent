@@ -103,6 +103,8 @@ if (!$found) foreach ([
     '/usr/share/fonts/liberation-sans-fonts/LiberationSans-Bold.ttf',
 ] as $f) if (is_file($f)) { $found = $f; break; }
 line('   font: ' . ($found ?: 'NESSUNO (reel senza testo)'));
+line('   GD + FreeType: ' . (function_exists('imagettftext') && function_exists('imagecreatefromjpeg') ? 'OK (scritte abilitate)' : 'ASSENTE (reel senza testo)'));
+line('   drawtext FFmpeg: ' . (strpos((string)@shell_exec(FFMPEG . ' -filters 2>&1'), 'drawtext') !== false ? 'presente' : 'ASSENTE (per questo usiamo GD)'));
 line('');
 
 // 7) Cartella reels scrivibile
@@ -125,13 +127,8 @@ foreach ($urls as $u) {
     if ($b === false) { $b = function_exists('curl_init') ? curlGet($u) : false; }
     if ($b === false || strlen($b) < 100) { line("   foto $i: download FALLITO"); continue; }
     $s = $work . "src_$i.img"; file_put_contents($s, $b);
-    $dt = '';
-    if ($found) {
-        $cap = $work . "cap_$i.txt"; file_put_contents($cap, "Fase $i");
-        $dt = ",drawtext=fontfile=$found:textfile=$cap:fontcolor=white:fontsize=56:box=1:boxcolor=black@0.45:boxborderw=22:x=(w-text_w)/2:y=h-320";
-    }
     $n = $work . sprintf('norm_%03d.jpg', $i);
-    $flt = '[0:v]scale=1080:1920:force_original_aspect_ratio=decrease[fg];[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=20:2[bg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1' . $dt;
+    $flt = '[0:v]scale=1080:1920:force_original_aspect_ratio=decrease[fg];[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=20:2[bg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1';
     exec(FFMPEG . ' -y -i ' . escapeshellarg($s) . ' -filter_complex ' . escapeshellarg($flt) . ' -frames:v 1 -q:v 2 ' . escapeshellarg($n) . ' 2>&1', $oN, $rcN);
     @unlink($s);
     if ($rcN === 0 && is_file($n)) { $normFiles[] = $n; $usedUrls[] = $u; line("   foto $i: OK"); }

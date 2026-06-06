@@ -88,6 +88,9 @@ function trovaFont(): ?string {
     return null;
 }
 $font = trovaFont();
+// Le scritte si disegnano con GD (il drawtext di FFmpeg non è sempre incluso
+// nei build statici). Servono GD + supporto FreeType per i font TTF.
+$gdOk = $font && function_exists('imagettftext') && function_exists('imagecreatefromjpeg');
 
 // -- Cartelle di lavoro -----------------------------------------------------
 $reelsDir = __DIR__ . '/reels/';
@@ -113,27 +116,21 @@ foreach ($items as $it) {
     $src = $tmpDir . 'src_' . $idx . '.img';
     file_put_contents($src, $bin);
 
-    // Didascalia della fase (sovrimpressa in basso), se abbiamo un font
-    $drawtext = '';
-    if ($font && $it['fase'] !== '') {
-        $capFile = $tmpDir . sprintf('cap_%03d.txt', $idx);
-        file_put_contents($capFile, wordwrap($it['fase'], 24, "\n", true));
-        $drawtext = ',drawtext=fontfile=' . $font . ':textfile=' . $capFile
-                  . ':fontcolor=white:fontsize=56:box=1:boxcolor=black@0.45:boxborderw=22'
-                  . ':x=(w-text_w)/2:y=h-320:line_spacing=10';
-    }
-
     $norm   = $tmpDir . sprintf('norm_%03d.jpg', $idx);
     $filter = '[0:v]scale=' . REEL_W . ':' . REEL_H . ':force_original_aspect_ratio=decrease[fg];'
             . '[0:v]scale=' . REEL_W . ':' . REEL_H . ':force_original_aspect_ratio=increase,'
             . 'crop=' . REEL_W . ':' . REEL_H . ',boxblur=20:2[bg];'
-            . '[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1' . $drawtext;
+            . '[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1';
     $cmd = FFMPEG . ' -y -i ' . escapeshellarg($src)
          . ' -filter_complex ' . escapeshellarg($filter)
          . ' -frames:v 1 -q:v 2 ' . escapeshellarg($norm) . ' 2>&1';
     exec($cmd, $o, $rc);
     @unlink($src);
-    if ($rc === 0 && is_file($norm)) { $normFiles[] = $norm; $usedItems[] = $it; $idx++; }
+    if ($rc === 0 && is_file($norm)) {
+        // Didascalia della fase disegnata con GD (in basso)
+        if ($gdOk && $it['fase'] !== '') gdCaption($norm, $it['fase'], $font);
+        $normFiles[] = $norm; $usedItems[] = $it; $idx++;
+    }
 }
 
 if (count($normFiles) < 2) { pulisci($tmpDir); fail('Non sono riuscito a elaborare abbastanza foto', 500); }
@@ -239,6 +236,89 @@ echo json_encode([
 // FUNZIONI SLIDE
 // ============================================================
 
+// GD disponibile con supporto FreeType?
+function gdOk(?string $font): bool {
+    return $font && function_exists('imagettftext') && function_exists('imagecreatefromjpeg');
+}
+
+// Spezza il testo su più righe in base alla larghezza max in pixel.
+function gdWrap(string $t, string $font, int $size, int $maxW): array {
+    $parole = preg_split('/\s+/', trim($t));
+    $linee = []; $cur = '';
+    foreach ($parole as $p) {
+        $try = $cur === '' ? $p : "$cur $p";
+        $bb  = imagettfbbox($size, 0, $font, $try);
+        if (($bb[2] - $bb[0]) > $maxW && $cur !== '') { $linee[] = $cur; $cur = $p; }
+        else $cur = $try;
+    }
+    if ($cur !== '') $linee[] = $cur;
+    return $linee;
+}
+
+// Didascalia in basso su fascia semitrasparente (per le foto delle fasi).
+function gdCaption(string $jpg, string $testo, string $font): void {
+    $im = @imagecreatefromjpeg($jpg);
+    if (!$im) return;
+    imagealphablending($im, true);
+    $W = imagesx($im); $H = imagesy($im);
+    $size = 46; $lh = $size + 18; $padY = 28;
+    $linee  = gdWrap($testo, $font, $size, $W - 160);
+    $blockH = count($linee) * $lh;
+    $top    = $H - 300;
+    $band   = imagecolorallocatealpha($im, 0, 0, 0, 80);
+    imagefilledrectangle($im, 0, $top - $padY, $W, $top + $blockH + $padY, $band);
+    $white  = imagecolorallocate($im, 255, 255, 255);
+    $y = $top + $size;
+    foreach ($linee as $ln) {
+        $bb = imagettfbbox($size, 0, $font, $ln);
+        $x  = (int)(($W - ($bb[2] - $bb[0])) / 2);
+        imagettftext($im, $size, 0, $x, $y, $white, $font, $ln);
+        $y += $lh;
+    }
+    imagejpeg($im, $jpg, 92);
+    imagedestroy($im);
+}
+
+// Titolo grande centrato (per la slide iniziale col nome del mobile).
+function gdTitolo(string $jpg, string $testo, string $font): void {
+    $im = @imagecreatefromjpeg($jpg);
+    if (!$im) return;
+    imagealphablending($im, true);
+    $W = imagesx($im); $H = imagesy($im);
+    $size = 76; $lh = $size + 24;
+    $linee  = gdWrap(mb_strtoupper($testo), $font, $size, $W - 180);
+    $blockH = count($linee) * $lh;
+    $y = (int)(($H - $blockH) / 2) + $size + 120;
+    $white = imagecolorallocate($im, 255, 255, 255);
+    foreach ($linee as $ln) {
+        $bb = imagettfbbox($size, 0, $font, $ln);
+        $x  = (int)(($W - ($bb[2] - $bb[0])) / 2);
+        // ombra leggera per leggibilità
+        $sh = imagecolorallocatealpha($im, 0, 0, 0, 60);
+        imagettftext($im, $size, 0, $x + 3, $y + 3, $sh, $font, $ln);
+        imagettftext($im, $size, 0, $x, $y, $white, $font, $ln);
+        $y += $lh;
+    }
+    imagejpeg($im, $jpg, 92);
+    imagedestroy($im);
+}
+
+// Etichetta corta con box (PRIMA / DOPO sulla slide finale).
+function gdLabel(string $jpg, string $testo, string $font, int $x, int $y): void {
+    $im = @imagecreatefromjpeg($jpg);
+    if (!$im) return;
+    imagealphablending($im, true);
+    $size = 52;
+    $bb = imagettfbbox($size, 0, $font, $testo);
+    $tw = $bb[2] - $bb[0]; $th = $bb[1] - $bb[7];
+    $box = imagecolorallocatealpha($im, 0, 0, 0, 70);
+    imagefilledrectangle($im, $x - 16, $y - 16, $x + $tw + 16, $y + $th + 16, $box);
+    $white = imagecolorallocate($im, 255, 255, 255);
+    imagettftext($im, $size, 0, $x, $y + $th, $white, $font, $testo);
+    imagejpeg($im, $jpg, 92);
+    imagedestroy($im);
+}
+
 // Slide-titolo: nome del mobile + logo su sfondo (prima foto sfocata e scurita).
 function slideTitolo(string $tmpDir, string $bgImg, string $logo, ?string $font, string $titolo): ?string {
     $out    = $tmpDir . 'slide_title.jpg';
@@ -251,19 +331,14 @@ function slideTitolo(string $tmpDir, string $bgImg, string $logo, ?string $font,
         $fc     .= ';[1:v]scale=460:-1[lg];[bg][lg]overlay=(W-w)/2:280[v1]';
         $next    = '[v1]';
     }
-    if ($font && $titolo !== '') {
-        $capFile = $tmpDir . 'title.txt';
-        file_put_contents($capFile, wordwrap($titolo, 18, "\n", true));
-        $fc  .= ';' . $next . 'drawtext=fontfile=' . $font . ':textfile=' . $capFile
-              . ':fontcolor=white:fontsize=84:x=(w-text_w)/2:y=(h-text_h)/2+140'
-              . ':line_spacing=16:box=1:boxcolor=black@0.35:boxborderw=30[vt]';
-        $next = '[vt]';
-    }
 
     $cmd = FFMPEG . ' -y' . $inputs . ' -filter_complex ' . escapeshellarg($fc)
          . ' -map ' . escapeshellarg($next) . ' -frames:v 1 -q:v 2 ' . escapeshellarg($out) . ' 2>&1';
     exec($cmd, $o, $rc);
-    return ($rc === 0 && is_file($out)) ? $out : null;
+    if ($rc !== 0 || !is_file($out)) return null;
+
+    if (gdOk($font) && $titolo !== '') gdTitolo($out, $titolo, $font);
+    return $out;
 }
 
 // Slide finale "Prima -> Dopo": prima e ultima foto impilate + etichette + logo.
@@ -280,16 +355,15 @@ function slideFinale(string $tmpDir, string $primaImg, string $dopoImg, string $
         $fc     .= ';[2:v]scale=300:-1[lg];[stk][lg]overlay=(W-w)/2:H-140[vl]';
         $next    = '[vl]';
     }
-    if ($font) {
-        $fc  .= ';' . $next . "drawtext=fontfile=$font:text=PRIMA:fontcolor=white:fontsize=58"
-              . ':x=40:y=40:box=1:boxcolor=black@0.5:boxborderw=16[v2]';
-        $fc  .= ';[v2]' . "drawtext=fontfile=$font:text=DOPO:fontcolor=white:fontsize=58"
-              . ':x=40:y=1000:box=1:boxcolor=black@0.5:boxborderw=16[v3]';
-        $next = '[v3]';
-    }
 
     $cmd = FFMPEG . ' -y' . $inputs . ' -filter_complex ' . escapeshellarg($fc)
          . ' -map ' . escapeshellarg($next) . ' -frames:v 1 -q:v 2 ' . escapeshellarg($out) . ' 2>&1';
     exec($cmd, $o, $rc);
-    return ($rc === 0 && is_file($out)) ? $out : null;
+    if ($rc !== 0 || !is_file($out)) return null;
+
+    if (gdOk($font)) {
+        gdLabel($out, 'PRIMA', $font, 40, 40);
+        gdLabel($out, 'DOPO',  $font, 40, 1000);
+    }
+    return $out;
 }
