@@ -734,6 +734,7 @@ async function creaReel() {
       body:    JSON.stringify({
         session_id: currentLead.Session_ID,
         musica:     document.getElementById('reelMusica').value,
+        mobile:     document.getElementById('lavMobile').value.trim() || (currentLead.Mobile ?? ''),
       })
     });
     const data = await res.json();

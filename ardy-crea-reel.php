@@ -24,6 +24,8 @@ const SITE_URL     = 'https://ardyagent.ardy-lab.it';
 const REEL_W       = 1080;
 const REEL_H       = 1920;
 const SEC_PER_FOTO = 2.5;     // durata di ogni foto
+const SEC_TITOLO   = 3.5;     // durata slide-titolo iniziale
+const SEC_FINALE   = 4.0;     // durata slide finale "Prima -> Dopo"
 const MAX_FOTO     = 40;      // tetto di sicurezza
 
 function fail(string $msg, int $code = 400): void {
@@ -36,6 +38,7 @@ function fail(string $msg, int $code = 400): void {
 $input     = json_decode(file_get_contents('php://input'), true) ?: [];
 $sessionId = preg_replace('/[^a-zA-Z0-9_\-]/', '', $input['session_id'] ?? '');
 $musica    = $input['musica'] ?? '';   // nome file, 'casuale' oppure '' / 'nessuna'
+$mobile    = trim($input['mobile'] ?? '');
 
 if ($sessionId === '') fail('session_id mancante');
 
@@ -47,6 +50,11 @@ try {
     $stmt = $db->prepare("SELECT fase_nome, foto_urls FROM fasi WHERE session_id = ? ORDER BY created_at ASC");
     $stmt->execute([$sessionId]);
     $rows = $stmt->fetchAll();
+    if ($mobile === '') {
+        $st2 = $db->prepare("SELECT mobile FROM clienti WHERE session_id = ? LIMIT 1");
+        $st2->execute([$sessionId]);
+        $mobile = trim((string)($st2->fetchColumn() ?: ''));
+    }
 } catch (PDOException $e) {
     error_log('ARDY REEL DB ERROR: ' . $e->getMessage());
     fail('Errore database', 500);
@@ -95,7 +103,8 @@ function pulisci(string $dir): void {
 }
 
 // -- Scarica e normalizza ogni foto a 1080x1920 ----------------------------
-$normFiles = [];
+$normFiles  = [];
+$usedItems  = [];   // gli item effettivamente elaborati (per prima/dopo)
 $idx = 0;
 foreach ($items as $it) {
     $url = $it['url'];
@@ -124,21 +133,45 @@ foreach ($items as $it) {
          . ' -frames:v 1 -q:v 2 ' . escapeshellarg($norm) . ' 2>&1';
     exec($cmd, $o, $rc);
     @unlink($src);
-    if ($rc === 0 && is_file($norm)) { $normFiles[] = $norm; $idx++; }
+    if ($rc === 0 && is_file($norm)) { $normFiles[] = $norm; $usedItems[] = $it; $idx++; }
 }
 
 if (count($normFiles) < 2) { pulisci($tmpDir); fail('Non sono riuscito a elaborare abbastanza foto', 500); }
 
-$durataTot = count($normFiles) * SEC_PER_FOTO;
+$logo = __DIR__ . '/assets/logo.png';
+
+// -- Slide-titolo iniziale (nome mobile + logo su sfondo sfocato) -----------
+$titleSlide = slideTitolo($tmpDir, $normFiles[0], $logo, $font, $mobile);
+
+// -- Slide finale "Prima -> Dopo" (prima e ultima foto + logo) -------------
+$finalSlide = null;
+$primaBin = @file_get_contents($usedItems[0]['url']);
+$dopoBin  = @file_get_contents(end($usedItems)['url']);
+if ($primaBin !== false && $dopoBin !== false) {
+    $primaSrc = $tmpDir . 'prima.img';
+    $dopoSrc  = $tmpDir . 'dopo.img';
+    file_put_contents($primaSrc, $primaBin);
+    file_put_contents($dopoSrc, $dopoBin);
+    $finalSlide = slideFinale($tmpDir, $primaSrc, $dopoSrc, $logo, $font);
+}
+
+// -- Sequenza completa con durate per-slide --------------------------------
+$slides = [];
+if ($titleSlide) $slides[] = ['f' => $titleSlide, 'd' => SEC_TITOLO];
+foreach ($normFiles as $nf) $slides[] = ['f' => $nf, 'd' => SEC_PER_FOTO];
+if ($finalSlide) $slides[] = ['f' => $finalSlide, 'd' => SEC_FINALE];
+
+$durataTot = 0.0;
+foreach ($slides as $s) $durataTot += $s['d'];
 
 // -- Lista per il concat demuxer -------------------------------------------
 $listFile = $tmpDir . 'list.txt';
 $lines    = '';
-foreach ($normFiles as $nf) {
-    $lines .= "file '" . $nf . "'\n";
-    $lines .= 'duration ' . SEC_PER_FOTO . "\n";
+foreach ($slides as $s) {
+    $lines .= "file '" . $s['f'] . "'\n";
+    $lines .= 'duration ' . $s['d'] . "\n";
 }
-$lines .= "file '" . end($normFiles) . "'\n"; // ripeti l'ultima (quirk concat)
+$lines .= "file '" . end($slides)['f'] . "'\n"; // ripeti l'ultima (quirk concat)
 file_put_contents($listFile, $lines);
 
 // -- Step 1: video muto con fade in/out ------------------------------------
@@ -201,3 +234,62 @@ echo json_encode([
     'durata'   => round($durataTot, 1),
     'musica'   => $musicPath ? basename($musicPath) : null,
 ]);
+
+// ============================================================
+// FUNZIONI SLIDE
+// ============================================================
+
+// Slide-titolo: nome del mobile + logo su sfondo (prima foto sfocata e scurita).
+function slideTitolo(string $tmpDir, string $bgImg, string $logo, ?string $font, string $titolo): ?string {
+    $out    = $tmpDir . 'slide_title.jpg';
+    $inputs = ' -i ' . escapeshellarg($bgImg);
+    $fc     = '[0:v]boxblur=30:3,eq=brightness=-0.30[bg]';
+    $next   = '[bg]';
+
+    if (is_file($logo)) {
+        $inputs .= ' -i ' . escapeshellarg($logo);
+        $fc     .= ';[1:v]scale=460:-1[lg];[bg][lg]overlay=(W-w)/2:280[v1]';
+        $next    = '[v1]';
+    }
+    if ($font && $titolo !== '') {
+        $capFile = $tmpDir . 'title.txt';
+        file_put_contents($capFile, wordwrap($titolo, 18, "\n", true));
+        $fc  .= ';' . $next . 'drawtext=fontfile=' . $font . ':textfile=' . $capFile
+              . ':fontcolor=white:fontsize=84:x=(w-text_w)/2:y=(h-text_h)/2+140'
+              . ':line_spacing=16:box=1:boxcolor=black@0.35:boxborderw=30[vt]';
+        $next = '[vt]';
+    }
+
+    $cmd = FFMPEG . ' -y' . $inputs . ' -filter_complex ' . escapeshellarg($fc)
+         . ' -map ' . escapeshellarg($next) . ' -frames:v 1 -q:v 2 ' . escapeshellarg($out) . ' 2>&1';
+    exec($cmd, $o, $rc);
+    return ($rc === 0 && is_file($out)) ? $out : null;
+}
+
+// Slide finale "Prima -> Dopo": prima e ultima foto impilate + etichette + logo.
+function slideFinale(string $tmpDir, string $primaImg, string $dopoImg, string $logo, ?string $font): ?string {
+    $out    = $tmpDir . 'slide_final.jpg';
+    $inputs = ' -i ' . escapeshellarg($primaImg) . ' -i ' . escapeshellarg($dopoImg);
+    $fc     = '[0:v]scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960[top];'
+            . '[1:v]scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960[bot];'
+            . '[top][bot]vstack=inputs=2[stk]';
+    $next   = '[stk]';
+
+    if (is_file($logo)) {
+        $inputs .= ' -i ' . escapeshellarg($logo);
+        $fc     .= ';[2:v]scale=300:-1[lg];[stk][lg]overlay=(W-w)/2:H-140[vl]';
+        $next    = '[vl]';
+    }
+    if ($font) {
+        $fc  .= ';' . $next . "drawtext=fontfile=$font:text=PRIMA:fontcolor=white:fontsize=58"
+              . ':x=40:y=40:box=1:boxcolor=black@0.5:boxborderw=16[v2]';
+        $fc  .= ';[v2]' . "drawtext=fontfile=$font:text=DOPO:fontcolor=white:fontsize=58"
+              . ':x=40:y=1000:box=1:boxcolor=black@0.5:boxborderw=16[v3]';
+        $next = '[v3]';
+    }
+
+    $cmd = FFMPEG . ' -y' . $inputs . ' -filter_complex ' . escapeshellarg($fc)
+         . ' -map ' . escapeshellarg($next) . ' -frames:v 1 -q:v 2 ' . escapeshellarg($out) . ' 2>&1';
+    exec($cmd, $o, $rc);
+    return ($rc === 0 && is_file($out)) ? $out : null;
+}
