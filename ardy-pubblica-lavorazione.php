@@ -83,6 +83,7 @@ if (!is_dir($sessionDir) && !mkdir($sessionDir, 0755, true) && !is_dir($sessionD
 }
 
 $savedImageUrls = [];
+$savedImageIds  = [];   // ID attachment WP, in parallelo a $savedImageUrls
 $allowedMimes   = ['image/jpeg', 'image/png', 'image/webp'];
 $maxImmagini    = 15;                 // numero massimo di foto per pubblicazione
 $maxByte        = 12 * 1024 * 1024;   // dimensione massima per foto (12 MB)
@@ -125,6 +126,7 @@ foreach ($immagini as $idx => $imgData) {
     $attachId = media_handle_sideload($wpFile, 0);
     if (!is_wp_error($attachId)) {
         $savedImageUrls[] = wp_get_attachment_url($attachId);
+        $savedImageIds[]  = $attachId;
     }
 }
 
@@ -138,8 +140,16 @@ $testoSocial = generaTestoSocial($noteBrevi, $faseNome, $mobileTitolo);
 // 8. COSTRUISCI BLOCCO HTML DELLA FASE
 // -----------------------------------------------------------
 $dataOra  = date('d/m/Y H:i');
+
+// Copertina FISSA: la prima foto del lavoro diventa l'immagine in evidenza.
+// La impostiamo solo se il post non ne ha già una (così resta la prima foto
+// in assoluto). Quella foto NON viene ripetuta nell'editor.
+$existingThumb   = $wpPostId ? has_post_thumbnail($wpPostId) : false;
+$featuredImageId = (!$existingThumb && !empty($savedImageIds)) ? $savedImageIds[0] : null;
+
 $fotoHtml = '';
-foreach ($savedImageUrls as $url) {
+foreach ($savedImageUrls as $idx => $url) {
+    if ($featuredImageId !== null && $idx === 0) continue; // la copertina non va nell'editor
     $fotoHtml .= '<img src="' . esc_url($url) . '" style="max-width:100%;margin:10px 0;border-radius:6px;" />' . "\n";
 }
 
@@ -194,6 +204,11 @@ if ($wpPostId) {
 if (!$wpPostId) {
     echo json_encode(['success' => false, 'error' => 'Errore pubblicazione WordPress']);
     exit();
+}
+
+// Imposta l'immagine in evidenza (copertina per il modulo DIVI Blog in home)
+if ($featuredImageId !== null) {
+    set_post_thumbnail($wpPostId, $featuredImageId);
 }
 
 // -----------------------------------------------------------
