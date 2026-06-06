@@ -70,7 +70,7 @@ if (!is_file(FFMPEG)) fail('FFmpeg non trovato sul server', 500);
 // -- Raccogli le foto dalle fasi -------------------------------------------
 try {
     $db   = ardyDB();
-    $stmt = $db->prepare("SELECT fase_nome, foto_urls FROM fasi WHERE session_id = ? ORDER BY created_at ASC");
+    $stmt = $db->prepare("SELECT fase_nome, foto_urls, testo_generato FROM fasi WHERE session_id = ? ORDER BY created_at ASC");
     $stmt->execute([$sessionId]);
     $rows = $stmt->fetchAll();
     if ($mobile === '') {
@@ -83,12 +83,15 @@ try {
     fail('Errore database', 500);
 }
 
-$items = [];   // [{url, fase}] mantenendo l'abbinamento foto -> fase
+$items    = [];   // [{url, fase}] mantenendo l'abbinamento foto -> fase
+$fasiNomi = [];   // elenco nomi fase (per la caption)
 foreach ($rows as $r) {
+    $fn = trim($r['fase_nome'] ?? '');
+    if ($fn !== '' && !in_array($fn, $fasiNomi, true)) $fasiNomi[] = $fn;
     $urls = json_decode($r['foto_urls'] ?? '[]', true) ?: [];
     foreach ($urls as $u) {
         if (is_string($u) && $u !== '') {
-            $items[] = ['url' => $u, 'fase' => trim($r['fase_nome'] ?? '')];
+            $items[] = ['url' => $u, 'fase' => $fn];
         }
     }
 }
@@ -261,13 +264,53 @@ pulisci($tmpDir);
 
 if (!is_file($finalPath)) fail('Reel non generato', 500);
 
+// Caption automatica (modificabile poi in dashboard prima di pubblicare)
+$caption = generaCaptionReel($mobile, $fasiNomi);
+
 echo json_encode([
     'success'  => true,
     'reel_url' => SITE_URL . '/reels/' . $finalName,
     'foto'     => count($normFiles),
     'durata'   => round($durataTot, 1),
     'musica'   => $musicPath ? basename($musicPath) : null,
+    'caption'  => $caption,
 ]);
+
+// Genera una caption per Instagram/Facebook a partire dalle fasi del lavoro.
+function generaCaptionReel(string $mobile, array $fasiNomi): string {
+    if (!defined('ARDY_API_KEY') || ARDY_API_KEY === '') return '';
+    $elenco = $fasiNomi ? '- ' . implode("\n- ", $fasiNomi) : '(fasi non specificate)';
+    $prompt = "Scrivi la didascalia di un Reel per Instagram/Facebook di Ardy Lab, "
+        . "bottega di restauro e laccatura mobili a Roma. Il reel mostra l'intera "
+        . "lavorazione passo dopo passo.\n\n"
+        . "Mobile: $mobile\nFasi mostrate nel reel:\n$elenco\n\n"
+        . "Regole:\n- Max 90 parole\n- Tono autentico, artigianale, emozionale\n"
+        . "- Apri con una frase d'impatto sul prima/dopo\n"
+        . "- Chiudi con call to action verso ardy-lab.it\n"
+        . "- Aggiungi 10-12 hashtag pertinenti su una riga separata\n"
+        . "- Max 3 emoji nel testo\n- Niente elenchi puntati";
+
+    $payload = json_encode([
+        'model'      => 'claude-sonnet-4-6',
+        'max_tokens' => 500,
+        'messages'   => [['role' => 'user', 'content' => $prompt]],
+    ]);
+
+    $ch = curl_init('https://api.anthropic.com/v1/messages');
+    curl_setopt($ch, CURLOPT_POST,           true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS,     $payload);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT,        60);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'x-api-key: ' . ARDY_API_KEY,
+        'anthropic-version: 2023-06-01',
+    ]);
+    $res = curl_exec($ch);
+    curl_close($ch);
+    $data = json_decode($res, true);
+    return $data['content'][0]['text'] ?? '';
+}
 
 // ============================================================
 // FUNZIONI SLIDE

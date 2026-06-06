@@ -277,6 +277,7 @@ const AI_URL          = BASE_URL + '/ardy-proxy.php';
 const LAVORAZIONE_URL = BASE_URL + '/ardy-pubblica-lavorazione.php';
 const SOCIAL_URL      = BASE_URL + '/ardy-pubblica-social.php';
 const REEL_URL        = BASE_URL + '/ardy-crea-reel.php';
+const REEL_PUB_URL    = BASE_URL + '/ardy-pubblica-reel.php';
 const MUSICA_URL      = BASE_URL + '/ardy-lista-musica.php';
 
 // ─── STATE ────────────────────────────────────────────────
@@ -691,6 +692,42 @@ async function pubblicaFase() {
 
 // ─── REEL FINALE ──────────────────────────────────────────
 let musicaCaricata = false;
+let lastReelUrl = null;
+
+async function pubblicaReel() {
+  if (!lastReelUrl) { showToast('⚠ Crea prima il reel', 'error'); return; }
+  const caption = document.getElementById('reelCaption').value.trim();
+  if (!caption) { showToast('⚠ La didascalia è vuota', 'error'); return; }
+  const btn = document.getElementById('btnPubReel');
+  btn.disabled = true;
+  btn.textContent = '⏳ INVIO IN CORSO...';
+  try {
+    const res  = await fetch(REEL_PUB_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        reel_url:   lastReelUrl,
+        caption:    caption,
+        mobile:     document.getElementById('lavMobile').value.trim() || (currentLead.Mobile ?? ''),
+        cliente:    `${currentLead.Nome ?? ''} ${currentLead.Cognome ?? ''}`.trim(),
+        session_id: currentLead.Session_ID,
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('✓ Reel inviato ai social', 'success');
+      btn.textContent = '✓ INVIATO';
+    } else {
+      showToast('⚠ ' + (data.error || 'Errore pubblicazione'), 'error');
+      btn.disabled = false;
+      btn.textContent = '📲 PUBBLICA REEL SUI SOCIAL';
+    }
+  } catch(e) {
+    showToast('⚠ Errore di rete', 'error');
+    btn.disabled = false;
+    btn.textContent = '📲 PUBBLICA REEL SUI SOCIAL';
+  }
+}
 
 function aggiornaPannelloReel() {
   const panel = document.getElementById('reelPanel');
@@ -739,9 +776,15 @@ async function creaReel() {
     });
     const data = await res.json();
     if (data.success) {
+      lastReelUrl = data.reel_url;
       out.innerHTML = `<strong>✓ Reel pronto!</strong> (${data.foto} foto · ${data.durata}s)<br><br>
         <video src="${safeUrl(data.reel_url)}" controls style="max-width:240px;border-radius:8px;"></video><br><br>
-        <a href="${safeUrl(data.reel_url)}" download style="color:var(--accent);">⬇ Scarica il reel</a>`;
+        <a href="${safeUrl(data.reel_url)}" download style="color:var(--accent);">⬇ Scarica il reel</a>
+        <div style="margin-top:14px;">
+          <div style="font-size:12px;color:var(--text-dim);margin-bottom:6px;">Didascalia (modificabile prima di pubblicare):</div>
+          <textarea class="lav-textarea" id="reelCaption" style="min-height:150px;">${escHtml(data.caption || '')}</textarea>
+          <button class="btn-pubblica" id="btnPubReel" style="margin-top:8px;" onclick="pubblicaReel()">📲 PUBBLICA REEL SUI SOCIAL</button>
+        </div>`;
       showToast('✓ Reel creato', 'success');
     } else {
       out.innerHTML = '⚠ ' + escHtml(data.error || 'Errore sconosciuto');
