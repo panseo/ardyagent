@@ -224,6 +224,20 @@
             <div class="lav-title" style="margin-bottom:8px;">🕒 Post social in attesa</div>
             <div id="socialPendingList"></div>
           </div>
+
+          <!-- REEL FINALE — monta un video con tutte le fasi pubblicate -->
+          <div id="reelPanel" style="display:none;margin-top:18px;border-top:1px dashed var(--border);padding-top:16px;">
+            <div class="lav-title" style="margin-bottom:4px;">🎬 Reel finale della lavorazione</div>
+            <p style="font-size:12px;color:var(--text-dim);margin:0 0 10px;">A lavoro finito, monta un video verticale con tutte le foto delle fasi pubblicate.</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+              <select class="lav-input" id="reelMusica" style="flex:2 1 160px;">
+                <option value="nessuna">🔇 Senza musica</option>
+                <option value="casuale">🎲 Traccia casuale</option>
+              </select>
+              <button class="btn-pubblica" id="btnReel" style="flex:1 1 140px;" onclick="creaReel()">🎬 CREA REEL</button>
+            </div>
+            <div class="lav-result" id="reelResult"></div>
+          </div>
         </div>
       </div>
 
@@ -262,6 +276,8 @@ const UPDATE_URL      = BASE_URL + '/ardy-update-lead.php';
 const AI_URL          = BASE_URL + '/ardy-proxy.php';
 const LAVORAZIONE_URL = BASE_URL + '/ardy-pubblica-lavorazione.php';
 const SOCIAL_URL      = BASE_URL + '/ardy-pubblica-social.php';
+const REEL_URL        = BASE_URL + '/ardy-crea-reel.php';
+const MUSICA_URL      = BASE_URL + '/ardy-lista-musica.php';
 
 // ─── STATE ────────────────────────────────────────────────
 let allLeads       = [];
@@ -409,6 +425,8 @@ function renderDetail() {
     document.getElementById('socialPanel').style.display = 'none';
     pendingSocial = null;
     renderSocialPending();
+    // Pannello reel: visibile solo se c'è già una lavorazione pubblicata
+    aggiornaPannelloReel();
   } else {
     lavSection.classList.remove('visible');
   }
@@ -658,6 +676,7 @@ async function pubblicaFase() {
 
       // Mostra il pannello social: la pubblicazione su FB/IG è ora manuale
       mostraPannelloSocial(data);
+      aggiornaPannelloReel();
       showToast('✓ Fase pubblicata e cliente notificato', 'success');
     } else {
       showToast('⚠ Errore: ' + (data.error ?? 'sconosciuto'), 'error');
@@ -668,6 +687,72 @@ async function pubblicaFase() {
 
   btn.disabled = false;
   btn.textContent = '✦ PUBBLICA FASE + NOTIFICA CLIENTE';
+}
+
+// ─── REEL FINALE ──────────────────────────────────────────
+let musicaCaricata = false;
+
+function aggiornaPannelloReel() {
+  const panel = document.getElementById('reelPanel');
+  if (!panel) return;
+  // Mostra solo se la lavorazione ha già un post (= fasi pubblicate)
+  panel.style.display = lavWpPostId ? 'block' : 'none';
+  document.getElementById('reelResult').classList.remove('visible');
+  if (lavWpPostId) caricaListaMusica();
+}
+
+async function caricaListaMusica() {
+  if (musicaCaricata) return;
+  try {
+    const res  = await fetch(MUSICA_URL);
+    const list = await res.json();
+    const sel  = document.getElementById('reelMusica');
+    if (Array.isArray(list) && list.length) {
+      const opts = list.map(t => `<option value="${escHtml(t.file)}">🎵 ${escHtml(t.label)}</option>`).join('');
+      sel.insertAdjacentHTML('beforeend', opts);
+    }
+    musicaCaricata = true;
+  } catch(e) { /* la lista resta con sole opzioni base */ }
+}
+
+async function creaReel() {
+  if (!currentLead || !lavWpPostId) {
+    showToast('⚠ Pubblica almeno una fase prima di creare il reel', 'error');
+    return;
+  }
+  const btn = document.getElementById('btnReel');
+  const out = document.getElementById('reelResult');
+  btn.disabled = true;
+  btn.textContent = '⏳ MONTAGGIO IN CORSO...';
+  out.classList.add('visible');
+  out.innerHTML = '<div class="spinner"></div> Sto montando il reel, può richiedere un minuto...';
+
+  try {
+    const res  = await fetch(REEL_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        session_id: currentLead.Session_ID,
+        musica:     document.getElementById('reelMusica').value,
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      out.innerHTML = `<strong>✓ Reel pronto!</strong> (${data.foto} foto · ${data.durata}s)<br><br>
+        <video src="${safeUrl(data.reel_url)}" controls style="max-width:240px;border-radius:8px;"></video><br><br>
+        <a href="${safeUrl(data.reel_url)}" download style="color:var(--accent);">⬇ Scarica il reel</a>`;
+      showToast('✓ Reel creato', 'success');
+    } else {
+      out.innerHTML = '⚠ ' + escHtml(data.error || 'Errore sconosciuto');
+      showToast('⚠ ' + (data.error || 'Errore reel'), 'error');
+    }
+  } catch(e) {
+    out.innerHTML = '⚠ Errore di rete o timeout durante il montaggio.';
+    showToast('⚠ Errore di rete', 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🎬 CREA REEL';
 }
 
 // ─── PUBBLICAZIONE SOCIAL (manuale) ───────────────────────
