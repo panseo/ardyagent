@@ -34,6 +34,19 @@ function fail(string $msg, int $code = 400): void {
     exit();
 }
 
+// Esegue un comando shell. Usa proc_open perché su PHP-FPM exec/shell_exec
+// sono spesso disabilitate. Ritorna l'exit code; $out raccoglie stdout+stderr.
+function runCmd(string $cmd, ?array &$out = null): int {
+    $desc = [1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
+    $p = @proc_open($cmd, $desc, $pipes);
+    if (!is_resource($p)) { $out = ['proc_open non disponibile']; return 127; }
+    $stdout = stream_get_contents($pipes[1]); fclose($pipes[1]);
+    $stderr = stream_get_contents($pipes[2]); fclose($pipes[2]);
+    $code = proc_close($p);
+    $out  = preg_split("/\r?\n/", trim($stdout . "\n" . $stderr)) ?: [];
+    return $code;
+}
+
 // -- Input (HTTP o CLI per test) -------------------------------------------
 $isCli = (PHP_SAPI === 'cli');
 if ($isCli) {
@@ -134,7 +147,7 @@ foreach ($items as $it) {
     $cmd = FFMPEG . ' -y -i ' . escapeshellarg($src)
          . ' -filter_complex ' . escapeshellarg($filter)
          . ' -frames:v 1 -q:v 2 ' . escapeshellarg($norm) . ' 2>&1';
-    exec($cmd, $o, $rc);
+    $rc = runCmd($cmd, $o);
     @unlink($src);
     if ($rc === 0 && is_file($norm)) {
         // Didascalia della fase disegnata con GD (in basso)
@@ -182,7 +195,7 @@ foreach ($slides as $k => $s) {
          . ' -vf ' . escapeshellarg('scale=' . REEL_W . ':' . REEL_H . ',format=yuv420p,setsar=1')
          . ' -c:v libx264 -preset veryfast '
          . escapeshellarg($clip) . ' 2>&1';
-    exec($cmd, $oc, $rcc);
+    $rcc = runCmd($cmd, $oc);
     if ($rcc !== 0 || !is_file($clip)) {
         error_log('ARDY REEL CLIP ERROR: ' . implode("\n", $oc));
         pulisci($tmpDir);
@@ -197,7 +210,7 @@ file_put_contents($listFile, $clipLines);
 $videoRaw = $tmpDir . 'raw.mp4';
 $cmd = FFMPEG . ' -y -f concat -safe 0 -i ' . escapeshellarg($listFile)
      . ' -c copy ' . escapeshellarg($videoRaw) . ' 2>&1';
-exec($cmd, $o1, $rc1);
+$rc1 = runCmd($cmd, $o1);
 if ($rc1 !== 0 || !is_file($videoRaw)) {
     error_log('ARDY REEL CONCAT ERROR: ' . implode("\n", $o1));
     pulisci($tmpDir);
@@ -237,7 +250,7 @@ if ($musicPath) {
          . ' -c:v libx264 -preset veryfast -pix_fmt yuv420p'
          . ' -movflags +faststart ' . escapeshellarg($finalPath) . ' 2>&1';
 }
-exec($cmd, $o2, $rc2);
+$rc2 = runCmd($cmd, $o2);
 if ($rc2 !== 0 || !is_file($finalPath)) {
     error_log('ARDY REEL FINAL ERROR: ' . implode("\n", $o2));
     pulisci($tmpDir);
@@ -358,7 +371,7 @@ function slideTitolo(string $tmpDir, string $bgImg, string $logo, ?string $font,
 
     $cmd = FFMPEG . ' -y' . $inputs . ' -filter_complex ' . escapeshellarg($fc)
          . ' -map ' . escapeshellarg($next) . ' -frames:v 1 -q:v 2 ' . escapeshellarg($out) . ' 2>&1';
-    exec($cmd, $o, $rc);
+    $rc = runCmd($cmd, $o);
     if ($rc !== 0 || !is_file($out)) return null;
 
     if (gdOk($font) && $titolo !== '') gdTitolo($out, $titolo, $font);
@@ -382,7 +395,7 @@ function slideFinale(string $tmpDir, string $primaImg, string $dopoImg, string $
 
     $cmd = FFMPEG . ' -y' . $inputs . ' -filter_complex ' . escapeshellarg($fc)
          . ' -map ' . escapeshellarg($next) . ' -frames:v 1 -q:v 2 ' . escapeshellarg($out) . ' 2>&1';
-    exec($cmd, $o, $rc);
+    $rc = runCmd($cmd, $o);
     if ($rc !== 0 || !is_file($out)) return null;
 
     if (gdOk($font)) {
