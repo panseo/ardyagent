@@ -285,8 +285,8 @@ function gdCaption(string $jpg, string $testo, string $font): void {
     if (!$im) return;
     imagealphablending($im, true);
     $W = imagesx($im); $H = imagesy($im);
-    $size = 46; $lh = $size + 18; $padY = 28;
-    $linee  = gdWrap($testo, $font, $size, $W - 160);
+    $size = 38; $lh = $size + 16; $padY = 26;
+    $linee  = gdWrap($testo, $font, $size, $W - 200);
     $blockH = count($linee) * $lh;
     $top    = $H - 300;
     $band   = imagecolorallocatealpha($im, 0, 0, 0, 80);
@@ -309,8 +309,8 @@ function gdTitolo(string $jpg, string $testo, string $font): void {
     if (!$im) return;
     imagealphablending($im, true);
     $W = imagesx($im); $H = imagesy($im);
-    $size = 76; $lh = $size + 24;
-    $linee  = gdWrap(mb_strtoupper($testo), $font, $size, $W - 180);
+    $size = 56; $lh = $size + 20;
+    $linee  = gdWrap(mb_strtoupper($testo), $font, $size, $W - 220);
     $blockH = count($linee) * $lh;
     $y = (int)(($H - $blockH) / 2) + $size + 120;
     $white = imagecolorallocate($im, 255, 255, 255);
@@ -332,7 +332,7 @@ function gdLabel(string $jpg, string $testo, string $font, int $x, int $y): void
     $im = @imagecreatefromjpeg($jpg);
     if (!$im) return;
     imagealphablending($im, true);
-    $size = 52;
+    $size = 40;
     $bb = imagettfbbox($size, 0, $font, $testo);
     $tw = $bb[2] - $bb[0]; $th = $bb[1] - $bb[7];
     $box = imagecolorallocatealpha($im, 0, 0, 0, 70);
@@ -352,7 +352,7 @@ function slideTitolo(string $tmpDir, string $bgImg, string $logo, ?string $font,
 
     if (is_file($logo)) {
         $inputs .= ' -i ' . escapeshellarg($logo);
-        $fc     .= ';[1:v]scale=460:-1[lg];[bg][lg]overlay=(W-w)/2:280[v1]';
+        $fc     .= ';[1:v]scale=360:-1[lg];[bg][lg]overlay=(W-w)/2:200[v1]';
         $next    = '[v1]';
     }
 
@@ -376,7 +376,7 @@ function slideFinale(string $tmpDir, string $primaImg, string $dopoImg, string $
 
     if (is_file($logo)) {
         $inputs .= ' -i ' . escapeshellarg($logo);
-        $fc     .= ';[2:v]scale=300:-1[lg];[stk][lg]overlay=(W-w)/2:H-140[vl]';
+        $fc     .= ';[2:v]scale=240:-1[lg];[stk][lg]overlay=(W-w)/2:H-h-60[vl]';
         $next    = '[vl]';
     }
 
