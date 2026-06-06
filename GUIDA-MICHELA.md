@@ -162,8 +162,13 @@ Instagram e Facebook.
 sezione lavorazione (quando c'è già almeno una fase pubblicata).
 
 **Come si fa:**
-1. (Facoltativo) scegli una **musica** dal menù a tendina, oppure "Senza musica"
-2. Premi **🎬 CREA REEL** → attendi un minuto: il video si monta da solo
+1. Scegli uno **stile (template)** dal primo menù (es. Classico, Veloce, Cinematico)
+2. (Facoltativo) scegli una **musica**, oppure lascia quella del template
+3. Premi **🎬 CREA REEL** → attendi un minuto: il video si monta da solo
+
+💡 *Col bottone **⚙ Template** puoi creare i tuoi stili (quanto dura ogni foto,
+mostrare o no titolo/didascalie/Prima-Dopo, musica predefinita). Sono condivisi
+tra telefono e computer, come la libreria fasi.*
 
 **Cosa monta il video:**
 - una **schermata iniziale** con il nome del mobile e il logo

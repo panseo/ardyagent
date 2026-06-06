@@ -59,13 +59,42 @@ if ($isCli) {
 } else {
     $input = json_decode(file_get_contents('php://input'), true) ?: [];
 }
-$sessionId = preg_replace('/[^a-zA-Z0-9_\-]/', '', $input['session_id'] ?? '');
-$musica    = $input['musica'] ?? '';   // nome file, 'casuale' oppure '' / 'nessuna'
-$mobile    = trim($input['mobile'] ?? '');
+$sessionId  = preg_replace('/[^a-zA-Z0-9_\-]/', '', $input['session_id'] ?? '');
+$musica     = $input['musica'] ?? '';   // nome file, 'casuale' oppure '' / 'nessuna'
+$mobile     = trim($input['mobile'] ?? '');
+$templateId = preg_replace('/[^a-zA-Z0-9_\-]/', '', $input['template_id'] ?? '');
 
 if ($sessionId === '') fail('session_id mancante');
 
 if (!is_file(FFMPEG)) fail('FFmpeg non trovato sul server', 500);
+
+// -- Parametri di stile (default = costanti, sovrascritti dal template) -----
+$secFoto     = SEC_PER_FOTO;
+$secTitolo   = SEC_TITOLO;
+$secFinale   = SEC_FINALE;
+$showTitolo  = true;
+$showCaption = true;
+$showFinale  = true;
+
+try {
+    if ($templateId !== '') {
+        $tdb = ardyDB();
+        $ts  = $tdb->prepare("SELECT * FROM reel_template WHERE id = ? LIMIT 1");
+        $ts->execute([$templateId]);
+        if ($t = $ts->fetch()) {
+            $secFoto     = (float) $t['sec_foto'];
+            $secTitolo   = (float) $t['sec_titolo'];
+            $secFinale   = (float) $t['sec_finale'];
+            $showTitolo  = ((int) $t['mostra_titolo']) === 1 && $secTitolo > 0;
+            $showCaption = ((int) $t['mostra_didascalie']) === 1;
+            $showFinale  = ((int) $t['mostra_finale']) === 1 && $secFinale > 0;
+            // se la dashboard non ha imposto una musica, usa quella del template
+            if ($musica === '') $musica = $t['musica_default'] ?? 'nessuna';
+        }
+    }
+} catch (PDOException $e) {
+    error_log('ARDY REEL TEMPLATE LOAD ERROR: ' . $e->getMessage());
+}
 
 // -- Raccogli le foto dalle fasi -------------------------------------------
 try {
@@ -154,7 +183,7 @@ foreach ($items as $it) {
     @unlink($src);
     if ($rc === 0 && is_file($norm)) {
         // Didascalia della fase disegnata con GD (in basso)
-        if ($gdOk && $it['fase'] !== '') gdCaption($norm, $it['fase'], $font);
+        if ($gdOk && $showCaption && $it['fase'] !== '') gdCaption($norm, $it['fase'], $font);
         $normFiles[] = $norm; $usedItems[] = $it; $idx++;
     }
 }
@@ -164,25 +193,27 @@ if (count($normFiles) < 2) { pulisci($tmpDir); fail('Non sono riuscito a elabora
 $logo = __DIR__ . '/assets/logo.png';
 
 // -- Slide-titolo iniziale (nome mobile + logo su sfondo sfocato) -----------
-$titleSlide = slideTitolo($tmpDir, $normFiles[0], $logo, $font, $mobile);
+$titleSlide = $showTitolo ? slideTitolo($tmpDir, $normFiles[0], $logo, $font, $mobile) : null;
 
 // -- Slide finale "Prima -> Dopo" (prima e ultima foto + logo) -------------
 $finalSlide = null;
-$primaBin = @file_get_contents($usedItems[0]['url']);
-$dopoBin  = @file_get_contents(end($usedItems)['url']);
-if ($primaBin !== false && $dopoBin !== false) {
-    $primaSrc = $tmpDir . 'prima.img';
-    $dopoSrc  = $tmpDir . 'dopo.img';
-    file_put_contents($primaSrc, $primaBin);
-    file_put_contents($dopoSrc, $dopoBin);
-    $finalSlide = slideFinale($tmpDir, $primaSrc, $dopoSrc, $logo, $font);
+if ($showFinale) {
+    $primaBin = @file_get_contents($usedItems[0]['url']);
+    $dopoBin  = @file_get_contents(end($usedItems)['url']);
+    if ($primaBin !== false && $dopoBin !== false) {
+        $primaSrc = $tmpDir . 'prima.img';
+        $dopoSrc  = $tmpDir . 'dopo.img';
+        file_put_contents($primaSrc, $primaBin);
+        file_put_contents($dopoSrc, $dopoBin);
+        $finalSlide = slideFinale($tmpDir, $primaSrc, $dopoSrc, $logo, $font);
+    }
 }
 
 // -- Sequenza completa con durate per-slide --------------------------------
 $slides = [];
-if ($titleSlide) $slides[] = ['f' => $titleSlide, 'd' => SEC_TITOLO];
-foreach ($normFiles as $nf) $slides[] = ['f' => $nf, 'd' => SEC_PER_FOTO];
-if ($finalSlide) $slides[] = ['f' => $finalSlide, 'd' => SEC_FINALE];
+if ($titleSlide) $slides[] = ['f' => $titleSlide, 'd' => $secTitolo];
+foreach ($normFiles as $nf) $slides[] = ['f' => $nf, 'd' => $secFoto];
+if ($finalSlide) $slides[] = ['f' => $finalSlide, 'd' => $secFinale];
 
 $durataTot = 0.0;
 foreach ($slides as $s) $durataTot += $s['d'];

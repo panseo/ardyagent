@@ -46,6 +46,7 @@ ardyagent.ardy-lab.it/
 ├── ardy-libreria-api.php      # API libreria fasi (DB, condivisa tra dispositivi)
 ├── ardy-crea-reel.php         # Genera reel MP4 9:16 dalle fasi (FFmpeg via proc_open + GD)
 ├── ardy-pubblica-reel.php     # Pubblica il reel sui social → webhook n8n (ramo Reels)
+├── ardy-reel-template-api.php # API libreria template di stile reel (DB)
 ├── ardy-lista-musica.php      # Elenca le tracce in assets/reel-music/
 ├── ardy-guida-michela.html    # Guida d'uso dashboard (HTML stampabile) — linkata dalla dashboard
 ├── GUIDA-MICHELA.md           # Guida d'uso dashboard (versione testo)
@@ -106,6 +107,15 @@ Libreria di frasi/fasi riutilizzabili nei preventivi. **Condivisa tra dispositiv
 
 ```
 id (VARCHAR), nome, cat, descr, created_at, updated_at
+```
+
+#### `reel_template`
+Libreria di **template di stile** per il reel (durate, slide attive, musica).
+Auto-creata e popolata con 4 preset (Classico, Veloce, Cinematico, Solo foto).
+
+```
+id (VARCHAR), nome, sec_foto, sec_titolo, sec_finale,
+mostra_titolo, mostra_didascalie, mostra_finale, musica_default, created_at, updated_at
 ```
 
 ---
@@ -323,7 +333,8 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
 - **Libreria fasi lavorative** (DB, **condivisa tra dispositivi**) con 12 fasi predefinite
 - **Pubblicazione fasi** con foto (scatta dal telefono o galleria); la prima foto diventa l'**immagine in evidenza** del post
 - **Pubblicazione social manuale**: dopo la fase, pannello per rivedere/modificare il post e scegliere *pubblica ora / salva per dopo / non pubblicare*; coda "post in attesa" (localStorage)
-- **Reel finale**: a lavoro concluso monta un video 9:16 dalle fasi (titolo + didascalie + Prima/Dopo), con scelta musica, caption automatica modificabile e pubblicazione sui social
+- **Reel finale**: a lavoro concluso monta un video 9:16 dalle fasi (titolo + didascalie + Prima/Dopo), con scelta **template di stile**, musica, caption automatica modificabile e pubblicazione sui social
+- **Libreria template reel** (DB): preset di stile (durate, slide attive, musica) creabili/modificabili dal pannello "⚙ Template"
 - Pulsante **❓ Guida** che apre la guida d'uso
 - Aggiunta manuale clienti
 

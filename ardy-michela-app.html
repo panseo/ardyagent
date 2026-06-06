@@ -230,10 +230,13 @@
             <div class="lav-title" style="margin-bottom:4px;">🎬 Reel finale della lavorazione</div>
             <p style="font-size:12px;color:var(--text-dim);margin:0 0 10px;">A lavoro finito, monta un video verticale con tutte le foto delle fasi pubblicate.</p>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-              <select class="lav-input" id="reelMusica" style="flex:2 1 160px;">
+              <select class="lav-input" id="reelTemplate" style="flex:2 1 150px;"></select>
+              <select class="lav-input" id="reelMusica" style="flex:2 1 150px;">
+                <option value="">🎵 Musica del template</option>
                 <option value="nessuna">🔇 Senza musica</option>
                 <option value="casuale">🎲 Traccia casuale</option>
               </select>
+              <button class="btn-secondary" style="flex:1 1 110px;" onclick="openGestioneTemplate()">⚙ Template</button>
               <button class="btn-pubblica" id="btnReel" style="flex:1 1 140px;" onclick="creaReel()">🎬 CREA REEL</button>
             </div>
             <div class="lav-result" id="reelResult"></div>
@@ -278,6 +281,7 @@ const LAVORAZIONE_URL = BASE_URL + '/ardy-pubblica-lavorazione.php';
 const SOCIAL_URL      = BASE_URL + '/ardy-pubblica-social.php';
 const REEL_URL        = BASE_URL + '/ardy-crea-reel.php';
 const REEL_PUB_URL    = BASE_URL + '/ardy-pubblica-reel.php';
+const REEL_TPL_URL    = BASE_URL + '/ardy-reel-template-api.php';
 const MUSICA_URL      = BASE_URL + '/ardy-lista-musica.php';
 
 // ─── STATE ────────────────────────────────────────────────
@@ -735,7 +739,136 @@ function aggiornaPannelloReel() {
   // Mostra solo se la lavorazione ha già un post (= fasi pubblicate)
   panel.style.display = lavWpPostId ? 'block' : 'none';
   document.getElementById('reelResult').classList.remove('visible');
-  if (lavWpPostId) caricaListaMusica();
+  if (lavWpPostId) { caricaListaMusica(); caricaTemplate(); }
+}
+
+// ── TEMPLATE REEL ─────────────────────────────────────────
+let reelTemplates = [];
+
+async function caricaTemplate() {
+  try {
+    const res = await fetch(REEL_TPL_URL);
+    const list = await res.json();
+    if (Array.isArray(list)) {
+      reelTemplates = list;
+      const sel = document.getElementById('reelTemplate');
+      const prev = sel.value;
+      sel.innerHTML = list.map(t => `<option value="${escHtml(t.id)}">🎬 ${escHtml(t.nome)}</option>`).join('');
+      if (prev) sel.value = prev;
+    }
+  } catch(e) { /* resta vuoto */ }
+}
+
+async function openGestioneTemplate() {
+  await caricaListaMusica();
+  populateTplMusica();
+  await caricaTemplate();
+  renderTemplateList();
+  resetTemplateForm();
+  document.getElementById('reelTplOverlay').classList.add('open');
+}
+
+function populateTplMusica() {
+  const src = document.getElementById('reelMusica');
+  const dst = document.getElementById('tpl-musica');
+  let html = '<option value="nessuna">🔇 Senza musica</option><option value="casuale">🎲 Casuale</option>';
+  [...src.options].forEach(o => {
+    if (o.value && o.value !== 'nessuna' && o.value !== 'casuale') {
+      html += `<option value="${escHtml(o.value)}">${escHtml(o.textContent)}</option>`;
+    }
+  });
+  dst.innerHTML = html;
+}
+function closeGestioneTemplate() {
+  document.getElementById('reelTplOverlay').classList.remove('open');
+}
+
+function renderTemplateList() {
+  const body = document.getElementById('tpl-body');
+  if (!reelTemplates.length) { body.innerHTML = '<div class="lib-empty">NESSUN TEMPLATE</div>'; return; }
+  body.innerHTML = reelTemplates.map(t => `
+    <div class="lib-item">
+      <div class="lib-item-info">
+        <div class="lib-item-nome">${escHtml(t.nome)}</div>
+        <div class="lib-item-desc">
+          ${t.sec_foto}s/foto ·
+          ${t.mostra_titolo ? 'titolo ' + t.sec_titolo + 's' : 'no titolo'} ·
+          ${t.mostra_didascalie ? 'didascalie' : 'no didascalie'} ·
+          ${t.mostra_finale ? 'Prima/Dopo ' + t.sec_finale + 's' : 'no finale'} ·
+          🎵 ${escHtml(t.musica_default)}
+        </div>
+      </div>
+      <div class="lib-item-actions">
+        <button class="lib-btn-edit" onclick='editTemplate(${JSON.stringify(t.id)})'>✎ Modifica</button>
+        <button class="lib-btn-del" onclick='eliminaTemplate(${JSON.stringify(t.id)})' title="Elimina">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function resetTemplateForm() {
+  document.getElementById('tpl-id').value = '';
+  document.getElementById('tpl-nome').value = '';
+  document.getElementById('tpl-sec-foto').value = '2.5';
+  document.getElementById('tpl-sec-titolo').value = '3.5';
+  document.getElementById('tpl-sec-finale').value = '4';
+  document.getElementById('tpl-mostra-titolo').checked = true;
+  document.getElementById('tpl-mostra-didascalie').checked = true;
+  document.getElementById('tpl-mostra-finale').checked = true;
+  document.getElementById('tpl-musica').value = 'nessuna';
+  document.getElementById('tplFormTitle').textContent = 'Nuovo template';
+}
+
+function editTemplate(id) {
+  const t = reelTemplates.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('tpl-id').value = t.id;
+  document.getElementById('tpl-nome').value = t.nome;
+  document.getElementById('tpl-sec-foto').value = t.sec_foto;
+  document.getElementById('tpl-sec-titolo').value = t.sec_titolo;
+  document.getElementById('tpl-sec-finale').value = t.sec_finale;
+  document.getElementById('tpl-mostra-titolo').checked = !!t.mostra_titolo;
+  document.getElementById('tpl-mostra-didascalie').checked = !!t.mostra_didascalie;
+  document.getElementById('tpl-mostra-finale').checked = !!t.mostra_finale;
+  document.getElementById('tpl-musica').value = t.musica_default || 'nessuna';
+  document.getElementById('tplFormTitle').textContent = 'Modifica template';
+}
+
+async function salvaTemplate() {
+  const nome = document.getElementById('tpl-nome').value.trim();
+  if (!nome) { showToast('⚠ Inserisci un nome', 'error'); return; }
+  const payload = {
+    mode: 'save',
+    id:   document.getElementById('tpl-id').value,
+    nome: nome,
+    sec_foto:          document.getElementById('tpl-sec-foto').value,
+    sec_titolo:        document.getElementById('tpl-sec-titolo').value,
+    sec_finale:        document.getElementById('tpl-sec-finale').value,
+    mostra_titolo:     document.getElementById('tpl-mostra-titolo').checked ? 1 : 0,
+    mostra_didascalie: document.getElementById('tpl-mostra-didascalie').checked ? 1 : 0,
+    mostra_finale:     document.getElementById('tpl-mostra-finale').checked ? 1 : 0,
+    musica_default:    document.getElementById('tpl-musica').value.trim() || 'nessuna',
+  };
+  try {
+    const res = await fetch(REEL_TPL_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Errore');
+    await caricaTemplate();
+    renderTemplateList();
+    resetTemplateForm();
+    showToast('✓ Template salvato', 'success');
+  } catch(e) { showToast('⚠ ' + e.message, 'error'); }
+}
+
+async function eliminaTemplate(id) {
+  if (!confirm('Eliminare questo template?')) return;
+  try {
+    const res = await fetch(REEL_TPL_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode:'delete', id }) });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Errore');
+    await caricaTemplate();
+    renderTemplateList();
+    showToast('Template eliminato', '');
+  } catch(e) { showToast('⚠ ' + e.message, 'error'); }
 }
 
 async function caricaListaMusica() {
@@ -769,9 +902,10 @@ async function creaReel() {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({
-        session_id: currentLead.Session_ID,
-        musica:     document.getElementById('reelMusica').value,
-        mobile:     document.getElementById('lavMobile').value.trim() || (currentLead.Mobile ?? ''),
+        session_id:  currentLead.Session_ID,
+        musica:      document.getElementById('reelMusica').value,
+        template_id: document.getElementById('reelTemplate').value,
+        mobile:      document.getElementById('lavMobile').value.trim() || (currentLead.Mobile ?? ''),
       })
     });
     const data = await res.json();
@@ -1847,6 +1981,59 @@ function showToast(msg, type = '') {
 
     <div class="lib-cat-filter" id="lib-gest-cats"></div>
     <div class="lib-body" id="lib-gest-body"></div>
+  </div>
+</div>
+
+<!-- ═══ GESTIONE TEMPLATE REEL ═══ -->
+<div class="lib-overlay" id="reelTplOverlay" onclick="if(event.target===this)closeGestioneTemplate()">
+  <div class="lib-panel" style="max-width:760px" onclick="event.stopPropagation()">
+    <div class="lib-head">
+      <h3>TEMPLATE REEL</h3>
+      <div class="lib-head-actions">
+        <button class="btn-save" onclick="resetTemplateForm()">+ NUOVO</button>
+        <button class="btn-cancel" onclick="closeGestioneTemplate()">✕</button>
+      </div>
+    </div>
+
+    <div class="lib-form" style="display:block;">
+      <div class="lib-form-title" id="tplFormTitle">Nuovo template</div>
+      <input type="hidden" id="tpl-id">
+      <div class="lib-form-grid">
+        <div class="lib-form-field full">
+          <label>Nome template *</label>
+          <input type="text" id="tpl-nome" placeholder="Es. Veloce per Reels">
+        </div>
+        <div class="lib-form-field">
+          <label>Secondi per foto</label>
+          <input type="number" id="tpl-sec-foto" step="0.5" min="0.5" max="10" value="2.5">
+        </div>
+        <div class="lib-form-field">
+          <label>Musica predefinita</label>
+          <select id="tpl-musica"></select>
+        </div>
+        <div class="lib-form-field">
+          <label>Durata slide titolo (s)</label>
+          <input type="number" id="tpl-sec-titolo" step="0.5" min="0" max="10" value="3.5">
+        </div>
+        <div class="lib-form-field">
+          <label>Durata slide finale (s)</label>
+          <input type="number" id="tpl-sec-finale" step="0.5" min="0" max="10" value="4">
+        </div>
+        <div class="lib-form-field full">
+          <label style="display:flex;gap:16px;flex-wrap:wrap;">
+            <span><input type="checkbox" id="tpl-mostra-titolo" checked> Slide titolo (mobile + logo)</span>
+            <span><input type="checkbox" id="tpl-mostra-didascalie" checked> Didascalie fasi</span>
+            <span><input type="checkbox" id="tpl-mostra-finale" checked> Slide Prima → Dopo</span>
+          </label>
+        </div>
+      </div>
+      <div class="lib-form-actions">
+        <button class="btn-cancel" onclick="resetTemplateForm()">Pulisci</button>
+        <button class="btn-save" onclick="salvaTemplate()">✦ SALVA TEMPLATE</button>
+      </div>
+    </div>
+
+    <div class="lib-body" id="tpl-body"></div>
   </div>
 </div>
 <!-- ═══════════════════════════════════════════════════════════
