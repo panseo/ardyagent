@@ -24,7 +24,7 @@ Options -Indexes
 # Le pagine pubbliche (chatbot, widget, unsubscribe) restano aperte.
 # Il file con utente+password (.htpasswd) si crea con ardy-setup-login.php
 # -----------------------------------------------------------
-<FilesMatch "^(ardy-michela-app\.html|ardy-crm-api\.php|ardy-update-lead\.php|ardy-preventivo\.php|ardy-get-fasi\.php|ardy-pubblica-lavorazione\.php|ardy-pubblica-social\.php|ardy-crea-reel\.php|ardy-pubblica-reel\.php|ardy-lista-musica\.php|ardy-reel-template-api\.php|ardy-libreria-api\.php|ardy-outreach\.html|ardy-outreach-api\.php|ardy-email-finder\.php|ardy-gcal\.php|ardy-gcal-auth\.php)$">
+<FilesMatch "^(ardy-michela-app\.html|ardy-crm-api\.php|ardy-update-lead\.php|ardy-preventivo\.php|ardy-get-fasi\.php|ardy-pubblica-lavorazione\.php|ardy-pubblica-social\.php|ardy-crea-reel\.php|ardy-pubblica-reel\.php|ardy-lista-musica\.php|ardy-reel-template-api\.php|ardy-libreria-api\.php|ardy-stats\.php|ardy-outreach\.html|ardy-outreach-api\.php|ardy-email-finder\.php|ardy-gcal\.php|ardy-gcal-auth\.php)$">
     AuthType Basic
     AuthName "Area riservata Ardy Lab"
     AuthUserFile /home/micoperibg/public_html/ardyagent.ardy-lab.it/.htpasswd
