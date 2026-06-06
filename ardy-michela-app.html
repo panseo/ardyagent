@@ -289,6 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (input) input.addEventListener('change', handleFotoUpload);
   });
   renderSocialPending();
+  libLoadRemote();
 });
 
 async function loadLeads() {
@@ -1196,29 +1197,51 @@ const FASI_DEFAULT = [
   { id: 'def12', nome: 'Smontaggio, imballaggio e trasporto',    cat: 'Logistica',    desc: 'Smontaggio accurato del manufatto in loco, imballaggio protettivo professionale con materiali imbottiti e trasporto presso il laboratorio. Incluso rimontaggio e messa in bolla a fine lavorazione.' },
 ];
 
+const LIBRERIA_URL = BASE_URL + '/ardy-libreria-api.php';
+
+// La libreria fasi vive nel DB (condivisa tra telefono e computer).
+// LIB_CACHE è la copia locale usata dai render (sincroni); localStorage
+// resta come fallback offline.
+let LIB_CACHE = null;
+
+// Lettura sincrona usata dai render: ritorna la cache, o il fallback locale.
 function libLoad() {
-  const raw = localStorage.getItem(LIB_KEY);
-  if (!raw) {
-    localStorage.setItem(LIB_KEY, JSON.stringify(FASI_DEFAULT));
-    return [...FASI_DEFAULT];
-  }
-  return JSON.parse(raw);
+  if (LIB_CACHE) return LIB_CACHE;
+  try {
+    const raw = localStorage.getItem(LIB_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return [...FASI_DEFAULT];
 }
 
-function libSave(fasi) {
-  localStorage.setItem(LIB_KEY, JSON.stringify(fasi));
+// Carica la libreria dal DB e aggiorna cache + fallback locale.
+async function libLoadRemote() {
+  try {
+    const res  = await fetch(LIBRERIA_URL);
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      LIB_CACHE = data;
+      try { localStorage.setItem(LIB_KEY, JSON.stringify(data)); } catch(e) {}
+    }
+  } catch(e) {
+    // offline: si usa il fallback locale
+    if (!LIB_CACHE) LIB_CACHE = libLoad();
+  }
+  return LIB_CACHE || [];
 }
 
 let libCatAttiva = 'Tutte';
 
 // ── PICKER (dal form preventivo) ──────────────────────────────────────────────
 
-function openLibreria() {
+async function openLibreria() {
   libCatAttiva = 'Tutte';
   document.getElementById('lib-picker-search').value = '';
   renderLibCats('lib-picker-cats', false);
   renderLibPicker();
   document.getElementById('libPickerOverlay').classList.add('open');
+  await libLoadRemote();
+  renderLibPicker();
 }
 
 function closeLibreria() {
@@ -1275,13 +1298,15 @@ function usaFaseDaLibreria(id) {
 
 // ── GESTIONE COMPLETA ─────────────────────────────────────────────────────────
 
-function openGestioneLibreria() {
+async function openGestioneLibreria() {
   libCatAttiva = 'Tutte';
   document.getElementById('lib-gest-search').value = '';
   toggleLibForm(false);
   renderLibCats('lib-gest-cats', true);
   renderLibGestione();
   document.getElementById('libGestioneOverlay').classList.add('open');
+  await libLoadRemote();
+  renderLibGestione();
 }
 
 function closeGestioneLibreria() {
@@ -1319,15 +1344,25 @@ function editFase(id) {
   form.scrollIntoView({ behavior: 'smooth' });
 }
 
-function eliminaFase(id) {
+async function eliminaFase(id) {
   if (!confirm('Eliminare questa fase dalla libreria?')) return;
-  const fasi = libLoad().filter(f => f.id !== id);
-  libSave(fasi);
-  renderLibGestione();
-  showToast('Fase eliminata', '');
+  try {
+    const res  = await fetch(LIBRERIA_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'delete', id })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Errore');
+    await libLoadRemote();
+    renderLibGestione();
+    showToast('Fase eliminata', '');
+  } catch(e) {
+    showToast('⚠ Errore eliminazione: ' + e.message, 'error');
+  }
 }
 
-function salvaFaseLibreria() {
+async function salvaFaseLibreria() {
   const nome = document.getElementById('lib-f-nome').value.trim();
   const desc = document.getElementById('lib-f-desc').value.trim();
   const cat  = document.getElementById('lib-f-cat').value;
@@ -1335,17 +1370,21 @@ function salvaFaseLibreria() {
 
   if (!nome) { showToast('⚠ Inserisci il nome della fase', 'error'); return; }
 
-  const fasi = libLoad();
-  if (editId) {
-    const idx = fasi.findIndex(f => f.id === editId);
-    if (idx >= 0) { fasi[idx].nome = nome; fasi[idx].desc = desc; fasi[idx].cat = cat; }
-  } else {
-    fasi.push({ id: 'custom_' + Date.now(), nome, cat, desc });
+  try {
+    const res  = await fetch(LIBRERIA_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'save', id: editId || '', nome, cat, desc })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Errore');
+    await libLoadRemote();
+    toggleLibForm(false);
+    renderLibGestione();
+    showToast('✓ Fase salvata', 'success');
+  } catch(e) {
+    showToast('⚠ Errore salvataggio: ' + e.message, 'error');
   }
-  libSave(fasi);
-  toggleLibForm(false);
-  renderLibGestione();
-  showToast('✓ Fase salvata', 'success');
 }
 
 function renderLibGestione() {
