@@ -30,8 +30,8 @@ Per aprire un cliente, **cliccaci sopra** nella lista a sinistra. La sua scheda 
 
 ### La colonna di sinistra contiene:
 - 🔍 **Cerca**: scrivi un nome, una zona o un servizio per trovare un cliente al volo
-- **+ NUOVO**: aggiungi un cliente a mano (vedi punto 8)
-- **LIBRERIA**: gestisci le frasi pronte per le lavorazioni (vedi punto 7)
+- **+ NUOVO**: aggiungi un cliente a mano (vedi punto 10)
+- **LIBRERIA**: gestisci le frasi pronte per le lavorazioni (vedi punto 9)
 - **❓ GUIDA**: riapre questa guida in qualsiasi momento
 - **I filtri** (TUTTI, LEAD, SOPRALLUOGO, ...): mostrano solo i clienti in quello stato
 
@@ -125,6 +125,8 @@ Questa è la parte che aggiorna il cliente **e** pubblica sui social.
 
 **Cosa succede SUBITO e in automatico quando pubblichi:**
 - 📝 Si crea/aggiorna la **pagina della lavorazione** sul sito
+- 🖼️ La **prima foto in assoluto** del lavoro diventa la **copertina** della pagina:
+  è quella che si vede come anteprima nella sezione lavorazioni della home del sito
 - ✉️ Il **cliente riceve un'email** con l'aggiornamento
 
 **I social NON partono da soli.** Subito dopo, compare un riquadro
@@ -150,15 +152,46 @@ computer. Quelli da pubblicare "ora" invece non hanno questo limite.*
 
 ---
 
-## 📚 8. La Libreria delle fasi
+## 🎬 8. Il Reel finale della lavorazione
+
+Quando il lavoro è finito e hai pubblicato tutte le fasi, puoi creare in un clic
+un **video verticale (reel)** che racconta tutta la lavorazione — pronto per
+Instagram e Facebook.
+
+👉 Il riquadro **"🎬 Reel finale della lavorazione"** compare in fondo alla
+sezione lavorazione (quando c'è già almeno una fase pubblicata).
+
+**Come si fa:**
+1. (Facoltativo) scegli una **musica** dal menù a tendina, oppure "Senza musica"
+2. Premi **🎬 CREA REEL** → attendi un minuto: il video si monta da solo
+
+**Cosa monta il video:**
+- una **schermata iniziale** con il nome del mobile e il logo
+- **tutte le foto** delle fasi, con scritto sopra il nome della fase
+- una **schermata finale "Prima → Dopo"**
+
+**Quando è pronto** vedi l'anteprima del video, il link per **scaricarlo**, e una
+**didascalia già scritta dall'AI** (con hashtag) che puoi **modificare**.
+
+- **📲 PUBBLICA REEL SUI SOCIAL** → invia il reel a Instagram/Facebook
+- oppure **⬇ Scarica il reel** e caricalo a mano quando preferisci
+
+💡 *La didascalia è modificabile prima di pubblicare: cambia parole o hashtag come vuoi.*
+
+---
+
+## 📚 9. La Libreria delle fasi
 
 Sono **frasi pronte** per le lavorazioni più comuni (così non riscrivi tutto ogni volta).
 - Quando pubblichi una fase, puoi premere **📚 SCEGLI DA LIBRERIA** e prenderne una
 - Col bottone **LIBRERIA** (in alto a sinistra) puoi aggiungerne di nuove o eliminarle
 
+💡 *La libreria è **condivisa tra telefono e computer**: una frase che aggiungi o
+modifichi da un dispositivo la ritrovi anche sull'altro.*
+
 ---
 
-## ➕ 9. Aggiungere un cliente a mano
+## ➕ 10. Aggiungere un cliente a mano
 
 Non tutti arrivano dal sito. Per inserirne uno tu:
 1. Clicca **+ NUOVO** (in alto a sinistra)
@@ -167,7 +200,7 @@ Non tutti arrivano dal sito. Per inserirne uno tu:
 
 ---
 
-## 🤖 10. Da dove arrivano i clienti "da soli"
+## 🤖 11. Da dove arrivano i clienti "da soli"
 
 Due strumenti automatici riempiono la dashboard senza che tu faccia niente:
 
@@ -189,6 +222,7 @@ Tu non devi fare nulla per questi: lavorano da soli e ti portano i contatti già
 2. **Clicchi un cliente** a sinistra, **lo gestisci** a destra
 3. **Cambi lo stato** man mano che la trattativa avanza
 4. **Pubblichi le fasi** con le foto quando lavori → cliente e social aggiornati da soli
+5. **A lavoro finito**, crei il **reel** con tutte le fasi e lo pubblichi sui social
 
 Per qualsiasi dubbio o se qualcosa non funziona, segnalalo: si sistema. 🙂
 
