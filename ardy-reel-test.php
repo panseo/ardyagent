@@ -111,8 +111,69 @@ $reels = __DIR__ . '/reels/';
 if (!is_dir($reels)) @mkdir($reels, 0755, true);
 line('   ' . $reels . ' : ' . (is_writable($reels) ? 'SCRIVIBILE' : 'NON scrivibile'));
 
+line('');
+
+// 8) MONTAGGIO COMPLETO (come l'endpoint)
+line('8) Montaggio completo');
+$work = $reels . 'tmp_test_' . uniqid() . '/';
+@mkdir($work, 0755, true);
+
+// normalizza tutte le foto (con didascalia se font)
+$normFiles = []; $usedUrls = []; $i = 0;
+foreach ($urls as $u) {
+    $b = @file_get_contents($u);
+    if ($b === false) { $b = function_exists('curl_init') ? curlGet($u) : false; }
+    if ($b === false || strlen($b) < 100) { line("   foto $i: download FALLITO"); continue; }
+    $s = $work . "src_$i.img"; file_put_contents($s, $b);
+    $dt = '';
+    if ($found) {
+        $cap = $work . "cap_$i.txt"; file_put_contents($cap, "Fase $i");
+        $dt = ",drawtext=fontfile=$found:textfile=$cap:fontcolor=white:fontsize=56:box=1:boxcolor=black@0.45:boxborderw=22:x=(w-text_w)/2:y=h-320";
+    }
+    $n = $work . sprintf('norm_%03d.jpg', $i);
+    $flt = '[0:v]scale=1080:1920:force_original_aspect_ratio=decrease[fg];[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=20:2[bg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1' . $dt;
+    exec(FFMPEG . ' -y -i ' . escapeshellarg($s) . ' -filter_complex ' . escapeshellarg($flt) . ' -frames:v 1 -q:v 2 ' . escapeshellarg($n) . ' 2>&1', $oN, $rcN);
+    @unlink($s);
+    if ($rcN === 0 && is_file($n)) { $normFiles[] = $n; $usedUrls[] = $u; line("   foto $i: OK"); }
+    else { line("   foto $i: FFMPEG ERRORE -> " . implode(' | ', array_slice($oN, -3))); }
+    $i++;
+}
+line('   foto normalizzate: ' . count($normFiles));
+
+if (count($normFiles) >= 2) {
+    // lista concat
+    $listF = $work . 'list.txt'; $L = '';
+    foreach ($normFiles as $nf) { $L .= "file '$nf'\nduration 2.5\n"; }
+    $L .= "file '" . end($normFiles) . "'\n";
+    file_put_contents($listF, $L);
+    $tot = count($normFiles) * 2.5;
+
+    $vid = $work . 'video.mp4';
+    $vf = 'fps=30,format=yuv420p,fade=t=in:st=0:d=0.5,fade=t=out:st=' . max(0, $tot - 1) . ':d=1';
+    $c = FFMPEG . ' -y -f concat -safe 0 -i ' . escapeshellarg($listF) . ' -vf ' . escapeshellarg($vf) . ' -c:v libx264 -preset veryfast -pix_fmt yuv420p -movflags +faststart ' . escapeshellarg($vid) . ' 2>&1';
+    exec($c, $oV, $rcV);
+    line('   concat video: exit ' . $rcV . (is_file($vid) ? ' (video.mp4 OK, ' . filesize($vid) . ' byte)' : ' FALLITO'));
+    if ($rcV !== 0) { line('   --- output ---'); line('   ' . implode("\n   ", array_slice($oV, -15))); }
+
+    if (is_file($vid)) {
+        $finalName = 'reel_TEST_' . date('His') . '.mp4';
+        @rename($vid, $reels . $finalName);
+        line('   >>> REEL DI TEST CREATO: https://ardyagent.ardy-lab.it/reels/' . $finalName);
+    }
+} else {
+    line('   STOP: meno di 2 foto normalizzate.');
+}
+
+function curlGet(string $url) {
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_TIMEOUT => 30]);
+    $d = curl_exec($ch); curl_close($ch); return $d;
+}
+
 // cleanup
 foreach (glob($tmp . '*') as $f) @unlink($f);
 @rmdir($tmp);
+foreach (glob($work . '*') as $f) @unlink($f);
+@rmdir($work);
 line('');
 line('=== FINE ===');
