@@ -52,15 +52,34 @@ try {
     fail('Errore database', 500);
 }
 
-$fotoUrls = [];
+$items = [];   // [{url, fase}] mantenendo l'abbinamento foto -> fase
 foreach ($rows as $r) {
     $urls = json_decode($r['foto_urls'] ?? '[]', true) ?: [];
     foreach ($urls as $u) {
-        if (is_string($u) && $u !== '') $fotoUrls[] = $u;
+        if (is_string($u) && $u !== '') {
+            $items[] = ['url' => $u, 'fase' => trim($r['fase_nome'] ?? '')];
+        }
     }
 }
-if (count($fotoUrls) < 2) fail('Servono almeno 2 foto pubblicate per creare il reel');
-if (count($fotoUrls) > MAX_FOTO) $fotoUrls = array_slice($fotoUrls, 0, MAX_FOTO);
+if (count($items) < 2) fail('Servono almeno 2 foto pubblicate per creare il reel');
+if (count($items) > MAX_FOTO) $items = array_slice($items, 0, MAX_FOTO);
+
+// Font per le didascalie: prima assets/fonts/, poi font di sistema.
+// Se nessuno è disponibile, il reel viene creato senza testo.
+function trovaFont(): ?string {
+    foreach (glob(__DIR__ . '/assets/fonts/*.{ttf,otf}', GLOB_BRACE) ?: [] as $f) return $f;
+    $sys = [
+        '/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf',
+        '/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf',
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+        '/usr/share/fonts/liberation/LiberationSans-Bold.ttf',
+        '/usr/share/fonts/liberation-sans-fonts/LiberationSans-Bold.ttf',
+        '/usr/share/fonts/google-noto/NotoSans-Bold.ttf',
+    ];
+    foreach ($sys as $f) if (is_file($f)) return $f;
+    return null;
+}
+$font = trovaFont();
 
 // -- Cartelle di lavoro -----------------------------------------------------
 $reelsDir = __DIR__ . '/reels/';
@@ -78,17 +97,28 @@ function pulisci(string $dir): void {
 // -- Scarica e normalizza ogni foto a 1080x1920 ----------------------------
 $normFiles = [];
 $idx = 0;
-foreach ($fotoUrls as $url) {
+foreach ($items as $it) {
+    $url = $it['url'];
     $bin = @file_get_contents($url);
     if ($bin === false || strlen($bin) < 100) continue;
     $src = $tmpDir . 'src_' . $idx . '.img';
     file_put_contents($src, $bin);
 
+    // Didascalia della fase (sovrimpressa in basso), se abbiamo un font
+    $drawtext = '';
+    if ($font && $it['fase'] !== '') {
+        $capFile = $tmpDir . sprintf('cap_%03d.txt', $idx);
+        file_put_contents($capFile, wordwrap($it['fase'], 24, "\n", true));
+        $drawtext = ',drawtext=fontfile=' . $font . ':textfile=' . $capFile
+                  . ':fontcolor=white:fontsize=56:box=1:boxcolor=black@0.45:boxborderw=22'
+                  . ':x=(w-text_w)/2:y=h-320:line_spacing=10';
+    }
+
     $norm   = $tmpDir . sprintf('norm_%03d.jpg', $idx);
     $filter = '[0:v]scale=' . REEL_W . ':' . REEL_H . ':force_original_aspect_ratio=decrease[fg];'
             . '[0:v]scale=' . REEL_W . ':' . REEL_H . ':force_original_aspect_ratio=increase,'
             . 'crop=' . REEL_W . ':' . REEL_H . ',boxblur=20:2[bg];'
-            . '[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1';
+            . '[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1' . $drawtext;
     $cmd = FFMPEG . ' -y -i ' . escapeshellarg($src)
          . ' -filter_complex ' . escapeshellarg($filter)
          . ' -frames:v 1 -q:v 2 ' . escapeshellarg($norm) . ' 2>&1';
