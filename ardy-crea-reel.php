@@ -34,8 +34,18 @@ function fail(string $msg, int $code = 400): void {
     exit();
 }
 
-// -- Input ------------------------------------------------------------------
-$input     = json_decode(file_get_contents('php://input'), true) ?: [];
+// -- Input (HTTP o CLI per test) -------------------------------------------
+$isCli = (PHP_SAPI === 'cli');
+if ($isCli) {
+    // uso: php ardy-crea-reel.php SESSION_ID [musica] [mobile]
+    $input = [
+        'session_id' => $argv[1] ?? '',
+        'musica'     => $argv[2] ?? 'nessuna',
+        'mobile'     => $argv[3] ?? '',
+    ];
+} else {
+    $input = json_decode(file_get_contents('php://input'), true) ?: [];
+}
 $sessionId = preg_replace('/[^a-zA-Z0-9_\-]/', '', $input['session_id'] ?? '');
 $musica    = $input['musica'] ?? '';   // nome file, 'casuale' oppure '' / 'nessuna'
 $mobile    = trim($input['mobile'] ?? '');
@@ -161,27 +171,35 @@ if ($finalSlide) $slides[] = ['f' => $finalSlide, 'd' => SEC_FINALE];
 $durataTot = 0.0;
 foreach ($slides as $s) $durataTot += $s['d'];
 
-// -- Lista per il concat demuxer -------------------------------------------
-$listFile = $tmpDir . 'list.txt';
-$lines    = '';
-foreach ($slides as $s) {
-    $lines .= "file '" . $s['f'] . "'\n";
-    $lines .= 'duration ' . $s['d'] . "\n";
+// -- Step 1: una mini-clip video per ogni slide (metodo robusto) -----------
+// Trasformare ogni immagine in una clip e poi concatenarle (stessi codec)
+// è molto più affidabile del concat di immagini, che a volte non avanza.
+$clipLines = '';
+foreach ($slides as $k => $s) {
+    $clip = $tmpDir . sprintf('clip_%03d.mp4', $k);
+    $cmd = FFMPEG . ' -y -loop 1 -i ' . escapeshellarg($s['f'])
+         . ' -t ' . $s['d'] . ' -r 30'
+         . ' -vf ' . escapeshellarg('scale=' . REEL_W . ':' . REEL_H . ',format=yuv420p,setsar=1')
+         . ' -c:v libx264 -preset veryfast '
+         . escapeshellarg($clip) . ' 2>&1';
+    exec($cmd, $oc, $rcc);
+    if ($rcc !== 0 || !is_file($clip)) {
+        error_log('ARDY REEL CLIP ERROR: ' . implode("\n", $oc));
+        pulisci($tmpDir);
+        fail('Errore creazione clip video', 500);
+    }
+    $clipLines .= "file '" . $clip . "'\n";
 }
-$lines .= "file '" . end($slides)['f'] . "'\n"; // ripeti l'ultima (quirk concat)
-file_put_contents($listFile, $lines);
+$listFile = $tmpDir . 'list.txt';
+file_put_contents($listFile, $clipLines);
 
-// -- Step 1: video muto con fade in/out ------------------------------------
-$videoMuto = $tmpDir . 'video.mp4';
-$fadeOut   = max(0, $durataTot - 1);
-$vf = 'fps=30,format=yuv420p,fade=t=in:st=0:d=0.5,fade=t=out:st=' . $fadeOut . ':d=1';
+// -- Step 2: concatena le clip (copia, niente riconversione) ---------------
+$videoRaw = $tmpDir . 'raw.mp4';
 $cmd = FFMPEG . ' -y -f concat -safe 0 -i ' . escapeshellarg($listFile)
-     . ' -vf ' . escapeshellarg($vf)
-     . ' -c:v libx264 -preset veryfast -pix_fmt yuv420p -movflags +faststart '
-     . escapeshellarg($videoMuto) . ' 2>&1';
+     . ' -c copy ' . escapeshellarg($videoRaw) . ' 2>&1';
 exec($cmd, $o1, $rc1);
-if ($rc1 !== 0 || !is_file($videoMuto)) {
-    error_log('ARDY REEL FFMPEG VIDEO ERROR: ' . implode("\n", $o1));
+if ($rc1 !== 0 || !is_file($videoRaw)) {
+    error_log('ARDY REEL CONCAT ERROR: ' . implode("\n", $o1));
     pulisci($tmpDir);
     fail('Errore nel montaggio video', 500);
 }
@@ -199,25 +217,31 @@ if ($musica !== '' && strtolower($musica) !== 'nessuna') {
     }
 }
 
-// -- Step 2: aggiungi audio (se presente) ----------------------------------
+// -- Step 3: fade in/out video + audio (se presente) -----------------------
 $finalName = 'reel_' . $sessionId . '_' . date('Ymd_His') . '.mp4';
 $finalPath = $reelsDir . $finalName;
+$fadeOut   = max(0, $durataTot - 1);
+$vf        = 'fade=t=in:st=0:d=0.5,fade=t=out:st=' . $fadeOut . ':d=1';
 
 if ($musicPath) {
     $afOut = max(0, $durataTot - 2);
-    $cmd = FFMPEG . ' -y -i ' . escapeshellarg($videoMuto)
+    $cmd = FFMPEG . ' -y -i ' . escapeshellarg($videoRaw)
          . ' -stream_loop -1 -i ' . escapeshellarg($musicPath)
-         . ' -map 0:v -map 1:a -c:v copy -c:a aac -b:a 192k -shortest'
+         . ' -map 0:v -map 1:a -vf ' . escapeshellarg($vf)
+         . ' -c:v libx264 -preset veryfast -pix_fmt yuv420p -c:a aac -b:a 192k -shortest'
          . ' -af ' . escapeshellarg('afade=t=out:st=' . $afOut . ':d=2')
          . ' -movflags +faststart ' . escapeshellarg($finalPath) . ' 2>&1';
-    exec($cmd, $o2, $rc2);
-    if ($rc2 !== 0 || !is_file($finalPath)) {
-        error_log('ARDY REEL FFMPEG AUDIO ERROR: ' . implode("\n", $o2));
-        // fallback: consegna il video muto
-        @rename($videoMuto, $finalPath);
-    }
 } else {
-    @rename($videoMuto, $finalPath);
+    $cmd = FFMPEG . ' -y -i ' . escapeshellarg($videoRaw)
+         . ' -vf ' . escapeshellarg($vf)
+         . ' -c:v libx264 -preset veryfast -pix_fmt yuv420p'
+         . ' -movflags +faststart ' . escapeshellarg($finalPath) . ' 2>&1';
+}
+exec($cmd, $o2, $rc2);
+if ($rc2 !== 0 || !is_file($finalPath)) {
+    error_log('ARDY REEL FINAL ERROR: ' . implode("\n", $o2));
+    pulisci($tmpDir);
+    fail('Errore nella finalizzazione del reel', 500);
 }
 
 pulisci($tmpDir);
