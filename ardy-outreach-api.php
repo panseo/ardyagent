@@ -361,6 +361,74 @@ try {
             echo json_encode(['success' => true]);
             break;
 
+        // --------------------------------------------------------
+        // RICERCA AZIENDE IN RETE (OpenStreetMap — Nominatim + Overpass)
+        // Cerca attività per categoria e zona, senza API key.
+        // --------------------------------------------------------
+        case 'web_search':
+            $cat    = $input['categoria'] ?? 'antiquari';
+            $citta  = trim($input['citta'] ?? '');
+            $raggio = max(1, min(50, (int)($input['raggio'] ?? 10))); // km, 1..50
+            if ($citta === '') { echo json_encode(['success' => false, 'error' => 'Indica una città o zona']); break; }
+
+            // 1) Geocoding della zona
+            $geo = osmGeocode($citta);
+            if (!$geo) { echo json_encode(['success' => false, 'error' => 'Zona non trovata: ' . $citta]); break; }
+
+            // 2) Overpass: attività della categoria entro il raggio
+            $results = osmOverpass($cat, $geo['lat'], $geo['lon'], $raggio * 1000);
+            if ($results === null) { echo json_encode(['success' => false, 'error' => 'Servizio di ricerca non raggiungibile, riprova']); break; }
+
+            // 3) Marca i contatti già presenti (per nome o sito)
+            $existing = $db->query("SELECT LOWER(nome) AS n, LOWER(COALESCE(sito,'')) AS s FROM outreach_contatti")->fetchAll();
+            $exNomi = array_column($existing, 'n');
+            $exSiti = array_filter(array_column($existing, 's'));
+            foreach ($results as &$r) {
+                $nomeL = strtolower($r['nome']);
+                $sitoL = strtolower($r['sito'] ?? '');
+                $r['exists'] = in_array($nomeL, $exNomi, true) || ($sitoL && in_array($sitoL, $exSiti, true));
+            }
+            unset($r);
+
+            echo json_encode(['success' => true, 'zona' => $geo['display'], 'count' => count($results), 'results' => $results]);
+            break;
+
+        // --------------------------------------------------------
+        // SALVA LEAD SELEZIONATI DALLA RICERCA (bulk)
+        // --------------------------------------------------------
+        case 'save_leads':
+            $leads = $input['leads'] ?? [];
+            $cat   = $input['categoria'] ?? 'antiquari';
+            if (empty($leads) || !is_array($leads)) { echo json_encode(['success' => false, 'error' => 'Nessun lead da salvare']); break; }
+
+            // Set per dedup (nome + sito già in DB)
+            $existing = $db->query("SELECT LOWER(nome) AS n, LOWER(COALESCE(sito,'')) AS s FROM outreach_contatti")->fetchAll();
+            $exNomi = array_column($existing, 'n');
+            $exSiti = array_filter(array_column($existing, 's'));
+
+            $ins = $db->prepare("INSERT INTO outreach_contatti (nome,categoria,email,telefono,sito,indirizzo,stato,note) VALUES (:nome,:cat,:email,:tel,:sito,:ind,'da_contattare',:note)");
+            $saved = 0; $skipped = 0;
+            foreach ($leads as $l) {
+                $nome = trim($l['nome'] ?? '');
+                if ($nome === '') { continue; }
+                $sitoL = strtolower(trim($l['sito'] ?? ''));
+                if (in_array(strtolower($nome), $exNomi, true) || ($sitoL && in_array($sitoL, $exSiti, true))) { $skipped++; continue; }
+                $ins->execute([
+                    ':nome'  => $nome,
+                    ':cat'   => $cat,
+                    ':email' => ($l['email'] ?? '') ?: null,
+                    ':tel'   => ($l['telefono'] ?? '') ?: null,
+                    ':sito'  => ($l['sito'] ?? '') ?: null,
+                    ':ind'   => ($l['indirizzo'] ?? '') ?: null,
+                    ':note'  => 'Trovato via ricerca OSM',
+                ]);
+                $exNomi[] = strtolower($nome);
+                if ($sitoL) { $exSiti[] = $sitoL; }
+                $saved++;
+            }
+            echo json_encode(['success' => true, 'saved' => $saved, 'skipped' => $skipped]);
+            break;
+
         default:
             echo json_encode(['error' => 'Azione non riconosciuta: ' . $action]);
     }
@@ -417,4 +485,91 @@ function brevoSend(string $toEmail, string $toName, string $oggetto, string $cor
     if ($err)               return ['ok' => false, 'error' => 'Curl: ' . $err];
     if ($code < 200 || $code >= 300) return ['ok' => false, 'error' => "HTTP $code: $res"];
     return ['ok' => true];
+}
+
+// ============================================================
+// RICERCA OSM — Geocoding (Nominatim) + attività (Overpass)
+// ============================================================
+function osmHttpGet(string $url): ?string {
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT,        45);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Accept: application/json']);
+    // Nominatim/Overpass richiedono uno User-Agent identificativo
+    curl_setopt($ch, CURLOPT_USERAGENT, 'ArdyLabOutreach/1.0 (https://ardy-lab.it)');
+    $res  = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    if (!$res || $code < 200 || $code >= 300) return null;
+    return $res;
+}
+
+function osmGeocode(string $query): ?array {
+    $url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' . urlencode($query);
+    $res = osmHttpGet($url);
+    if (!$res) return null;
+    $data = json_decode($res, true);
+    if (empty($data[0]['lat'])) return null;
+    return [
+        'lat'     => (float)$data[0]['lat'],
+        'lon'     => (float)$data[0]['lon'],
+        'display' => $data[0]['display_name'] ?? $query,
+    ];
+}
+
+// Mappa categoria Ardy -> filtri OSM (tag) per Overpass
+function osmCategoryFilters(string $cat): array {
+    switch ($cat) {
+        case 'antiquari':         return ['["shop"="antiques"]'];
+        case 'mercatini':         return ['["shop"="second_hand"]', '["amenity"="marketplace"]'];
+        case 'interior_designer': return ['["office"="interior_design"]', '["shop"="interior_decoration"]', '["craft"="interior_work"]'];
+        case 'bb':                return ['["tourism"="guest_house"]', '["tourism"="bed_and_breakfast"]'];
+        default:                  return ['["shop"="antiques"]'];
+    }
+}
+
+function osmOverpass(string $cat, float $lat, float $lon, int $radiusMeters): ?array {
+    $filters = osmCategoryFilters($cat);
+    $parts = '';
+    foreach ($filters as $f) {
+        // nwr = node + way + relation, con nome obbligatorio
+        $parts .= "nwr{$f}[\"name\"](around:{$radiusMeters},{$lat},{$lon});";
+    }
+    $query = "[out:json][timeout:40];({$parts});out center tags 80;";
+    $res = osmHttpGet('https://overpass-api.de/api/interpreter?data=' . urlencode($query));
+    if (!$res) return null;
+    $data = json_decode($res, true);
+    if (!isset($data['elements'])) return [];
+
+    $out  = [];
+    $seen = [];
+    foreach ($data['elements'] as $el) {
+        $t = $el['tags'] ?? [];
+        $nome = trim($t['name'] ?? '');
+        if ($nome === '') continue;
+        $key = strtolower($nome);
+        if (isset($seen[$key])) continue;
+        $seen[$key] = true;
+
+        // Indirizzo da tag addr:*
+        $via   = trim(($t['addr:street'] ?? '') . ' ' . ($t['addr:housenumber'] ?? ''));
+        $citta = trim(($t['addr:postcode'] ?? '') . ' ' . ($t['addr:city'] ?? ''));
+        $indirizzo = trim($via . ($via && $citta ? ', ' : '') . $citta);
+
+        $sito = $t['website'] ?? ($t['contact:website'] ?? '');
+        $tel  = $t['phone']   ?? ($t['contact:phone']   ?? '');
+        $email= $t['email']   ?? ($t['contact:email']   ?? '');
+
+        $out[] = [
+            'nome'      => $nome,
+            'indirizzo' => $indirizzo,
+            'sito'      => $sito,
+            'telefono'  => $tel,
+            'email'     => $email,
+        ];
+    }
+    // Ordina alfabeticamente
+    usort($out, fn($a, $b) => strcasecmp($a['nome'], $b['nome']));
+    return $out;
 }
