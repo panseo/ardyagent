@@ -466,6 +466,21 @@ Dopo il push, caricare manualmente i file modificati via **cPanel File Manager**
 
 ## 📝 Note sessioni
 
+**Giugno 2026 — Sessione 5 (SEO sito + integrazione AI agent)**
+- **Prompt agente pubblico** (`ardy-system.txt`): aggiunta sezione *APERTURA — PRIMO MESSAGGIO E ROUTING* con saluto a **doppia modalità**:
+  - Nuovo contatto/lead → processo di qualifica esistente
+  - Cliente esistente → riconoscimento (nome + telefono) e rimando alla chat dedicata sulla pagina del lavoro
+- **Integrazione sito (snippet WPCode sul sito WordPress ardy-lab.it, non in questo repo):**
+  - Pulsante flottante "Chatta con Ardy" → `/ardy-agent/`, su tutto il sito **tranne** pagine `/lavori-in-corso/` (chat cliente dedicata) e `/project/` (corsi)
+  - Pulsante flottante contestuale sui corsi → `/ardy-agent/?corso=<nome>`
+  - Pagina `/ardy-agent/` in "modalità corso" quando arriva `?corso=`: intestazione/suggerimenti dedicati e avvio chat già sul corso (il nome corso viene inviato come primo messaggio al proxy)
+- **SEO (sito WordPress):**
+  - Schema **LocalBusiness** via filtro Yoast (`wpseo_schema_organization`) — unica entità, no doppioni (rimosso vecchio snippet `#localbusiness` da Integrazioni Divi)
+  - Schema **Course** sui 9 corsi (CPT `project`), `provider` collegato all'@id Yoast
+  - Title/meta home + **nome canonico "Ardy Lab"**
+  - Rimosso `noindex` dal CPT `project` (corsi) + richiesta indicizzazione in Search Console
+  - Cloudflare: regola "Skip" per IP proprio (audit/test); Googlebot verificato passa regolarmente
+
 **Giugno 2026 — Sessione 4**
 - **Libreria fasi nel DB** (`ardy-libreria-api.php`, tabella `libreria_fasi`): condivisa tra telefono e computer; era in localStorage. Auto-creazione tabella + seeding 12 default.
 - **Immagine in evidenza**: la prima foto del lavoro diventa la copertina del post WordPress (anteprima nel modulo DIVI Blog in home); non viene più duplicata nell'editor.
