@@ -25,6 +25,25 @@ if (empty($telefono) || empty($wpPostId)) {
     exit();
 }
 
+// Rate limiting leggero anti-forza-bruta sul telefono.
+// Fail-open: se la scrittura del file fallisce, NON blocca i clienti veri.
+$ipAddr = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+$rlFile = sys_get_temp_dir() . '/ardy_verify_' . md5($ipAddr) . '.json';
+$now    = time();
+$window = 600;  // 10 minuti
+$maxTry = 20;   // ampio: un cliente vero verifica in 1-2 tentativi
+$tries  = [];
+if (is_readable($rlFile)) {
+    $tries = json_decode(@file_get_contents($rlFile), true) ?: [];
+    $tries = array_values(array_filter($tries, fn($t) => $t > $now - $window));
+}
+if (count($tries) >= $maxTry) {
+    echo json_encode(['verified' => false, 'error' => 'Troppi tentativi. Riprova tra qualche minuto.']);
+    exit();
+}
+$tries[] = $now;
+@file_put_contents($rlFile, json_encode($tries));
+
 // Normalizza telefono: rimuovi spazi, +, trattini
 $telNorm = preg_replace('/[\s\+\-\(\)]/', '', $telefono);
 // Se inizia con 39, toglilo per il confronto

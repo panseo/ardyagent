@@ -4,6 +4,8 @@
 // v2.0 — Ordine caricamento corretto + webhook n8n
 // -----------------------------------------------------------
 
+date_default_timezone_set('Europe/Rome');
+
 define('ARDY_WP_LOAD', '/home/micoperibg/public_html/archivio/wp-load.php');
 
 // -----------------------------------------------------------
@@ -75,10 +77,21 @@ use PHPMailer\PHPMailer\Exception;
 // -----------------------------------------------------------
 $cleanSession = preg_replace('/[^a-zA-Z0-9_\-]/', '', $sessionId);
 $sessionDir   = ARDY_UPLOAD_DIR . $cleanSession . '/lavorazioni/';
-if (!is_dir($sessionDir)) mkdir($sessionDir, 0755, true);
+if (!is_dir($sessionDir) && !mkdir($sessionDir, 0755, true) && !is_dir($sessionDir)) {
+    echo json_encode(['success' => false, 'error' => 'Impossibile creare la cartella di upload']);
+    exit();
+}
 
 $savedImageUrls = [];
+$savedImageIds  = [];   // ID attachment WP, in parallelo a $savedImageUrls
 $allowedMimes   = ['image/jpeg', 'image/png', 'image/webp'];
+$maxImmagini    = 15;                 // numero massimo di foto per pubblicazione
+$maxByte        = 12 * 1024 * 1024;   // dimensione massima per foto (12 MB)
+
+// Limita il numero di immagini elaborate (evita riempimento disco)
+if (is_array($immagini) && count($immagini) > $maxImmagini) {
+    $immagini = array_slice($immagini, 0, $maxImmagini);
+}
 
 require_once ABSPATH . 'wp-admin/includes/media.php';
 require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -87,13 +100,14 @@ require_once ABSPATH . 'wp-admin/includes/image.php';
 foreach ($immagini as $idx => $imgData) {
     $decoded = base64_decode($imgData, true);
     if (!$decoded) continue;
+    if (strlen($decoded) > $maxByte) continue;   // salta foto troppo grandi
     $finfo   = new finfo(FILEINFO_MIME_TYPE);
     $mime    = $finfo->buffer($decoded);
     if (!in_array($mime, $allowedMimes)) continue;
     $ext      = $mime === 'image/png' ? 'png' : ($mime === 'image/webp' ? 'webp' : 'jpg');
-    $filename = date('Ymd_His') . '_' . $idx . '.' . $ext;
+    $filename = date('Ymd_His') . '_' . uniqid() . '_' . $idx . '.' . $ext;
     $filepath = $sessionDir . $filename;
-    file_put_contents($filepath, $decoded);
+    if (file_put_contents($filepath, $decoded) === false) continue;
 
     // Carica su WP Media Library
     $attachment = [
@@ -112,6 +126,7 @@ foreach ($immagini as $idx => $imgData) {
     $attachId = media_handle_sideload($wpFile, 0);
     if (!is_wp_error($attachId)) {
         $savedImageUrls[] = wp_get_attachment_url($attachId);
+        $savedImageIds[]  = $attachId;
     }
 }
 
@@ -125,8 +140,16 @@ $testoSocial = generaTestoSocial($noteBrevi, $faseNome, $mobileTitolo);
 // 8. COSTRUISCI BLOCCO HTML DELLA FASE
 // -----------------------------------------------------------
 $dataOra  = date('d/m/Y H:i');
+
+// Copertina FISSA: la prima foto del lavoro diventa l'immagine in evidenza.
+// La impostiamo solo se il post non ne ha già una (così resta la prima foto
+// in assoluto). Quella foto NON viene ripetuta nell'editor.
+$existingThumb   = $wpPostId ? has_post_thumbnail($wpPostId) : false;
+$featuredImageId = (!$existingThumb && !empty($savedImageIds)) ? $savedImageIds[0] : null;
+
 $fotoHtml = '';
-foreach ($savedImageUrls as $url) {
+foreach ($savedImageUrls as $idx => $url) {
+    if ($featuredImageId !== null && $idx === 0) continue; // la copertina non va nell'editor
     $fotoHtml .= '<img src="' . esc_url($url) . '" style="max-width:100%;margin:10px 0;border-radius:6px;" />' . "\n";
 }
 
@@ -183,10 +206,14 @@ if (!$wpPostId) {
     exit();
 }
 
+// Imposta l'immagine in evidenza (copertina per il modulo DIVI Blog in home)
+if ($featuredImageId !== null) {
+    set_post_thumbnail($wpPostId, $featuredImageId);
+}
+
 // -----------------------------------------------------------
 // 10. EMAIL AL CLIENTE
 // -----------------------------------------------------------
-error_log("ARDY DEBUG EMAIL: clienteEmail=" . $clienteEmail);
 if ($clienteEmail) {
     inviaEmailCliente($clienteEmail, $clienteNome, $mobileTitolo, $faseNome, $testoGenerato, $postLink);
 }
@@ -220,40 +247,22 @@ try {
 }
 
 // -----------------------------------------------------------
-// 12. WEBHOOK N8N → Google Business Profile
-// -----------------------------------------------------------
-$webhookUrl = 'https://n8n.ardy-lab.it/webhook/7d01db65-cc21-4192-ab15-0bdbfd070362';
-
-
-$webhookUrl = 'https://n8n.ardy-lab.it/webhook/7d01db65-cc21-4192-ab15-0bdbfd070362';
-$webhookData = [
-    'testo'      => $testoGenerato,
-    'fase'       => $faseNome,
-    'mobile'     => $mobileTitolo,
-    'post_link'  => $postLink,
-    'immagini'   => $savedImageUrls,
-    'cliente'    => $clienteNome,
-    'testo_social' => $testoSocial,
-];
-$chW = curl_init($webhookUrl);
-curl_setopt($chW, CURLOPT_POST, true);
-curl_setopt($chW, CURLOPT_POSTFIELDS, json_encode($webhookData));
-curl_setopt($chW, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($chW, CURLOPT_TIMEOUT, 10);
-curl_setopt($chW, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-curl_exec($chW);
-curl_close($chW);
-
-
-// -----------------------------------------------------------
-// 13. RISPOSTA
+// 12. RISPOSTA
+// NB: la pubblicazione sui social NON è più automatica.
+// Avviene come passo separato e manuale dalla dashboard
+// (vedi ardy-pubblica-social.php), così Michela può rivedere,
+// modificare, posticipare o saltare il post.
 // -----------------------------------------------------------
 echo json_encode([
-    'success'    => true,
-    'wp_post_id' => (string)$wpPostId,
-    'post_link'  => $postLink,
-    'testo'      => $testoGenerato,
+    'success'      => true,
+    'wp_post_id'   => (string)$wpPostId,
+    'post_link'    => $postLink,
+    'testo'        => $testoGenerato,
     'testo_social' => $testoSocial,
+    'immagini'     => $savedImageUrls,
+    'fase'         => $faseNome,
+    'mobile'       => $mobileTitolo,
+    'cliente'      => $clienteNome,
 ]);
 
 // ============================================================
@@ -286,8 +295,12 @@ Il tono deve essere artigianale, competente e rassicurante. Non usare elenchi pu
         'x-api-key: ' . ARDY_API_KEY,
         'anthropic-version: 2023-06-01'
     ]);
-    $res  = curl_exec($ch);
+    $res      = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
+    if ($httpCode !== 200) {
+        error_log('ARDY GENERA TESTO FASE: HTTP ' . $httpCode);
+    }
     $data = json_decode($res, true);
     return $data['content'][0]['text'] ?? $noteBrevi;
 }

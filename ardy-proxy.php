@@ -3,6 +3,8 @@
 // ARDY LAB — Proxy AI v6.0
 // -----------------------------------------------------------
 
+date_default_timezone_set('Europe/Rome');
+
 // CORS dinamico: accetta sia ardy-lab.it che ardyagent
 $allowedOrigins = ['https://ardy-lab.it', 'https://www.ardy-lab.it', 'https://ardyagent.ardy-lab.it'];
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
@@ -243,7 +245,7 @@ function callAnthropic(array $messages, string $system, array $tools, string $ap
     curl_setopt($ch, CURLOPT_TIMEOUT,        120);
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
     curl_setopt($ch, CURLOPT_HTTP_VERSION,   CURL_HTTP_VERSION_1_1);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
@@ -267,20 +269,26 @@ function callAnthropic(array $messages, string $system, array $tools, string $ap
 // SALVATAGGIO IMMAGINI
 // -----------------------------------------------------------
 $savedImages = [];
-if (!empty($images)) {
+if (!empty($images) && is_array($images)) {
     $sessionDir = ARDY_UPLOAD_DIR . $cleanSession . '/';
-    if (!is_dir($sessionDir)) mkdir($sessionDir, 0755, true);
-    foreach ($images as $idx => $img) {
-        $mimeType = $img['type'];
+    $dirOk      = is_dir($sessionDir) || mkdir($sessionDir, 0755, true) || is_dir($sessionDir);
+    $allowedImg = ['image/png', 'image/gif', 'image/webp', 'image/jpeg'];
+    $maxImgByte = 12 * 1024 * 1024;   // 12 MB per immagine
+    foreach (array_slice($images, 0, 8, true) as $idx => $img) {
+        if (!$dirOk) break;
+        $raw = base64_decode($img['data'] ?? '', true);
+        if ($raw === false || strlen($raw) > $maxImgByte) continue;
+        $mimeType = (new finfo(FILEINFO_MIME_TYPE))->buffer($raw);  // tipo reale, non quello dichiarato
+        if (!in_array($mimeType, $allowedImg, true)) continue;
         switch($mimeType) {
             case 'image/png':  $ext = 'png'; break;
             case 'image/gif':  $ext = 'gif'; break;
             case 'image/webp': $ext = 'webp'; break;
             default:           $ext = 'jpg';
         }
-        $filename = date('Ymd_His') . '_' . $idx . '.' . $ext;
+        $filename = date('Ymd_His') . '_' . uniqid() . '_' . $idx . '.' . $ext;
         $filepath = $sessionDir . $filename;
-        file_put_contents($filepath, base64_decode($img['data']));
+        if (file_put_contents($filepath, $raw) === false) continue;
         $savedImages[] = $filepath;
     }
 }
@@ -324,13 +332,25 @@ $messages[] = ['role' => 'user', 'content' => $lastUserContent];
 $reply         = '';
 $maxIterations = 5;
 $iteration     = 0;
+$bookingMade   = false;   // diventa true se viene fissato un sopralluogo
+$bookingWhen   = null;    // DateTime dell'appuntamento
 
 while ($iteration < $maxIterations) {
     $iteration++;
     $data = callAnthropic($messages, $system, $tools, ARDY_API_KEY);
 
+    // Ritenta in caso di intoppo momentaneo dell'API (sovraccarico/timeout):
+    // così il cliente non vede l'errore per un singhiozzo passeggero.
+    $retry = 0;
+    while (isset($data['error']) && $retry < 2) {
+        $retry++;
+        error_log('ARDY API retry ' . $retry . ': ' . json_encode($data));
+        usleep(800000); // 0,8 secondi
+        $data = callAnthropic($messages, $system, $tools, ARDY_API_KEY);
+    }
+
     if (isset($data['error'])) {
-        error_log('ARDY API ERROR: ' . json_encode($data));
+        error_log('ARDY API ERROR (dopo ' . $retry . ' ritentativi): ' . json_encode($data));
         $reply = 'Errore nella risposta AI. Riprova.';
         break;
     }
@@ -372,25 +392,29 @@ while ($iteration < $maxIterations) {
                 }
 
             } elseif ($toolName === 'fissa_appuntamento_calendario') {
-                // Estrai data e ora da ISO 8601
-                $startDt  = new DateTime($toolInput['start']);
-                $dateStr  = $startDt->format('Y-m-d');
-                $timeStr  = $startDt->format('H:i');
-                // Usa summary e description direttamente come li fornisce Claude
-                $summary  = $toolInput['summary']     ?? 'Sopralluogo Ardy Lab';
-                $desc     = $toolInput['description'] ?? '';
-                $r = gcal_create_event(
-                    $dateStr,
-                    $timeStr,
-                    $summary,
-                    '',
-                    '',
-                    '',
-                    $desc
-                );
-                $toolResult = $r
-                    ? 'Appuntamento creato con successo nel calendario di Michela.'
-                    : 'Errore nella creazione dell\'appuntamento. Riprova.';
+                try {
+                    if (empty($toolInput['start'])) {
+                        $toolResult = 'Errore: data/ora mancante. Chiedi al cliente di confermare giorno e ora.';
+                    } else {
+                        $startDt  = new DateTime($toolInput['start']);
+                        $dateStr  = $startDt->format('Y-m-d');
+                        $timeStr  = $startDt->format('H:i');
+                        // Usa summary e description direttamente come li fornisce Claude
+                        $summary  = $toolInput['summary']     ?? 'Sopralluogo Ardy Lab';
+                        $desc     = $toolInput['description'] ?? '';
+                        $r = gcal_create_event($dateStr, $timeStr, $summary, '', '', '', $desc);
+                        if ($r) {
+                            $bookingMade = true;
+                            $bookingWhen = $startDt;
+                        }
+                        $toolResult = $r
+                            ? 'Appuntamento creato con successo nel calendario di Michela.'
+                            : 'Errore nella creazione dell\'appuntamento. Riprova.';
+                    }
+                } catch (Exception $e) {
+                    error_log('ARDY BOOKING ERROR: ' . $e->getMessage() . ' input=' . json_encode($toolInput));
+                    $toolResult = 'Errore tecnico nella prenotazione. Chiedi al cliente di riprovare.';
+                }
 
             } elseif ($toolName === 'salva_lead_crm') {
                 $ch = curl_init('https://ardyagent.ardy-lab.it/ardy-save-lead.php');
@@ -426,6 +450,7 @@ while ($iteration < $maxIterations) {
 }
 
 if (empty($reply)) {
+    error_log('ARDY EMPTY REPLY: iter=' . $iteration . ' stop=' . ($data['stop_reason'] ?? '?') . ' data=' . json_encode($data ?? null));
     $reply = 'Errore nella risposta AI. Riprova.';
 }
 
@@ -484,6 +509,48 @@ if ($userEmail || $userPhone) {
         $mail->send();
     } catch (Exception $e) {
         error_log('ARDY MAIL ERROR: ' . $mail->ErrorInfo);
+    }
+}
+
+// -----------------------------------------------------------
+// CONFERMA SOPRALLUOGO AL CLIENTE (se prenotato e email disponibile)
+// -----------------------------------------------------------
+if ($bookingMade && $bookingWhen instanceof DateTime && $userEmail && filter_var($userEmail, FILTER_VALIDATE_EMAIL)) {
+    $giorni = ['Monday'=>'lunedì','Tuesday'=>'martedì','Wednesday'=>'mercoledì','Thursday'=>'giovedì','Friday'=>'venerdì','Saturday'=>'sabato','Sunday'=>'domenica'];
+    $mesi   = ['January'=>'gennaio','February'=>'febbraio','March'=>'marzo','April'=>'aprile','May'=>'maggio','June'=>'giugno','July'=>'luglio','August'=>'agosto','September'=>'settembre','October'=>'ottobre','November'=>'novembre','December'=>'dicembre'];
+    $gg     = $giorni[$bookingWhen->format('l')] ?? '';
+    $mm     = $mesi[$bookingWhen->format('F')] ?? '';
+    $quando = trim(ucfirst($gg) . ' ' . $bookingWhen->format('j') . ' ' . $mm . ' ' . $bookingWhen->format('Y') . ' alle ' . $bookingWhen->format('H:i'));
+
+    try {
+        $mailC = new PHPMailer(true);
+        $mailC->isSMTP();
+        $mailC->Host       = 'smtp-relay.brevo.com';
+        $mailC->SMTPAuth   = true;
+        $mailC->Username   = ARDY_SMTP_USER;
+        $mailC->Password   = ARDY_SMTP_PASSWORD;
+        $mailC->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mailC->Port       = 587;
+        $mailC->CharSet    = 'UTF-8';
+        $mailC->setFrom('noreply@ardy-lab.it', 'Ardy Lab');
+        $mailC->addAddress($userEmail);
+        $mailC->Subject = '✅ Sopralluogo Ardy Lab — ' . $quando;
+        $mailC->isHTML(true);
+        $mailC->Body = '
+<div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:32px;color:#333;">
+  <h2 style="font-family:sans-serif;color:#c8a96e;font-size:20px;margin-bottom:4px;">Ardy Lab</h2>
+  <p style="color:#999;font-size:13px;margin-bottom:24px;">Conferma sopralluogo</p>
+  <p style="font-size:15px;line-height:1.7;">Ciao,<br>abbiamo fissato il tuo sopralluogo. Ecco il riepilogo:</p>
+  <div style="border-left:3px solid #c8a96e;padding:12px 20px;background:#fafaf8;margin:20px 0;font-size:16px;">
+    <strong>' . htmlspecialchars($quando) . '</strong>
+  </div>
+  <p style="font-size:15px;line-height:1.7;">Per qualsiasi modifica o domanda puoi rispondere a questa email oppure chiamarci al <strong>351 967 7973</strong>. A presto!</p>
+  <p style="margin-top:32px;font-size:12px;color:#bbb;">Ardy Lab — Restauro e laccatura mobili · Roma</p>
+</div>';
+        $mailC->send();
+        error_log('ARDY CONFERMA CLIENTE OK: ' . $userEmail);
+    } catch (Exception $e) {
+        error_log('ARDY CONFERMA CLIENTE ERROR: ' . $mailC->ErrorInfo);
     }
 }
 

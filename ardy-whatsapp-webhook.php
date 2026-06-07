@@ -28,7 +28,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
 // ── MESSAGGI IN ARRIVO (POST) ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $input = json_decode(file_get_contents('php://input'), true);
+    // Leggi il corpo grezzo (max 1 MB) — serve sia per la firma sia per il parsing
+    $rawBody = file_get_contents('php://input', false, null, 0, 1048576);
+
+    // Verifica firma Meta (X-Hub-Signature-256), SOLO se l'app secret è configurato.
+    // Finché WA_APP_SECRET non è definito in ardy-config.php, il comportamento resta invariato.
+    if (file_exists(__DIR__ . '/ardy-config.php')) { require_once __DIR__ . '/ardy-config.php'; }
+    if (defined('WA_APP_SECRET') && WA_APP_SECRET !== '') {
+        $sigHeader = $_SERVER['HTTP_X_HUB_SIGNATURE_256'] ?? '';
+        $expected  = 'sha256=' . hash_hmac('sha256', $rawBody, WA_APP_SECRET);
+        if (!hash_equals($expected, $sigHeader)) {
+            http_response_code(403);
+            echo 'Firma non valida';
+            exit();
+        }
+    }
+
+    $input = json_decode($rawBody, true);
 
     // Log per debug
     $logFile = __DIR__ . '/ardy-wa-log.json';

@@ -469,7 +469,8 @@
           message: text,
           history: history,
           context: pageContext,
-          titolo: pageTitle
+          titolo: pageTitle,
+          nome: clientName
         })
       });
       var data = await res.json();

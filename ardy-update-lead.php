@@ -61,5 +61,5 @@ try {
 } catch (PDOException $e) {
     error_log('ARDY UPDATE LEAD ERROR: ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    echo json_encode(['success' => false, 'error' => 'Errore interno']);
 }

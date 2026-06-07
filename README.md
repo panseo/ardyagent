@@ -40,13 +40,23 @@ ardyagent.ardy-lab.it/
 ├── ardy-email-finder.php      # Ricerca email lead
 ├── ardy-outreach.html         # Tool outreach
 ├── ardy-outreach-api.php      # API outreach
-├── ardy-pubblica-lavorazione.php  # Pubblica aggiornamenti lavorazioni + webhook n8n
+├── ardy-pubblica-lavorazione.php  # Pubblica fase: pagina WP + immagine in evidenza + email cliente (NO social auto)
+├── ardy-pubblica-social.php   # Pubblica sui social (passo manuale, separato) → webhook n8n
 ├── ardy-get-fasi.php          # API fasi lavorative
+├── ardy-libreria-api.php      # API libreria fasi (DB, condivisa tra dispositivi)
+├── ardy-crea-reel.php         # Genera reel MP4 9:16 dalle fasi (FFmpeg via proc_open + GD)
+├── ardy-pubblica-reel.php     # Pubblica il reel sui social → webhook n8n (ramo Reels)
+├── ardy-reel-template-api.php # API libreria template di stile reel (DB)
+├── ardy-lista-musica.php      # Elenca le tracce in assets/reel-music/
+├── ardy-guida-michela.html    # Guida d'uso dashboard (HTML stampabile) — linkata dalla dashboard
+├── GUIDA-MICHELA.md           # Guida d'uso dashboard (versione testo)
 ├── ardy-unsubscribe.php       # Gestione unsubscribe email
 ├── ardy-rate-limit/           # ⚠️ NON in repo — rate limiting
 ├── ardy-system.txt            # Prompt sistema agente AI (chatbot pubblico)
 ├── assets/
-│   └── logo.png               # Logo Ardy Lab
+│   ├── logo.png               # Logo Ardy Lab
+│   └── reel-music/            # Tracce royalty-free per i reel (caricate sul server)
+├── reels/                     # ⚠️ NON in repo — MP4 dei reel generati (auto-creata)
 ├── preventivi_pdf/            # ⚠️ NON in repo — PDF generati
 ├── ardy-uploads/              # ⚠️ NON in repo — foto lavorazioni
 ├── vendor/                    # ⚠️ NON in repo — dipendenze Composer
@@ -84,6 +94,30 @@ note, condizioni, voci_json, subtotale, grand_total,
 file_pdf, stato, data_emissione, data_scadenza, created_at, updated_at
 ```
 
+#### `fasi`
+Fasi di lavorazione pubblicate per ogni cliente (usate anche per generare il reel).
+
+```
+id, session_id, fase_nome, testo_breve, testo_generato, foto_urls (JSON), created_at
+```
+
+#### `libreria_fasi`
+Libreria di frasi/fasi riutilizzabili nei preventivi. **Condivisa tra dispositivi**
+(prima era in localStorage). Auto-creata e popolata con 12 default al primo avvio.
+
+```
+id (VARCHAR), nome, cat, descr, created_at, updated_at
+```
+
+#### `reel_template`
+Libreria di **template di stile** per il reel (durate, slide attive, musica).
+Auto-creata e popolata con 4 preset (Classico, Veloce, Cinematico, Solo foto).
+
+```
+id (VARCHAR), nome, sec_foto, sec_titolo, sec_finale,
+mostra_titolo, mostra_didascalie, mostra_finale, musica_default, created_at, updated_at
+```
+
 ---
 
 ## 🧩 Architettura sistema completa
@@ -107,9 +141,22 @@ file_pdf, stato, data_emissione, data_scadenza, created_at, updated_at
 
 [Pubblicazione Lavorazioni]
         ↓ ardy-pubblica-lavorazione.php
-        ↓ WordPress (crea/aggiorna post)
+        ↓ WordPress (crea/aggiorna post + immagine in evidenza = prima foto)
         ↓ Email cliente (PHPMailer + Brevo SMTP)
+        ↓ Salva la fase nella tabella `fasi` (foto incluse)
+        ↓ (i social NON partono in automatico)
+
+[Pubblicazione Social — manuale dalla dashboard]
+        ↓ Michela rivede/modifica il testo → pubblica ora / salva per dopo / salta
+        ↓ ardy-pubblica-social.php
         ↓ Webhook n8n → Facebook + Instagram
+
+[Reel finale — a lavoro concluso]
+        ↓ ardy-crea-reel.php (FFmpeg via proc_open + testi con GD)
+        ↓   monta MP4 9:16: titolo + foto delle fasi con didascalia + Prima/Dopo
+        ↓   genera caption automatica (Claude), modificabile in dashboard
+        ↓ ardy-pubblica-reel.php
+        ↓ Webhook n8n (ramo Reels) → Instagram Reels / Facebook
 
 [n8n — Automazione Social]
         ↓ Webhook riceve dati da pubblica-lavorazione
@@ -150,6 +197,7 @@ file_pdf, stato, data_emissione, data_scadenza, created_at, updated_at
 
 ### Workflow n8n "Meta"
 
+**Ramo post-foto** (esistente):
 ```
 [Webhook POST]
     ↓ riceve: testo, immagini[], fase, mobile, post_link
@@ -159,6 +207,23 @@ file_pdf, stato, data_emissione, data_scadenza, created_at, updated_at
     ↓ Pubblica su Instagram (se immagine: /media → /media_publish)
     ↓ Usa this.helpers.httpRequest (il nodo HTTP Request standard ha problemi di timeout)
 ```
+
+**Ramo Reels** (Webhook1 — path `ecf74cbf-…`):
+```
+[Webhook1 POST]  ← da ardy-pubblica-reel.php
+    ↓ riceve: tipo=reel, reel_url, caption, mobile, cliente, session_id
+    ↓
+[HTTP Request] POST /v21.0/{ig-id}/media
+    ↓ media_type=REELS, video_url={{ $json.body.reel_url }}, caption={{ $json.body.caption }}
+    ↓ → restituisce un container id
+[Wait] ~60s (elaborazione video lato Instagram)
+    ↓
+[HTTP Request] POST /v21.0/{ig-id}/media_publish
+    ↓ creation_id={{ $json.id }}
+```
+> Nota: `media_type` deve essere **REELS** (maiuscolo). Attenzione a non lasciare
+> spazi/tab nei valori `video_url`/`caption`. Il nodo `media_publish` si tiene
+> disattivato durante i test per non pubblicare davvero.
 
 ---
 
@@ -259,13 +324,18 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
 
 ### Funzionalità
 - Lista clienti/lead con filtri per stato e ricerca
-- Dettaglio cliente con note modificabili
+- Dettaglio cliente con **tutti i campi modificabili** (nome, cognome, telefono, email, servizio, zona, mobile, budget, indirizzo, note, follow-up)
 - Cambio stato cliente (Lead → Sopralluogo → Preventivo → Acconto → Standby → Perso)
 - Azioni rapide: contenuto AI, post social, **proforma**, email, WhatsApp, note interne
 - **Generatore preventivi PDF** con form completo
 - **Generatore proforma** con 3 scenari
 - **Storico preventivi** per cliente (dal DB)
-- **Libreria fasi lavorative** (localStorage) con 12 fasi predefinite
+- **Libreria fasi lavorative** (DB, **condivisa tra dispositivi**) con 12 fasi predefinite
+- **Pubblicazione fasi** con foto (scatta dal telefono o galleria); la prima foto diventa l'**immagine in evidenza** del post
+- **Pubblicazione social manuale**: dopo la fase, pannello per rivedere/modificare il post e scegliere *pubblica ora / salva per dopo / non pubblicare*; coda "post in attesa" (localStorage)
+- **Reel finale**: a lavoro concluso monta un video 9:16 dalle fasi (titolo + didascalie + Prima/Dopo), con scelta **template di stile**, musica, caption automatica modificabile e pubblicazione sui social
+- **Libreria template reel** (DB): preset di stile (durate, slide attive, musica) creabili/modificabili dal pannello "⚙ Template"
+- Pulsante **❓ Guida** che apre la guida d'uso
 - Aggiunta manuale clienti
 
 ### Stati cliente
@@ -309,7 +379,8 @@ Il numero di Michela è usato sull'app WhatsApp Business del telefono. Per Cloud
 
 **VPS:** OVH AlmaLinux — gestito via WHM/cPanel
 **Accesso:** Solo WHM — SSH e FTP disabilitati per sicurezza
-**PHP:** Con `exec()` disabilitata → per questo si usa mPDF invece di wkhtmltopdf
+**PHP:** In PHP-FPM (web) sono disabilitate `exec`, `shell_exec`, `system` ma **`proc_open` è attiva** → per i PDF si usa mPDF; per FFmpeg (reel) si usa `proc_open` (vedi `ardy-crea-reel.php`)
+**FFmpeg:** build statico in `/usr/local/bin/ffmpeg` (johnvansickle 7.0.2). Il filtro `drawtext` NON è incluso → i testi del reel si disegnano con **GD/FreeType** (font `dejavu-sans-fonts`)
 **Composer:** Installato in `/home/micoperibg/public_html/ardyagent.ardy-lab.it/`
 
 ### n8n
@@ -353,7 +424,9 @@ Dopo il push, caricare manualmente i file modificati via **cPanel File Manager**
 |---|---|---|
 | mPDF | ^8.3 | Generazione PDF da HTML |
 | PHPMailer | locale | Invio email |
-| Claude API | claude-sonnet-4-6 | Chatbot, widget lavorazione, generazione testi |
+| Claude API | claude-sonnet-4-6 | Chatbot, widget lavorazione, generazione testi, caption reel |
+| FFmpeg | 7.0.2 static | Montaggio reel video (via proc_open) |
+| GD + FreeType | PHP ext | Testi/didascalie sulle slide del reel |
 
 ---
 
@@ -393,8 +466,27 @@ Dopo il push, caricare manualmente i file modificati via **cPanel File Manager**
 
 ## 📝 Note sessioni
 
+**Giugno 2026 — Sessione 4**
+- **Libreria fasi nel DB** (`ardy-libreria-api.php`, tabella `libreria_fasi`): condivisa tra telefono e computer; era in localStorage. Auto-creazione tabella + seeding 12 default.
+- **Immagine in evidenza**: la prima foto del lavoro diventa la copertina del post WordPress (anteprima nel modulo DIVI Blog in home); non viene più duplicata nell'editor.
+- **Reel finale** (`ardy-crea-reel.php`): video MP4 9:16 da tutte le fasi pubblicate — slide-titolo (mobile + logo), foto con didascalia fase, slide finale Prima/Dopo. Scelta musica da `assets/reel-music/`.
+  - FFmpeg statico installato (`/usr/local/bin/ffmpeg`); chiamate via **proc_open** (exec disabilitata in FPM); testi con **GD** (drawtext non incluso nel build).
+  - Montaggio robusto: una mini-clip per slide + concat (il concat di immagini mostrava una sola foto).
+  - **Caption automatica** con Claude, modificabile in dashboard.
+- **Pubblicazione reel** (`ardy-pubblica-reel.php`): invio `reel_url` + caption al webhook n8n; nuovo **ramo Reels** nel workflow "Meta" (Webhook1 → /media REELS → Wait → /media_publish).
+
 **Giugno 2026 — Sessione 1**
 Costruita dashboard completa, generatore PDF con mPDF, libreria fasi, storico preventivi su DB, fix doppio salvataggio, bottoni sidebar, manuale utente Word.
+
+**Giugno 2026 — Sessione 3**
+- Tasto "Scatta foto" diretto nella dashboard lavorazioni (mobile)
+- **Sicurezza**: login Basic Auth su pagine/endpoint privati; hardening endpoint pubblici (save-lead, verify-client con rate limit, webhook WhatsApp con firma); anti-XSS dashboard; link disiscrizione firmato (HMAC); limiti/retry sui proxy AI; messaggi d'errore generici; fuso orario Europe/Rome
+- Chatbot: telefono ora raccolto sempre; email di conferma sopralluogo al cliente
+- Dashboard: campi cliente modificabili e salvabili
+- Widget fasi: il nome verificato viene passato all'AI (niente più richiesta del nome già noto)
+- n8n: nodo Code Meta corretto (foto su Facebook, Instagram con attesa contenitore)
+- **Social manuale**: `ardy-pubblica-social.php` + pannello dashboard (pubblica ora / salva per dopo / modifica / salta)
+- Guida d'uso per Michela (`GUIDA-MICHELA.md`, `ardy-guida-michela.html`, PDF) + pulsante Guida in dashboard
 
 **Giugno 2026 — Sessione 2**
 - App Ardyagent creata su Meta Developers (verifica Business completata)
