@@ -467,6 +467,14 @@ Dopo il push, caricare manualmente i file modificati via **cPanel File Manager**
 - [ ] **Caricamento video delle lavorazioni** — nelle fasi di lavorazione poter caricare anche video (non solo foto) dei lavori effettuati
 - [ ] Autenticare il dominio `ardy-lab.it` su Brevo (DKIM/SPF) ed evitare il mittente Gmail (deliverability)
 
+### Riuso / Multi-cliente (white-label)
+Richiesta: replicare il sistema per altri artigiani (es. un collega che fa mobili e infissi su misura, non restauro) con prompt e branding diversi. Fattibile: ~90% del codice è riutilizzabile, cambiano prompt + configurazione.
+- [ ] **Parametrizzare i valori fissi nel codice** → spostare in `ardy-config.php` tutto ciò che oggi è hardcoded (dominio `ardyagent.ardy-lab.it` nei CORS e negli URL, telefono `351 967 7973`, email, indirizzo, nome attività…), così un nuovo cliente = nuovo file di config + nuovo prompt, senza toccare il codice
+- [ ] **Checklist di setup per nuovo cliente** — account da aprire e configurare in ordine: chiave Anthropic, Brevo (mittente/dominio), Google Calendar OAuth, database CRM, (opzionale) Meta/n8n per reel/social; branding e dominio
+- [ ] Riscrivere `ardy-system.txt` per il nuovo mestiere (mobili/infissi su misura): servizi, listino/forbici, processo di qualifica, sopralluogo, tono
+- [ ] Installazione **separata** per cliente (copia del progetto sul suo dominio/hosting + sua config) — attività isolate, niente dati condivisi
+- [ ] (Visione) Trasformarlo in un piccolo prodotto white-label da offrire ad altri artigiani
+
 ---
 
 ## 📝 Note sessioni
