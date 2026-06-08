@@ -461,10 +461,23 @@ Dopo il push, caricare manualmente i file modificati via **cPanel File Manager**
 ### Infrastruttura
 - [ ] Migrazione server (pianificata — da definire tempistiche)
 - [ ] Automatizzare deploy da GitHub al server (ora manuale via cPanel)
+- [ ] **Deploy via git sul server** — trasformare la cartella del sito in un checkout git (serve token GitHub read-only sul repo privato), così gli aggiornamenti diventano un solo `git pull`
+
+### Dashboard / Lavorazioni
+- [ ] **Caricamento video delle lavorazioni** — nelle fasi di lavorazione poter caricare anche video (non solo foto) dei lavori effettuati
+- [ ] Autenticare il dominio `ardy-lab.it` su Brevo (DKIM/SPF) ed evitare il mittente Gmail (deliverability)
 
 ---
 
 ## 📝 Note sessioni
+
+**Giugno 2026 — Sessione 6 (primo lead: fix mail + calendario + foto scheda)**
+- **Primo lead reale** arrivato dal widget AI (Giulia Di Fazio). Emersi alcuni bug dopo il ripristino del server.
+- **Fix mail notifiche lead (causa: firewall):** dopo il ripristino del server, in `/etc/sysconfig/nftables.conf` (servizio `nftables` attivo al boot) era rimasto un blocco di **SMTP blocking** che **dirottava tutto l'SMTP in uscita di PHP-FPM sul mail server locale (Exim)**. PHP-FPM (utente `micoperibg`) finiva contro Exim → certificato sbagliato (`vps-...ovh-net`) → `SSL certificate verify failed` → mail a Michela e conferme cliente non inviate. Root era esente, quindi da CLI sembrava tutto ok. **Soluzione:** rimosse le 2 righe `redirect` dal file di boot (persistente) e dalle regole live nft — senza reboot.
+- **Agente: forzata la creazione evento calendario** (`ardy-system.txt`): il prompt proponeva gli slot ma non chiamava mai `fissa_appuntamento_calendario`, quindi l'evento non veniva creato (i dati appuntamento finivano solo nel CRM). Rinforzato il Passo 7 e la sezione GESTIONE CALENDARIO con il flusso obbligatorio dei tool (disponibilità → fissa appuntamento → salva CRM).
+- **Dashboard — "Foto della scheda"** (`ardy-lead-foto.php` + `ardy-michela-app.html`): nuova sezione nel dettaglio cliente, **visibile in ogni stato** (LEAD, SOPRALLUOGO, ecc.). Mostra le foto inviate dal cliente in chat e permette di **aggiungerne di nuove** (scatto o galleria), salvate in `ARDY_UPLOAD_DIR/<sessione>/`. Nuovo endpoint protetto da Basic Auth (`.htaccess`), con controllo MIME reale e niente path-traversal.
+- **Da fare prossima sessione:** deploy via git sul server, caricamento **video** nelle lavorazioni, autenticazione dominio Brevo (DKIM).
+
 
 **Giugno 2026 — Sessione 5 (SEO sito + integrazione AI agent)**
 - **Prompt agente pubblico** (`ardy-system.txt`): aggiunta sezione *APERTURA — PRIMO MESSAGGIO E ROUTING* con saluto a **doppia modalità**:
