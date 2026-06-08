@@ -475,6 +475,14 @@ Richiesta: replicare il sistema per altri artigiani (es. un collega che fa mobil
 - [ ] Installazione **separata** per cliente (copia del progetto sul suo dominio/hosting + sua config) — attività isolate, niente dati condivisi
 - [ ] (Visione) Trasformarlo in un piccolo prodotto white-label da offrire ad altri artigiani
 
+#### Opportunità community "Farò Arte" (artigiani romani)
+Interesse concreto da parte della community di artigiani **Farò Arte**: possibili più installazioni. Validato da un lead reale già acquisito. Procedere con calma e in modo ripetibile.
+- [ ] **Pilota Farò Arte** — primo cliente della community (collega o altro) per rodare il processo di onboarding end-to-end
+- [ ] **Definire pacchetto e prezzo** — modello suggerito: *setup una-tantum + canone mensile* (manutenzione/aggiornamenti)
+- [ ] **Costi vivi da girare al cliente** — chiave Anthropic, Brevo, hosting, dominio (non assorbibili su molti clienti)
+- [ ] **Bozza di offerta** da mostrare alla community (cosa include, prezzi, costi ricorrenti)
+- [ ] Sequenza consigliata: 1) finire il template parametrizzato → 2) 1 pilota → 3) apertura come pacchetto ripetibile
+
 ---
 
 ## 📝 Note sessioni
