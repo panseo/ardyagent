@@ -135,6 +135,23 @@
         </div>
       </div>
 
+      <!-- SEZIONE FOTO DELLA SCHEDA — sempre visibile, in ogni stato -->
+      <div class="foto-scheda-section" id="fotoSchedaSection" style="margin:18px 0;">
+        <div class="lav-title">📷 Foto della scheda</div>
+        <div class="lav-foto-buttons">
+          <label class="lav-foto-btn" for="schedaFotoCamera">
+            📷 SCATTA FOTO
+            <input type="file" id="schedaFotoCamera" accept="image/*" capture="environment" multiple>
+          </label>
+          <label class="lav-foto-btn lav-foto-btn-alt" for="schedaFotoInput">
+            🖼️ DALLA GALLERIA
+            <input type="file" id="schedaFotoInput" accept="image/*" multiple>
+          </label>
+        </div>
+        <div class="lav-foto-count" id="schedaFotoStatus"></div>
+        <div class="lav-preview" id="schedaFotoGrid"></div>
+      </div>
+
       <!-- AZIONI -->
       <div class="azioni-title">Azioni rapide</div>
       <div class="azioni-grid">
@@ -309,6 +326,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const input = document.getElementById(id);
     if (input) input.addEventListener('change', handleFotoUpload);
   });
+  ['schedaFotoCamera', 'schedaFotoInput'].forEach(id => {
+    const input = document.getElementById(id);
+    if (input) input.addEventListener('change', handleSchedaFotoUpload);
+  });
   renderSocialPending();
   libLoadRemote();
 });
@@ -411,6 +432,9 @@ function renderDetail() {
   document.getElementById('dNote').value            = l.Note      ?? '';
   document.getElementById('dDataFollowup').value    = l.Data_followup ?? '';
   document.getElementById('dSessionId').textContent = l.Session_ID ?? '—';
+
+  // Foto della scheda — sempre, in ogni stato
+  caricaFotoScheda(l.Session_ID ?? '');
 
   // Sezione lavorazioni — visibile da ACCONTO in poi
   const statiLav = ['ACCONTO'];
@@ -625,6 +649,62 @@ function handleFotoUpload(event) {
 function aggiornaContatoreFoto() {
   const count = document.getElementById('lavFotoCount');
   count.textContent = lavImmagini.length ? `📸 ${lavImmagini.length} foto pronte da pubblicare` : '';
+}
+
+// ─── FOTO DELLA SCHEDA (CRM) — in ogni stato ──────────────
+async function caricaFotoScheda(sessionId) {
+  const grid   = document.getElementById('schedaFotoGrid');
+  const status = document.getElementById('schedaFotoStatus');
+  if (!grid) return;
+  grid.innerHTML = '';
+  status.textContent = '';
+  if (!sessionId) { status.textContent = 'Scheda senza sessione: foto non disponibili.'; return; }
+  try {
+    const r = await fetch('ardy-lead-foto.php?session_id=' + encodeURIComponent(sessionId));
+    const data = await r.json();
+    const foto = (data && data.foto) || [];
+    if (!foto.length) { status.textContent = 'Nessuna foto sulla scheda.'; return; }
+    status.textContent = `📸 ${foto.length} foto`;
+    grid.innerHTML = foto.map(f => {
+      const url = 'ardy-lead-foto.php?session_id=' + encodeURIComponent(sessionId) + '&file=' + encodeURIComponent(f.file);
+      return `<a href="${url}" target="_blank"><img src="${url}" loading="lazy"></a>`;
+    }).join('');
+  } catch (e) {
+    status.textContent = 'Errore nel caricamento delle foto.';
+  }
+}
+
+function handleSchedaFotoUpload(event) {
+  const sessionId = currentLead && currentLead.Session_ID;
+  const files = Array.from(event.target.files);
+  event.target.value = ''; // permette di riaggiungere lo stesso scatto
+  if (!sessionId) { alert('Seleziona prima una scheda con sessione valida.'); return; }
+  if (!files.length) return;
+  const status = document.getElementById('schedaFotoStatus');
+  status.textContent = '⏳ Carico le foto…';
+
+  const readers = files.map(file => new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload  = e => resolve({ data: e.target.result.split(',')[1] });
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  }));
+
+  Promise.all(readers).then(async images => {
+    images = images.filter(Boolean);
+    try {
+      const r = await fetch('ardy-lead-foto.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, images })
+      });
+      const data = await r.json();
+      if (data && data.success) caricaFotoScheda(sessionId);
+      else status.textContent = 'Errore nel salvataggio delle foto.';
+    } catch (e) {
+      status.textContent = 'Errore di rete nel salvataggio.';
+    }
+  });
 }
 
 async function pubblicaFase() {
