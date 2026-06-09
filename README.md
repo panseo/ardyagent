@@ -480,7 +480,7 @@ permette il deploy push-button da cPanel (richiede Jailed Shell).
 - [ ] **Deploy via git sul server** — trasformare la cartella del sito in un checkout git (serve token GitHub read-only sul repo privato), così gli aggiornamenti diventano un solo `git pull`
 
 ### Dashboard / Lavorazioni
-- [ ] **Caricamento video delle lavorazioni** — nelle fasi di lavorazione poter caricare anche video (non solo foto) dei lavori effettuati
+- [x] **Caricamento video delle lavorazioni** — nelle fasi si possono caricare anche video (oltre alle foto). Upload multipart via `ardy-upload-video.php` → Media Library WP; incorporati come `<video>` nel post e salvati in `fasi.video_urls` (sessione 7)
 - [ ] Autenticare il dominio `ardy-lab.it` su Brevo (DKIM/SPF) ed evitare il mittente Gmail (deliverability)
 
 ### Riuso / Multi-cliente (white-label)
@@ -509,6 +509,7 @@ Interesse concreto da parte della community di artigiani **Farò Arte**: possibi
 - Creata **Deploy key read-only** sul repo GitHub (`~micoperibg/.ssh/github_ardyagent`); repo clonato in `/home/micoperibg/repositories/ardyagent` (fuori dal document root).
 - Aggiunti `deploy.sh` (rsync selettivo, niente `--delete`, preserva config/upload/vendor) e `.cpanel.yml` (deploy push-button cPanel di riserva).
 - Aggiornamento sito = `runuser -u micoperibg -- bash -c 'cd ~/repositories/ardyagent && git pull origin main && ./deploy.sh'`.
+- **Video nelle lavorazioni**: nuovo `ardy-upload-video.php` (upload multipart, max 150 MB, MIME reale, → WP Media Library). Dashboard con pulsanti 🎥/🎬 che caricano subito; i video finiscono nel post WP come `<video>` e in `fasi.video_urls`. Reel non impattato (usa solo le foto).
 
 **Giugno 2026 — Sessione 6 (primo lead: fix mail + calendario + foto scheda)**
 - **Primo lead reale** arrivato dal widget AI (Giulia Di Fazio). Emersi alcuni bug dopo il ripristino del server.

@@ -216,8 +216,20 @@
               <input type="file" id="lavFotoInput" accept="image/*" multiple>
             </label>
           </div>
+          <div class="lav-foto-buttons">
+            <label class="lav-foto-btn" for="lavVideoCamera">
+              🎥 REGISTRA VIDEO
+              <input type="file" id="lavVideoCamera" accept="video/*" capture="environment">
+            </label>
+            <label class="lav-foto-btn lav-foto-btn-alt" for="lavVideoInput">
+              🎬 VIDEO DA GALLERIA
+              <input type="file" id="lavVideoInput" accept="video/*" multiple>
+            </label>
+          </div>
           <div class="lav-foto-count" id="lavFotoCount"></div>
+          <div class="lav-foto-count" id="lavVideoCount"></div>
           <div class="lav-preview" id="lavPreview"></div>
+          <div class="lav-preview" id="lavVideoPreview"></div>
           <button class="btn-pubblica" id="btnPubblica" onclick="pubblicaFase()">
             ✦ PUBBLICA FASE + NOTIFICA CLIENTE
           </button>
@@ -325,6 +337,10 @@ document.addEventListener('DOMContentLoaded', () => {
   ['lavFotoCamera', 'lavFotoInput'].forEach(id => {
     const input = document.getElementById(id);
     if (input) input.addEventListener('change', handleFotoUpload);
+  });
+  ['lavVideoCamera', 'lavVideoInput'].forEach(id => {
+    const input = document.getElementById(id);
+    if (input) input.addEventListener('change', handleVideoUpload);
   });
   ['schedaFotoCamera', 'schedaFotoInput'].forEach(id => {
     const input = document.getElementById(id);
@@ -651,6 +667,55 @@ function aggiornaContatoreFoto() {
   count.textContent = lavImmagini.length ? `📸 ${lavImmagini.length} foto pronte da pubblicare` : '';
 }
 
+// ─── VIDEO LAVORAZIONE ────────────────────────────────────
+const VIDEO_UPLOAD_URL = BASE_URL + '/ardy-upload-video.php';
+const VIDEO_MAX_BYTE   = 150 * 1024 * 1024; // 150 MB, allineato al server
+let lavVideoUrls = []; // URL dei video già caricati su WP
+
+async function handleVideoUpload(event) {
+  const files = Array.from(event.target.files);
+  event.target.value = ''; // permette di riaggiungere lo stesso video
+  const sessionId = currentLead && currentLead.Session_ID;
+  if (!sessionId) { showToast('⚠ Seleziona prima una scheda valida', 'error'); return; }
+
+  for (const file of files) {
+    if (file.size > VIDEO_MAX_BYTE) {
+      showToast(`⚠ "${file.name}" oltre 150 MB: saltato`, 'error');
+      continue;
+    }
+    const card = document.createElement('div');
+    card.style.cssText = 'font-size:12px;color:var(--text-dim);margin:4px 0;';
+    card.textContent = `⏳ Carico "${file.name}"…`;
+    document.getElementById('lavVideoPreview').appendChild(card);
+
+    try {
+      const fd = new FormData();
+      fd.append('session_id', sessionId);
+      fd.append('video', file, file.name);
+      const res  = await fetch(VIDEO_UPLOAD_URL, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data && data.success && data.url) {
+        lavVideoUrls.push(data.url);
+        card.innerHTML = '';
+        const v = document.createElement('video');
+        v.src = data.url; v.controls = true; v.preload = 'metadata'; v.playsInline = true;
+        v.style.cssText = 'max-width:140px;border-radius:6px;margin:4px;';
+        card.appendChild(v);
+        aggiornaContatoreVideo();
+      } else {
+        card.textContent = `⚠ "${file.name}": ${data && data.error ? data.error : 'errore upload'}`;
+      }
+    } catch (e) {
+      card.textContent = `⚠ "${file.name}": errore di rete`;
+    }
+  }
+}
+
+function aggiornaContatoreVideo() {
+  const count = document.getElementById('lavVideoCount');
+  count.textContent = lavVideoUrls.length ? `🎥 ${lavVideoUrls.length} video pronti da pubblicare` : '';
+}
+
 // ─── FOTO DELLA SCHEDA (CRM) — in ogni stato ──────────────
 async function caricaFotoScheda(sessionId) {
   const grid   = document.getElementById('schedaFotoGrid');
@@ -730,6 +795,7 @@ async function pubblicaFase() {
     nome:        `${currentLead.Nome ?? ''} ${currentLead.Cognome ?? ''}`.trim(),
     wp_post_id:  lavWpPostId,
     immagini:    lavImmagini,
+    video_urls:  lavVideoUrls,
   };
 
   try {
@@ -758,6 +824,9 @@ async function pubblicaFase() {
       document.getElementById('lavPreview').innerHTML = '';
       lavImmagini = [];
       aggiornaContatoreFoto();
+      document.getElementById('lavVideoPreview').innerHTML = '';
+      lavVideoUrls = [];
+      aggiornaContatoreVideo();
 
       // Mostra il pannello social: la pubblicazione su FB/IG è ora manuale
       mostraPannelloSocial(data);

@@ -39,6 +39,7 @@ $clienteNome  = $input['nome']       ?? '';
 $mobileTitolo = $input['mobile']     ?? '';
 $wpPostId     = !empty($input['wp_post_id']) ? (int)$input['wp_post_id'] : null;
 $immagini     = $input['immagini']   ?? [];
+$videoUrls    = $input['video_urls'] ?? [];   // URL video già caricati via ardy-upload-video.php
 
 if (empty($sessionId) || empty($noteBrevi)) {
     echo json_encode(['success' => false, 'error' => 'Dati mancanti']);
@@ -153,11 +154,30 @@ foreach ($savedImageUrls as $idx => $url) {
     $fotoHtml .= '<img src="' . esc_url($url) . '" style="max-width:100%;margin:10px 0;border-radius:6px;" />' . "\n";
 }
 
+// Video della fase (già caricati su WP Media Library via ardy-upload-video.php).
+// Accetta solo URL http(s) per evitare injection nel post.
+$videoUrlsClean = [];
+if (is_array($videoUrls)) {
+    foreach (array_slice($videoUrls, 0, 5) as $vurl) {
+        if (is_string($vurl) && preg_match('#^https?://#i', $vurl)) $videoUrlsClean[] = $vurl;
+    }
+}
+$videoHtml = '';
+if (!empty($videoUrlsClean)) {
+    foreach ($videoUrlsClean as $vurl) {
+        $videoHtml .= '<video controls preload="metadata" playsinline '
+            . 'style="max-width:100%;margin:10px 0;border-radius:6px;display:block;">'
+            . '<source src="' . esc_url($vurl) . '" />'
+            . 'Il tuo browser non supporta il video.'
+            . '</video>' . "\n";
+    }
+}
+
 $nuovoBlocko = '
 <div style="border-left:3px solid #c8a96e;padding:16px 20px;margin:24px 0;background:#fafaf8;">
   <p style="font-size:12px;color:#999;margin-bottom:8px;font-family:monospace;">' . esc_html($dataOra) . ' — ' . esc_html($faseNome) . '</p>
   <div style="font-size:15px;line-height:1.7;color:#333;">' . nl2br(esc_html($testoGenerato)) . '</div>
-  ' . $fotoHtml . '
+  ' . $fotoHtml . $videoHtml . '
 </div>';
 
 // -----------------------------------------------------------
@@ -223,13 +243,19 @@ if ($clienteEmail) {
 // -----------------------------------------------------------
 try {
     $db = ardyDB();
-    $db->prepare("INSERT INTO fasi (session_id, fase_nome, testo_breve, testo_generato, foto_urls) VALUES (:sid, :fase, :breve, :generato, :foto)")
+    // Migrazione idempotente: assicura la colonna video_urls sulla tabella fasi.
+    $hasCol = $db->query("SHOW COLUMNS FROM fasi LIKE 'video_urls'")->fetch();
+    if (!$hasCol) {
+        $db->exec("ALTER TABLE fasi ADD COLUMN video_urls TEXT NULL AFTER foto_urls");
+    }
+    $db->prepare("INSERT INTO fasi (session_id, fase_nome, testo_breve, testo_generato, foto_urls, video_urls) VALUES (:sid, :fase, :breve, :generato, :foto, :video)")
        ->execute([
            ':sid'      => $sessionId,
            ':fase'     => $faseNome,
            ':breve'    => $noteBrevi,
            ':generato' => $testoGenerato,
            ':foto'     => json_encode($savedImageUrls),
+           ':video'    => json_encode($videoUrlsClean),
        ]);
 } catch (PDOException $e) {
     error_log('ARDY SALVA FASE ERROR: ' . $e->getMessage());
@@ -260,6 +286,7 @@ echo json_encode([
     'testo'        => $testoGenerato,
     'testo_social' => $testoSocial,
     'immagini'     => $savedImageUrls,
+    'video_urls'   => $videoUrlsClean,
     'fase'         => $faseNome,
     'mobile'       => $mobileTitolo,
     'cliente'      => $clienteNome,
