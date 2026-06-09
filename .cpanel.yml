@@ -1,0 +1,16 @@
+---
+# Deploy via cPanel "Git Version Control" (richiede Jailed Shell sull'account).
+# Copia selettiva: tocca solo i file del progetto, NON i file/cartelle non in repo
+# (ardy-config.php, ardy-gcal-token.json, ardy-uploads/, preventivi_pdf/, reels/, vendor/...).
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/micoperibg/public_html/ardyagent.ardy-lab.it
+    - /bin/cp -R -f assets $DEPLOYPATH/
+    - /bin/cp -R -f phpmailer $DEPLOYPATH/
+    - /bin/cp -f *.php $DEPLOYPATH/
+    - /bin/cp -f *.html $DEPLOYPATH/
+    - /bin/cp -f *.css $DEPLOYPATH/
+    - /bin/cp -f *.js $DEPLOYPATH/
+    - /bin/cp -f *.txt $DEPLOYPATH/
+    - /bin/cp -f .htaccess $DEPLOYPATH/
+    - /bin/cp -f composer.json $DEPLOYPATH/
