@@ -458,6 +458,7 @@ permette il deploy push-button da cPanel (richiede Jailed Shell).
 - [ ] Impostare `WA_APP_SECRET` in `ardy-config.php` (verifica firma webhook)
 - [ ] Spostare token/chiavi dal nodo Code alle credenziali/variabili n8n
 - [ ] Gestire messaggi non testuali (foto inviate dal cliente)
+- [ ] **Inbox WhatsApp nella dashboard** — Michela legge le conversazioni Sole↔cliente (dati già in `wa_messaggi`), può mettere Sole **in pausa** per una chat, **rispondere manualmente** (invio via Cloud API, token in `ardy-config.php`) e riattivare Sole. Il nodo n8n deve controllare il flag di pausa prima di rispondere. NB: finestra 24h per i messaggi liberi.
 
 ### Dashboard Michela
 - [ ] Layout PDF da rifinire graficamente
