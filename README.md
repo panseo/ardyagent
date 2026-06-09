@@ -454,7 +454,7 @@ permette il deploy push-button da cPanel (richiede Jailed Shell).
 - [x] Workflow n8n per WhatsApp (Webhook `ardy-whatsapp` → nodo Code: lookup → Claude → invio Cloud API)
 - [x] Prompt WhatsApp (`ardy-whatsapp-system.txt`, modalità Lead/Cliente/Cliente_lavorazione)
 - [x] Test end-to-end OK
-- [ ] **Memoria conversazione** (storico per numero) — ora ogni messaggio è stateless
+- [x] **Memoria conversazione** (storico per numero) — `ardy-wa-memoria.php` (tabella `wa_messaggi`); il nodo Code recupera lo storico, lo passa a Claude e salva la nuova coppia (sessione 7)
 - [ ] Impostare `WA_APP_SECRET` in `ardy-config.php` (verifica firma webhook)
 - [ ] Spostare token/chiavi dal nodo Code alle credenziali/variabili n8n
 - [ ] Gestire messaggi non testuali (foto inviate dal cliente)
