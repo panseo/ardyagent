@@ -413,8 +413,24 @@ git commit -m "descrizione modifica"
 git push origin main
 ```
 
-### Deploy sul server
-Dopo il push, caricare manualmente i file modificati via **cPanel File Manager**.
+### Deploy sul server (via git — attivo)
+Il sito si aggiorna con **git pull + deploy**, non più via cPanel File Manager.
+
+**Setup (già fatto, sessione 7):**
+- Accesso SSH come **root** al VPS (`ssh root@57.131.47.5`).
+- **Deploy key** read-only sul repo GitHub (chiave `~micoperibg/.ssh/github_ardyagent`).
+- Repo clonato in `/home/micoperibg/repositories/ardyagent` (fuori dal document root).
+- Le operazioni girano come utente `micoperibg` (proprietà file corretta) via `runuser`.
+
+**Aggiornare il sito dopo un push su `main`:**
+```bash
+runuser -u micoperibg -- bash -c 'cd ~/repositories/ardyagent && git pull origin main && ./deploy.sh'
+```
+
+`deploy.sh` fa un `rsync` selettivo nel document root **senza `--delete`**: i file NON
+in repo (`ardy-config.php`, `ardy-gcal-token.json`, `ardy-uploads/`, `preventivi_pdf/`,
+`reels/`, `vendor/`, `ardy-rate-limit/`) restano intatti. In alternativa, `.cpanel.yml`
+permette il deploy push-button da cPanel (richiede Jailed Shell).
 
 ---
 
@@ -486,6 +502,13 @@ Interesse concreto da parte della community di artigiani **Farò Arte**: possibi
 ---
 
 ## 📝 Note sessioni
+
+**Giugno 2026 — Sessione 7 (deploy via git sul server)**
+- **Deploy automatizzato via git** (chiuso il TODO storico). Prima i file si caricavano a mano via cPanel File Manager.
+- Accesso SSH come **root** al VPS funzionante (la shell dell'utente cPanel `micoperibg` resta disabilitata; si opera con `runuser -u micoperibg`).
+- Creata **Deploy key read-only** sul repo GitHub (`~micoperibg/.ssh/github_ardyagent`); repo clonato in `/home/micoperibg/repositories/ardyagent` (fuori dal document root).
+- Aggiunti `deploy.sh` (rsync selettivo, niente `--delete`, preserva config/upload/vendor) e `.cpanel.yml` (deploy push-button cPanel di riserva).
+- Aggiornamento sito = `runuser -u micoperibg -- bash -c 'cd ~/repositories/ardyagent && git pull origin main && ./deploy.sh'`.
 
 **Giugno 2026 — Sessione 6 (primo lead: fix mail + calendario + foto scheda)**
 - **Primo lead reale** arrivato dal widget AI (Giulia Di Fazio). Emersi alcuni bug dopo il ripristino del server.
