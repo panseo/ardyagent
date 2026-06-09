@@ -178,7 +178,7 @@ mostra_titolo, mostra_didascalie, mostra_finale, musica_default, created_at, upd
 | **Facebook** | ✅ Funzionante | Pagina "Ardy" (ID: 376551605541671) — pubblica via n8n nodo Code |
 | **Instagram** | ✅ Funzionante | Account "ardy.lab" (ID: 17841404189479259) — pubblica via n8n |
 | **Google Business** | ⏳ In attesa | Quota API da aumentare — richiesta inviata |
-| **WhatsApp Business** | 🔧 In costruzione | App ArdyagentWA creata, webhook configurato. Serve SIM dedicata per Cloud API |
+| **WhatsApp Business** | ✅ Attivo | Cloud API col numero eSIM +39 379 375 6437. Webhook → n8n → Claude. (sessione 7) |
 | **n8n** | ✅ Attivo | `n8n.ardy-lab.it` — Docker su VPS OVH |
 | **LinkedIn** | 🔧 Da connettere | Per outreach B2B |
 
@@ -448,12 +448,16 @@ permette il deploy push-button da cPanel (richiede Jailed Shell).
 
 ## 🚧 TODO / Sviluppi futuri
 
-### WhatsApp
-- [ ] Acquistare SIM dedicata per Cloud API
-- [ ] Registrare numero sulla Cloud API
-- [ ] Creare workflow n8n per WhatsApp
-- [ ] Scrivere prompt WhatsApp (Modalità Lead + Modalità Cliente)
-- [ ] Test end-to-end
+### WhatsApp ✅ ATTIVO (sessione 7)
+- [x] SIM dedicata (eSIM) per Cloud API
+- [x] Numero registrato sulla Cloud API → **+39 379 375 6437** (Phone Number ID `1151535311377293`, WABA "Ardy lab" `1235593451848137`)
+- [x] Workflow n8n per WhatsApp (Webhook `ardy-whatsapp` → nodo Code: lookup → Claude → invio Cloud API)
+- [x] Prompt WhatsApp (`ardy-whatsapp-system.txt`, modalità Lead/Cliente/Cliente_lavorazione)
+- [x] Test end-to-end OK
+- [ ] **Memoria conversazione** (storico per numero) — ora ogni messaggio è stateless
+- [ ] Impostare `WA_APP_SECRET` in `ardy-config.php` (verifica firma webhook)
+- [ ] Spostare token/chiavi dal nodo Code alle credenziali/variabili n8n
+- [ ] Gestire messaggi non testuali (foto inviate dal cliente)
 
 ### Dashboard Michela
 - [ ] Layout PDF da rifinire graficamente
@@ -510,6 +514,7 @@ Interesse concreto da parte della community di artigiani **Farò Arte**: possibi
 - Aggiunti `deploy.sh` (rsync selettivo, niente `--delete`, preserva config/upload/vendor) e `.cpanel.yml` (deploy push-button cPanel di riserva).
 - Aggiornamento sito = `runuser -u micoperibg -- bash -c 'cd ~/repositories/ardyagent && git pull origin main && ./deploy.sh'`.
 - **Video nelle lavorazioni**: nuovo `ardy-upload-video.php` (upload multipart, max 150 MB, MIME reale, → WP Media Library). Dashboard con pulsanti 🎥/🎬 che caricano subito; i video finiscono nel post WP come `<video>` e in `fasi.video_urls`. Reel non impattato (usa solo le foto).
+- **WhatsApp Cloud API ATTIVO** col numero dedicato eSIM **+39 379 375 6437** (Phone Number ID `1151535311377293`, WABA "Ardy lab" `1235593451848137`, token permanente da Utente di sistema). Flusso: Meta → `ardy-whatsapp-webhook.php` → n8n (Webhook `ardy-whatsapp`, nodo Code per evitare il timeout dell'HTTP Request) → `ardy-wa-lookup.php` (classifica numero + restituisce system prompt) → Claude → invio risposta via Cloud API. Test end-to-end OK. Segreto `WA_LOOKUP_SECRET` in `ardy-config.php`.
 
 **Giugno 2026 — Sessione 6 (primo lead: fix mail + calendario + foto scheda)**
 - **Primo lead reale** arrivato dal widget AI (Giulia Di Fazio). Emersi alcuni bug dopo il ripristino del server.
