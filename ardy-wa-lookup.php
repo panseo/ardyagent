@@ -62,12 +62,27 @@ try {
     exit();
 }
 
+// Costruisce il system prompt completo per n8n:
+// wrapper WhatsApp + contesto (mode/cliente) + documento principale Ardy Lab.
+function ardy_wa_system_prompt(string $mode, ?array $cliente): string {
+    $wrap = @file_get_contents(__DIR__ . '/ardy-whatsapp-system.txt') ?: '';
+    $base = @file_get_contents(__DIR__ . '/ardy-system.txt') ?: '';
+    $ctx  = "\n\n## CONTESTO DI QUESTA CONVERSAZIONE\nmode: {$mode}\n";
+    if ($cliente) {
+        $ctx .= "cliente:\n" . json_encode($cliente, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+    } else {
+        $ctx .= "cliente: (nessuno — nuovo contatto)\n";
+    }
+    return $wrap . $ctx . "\n" . $base;
+}
+
 // Nessun match → nuovo contatto
 if (!$row) {
     echo json_encode([
-        'success' => true,
-        'mode'    => 'lead',
-        'cliente' => null,
+        'success'       => true,
+        'mode'          => 'lead',
+        'cliente'       => null,
+        'system_prompt' => ardy_wa_system_prompt('lead', null),
     ]);
     exit();
 }
@@ -89,17 +104,20 @@ if ($hasLavorazione) {
     }
 }
 
+$clienteOut = [
+    'session_id'   => $row['session_id'],
+    'nome'         => trim(($row['nome'] ?? '') . ' ' . ($row['cognome'] ?? '')),
+    'email'        => $row['email'] ?? '',
+    'servizio'     => $row['servizio'] ?? '',
+    'mobile'       => $row['mobile'] ?? '',
+    'stato'        => $row['stato'] ?? '',
+    'wp_post_link' => $row['wp_post_link'] ?? '',
+    'ultima_fase'  => $ultimaFase,
+];
+
 echo json_encode([
-    'success' => true,
-    'mode'    => $mode,
-    'cliente' => [
-        'session_id'   => $row['session_id'],
-        'nome'         => trim(($row['nome'] ?? '') . ' ' . ($row['cognome'] ?? '')),
-        'email'        => $row['email'] ?? '',
-        'servizio'     => $row['servizio'] ?? '',
-        'mobile'       => $row['mobile'] ?? '',
-        'stato'        => $row['stato'] ?? '',
-        'wp_post_link' => $row['wp_post_link'] ?? '',
-        'ultima_fase'  => $ultimaFase,
-    ],
+    'success'       => true,
+    'mode'          => $mode,
+    'cliente'       => $clienteOut,
+    'system_prompt' => ardy_wa_system_prompt($mode, $clienteOut),
 ]);
