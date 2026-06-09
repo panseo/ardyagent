@@ -352,7 +352,7 @@
 
         // Messaggio di benvenuto personalizzato
         var welcomeName = clientName ? clientName.split(' ')[0] : '';
-        addMessage('Ciao' + (welcomeName ? ' ' + welcomeName : '') + '! Sono Ardy, sono qui per aiutarti con la tua lavorazione. Chiedimi pure!', 'agent');
+        addMessage('Ciao' + (welcomeName ? ' ' + welcomeName : '') + '! Sono Sole, sono qui per aiutarti con la tua lavorazione. Chiedimi pure!', 'agent');
 
         // Suggerimenti
         initSuggestions();

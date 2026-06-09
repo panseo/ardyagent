@@ -19,7 +19,7 @@ $db->exec("
 ");
 
 // Etichette leggibili per le pagine note
-$labels = ['chat-lead' => 'Chat lead — "Parla subito con Ardy"'];
+$labels = ['chat-lead' => 'Chat lead — "Parla subito con Sole"'];
 
 // Totali per pagina
 $totali = $db->query("

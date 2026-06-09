@@ -473,7 +473,7 @@ if (preg_match('/(\+39)?\s?3\d{2}[\s\-]?\d{6,7}/', $fullConversation, $m)) {
 }
 
 if ($userEmail || $userPhone) {
-    $subject = '📋 Nuovo lead da Ardy AI — ' . date('d/m/Y H:i');
+    $subject = '📋 Nuovo lead da Sole AI — ' . date('d/m/Y H:i');
     $body    = "Nuovo contatto dal widget AI di Ardy Lab\n";
     $body   .= str_repeat('─', 40) . "\n\n";
     $body   .= "DATA:      " . date('d/m/Y H:i') . "\n";
