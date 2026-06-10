@@ -570,6 +570,7 @@ Interesse concreto da parte della community di artigiani **Farò Arte**: possibi
 - Dashboard: pulsante **💸 MOROSI** → modale con form nuovo caso, lista filtrabile per stato, verifica preventivo collegato, generazione AI del testo (modificabile), scelta canali WhatsApp/email e invio. Livelli 1-3 inviano; livello 4 = bozza diffida da inviare a mano (stato → DIFFIDA).
 - `.htaccess`: aggiunto `ardy-solleciti.php` alle pagine protette da Basic Auth.
 - ⚠️ Per inviare WhatsApp ai morosi fuori dalla finestra 24h serve un **template Meta approvato** (`WA_TEMPLATE_SOLLECITO` in `ardy-config.php`); riusa `WA_TOKEN`/`WA_PHONE_NUMBER_ID`.
+- **Contesto fattuale all'agente** (rinforzo): in fase di generazione l'AI riceve preventivo (numero/totale/stato/condizioni), **fasi di lavorazione** (prova del lavoro svolto) e **storico WhatsApp** del cliente. Importi e date restano **deterministici** (li fissa il codice, l'AI non li ricalcola). La verifica distingue **bloccanti** (importo mancante, preventivo non accettato → fermano la generazione, con possibilità di "Genera comunque") da **avvisi** (da controllare a mano).
 
 **Giugno 2026 — Sessione 7 (deploy via git sul server)**
 - **Deploy automatizzato via git** (chiuso il TODO storico). Prima i file si caricavano a mano via cPanel File Manager.

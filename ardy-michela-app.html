@@ -2937,7 +2937,16 @@ async function moVerifica(id) {
     const res  = await fetch(SOLLECITI_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode:'verifica', id }) });
     const data = await res.json();
     if (data.success) {
-      alert((data.ok ? '✅ Controlli ok.\n\n' : '⚠️ Da verificare prima di sollecitare:\n\n') + (data.avvisi || []).map(a => '• ' + a).join('\n'));
+      let msg = '';
+      if (data.bloccanti && data.bloccanti.length) {
+        msg += '⛔ BLOCCANTI (impediscono il sollecito):\n' + data.bloccanti.map(b => '• ' + b).join('\n') + '\n\n';
+      } else {
+        msg += '✅ Nessun blocco.\n\n';
+      }
+      if (data.avvisi && data.avvisi.length) {
+        msg += '⚠️ Da verificare a mano:\n' + data.avvisi.map(a => '• ' + a).join('\n');
+      }
+      alert(msg);
     } else { moMsg(data.error || 'Errore verifica.', false); }
   } catch (e) { moMsg('Errore di rete.', false); }
 }
@@ -2959,25 +2968,40 @@ async function moGenera(id) {
   panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
 }
 
-async function moRunGenera() {
+async function moRunGenera(forza) {
   if (!moCorrente) return;
-  const ta = document.getElementById('moTesto');
+  const ta  = document.getElementById('moTesto');
   const btn = document.getElementById('moBtnGen');
+  const box = document.getElementById('moAvvisi');
   ta.value = 'Generazione in corso...';
+  box.style.display = 'none';
   btn.disabled = true;
-  // mostra avvisi di verifica in linea
   try {
-    const v = await (await fetch(SOLLECITI_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode:'verifica', id: moCorrente.id }) })).json();
-    if (v.success && v.avvisi && v.avvisi.length) {
-      const box = document.getElementById('moAvvisi');
-      box.style.display = 'block';
-      box.innerHTML = '⚠️ ' + v.avvisi.map(escHtml).join('<br>');
-    }
-  } catch (e) {}
-  try {
-    const res  = await fetch(SOLLECITI_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode:'genera', id: moCorrente.id, livello: moCorrente.livello }) });
+    const res  = await fetch(SOLLECITI_URL, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ mode:'genera', id: moCorrente.id, livello: moCorrente.livello, forza: forza ? 1 : 0 }) });
     const data = await res.json();
-    ta.value = data.success ? data.testo : ('⚠ ' + (data.error || 'Errore generazione.'));
+
+    // Generazione bloccata: mostra i motivi e offri la forzatura, niente testo
+    if (data.bloccato) {
+      ta.value = '';
+      box.style.display = 'block';
+      box.innerHTML = '<b style="color:#e08080;">⛔ Generazione bloccata:</b><br>'
+        + (data.bloccanti || []).map(b => '• ' + escHtml(b)).join('<br>')
+        + ((data.avvisi && data.avvisi.length) ? '<br><br><b>Da verificare:</b><br>' + data.avvisi.map(a => '• ' + escHtml(a)).join('<br>') : '')
+        + '<br><br><button class="btn-cancel" style="font-size:10px;padding:4px 8px;color:#e0b070;border-color:#8b6f3e;" onclick="moRunGenera(true)">Genera comunque (sotto mia responsabilità)</button>';
+      btn.disabled = false;
+      return;
+    }
+
+    if (data.success) {
+      ta.value = data.testo;
+      if (data.avvisi && data.avvisi.length) {
+        box.style.display = 'block';
+        box.innerHTML = '⚠️ <b>Da verificare prima dell\'invio:</b><br>' + data.avvisi.map(a => '• ' + escHtml(a)).join('<br>');
+      }
+    } else {
+      ta.value = '⚠ ' + (data.error || 'Errore generazione.');
+    }
   } catch (e) { ta.value = '⚠ Errore di rete.'; }
   btn.disabled = false;
 }

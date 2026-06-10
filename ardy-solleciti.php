@@ -93,78 +93,169 @@ function sollecito_get(PDO $db, int $id): ?array {
 }
 
 // -----------------------------------------------------------
-// Helper: verifica il preventivo collegato (controlli pre-sollecito)
-// Ritorna ['ok'=>bool, 'avvisi'=>[...], 'preventivo'=>?array]
+// Helper: preventivo collegato (riga completa) e fasi del cliente
+// -----------------------------------------------------------
+function carica_preventivo(PDO $db, ?string $sessionId): ?array {
+    if (empty($sessionId)) return null;
+    try {
+        $p = $db->prepare("SELECT numero, oggetto, condizioni, voci_json, subtotale, grand_total,
+                                  stato, data_emissione, data_scadenza, file_pdf
+                             FROM preventivi
+                            WHERE session_id = :sid
+                         ORDER BY id DESC LIMIT 1");
+        $p->execute([':sid' => $sessionId]);
+        return $p->fetch(PDO::FETCH_ASSOC) ?: null;
+    } catch (PDOException $e) {
+        error_log('ARDY SOLLECITI PREV ERROR: ' . $e->getMessage());
+        return null;
+    }
+}
+function carica_fasi(PDO $db, ?string $sessionId): array {
+    if (empty($sessionId)) return [];
+    try {
+        $f = $db->prepare("SELECT fase_nome, testo_generato, created_at
+                             FROM fasi WHERE session_id = :sid ORDER BY id ASC");
+        $f->execute([':sid' => $sessionId]);
+        return $f->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (PDOException $e) {
+        error_log('ARDY SOLLECITI FASI ERROR: ' . $e->getMessage());
+        return [];
+    }
+}
+// Storico WhatsApp del cliente (solo se la tabella esiste — Task 1/sessione 7)
+function carica_chat_whatsapp(PDO $db, ?string $telefono, int $max = 20): array {
+    if (empty($telefono)) return [];
+    $digits = preg_replace('/\D+/', '', $telefono);
+    if ($digits === '') return [];
+    try {
+        $c = $db->prepare("SELECT role, content FROM wa_messaggi
+                            WHERE phone LIKE :p ORDER BY id DESC LIMIT :lim");
+        $c->bindValue(':p', '%' . substr($digits, -9));
+        $c->bindValue(':lim', $max, PDO::PARAM_INT);
+        $c->execute();
+        return array_reverse($c->fetchAll(PDO::FETCH_ASSOC) ?: []);
+    } catch (PDOException $e) {
+        // tabella assente o altro: non bloccante
+        return [];
+    }
+}
+
+// -----------------------------------------------------------
+// Helper: verifica pre-sollecito.
+// Ritorna ['bloccanti'=>[...], 'avvisi'=>[...], 'preventivo'=>?array, 'fasi'=>[...]]
+//  - bloccanti: condizioni che impediscono di sollecitare (fermano la generazione)
+//  - avvisi:    cose da controllare a mano, ma non bloccano
 // -----------------------------------------------------------
 function verifica_preventivo(PDO $db, array $caso): array {
-    $avvisi = [];
-    $prev   = null;
+    $bloccanti = [];
+    $avvisi    = [];
+    $prev = carica_preventivo($db, $caso['session_id'] ?? null);
+    $fasi = carica_fasi($db, $caso['session_id'] ?? null);
+
+    // BLOCCANTE: senza importo non si può chiedere un pagamento
+    if (empty($caso['importo_dovuto']) || (float)$caso['importo_dovuto'] <= 0) {
+        $bloccanti[] = "Importo dovuto non indicato: inseriscilo prima di sollecitare.";
+    }
 
     if (!empty($caso['session_id'])) {
-        try {
-            $p = $db->prepare("SELECT numero, oggetto, condizioni, voci_json, grand_total, stato,
-                                      data_emissione, file_pdf
-                                 FROM preventivi
-                                WHERE session_id = :sid
-                             ORDER BY id DESC LIMIT 1");
-            $p->execute([':sid' => $caso['session_id']]);
-            $prev = $p->fetch(PDO::FETCH_ASSOC) ?: null;
-        } catch (PDOException $e) {
-            error_log('ARDY SOLLECITI VERIFICA ERROR: ' . $e->getMessage());
+        if (!$prev) {
+            $avvisi[] = "Nessun preventivo trovato nel sistema per questo cliente: verifica a mano che esista un documento accettato.";
+        } else {
+            $statoPrev = strtolower((string)($prev['stato'] ?? ''));
+            // BLOCCANTE: sollecitare su un preventivo non accettato è scorretto
+            if (!in_array($statoPrev, ['accettato', 'approvato', 'pagato'], true)) {
+                $bloccanti[] = "Il preventivo collegato è in stato \"" . ($prev['stato'] ?: 'non definito') . "\" (non accettato dal cliente). Conferma l'accettazione prima di procedere.";
+            }
+            if ((float)($prev['grand_total'] ?? 0) <= 0) {
+                $avvisi[] = "Il preventivo collegato non ha un totale chiaro (importo a 0).";
+            }
+            if (trim((string)($prev['condizioni'] ?? '')) === '') {
+                $avvisi[] = "Nel preventivo non risultano indicate le condizioni/modalità di pagamento.";
+            }
         }
-    }
-
-    if (!$prev) {
-        $avvisi[] = "Nessun preventivo collegato trovato nel sistema: verifica a mano che esista un documento accettato dal cliente prima di sollecitare.";
+        if (empty($fasi)) {
+            $avvisi[] = "Nessuna fase di lavorazione registrata: assicurati che il lavoro sia stato effettivamente svolto/consegnato.";
+        }
     } else {
-        if ((float)($prev['grand_total'] ?? 0) <= 0) {
-            $avvisi[] = "Il preventivo collegato non ha un totale chiaro (importo a 0).";
-        }
-        $statoPrev = strtolower((string)($prev['stato'] ?? ''));
-        if (!in_array($statoPrev, ['accettato', 'approvato', 'pagato'], true)) {
-            $avvisi[] = "Il preventivo collegato risulta in stato \"" . ($prev['stato'] ?: 'non definito') . "\": conferma che sia stato accettato dal cliente.";
-        }
-        if (trim((string)($prev['condizioni'] ?? '')) === '') {
-            $avvisi[] = "Nel preventivo non risultano indicate le modalità/condizioni di pagamento.";
-        }
+        $avvisi[] = "Caso non collegato a un cliente del CRM (nessun session_id): impossibile verificare preventivo e lavoro a sistema.";
     }
 
-    if (empty($caso['importo_dovuto']) || (float)$caso['importo_dovuto'] <= 0) {
-        $avvisi[] = "Importo dovuto non indicato nel caso: inseriscilo prima di procedere.";
-    }
     if (empty($caso['data_scadenza'])) {
         $avvisi[] = "Data di scadenza non indicata.";
     }
     // Dati non memorizzati a sistema: vanno sempre confermati a mano
-    $avvisi[] = "Verifica manualmente: firma/accettazione del cliente, data di accettazione ed eventuale acconto già versato (con residuo).";
+    $avvisi[] = "Verifica manualmente: firma/accettazione del cliente, data di accettazione ed eventuale acconto versato (con residuo).";
 
-    // "ok" inteso come: nessun avviso bloccante oltre al promemoria manuale
-    $ok = count($avvisi) <= 1;
-    return ['ok' => $ok, 'avvisi' => $avvisi, 'preventivo' => $prev];
+    return ['bloccanti' => $bloccanti, 'avvisi' => $avvisi, 'preventivo' => $prev, 'fasi' => $fasi];
 }
 
 // -----------------------------------------------------------
 // Helper: genera il testo del sollecito con il modello AI
 // -----------------------------------------------------------
-function genera_messaggio(array $caso, int $livello): array {
+function genera_messaggio(PDO $db, array $caso, int $livello): array {
     if (!defined('ARDY_API_KEY') || ARDY_API_KEY === '') {
         return ['ok' => false, 'error' => 'API key non configurata'];
     }
     $system = @file_get_contents(__DIR__ . '/ardy-solleciti-system.txt') ?: '';
 
-    $scad = $caso['data_scadenza'] ?? '';
+    // ── DATI VINCOLANTI (li fissa il codice, l'AI NON li modifica) ──
+    $scad           = $caso['data_scadenza'] ?? '';
+    $importoNum     = isset($caso['importo_dovuto']) ? (float)$caso['importo_dovuto'] : null;
+    $importoTesto   = $importoNum !== null ? ('€ ' . number_format($importoNum, 2, ',', '.')) : '[DA COMPLETARE]';
+
+    $datiVincolanti = [
+        'nome_cliente'   => $caso['nome_cliente'] ?? '',
+        'importo_dovuto' => $importoTesto,
+        'data_scadenza'  => $scad,
+        'preventivo_ref' => $caso['preventivo_ref'] ?? '',
+    ];
+
+    // ── CONTESTO FATTUALE (sola lettura, dal DB) ──
+    $prev = carica_preventivo($db, $caso['session_id'] ?? null);
+    $fasi = carica_fasi($db, $caso['session_id'] ?? null);
+    $chat = carica_chat_whatsapp($db, $caso['telefono'] ?? null);
+
+    $contesto = [];
+    if ($prev) {
+        $contesto['preventivo'] = [
+            'numero'         => $prev['numero'] ?? '',
+            'oggetto'        => $prev['oggetto'] ?? '',
+            'totale'         => isset($prev['grand_total']) ? ('€ ' . number_format((float)$prev['grand_total'], 2, ',', '.')) : '',
+            'stato'          => $prev['stato'] ?? '',
+            'data_emissione' => $prev['data_emissione'] ?? '',
+            'condizioni'     => mb_substr((string)($prev['condizioni'] ?? ''), 0, 800),
+        ];
+    }
+    if ($fasi) {
+        $contesto['lavoro_svolto'] = array_map(fn($f) => [
+            'fase'  => $f['fase_nome'] ?? '',
+            'data'  => substr((string)($f['created_at'] ?? ''), 0, 10),
+        ], $fasi);
+    }
+    if ($chat) {
+        $contesto['ultimi_messaggi_whatsapp'] = array_map(fn($m) => [
+            'da'      => ($m['role'] ?? '') === 'assistant' ? 'Sole' : 'cliente',
+            'testo'   => mb_substr((string)($m['content'] ?? ''), 0, 500),
+        ], $chat);
+    }
+
     $datiCaso = [
-        'nome_cliente'        => $caso['nome_cliente'] ?? '',
-        'importo_dovuto'      => isset($caso['importo_dovuto']) ? ('€ ' . number_format((float)$caso['importo_dovuto'], 2, ',', '.')) : '[DA COMPLETARE]',
-        'data_scadenza'       => $scad,
-        'preventivo_ref'      => $caso['preventivo_ref'] ?? '',
-        'note_interne'        => $caso['note_interne'] ?? '',
-        'risposta_cliente'    => $caso['risposta_cliente'] ?? '',
+        'note_interne'          => $caso['note_interne'] ?? '',
+        'risposta_cliente'      => $caso['risposta_cliente'] ?? '',
         'solleciti_gia_inviati' => (int)($caso['numero_sollecito'] ?? 0),
     ];
 
+    $regole = "REGOLE FERME:\n"
+        . "- Usa ESATTAMENTE l'importo e le date dei 'dati_vincolanti': non ricalcolarli, non arrotondarli, non inventarne altri.\n"
+        . "- Il 'contesto' (preventivo, lavoro_svolto, messaggi) serve solo a rendere il sollecito fondato e coerente: citalo se utile, ma non contraddire i dati vincolanti.\n"
+        . "- Se un dato non c'è, NON inventarlo: lascia [DA COMPLETARE].\n"
+        . "- Tieni conto di eventuali messaggi del cliente (es. promesse di pagamento) con una riga asciutta, senza polemiche.";
+
     $userMsg = "Scrivi il sollecito di LIVELLO {$livello}.\n\n"
-             . "Dati del caso:\n" . json_encode($datiCaso, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+             . $regole . "\n\n"
+             . "dati_vincolanti:\n" . json_encode($datiVincolanti, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n\n"
+             . "dettagli_caso:\n" . json_encode($datiCaso, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n\n"
+             . "contesto:\n" . json_encode($contesto, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
     $payload = json_encode([
         'model'      => 'claude-sonnet-4-6',
@@ -405,7 +496,12 @@ try {
             $caso = sollecito_get($db, (int)($in['id'] ?? 0));
             if (!$caso) { http_response_code(404); echo json_encode(['success' => false, 'error' => 'caso non trovato']); break; }
             $v = verifica_preventivo($db, $caso);
-            echo json_encode(['success' => true, 'ok' => $v['ok'], 'avvisi' => $v['avvisi']]);
+            echo json_encode([
+                'success'   => true,
+                'ok'        => empty($v['bloccanti']),
+                'bloccanti' => $v['bloccanti'],
+                'avvisi'    => $v['avvisi'],
+            ]);
             break;
         }
 
@@ -415,9 +511,17 @@ try {
             if (!$caso) { http_response_code(404); echo json_encode(['success' => false, 'error' => 'caso non trovato']); break; }
             $livello = (int)($in['livello'] ?? 0);
             if ($livello < 1 || $livello > 4) { http_response_code(400); echo json_encode(['success' => false, 'error' => 'livello non valido (1-4)']); break; }
-            $g = genera_messaggio($caso, $livello);
+
+            // Blocca la generazione se ci sono condizioni bloccanti, a meno di forzatura esplicita
+            $v = verifica_preventivo($db, $caso);
+            if (!empty($v['bloccanti']) && empty($in['forza'])) {
+                echo json_encode(['success' => false, 'bloccato' => true, 'bloccanti' => $v['bloccanti'], 'avvisi' => $v['avvisi']]);
+                break;
+            }
+
+            $g = genera_messaggio($db, $caso, $livello);
             if (!$g['ok']) { http_response_code(502); echo json_encode(['success' => false, 'error' => $g['error']]); break; }
-            echo json_encode(['success' => true, 'testo' => $g['testo'], 'livello' => $livello]);
+            echo json_encode(['success' => true, 'testo' => $g['testo'], 'livello' => $livello, 'avvisi' => $v['avvisi']]);
             break;
         }
 
