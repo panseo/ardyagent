@@ -2407,6 +2407,11 @@ function showToast(msg, type = '') {
       <details id="morosiNuovoWrap" style="margin-bottom:16px;border:1px solid #333;border-radius:6px;padding:10px 14px;">
         <summary style="cursor:pointer;color:#c8a96e;font-family:'DM Mono',monospace;font-size:12px;">➕ Nuovo caso moroso</summary>
         <div class="dark-form-grid" style="margin-top:12px;">
+          <div class="dark-field full"><label>Cliente registrato (compila i campi in automatico)</label>
+            <select id="mo-cliente" onchange="moSelezionaCliente(this.value)">
+              <option value="">— inserisci a mano oppure scegli un cliente —</option>
+            </select>
+          </div>
           <div class="dark-field"><label>Nome cliente *</label><input type="text" id="mo-nome" placeholder="Mario Rossi"></div>
           <div class="dark-field"><label>Telefono</label><input type="tel" id="mo-telefono" placeholder="+39 340 000 0000"></div>
           <div class="dark-field"><label>Email</label><input type="email" id="mo-email" placeholder="mario@email.it"></div>
@@ -2758,10 +2763,49 @@ let moCorrente = null;   // { id, livello } in fase di invio
 function openMorosi() {
   document.getElementById('morosiOverlay').classList.add('open');
   moChiudiInvio();
+  moPopolaClienti();
   moCarica();
 }
 function closeMorosi() {
   document.getElementById('morosiOverlay').classList.remove('open');
+}
+
+// Riempie il selettore con i clienti registrati (da allLeads)
+function moPopolaClienti() {
+  const sel = document.getElementById('mo-cliente');
+  if (!sel) return;
+  const opts = (allLeads || [])
+    .filter(l => (l.Nome || l.Cognome) && l.Session_ID)
+    .map(l => {
+      const nome = `${l.Nome ?? ''} ${l.Cognome ?? ''}`.trim();
+      const meta = [l.Zona, l.Stato].filter(Boolean).join(' · ');
+      return `<option value="${escHtml(l.Session_ID)}">${escHtml(nome)}${meta ? ' — ' + escHtml(meta) : ''}</option>`;
+    }).join('');
+  sel.innerHTML = '<option value="">— inserisci a mano oppure scegli un cliente —</option>' + opts;
+}
+
+// Precompila i campi del form dal cliente scelto + ultimo preventivo
+async function moSelezionaCliente(sessionId) {
+  if (!sessionId) return;
+  const l = (allLeads || []).find(x => x.Session_ID === sessionId);
+  if (!l) return;
+  document.getElementById('mo-nome').value     = `${l.Nome ?? ''} ${l.Cognome ?? ''}`.trim();
+  document.getElementById('mo-telefono').value = l.Telefono ?? '';
+  document.getElementById('mo-email').value    = l.Email ?? '';
+  document.getElementById('mo-session').value  = sessionId;
+  // Prova a precompilare importo e riferimento dall'ultimo preventivo del cliente
+  try {
+    const res  = await fetch(PREV_API + '?mode=lista&session_id=' + encodeURIComponent(sessionId));
+    const data = await res.json();
+    const lista = Array.isArray(data) ? data : (data.items || data.data || []);
+    if (lista && lista.length) {
+      const p = lista[0]; // il più recente
+      if (p.grand_total && !document.getElementById('mo-importo').value)
+        document.getElementById('mo-importo').value = Number(p.grand_total).toFixed(2);
+      if (p.numero && !document.getElementById('mo-prev').value)
+        document.getElementById('mo-prev').value = `${p.numero}${p.data_emissione ? ' del ' + p.data_emissione : ''}`;
+    }
+  } catch (e) { /* non bloccante */ }
 }
 
 function moSetFiltro(btn) {
@@ -2863,6 +2907,7 @@ async function moCrea() {
     if (data.success) {
       ['mo-nome','mo-telefono','mo-email','mo-importo','mo-session','mo-prev','mo-note'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('mo-scadenza').value = '';
+      document.getElementById('mo-cliente').value = '';
       document.getElementById('morosiNuovoWrap').open = false;
       moMsg('Caso aggiunto.', true);
       moCarica();
