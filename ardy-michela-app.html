@@ -49,6 +49,8 @@
       <button class="filter-chip" data-stato="SOPRALLUOGO" onclick="setFilter(this)">SOPRALLUOGO</button>
       <button class="filter-chip" data-stato="PREVENTIVO" onclick="setFilter(this)">PREVENTIVO</button>
       <button class="filter-chip" data-stato="ACCONTO" onclick="setFilter(this)">ACCONTO</button>
+      <button class="filter-chip" data-stato="CONSEGNATO" onclick="setFilter(this)">CONSEGNATO</button>
+      <button class="filter-chip" data-stato="PAGATO" onclick="setFilter(this)">PAGATO</button>
       <button class="filter-chip" data-stato="STANDBY" onclick="setFilter(this)">STANDBY</button>
       <button class="filter-chip" data-stato="PERSO" onclick="setFilter(this)">PERSO</button>
     </div>
@@ -83,185 +85,194 @@
         <div class="stato-selector" id="statoSelector"></div>
       </div>
 
-      <!-- INFO GRID -->
-      <div class="info-grid" style="margin-bottom: 24px;">
-        <div class="info-cell">
-          <div class="info-label">Nome</div>
-          <input class="info-value editable" id="dNomeEdit" oninput="markDirty()">
-        </div>
-        <div class="info-cell">
-          <div class="info-label">Cognome</div>
-          <input class="info-value editable" id="dCognomeEdit" oninput="markDirty()">
-        </div>
-        <div class="info-cell">
-          <div class="info-label">Telefono</div>
-          <input class="info-value editable" id="dTelefono" oninput="markDirty()">
-        </div>
-        <div class="info-cell">
-          <div class="info-label">Email</div>
-          <input class="info-value editable" id="dEmail" oninput="markDirty()">
-        </div>
-        <div class="info-cell">
-          <div class="info-label">Servizio</div>
-          <input class="info-value editable" id="dServizio" oninput="markDirty()">
-        </div>
-        <div class="info-cell">
-          <div class="info-label">Zona</div>
-          <input class="info-value editable" id="dZona" oninput="markDirty()">
-        </div>
-        <div class="info-cell">
-          <div class="info-label">Mobile / Pezzo</div>
-          <input class="info-value editable" id="dMobile" oninput="markDirty()">
-        </div>
-        <div class="info-cell">
-          <div class="info-label">Budget</div>
-          <input class="info-value editable" id="dBudget" oninput="markDirty()">
-        </div>
-        <div class="info-cell full">
-          <div class="info-label">Indirizzo</div>
-          <input class="info-value editable" id="dIndirizzo" oninput="markDirty()">
-        </div>
-        <div class="info-cell full">
-          <div class="info-label">Note <small style="color:var(--text-dim);font-size:9px;">(modificabile)</small></div>
-          <textarea class="info-value editable" id="dNote" rows="3" oninput="markDirty()"></textarea>
-        </div>
-        <div class="info-cell">
-          <div class="info-label">Data followup</div>
-          <input type="date" class="info-value editable" id="dDataFollowup" oninput="markDirty()" style="width:100%;">
-        </div>
-        <div class="info-cell">
-          <div class="info-label">Session ID</div>
-          <div class="info-value" id="dSessionId" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-dim);">—</div>
-        </div>
-      </div>
-
-      <!-- SEZIONE FOTO DELLA SCHEDA — sempre visibile, in ogni stato -->
-      <div class="foto-scheda-section" id="fotoSchedaSection" style="margin:18px 0;">
-        <div class="lav-title">📷 Foto della scheda</div>
-        <div class="lav-foto-buttons">
-          <label class="lav-foto-btn" for="schedaFotoCamera">
-            📷 SCATTA FOTO
-            <input type="file" id="schedaFotoCamera" accept="image/*" capture="environment" multiple>
-          </label>
-          <label class="lav-foto-btn lav-foto-btn-alt" for="schedaFotoInput">
-            🖼️ DALLA GALLERIA
-            <input type="file" id="schedaFotoInput" accept="image/*" multiple>
-          </label>
-        </div>
-        <div class="lav-foto-count" id="schedaFotoStatus"></div>
-        <div class="lav-preview" id="schedaFotoGrid"></div>
-      </div>
-
-      <!-- AZIONI -->
-      <div class="azioni-title">Azioni rapide</div>
-      <div class="azioni-grid">
-        <button class="azione-btn" onclick="openModal('contenuto')">
-          <span class="azione-icon">✍️</span>
-          <span class="azione-label">Genera contenuto</span>
+      <!-- ═══ 1. DATI E CONTATTO ═══ -->
+      <div class="acc-section open" id="acc-dati">
+        <button class="acc-header" onclick="toggleAcc('acc-dati')">
+          <span class="acc-title">👤 Dati e contatto</span>
+          <span class="acc-chevron">▾</span>
         </button>
-        <button class="azione-btn" onclick="openModal('post')">
-          <span class="azione-icon">📱</span>
-          <span class="azione-label">Post social</span>
-        </button>
-        <button class="azione-btn" onclick="openProformaPanel()">
-          <span class="azione-icon">📄</span>
-          <span class="azione-label">Proforma</span>
-        </button>
-        <button class="azione-btn" onclick="openModal('email')">
-          <span class="azione-icon">📧</span>
-          <span class="azione-label">Email cliente</span>
-        </button>
-        <button class="azione-btn" onclick="openModal('whatsapp')">
-          <span class="azione-icon">💬</span>
-          <span class="azione-label">Messaggio WA</span>
-        </button>
-        <button class="azione-btn" onclick="openModal('note_interne')">
-          <span class="azione-icon">📋</span>
-          <span class="azione-label">Note interne</span>
-        </button>
-        <button class="azione-btn" onclick="apriVideoUpload()">
-          <span class="azione-icon">🎥</span>
-          <span class="azione-label">Video</span>
-        </button>
-        <button class="azione-btn" onclick="openPreventivoPanel()" style="border-color:var(--accent2);">
-          <span class="azione-icon">📑</span>
-          <span class="azione-label">Preventivo PDF</span>
-        </button>
-      </div>
-
-      <!-- SEZIONE STORICO PREVENTIVI -->
-      <div class="storico-prev-section" id="storicoPrevSection" style="display:none;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-          <div class="lav-title" style="margin-bottom:0;">📑 Storico Preventivi</div>
-          <button class="btn-secondary" onclick="openPreventivoPanel()">+ PREVENTIVO</button>
-        </div>
-        <div id="storicoPrevList"></div>
-      </div>
-
-      <!-- SEZIONE LAVORAZIONI -->
-      <div class="lavorazioni-section" id="lavSection">
-        <div class="lav-title">
-          🪵 Lavorazione in corso
-          <a href="#" class="lav-post-link" id="lavPostLink" target="_blank" style="display:none;">Vedi post →</a>
-        </div>
-        <div class="lav-form">
-          <div class="lav-row">
-            <input class="lav-input" id="lavFase" placeholder="Nome fase (es. Sverniciatura)">
-            <input class="lav-input" id="lavMobile" placeholder="Mobile (es. Credenza anni 60)">
-          </div>
-          <textarea class="lav-textarea" id="lavNote" placeholder="Scrivi 2-3 righe su cosa hai fatto — Claude le espande in testo professionale..."></textarea>
-          <div class="lav-foto-buttons">
-            <label class="lav-foto-btn" for="lavFotoCamera">
-              📷 SCATTA FOTO
-              <input type="file" id="lavFotoCamera" accept="image/*" capture="environment" multiple>
-            </label>
-            <label class="lav-foto-btn lav-foto-btn-alt" for="lavFotoInput">
-              🖼️ DALLA GALLERIA
-              <input type="file" id="lavFotoInput" accept="image/*" multiple>
-            </label>
-          </div>
-          <div class="lav-foto-buttons">
-            <label class="lav-foto-btn" for="lavVideoCamera">
-              🎥 REGISTRA VIDEO
-              <input type="file" id="lavVideoCamera" accept="video/*" capture="environment">
-            </label>
-            <label class="lav-foto-btn lav-foto-btn-alt" for="lavVideoInput">
-              🎬 VIDEO DA GALLERIA
-              <input type="file" id="lavVideoInput" accept="video/*" multiple>
-            </label>
-          </div>
-          <div class="lav-foto-count" id="lavFotoCount"></div>
-          <div class="lav-foto-count" id="lavVideoCount"></div>
-          <div class="lav-preview" id="lavPreview"></div>
-          <div class="lav-preview" id="lavVideoPreview"></div>
-          <button class="btn-pubblica" id="btnPubblica" onclick="pubblicaFase()">
-            ✦ PUBBLICA FASE + NOTIFICA CLIENTE
-          </button>
-          <div class="lav-result" id="lavResult"></div>
-
-          <!-- PANNELLO SOCIAL — compare dopo la pubblicazione della fase -->
-          <div id="socialPanel" style="display:none;margin-top:18px;border-top:1px dashed var(--border);padding-top:16px;">
-            <div class="lav-title" style="margin-bottom:4px;">📲 Vuoi pubblicare sui social?</div>
-            <p style="font-size:12px;color:var(--text-dim);margin:0 0 10px;">Rivedi e modifica il testo. Niente esce su Facebook/Instagram finché non premi tu.</p>
-            <textarea class="lav-textarea" id="socialText" style="min-height:150px;"></textarea>
-            <div class="lav-preview" id="socialThumbs"></div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
-              <button class="btn-pubblica" style="flex:2 1 140px;" onclick="pubblicaSocialOra()">📲 PUBBLICA ORA</button>
-              <button class="btn-secondary" style="flex:1 1 110px;" onclick="salvaSocialDopo()">🕒 SALVA PER DOPO</button>
-              <button class="btn-secondary" style="flex:1 1 110px;" onclick="annullaSocial()">✕ NON PUBBLICARE</button>
+        <div class="acc-body">
+          <div class="info-grid" style="margin-bottom:16px;">
+            <div class="info-cell">
+              <div class="info-label">Nome</div>
+              <input class="info-value editable" id="dNomeEdit" oninput="markDirty()">
+            </div>
+            <div class="info-cell">
+              <div class="info-label">Cognome</div>
+              <input class="info-value editable" id="dCognomeEdit" oninput="markDirty()">
+            </div>
+            <div class="info-cell">
+              <div class="info-label">Telefono</div>
+              <input class="info-value editable" id="dTelefono" oninput="markDirty()">
+            </div>
+            <div class="info-cell">
+              <div class="info-label">Email</div>
+              <input class="info-value editable" id="dEmail" oninput="markDirty()">
+            </div>
+            <div class="info-cell">
+              <div class="info-label">Servizio</div>
+              <input class="info-value editable" id="dServizio" oninput="markDirty()">
+            </div>
+            <div class="info-cell">
+              <div class="info-label">Zona</div>
+              <input class="info-value editable" id="dZona" oninput="markDirty()">
+            </div>
+            <div class="info-cell">
+              <div class="info-label">Mobile / Pezzo</div>
+              <input class="info-value editable" id="dMobile" oninput="markDirty()">
+            </div>
+            <div class="info-cell">
+              <div class="info-label">Budget</div>
+              <input class="info-value editable" id="dBudget" oninput="markDirty()">
+            </div>
+            <div class="info-cell full">
+              <div class="info-label">Indirizzo</div>
+              <input class="info-value editable" id="dIndirizzo" oninput="markDirty()">
+            </div>
+            <div class="info-cell full">
+              <div class="info-label">Note <small style="color:var(--text-dim);font-size:9px;">(modificabile)</small></div>
+              <textarea class="info-value editable" id="dNote" rows="3" oninput="markDirty()"></textarea>
+            </div>
+            <div class="info-cell">
+              <div class="info-label">Data followup</div>
+              <input type="date" class="info-value editable" id="dDataFollowup" oninput="markDirty()" style="width:100%;">
+            </div>
+            <div class="info-cell">
+              <div class="info-label">Session ID</div>
+              <div class="info-value" id="dSessionId" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-dim);">—</div>
             </div>
           </div>
 
-          <!-- POST SOCIAL IN ATTESA — salvati per dopo (in questo browser) -->
-          <div id="socialPending" style="display:none;margin-top:18px;">
-            <div class="lav-title" style="margin-bottom:8px;">🕒 Post social in attesa</div>
-            <div id="socialPendingList"></div>
+          <!-- Foto della scheda -->
+          <div class="foto-scheda-section" id="fotoSchedaSection" style="margin-bottom:16px;">
+            <div class="lav-title" style="font-size:11px;margin-bottom:8px;">📷 Foto della scheda</div>
+            <div class="lav-foto-buttons">
+              <label class="lav-foto-btn" for="schedaFotoCamera">
+                📷 SCATTA FOTO
+                <input type="file" id="schedaFotoCamera" accept="image/*" capture="environment" multiple>
+              </label>
+              <label class="lav-foto-btn lav-foto-btn-alt" for="schedaFotoInput">
+                🖼️ DALLA GALLERIA
+                <input type="file" id="schedaFotoInput" accept="image/*" multiple>
+              </label>
+            </div>
+            <div class="lav-foto-count" id="schedaFotoStatus"></div>
+            <div class="lav-preview" id="schedaFotoGrid"></div>
           </div>
 
-          <!-- REEL FINALE — monta un video con tutte le fasi pubblicate -->
-          <div id="reelPanel" style="display:none;margin-top:18px;border-top:1px dashed var(--border);padding-top:16px;">
-            <div class="lav-title" style="margin-bottom:4px;">🎬 Reel finale della lavorazione</div>
-            <p style="font-size:12px;color:var(--text-dim);margin:0 0 10px;">A lavoro finito, monta un video verticale con tutte le foto delle fasi pubblicate.</p>
+          <!-- Azioni contestuali -->
+          <div class="acc-azioni">
+            <button class="azione-btn" onclick="openModal('email')">
+              <span class="azione-icon">📧</span>
+              <span class="azione-label">Email cliente</span>
+            </button>
+            <button class="azione-btn" onclick="openModal('whatsapp')">
+              <span class="azione-icon">💬</span>
+              <span class="azione-label">Messaggio WA</span>
+            </button>
+            <button class="azione-btn" onclick="openModal('contenuto')">
+              <span class="azione-icon">✍️</span>
+              <span class="azione-label">Genera contenuto</span>
+            </button>
+            <button class="azione-btn" onclick="openModal('note_interne')">
+              <span class="azione-icon">📋</span>
+              <span class="azione-label">Note interne</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ 2. PREVENTIVI ═══ -->
+      <div class="acc-section" id="acc-preventivi" style="display:none;">
+        <button class="acc-header" onclick="toggleAcc('acc-preventivi')">
+          <span class="acc-title">📑 Preventivi</span>
+          <span class="acc-chevron">▾</span>
+        </button>
+        <div class="acc-body">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+            <button class="btn-secondary" style="flex:1;" onclick="openPreventivoPanel()">+ PREVENTIVO PDF</button>
+            <button class="btn-secondary" style="flex:1;" onclick="openProformaPanel()">📄 Proforma</button>
+          </div>
+          <div id="storicoPrevList"></div>
+        </div>
+      </div>
+
+      <!-- ═══ 3. LAVORAZIONE IN CORSO ═══ -->
+      <div class="acc-section" id="acc-lavorazione" style="display:none;">
+        <button class="acc-header" onclick="toggleAcc('acc-lavorazione')">
+          <span class="acc-title">🪵 Lavorazione in corso</span>
+          <span class="acc-chevron">▾</span>
+        </button>
+        <div class="acc-body">
+          <div class="lavorazioni-section visible" id="lavSection">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+              <a href="#" class="lav-post-link" id="lavPostLink" target="_blank" style="display:none;">Vedi post →</a>
+            </div>
+            <div class="lav-form">
+              <div class="lav-row">
+                <input class="lav-input" id="lavFase" placeholder="Nome fase (es. Sverniciatura)">
+                <input class="lav-input" id="lavMobile" placeholder="Mobile (es. Credenza anni 60)">
+              </div>
+              <textarea class="lav-textarea" id="lavNote" placeholder="Scrivi 2-3 righe su cosa hai fatto — Claude le espande in testo professionale..."></textarea>
+              <div class="lav-foto-buttons">
+                <label class="lav-foto-btn" for="lavFotoCamera">
+                  📷 SCATTA FOTO
+                  <input type="file" id="lavFotoCamera" accept="image/*" capture="environment" multiple>
+                </label>
+                <label class="lav-foto-btn lav-foto-btn-alt" for="lavFotoInput">
+                  🖼️ DALLA GALLERIA
+                  <input type="file" id="lavFotoInput" accept="image/*" multiple>
+                </label>
+              </div>
+              <div class="lav-foto-buttons">
+                <label class="lav-foto-btn" for="lavVideoCamera">
+                  🎥 REGISTRA VIDEO
+                  <input type="file" id="lavVideoCamera" accept="video/*" capture="environment">
+                </label>
+                <label class="lav-foto-btn lav-foto-btn-alt" for="lavVideoInput">
+                  🎬 VIDEO DA GALLERIA
+                  <input type="file" id="lavVideoInput" accept="video/*" multiple>
+                </label>
+              </div>
+              <div class="lav-foto-count" id="lavFotoCount"></div>
+              <div class="lav-foto-count" id="lavVideoCount"></div>
+              <div class="lav-preview" id="lavPreview"></div>
+              <div class="lav-preview" id="lavVideoPreview"></div>
+              <button class="btn-pubblica" id="btnPubblica" onclick="pubblicaFase()">
+                ✦ PUBBLICA FASE + NOTIFICA CLIENTE
+              </button>
+              <div class="lav-result" id="lavResult"></div>
+
+              <div id="socialPanel" style="display:none;margin-top:18px;border-top:1px dashed var(--border);padding-top:16px;">
+                <div class="lav-title" style="margin-bottom:4px;">📲 Vuoi pubblicare sui social?</div>
+                <p style="font-size:12px;color:var(--text-dim);margin:0 0 10px;">Rivedi e modifica il testo. Niente esce su Facebook/Instagram finché non premi tu.</p>
+                <textarea class="lav-textarea" id="socialText" style="min-height:150px;"></textarea>
+                <div class="lav-preview" id="socialThumbs"></div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+                  <button class="btn-pubblica" style="flex:2 1 140px;" onclick="pubblicaSocialOra()">📲 PUBBLICA ORA</button>
+                  <button class="btn-secondary" style="flex:1 1 110px;" onclick="salvaSocialDopo()">🕒 SALVA PER DOPO</button>
+                  <button class="btn-secondary" style="flex:1 1 110px;" onclick="annullaSocial()">✕ NON PUBBLICARE</button>
+                </div>
+              </div>
+
+              <div id="socialPending" style="display:none;margin-top:18px;">
+                <div class="lav-title" style="margin-bottom:8px;">🕒 Post social in attesa</div>
+                <div id="socialPendingList"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ 4. REEL FINALE ═══ -->
+      <div class="acc-section" id="acc-reel" style="display:none;">
+        <button class="acc-header" onclick="toggleAcc('acc-reel')">
+          <span class="acc-title">🎬 Reel finale</span>
+          <span class="acc-chevron">▾</span>
+        </button>
+        <div class="acc-body">
+          <div id="reelPanel">
+            <p style="font-size:12px;color:var(--text-dim);margin:0 0 14px;">Monta un video verticale con tutte le foto delle fasi pubblicate.</p>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
               <select class="lav-input" id="reelTemplate" style="flex:2 1 150px;"></select>
               <select class="lav-input" id="reelMusica" style="flex:2 1 150px;">
@@ -456,32 +467,11 @@ function renderDetail() {
   // Foto della scheda — sempre, in ogni stato
   caricaFotoScheda(l.Session_ID ?? '');
 
-  // Sezione lavorazioni — visibile da ACCONTO in poi
-  const statiLav = ['ACCONTO'];
-  const lavSection = document.getElementById('lavSection');
-  if (statiLav.includes((l.Stato ?? '').toUpperCase())) {
-    lavSection.classList.add('visible');
-    document.getElementById('lavMobile').value = l.Mobile ?? '';
-    // Reset stato lavorazione
-    lavWpPostId   = l.wp_post_id   ?? null;
-    lavWpPostLink = l.wp_post_link ?? null;
-    const linkEl = document.getElementById('lavPostLink');
-    if (lavWpPostLink) { linkEl.href = lavWpPostLink; linkEl.style.display = 'inline'; }
-    else { linkEl.style.display = 'none'; }
-    document.getElementById('lavResult').classList.remove('visible');
-    document.getElementById('lavPreview').innerHTML = '';
-    lavImmagini = [];
-    document.getElementById('socialPanel').style.display = 'none';
-    pendingSocial = null;
-    renderSocialPending();
-    // Pannello reel: visibile solo se c'è già una lavorazione pubblicata
-    aggiornaPannelloReel();
-  } else {
-    lavSection.classList.remove('visible');
-  }
+  // Visibilità sezioni accordion basata su stato
+  aggiornaSezioniVisibili(l.Stato ?? '');
 
   // Stato buttons
-  const stati = ['LEAD','SOPRALLUOGO','PREVENTIVO','ACCONTO','STANDBY','PERSO'];
+  const stati = ['LEAD','SOPRALLUOGO','PREVENTIVO','ACCONTO','CONSEGNATO','PAGATO','STANDBY','PERSO'];
   document.getElementById('statoSelector').innerHTML = stati.map(s => `
     <button class="stato-btn ${(l.Stato??'').toUpperCase() === s ? 'current' : ''}"
             onclick="setStato('${s}')">
