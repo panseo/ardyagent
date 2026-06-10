@@ -50,6 +50,7 @@ ardyagent.ardy-lab.it/
 ├── ardy-lista-musica.php      # Elenca le tracce in assets/reel-music/
 ├── ardy-guida-michela.html    # Guida d'uso dashboard (HTML stampabile) — linkata dalla dashboard
 ├── GUIDA-MICHELA.md           # Guida d'uso dashboard (versione testo)
+├── ardy-notifica-michela.php  # Notifiche WhatsApp a Michela (Sole "segretaria") — libreria + endpoint n8n
 ├── ardy-unsubscribe.php       # Gestione unsubscribe email
 ├── ardy-rate-limit/           # ⚠️ NON in repo — rate limiting
 ├── ardy-system.txt            # Prompt sistema agente AI (chatbot pubblico)
@@ -395,6 +396,20 @@ Il numero di Michela è usato sull'app WhatsApp Business del telefono. Per Cloud
 - Email: gestita da Aruba, riceve su `marketing@ardy-lab.it`
 - SMTP invio: Brevo (DKIM configurato)
 
+### Config WhatsApp per notifiche a Michela (in `ardy-config.php`)
+Necessaria per `ardy-notifica-michela.php` (Task 1 — Sole avvisa Michela su WhatsApp):
+```php
+define('WA_TOKEN',           '...');             // token permanente Cloud API (Bearer)
+define('WA_PHONE_NUMBER_ID', '1151535311377293'); // numero "Sole" (+39 379 375 6437)
+define('WA_MICHELA_NUMBER',  '393519677973');    // numero di Michela, formato internazionale
+// Opzionali:
+define('WA_TEMPLATE_NOTIFICA', '');              // template Meta approvato (body 1 var {{1}}) — aggira la finestra 24h
+define('WA_TEMPLATE_LANG',     'it');
+```
+> ⚠️ Senza un **template approvato** il messaggio libero a Michela arriva solo se lei
+> ha scritto al numero Sole nelle ultime 24h. Per notifiche affidabili in qualsiasi
+> momento serve far approvare un template a Meta e impostare `WA_TEMPLATE_NOTIFICA`.
+
 ### File da creare manualmente sul server (NON in repo)
 - `ardy-config.php` — credenziali DB + API keys
 - `ardy-gcal-token.json` — token Google Calendar
@@ -507,6 +522,11 @@ Interesse concreto da parte della community di artigiani **Farò Arte**: possibi
 ---
 
 ## 📝 Note sessioni
+
+**Giugno 2026 — Sessione 8 (notifiche WhatsApp a Michela)**
+- **Task 1 fatto**: Sole avvisa Michela su WhatsApp come una segretaria. Nuovo `ardy-notifica-michela.php` con doppio uso: libreria (`notificaMichela()` / `ardy_wa_send_michela()`, dedupe persistente su file) ed **endpoint HTTP** protetto da `WA_LOOKUP_SECRET`, così anche il ramo WhatsApp via n8n può avvisare Michela riusando lo stesso codice (invio via Cloud API).
+- `ardy-proxy.php`: dopo lead salvato e/o sopralluogo fissato parte una **notifica consolidata** (riepilogo nome/telefono/servizio/mobile/zona/budget/appuntamento/note). Aggiunto il tool **`avvisa_michela`** che Sole chiama per reclami, problemi di pagamento, richieste di modifica e richieste fuori standard; prompt aggiornato in `ardy-system.txt`.
+- Config nuova in `ardy-config.php`: `WA_TOKEN`, `WA_PHONE_NUMBER_ID`, `WA_MICHELA_NUMBER` (+ opzionali `WA_TEMPLATE_NOTIFICA`/`WA_TEMPLATE_LANG`). ⚠️ Per scrivere a Michela fuori dalla finestra 24h serve un **template Meta approvato**.
 
 **Giugno 2026 — Sessione 7 (deploy via git sul server)**
 - **Deploy automatizzato via git** (chiuso il TODO storico). Prima i file si caricavano a mano via cPanel File Manager.

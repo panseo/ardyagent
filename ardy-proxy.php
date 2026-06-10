@@ -24,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-gcal.php';
+require_once __DIR__ . '/ardy-notifica-michela.php';
 require_once __DIR__ . '/phpmailer/src/PHPMailer.php';
 require_once __DIR__ . '/phpmailer/src/SMTP.php';
 require_once __DIR__ . '/phpmailer/src/Exception.php';
@@ -222,6 +223,18 @@ $tools = [
             ],
             'required' => ['nome', 'stato']
         ]
+    ],
+    [
+        'name'        => 'avvisa_michela',
+        'description' => 'Invia a Michela una notifica WhatsApp breve, come farebbe una segretaria efficiente. Usalo SOLO quando emerge qualcosa che Michela deve sapere subito e che NON è già coperto dal salvataggio lead/appuntamento: un reclamo o insoddisfazione, un problema di pagamento, una richiesta di modifica a un lavoro già concordato, oppure una richiesta fuori standard (tempi urgenti, lavoro particolare). Non usarlo per conversazioni di routine.',
+        'input_schema' => [
+            'type'       => 'object',
+            'properties' => [
+                'messaggio' => ['type' => 'string', 'description' => 'Riepilogo breve, diretto e azionabile per Michela. Includi nome del cliente, di cosa si tratta e cosa serve fare. Es: "Mario Rossi (Prati) si lamenta: dice che il preventivo era diverso da quanto concordato. Vuole essere richiamato."'],
+                'motivo'    => ['type' => 'string', 'description' => 'Categoria: reclamo | pagamento | modifica | fuori_standard | altro']
+            ],
+            'required' => ['messaggio']
+        ]
     ]
 ];
 
@@ -346,6 +359,8 @@ $maxIterations = 5;
 $iteration     = 0;
 $bookingMade   = false;   // diventa true se viene fissato un sopralluogo
 $bookingWhen   = null;    // DateTime dell'appuntamento
+$leadSaved     = false;   // diventa true quando il lead è salvato nel CRM
+$leadData      = [];      // ultimi dati lead salvati (per il riepilogo a Michela)
 
 while ($iteration < $maxIterations) {
     $iteration++;
@@ -450,7 +465,25 @@ while ($iteration < $maxIterations) {
                 curl_setopt($ch, CURLOPT_HTTPHEADER,     ['Content-Type: application/json']);
                 $r = json_decode(curl_exec($ch), true);
                 curl_close($ch);
+                if (isset($r['success'])) {
+                    $leadSaved = true;
+                    $leadData  = $toolInput;   // per il riepilogo WhatsApp a Michela
+                }
                 $toolResult = isset($r['success']) ? 'Cliente salvato nel CRM.' : 'Errore CRM: ' . json_encode($r);
+
+            } elseif ($toolName === 'avvisa_michela') {
+                $msg = trim((string) ($toolInput['messaggio'] ?? ''));
+                if ($msg === '') {
+                    $toolResult = 'Errore: messaggio mancante.';
+                } else {
+                    $motivo = $toolInput['motivo'] ?? 'altro';
+                    $testo  = "🔔 Sole — segnalazione (" . $motivo . ")\n\n" . $msg;
+                    // Dedupe sul contenuto: evita doppioni se il tool viene richiamato nello stesso giro
+                    $ok = notificaMichela($testo, 'avvisa:' . $cleanSession . ':' . md5($msg));
+                    $toolResult = $ok
+                        ? 'Michela è stata avvisata su WhatsApp.'
+                        : 'Avviso registrato (eventuale invio WhatsApp gestito a parte).';
+                }
             }
 
             $toolResults[] = ['type' => 'tool_result', 'tool_use_id' => $toolId, 'content' => $toolResult];
@@ -564,6 +597,36 @@ if ($bookingMade && $bookingWhen instanceof DateTime && $userEmail && filter_var
     } catch (Exception $e) {
         error_log('ARDY CONFERMA CLIENTE ERROR: ' . $mailC->ErrorInfo);
     }
+}
+
+// -----------------------------------------------------------
+// NOTIFICA WHATSAPP A MICHELA (lead salvato e/o sopralluogo fissato)
+// Sole come segretaria: riepilogo breve e azionabile. Dedupe sul contenuto,
+// così non si ripete su ogni messaggio della stessa sessione.
+// -----------------------------------------------------------
+if ($leadSaved || $bookingMade) {
+    $nomeCompleto = trim(($leadData['nome'] ?? '') . ' ' . ($leadData['cognome'] ?? ''));
+    if ($nomeCompleto === '') $nomeCompleto = 'Nuovo contatto';
+    $tel = $leadData['telefono'] ?? $userPhone ?? '';
+
+    $righe = ['🔔 Sole — aggiornamento', '', '👤 ' . $nomeCompleto];
+    if ($tel !== '')                          $righe[] = '📞 ' . $tel;
+    if (!empty($leadData['servizio']))        $righe[] = '🛠️ ' . $leadData['servizio'];
+    if (!empty($leadData['mobile']))          $righe[] = '🪑 ' . $leadData['mobile'];
+    if (!empty($leadData['zona']))            $righe[] = '📍 ' . $leadData['zona'];
+    if (!empty($leadData['budget']))          $righe[] = '💶 ' . $leadData['budget'];
+
+    if ($bookingMade && $bookingWhen instanceof DateTime) {
+        $righe[] = '';
+        $righe[] = '📅 Sopralluogo fissato: ' . ardy_data_ita($bookingWhen);
+    }
+    if (!empty($leadData['note'])) {
+        $righe[] = '';
+        $righe[] = '📝 ' . $leadData['note'];
+    }
+
+    $riepilogo = implode("\n", $righe);
+    notificaMichela($riepilogo, 'evt:' . $cleanSession . ':' . md5($riepilogo));
 }
 
 // -----------------------------------------------------------
