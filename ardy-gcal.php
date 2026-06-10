@@ -257,3 +257,90 @@ function gcal_create_event($date, $startTime, $clientName, $clientPhone, $client
     $result = json_decode($response, true);
     return isset($result['id']) ? $result : false;
 }
+
+// -----------------------------------------------------------
+// Verifica se uno slot specifico è libero (per spostamenti/conferme)
+// Ritorna true (libero), false (occupato) o null (impossibile verificare)
+// -----------------------------------------------------------
+function gcal_is_slot_free($date, $startTime, $durationHours = 2) {
+    global $GCAL_CALENDAR_ID;
+
+    $accessToken = gcal_get_access_token();
+    if (!$accessToken) return null;
+
+    $startDt = new DateTime($date . ' ' . $startTime, new DateTimeZone('Europe/Rome'));
+    $endDt   = clone $startDt;
+    $endDt->modify("+{$durationHours} hours");
+
+    // Allarga la finestra di query per intercettare eventi che iniziano prima
+    $qMin = clone $startDt; $qMin->modify('-3 hours');
+    $url  = 'https://www.googleapis.com/calendar/v3/calendars/' . urlencode($GCAL_CALENDAR_ID) .
+            '/events?timeMin=' . urlencode($qMin->format(DateTime::RFC3339)) .
+            '&timeMax=' . urlencode($endDt->format(DateTime::RFC3339)) .
+            '&singleEvents=true&orderBy=startTime';
+
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT,        30);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER,     ['Authorization: Bearer ' . $accessToken]);
+    $response = curl_exec($ch);
+    $err      = curl_error($ch);
+    curl_close($ch);
+    if ($err) { error_log('ARDY GCAL SLOTCHECK ERROR: ' . $err); return null; }
+
+    $events   = json_decode($response, true)['items'] ?? [];
+    $slotS    = $startDt->getTimestamp();
+    $slotE    = $endDt->getTimestamp();
+    foreach ($events as $event) {
+        if (($event['status'] ?? '') === 'cancelled') continue;
+        $s = $event['start']['dateTime'] ?? ($event['start']['date'] ?? null);
+        $e = $event['end']['dateTime']   ?? ($event['end']['date']   ?? null);
+        if (!$s || !$e) continue;
+        if ($slotS < strtotime($e) && $slotE > strtotime($s)) return false; // sovrapposizione
+    }
+    return true;
+}
+
+// -----------------------------------------------------------
+// Sposta un appuntamento esistente (cambia data/ora dell'evento)
+// -----------------------------------------------------------
+function gcal_update_event($eventId, $date, $startTime, $durationHours = 2) {
+    global $GCAL_CALENDAR_ID;
+
+    $accessToken = gcal_get_access_token();
+    if (!$accessToken || !$eventId) return false;
+
+    $startDt = new DateTime($date . ' ' . $startTime, new DateTimeZone('Europe/Rome'));
+    $endDt   = clone $startDt;
+    $endDt->modify("+{$durationHours} hours");
+
+    $patch = [
+        'start' => ['dateTime' => $startDt->format(DateTime::RFC3339), 'timeZone' => 'Europe/Rome'],
+        'end'   => ['dateTime' => $endDt->format(DateTime::RFC3339),   'timeZone' => 'Europe/Rome'],
+    ];
+
+    $url = 'https://www.googleapis.com/calendar/v3/calendars/' .
+           urlencode($GCAL_CALENDAR_ID) . '/events/' . urlencode($eventId);
+
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST,  'PATCH');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT,        30);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS,     json_encode($patch));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Authorization: Bearer ' . $accessToken,
+        'Content-Type: application/json'
+    ]);
+    $response = curl_exec($ch);
+    $err      = curl_error($ch);
+    curl_close($ch);
+
+    if ($err) {
+        error_log('ARDY GCAL UPDATE ERROR: ' . $err);
+        return false;
+    }
+    $result = json_decode($response, true);
+    return isset($result['id']) ? $result : false;
+}
