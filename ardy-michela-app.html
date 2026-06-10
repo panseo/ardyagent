@@ -1647,7 +1647,11 @@ function renderStoricoPrev(preventivi) {
 
 async function aggiornaStatoPrev(id, stato, sel) {
   try {
-    const res  = await fetch(PREV_API + '?mode=stato&id=' + id + '&stato=' + stato);
+    const res  = await fetch(PREV_API + '?mode=stato', {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      body: new URLSearchParams({ id: id, stato: stato })
+    });
     const data = await res.json();
     if (data.success) {
       sel.className = 'storico-stato-sel ' + stato;

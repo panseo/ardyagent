@@ -31,6 +31,40 @@ require_once MPDF_VENDOR;
 
 $mode = $_GET['mode'] ?? 'download';
 
+// ─── Cambio stato preventivo (MUTAZIONE) ────────────────────────────────────────
+// Operazione che modifica lo stato: ammessa solo via POST e con header custom
+// (anti-CSRF). Una richiesta forgiata via <img>/<form> cross-site non può
+// impostare X-Requested-With, e una fetch cross-origin scatenerebbe un preflight
+// CORS che questo endpoint non autorizza. Sostituisce la vecchia GET CSRF-able.
+if ($mode === 'stato') {
+    header('Content-Type: application/json');
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        header('Allow: POST');
+        echo json_encode(['error' => 'Metodo non consentito. Usa POST.']);
+        exit;
+    }
+    if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') !== 'XMLHttpRequest') {
+        http_response_code(403);
+        echo json_encode(['error' => 'Richiesta non autorizzata']);
+        exit;
+    }
+    $id    = intval($_POST['id'] ?? 0);
+    $stato = $_POST['stato'] ?? 'bozza';
+    $stati = ['bozza','inviato','accettato','rifiutato'];
+    if (!$id || !in_array($stato, $stati, true)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Parametri non validi']);
+        exit;
+    }
+    $db   = dbConnect();
+    $stmt = $db->prepare("UPDATE preventivi SET stato=? WHERE id=?");
+    $stmt->bind_param('si', $stato, $id);
+    $stmt->execute();
+    echo json_encode(['success' => true, 'stato' => $stato]);
+    exit;
+}
+
 // ─── Endpoint GET ─────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
@@ -47,21 +81,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         while ($r = $res->fetch_assoc()) $rows[] = $r;
         header('Content-Type: application/json');
         echo json_encode($rows);
-        exit;
-    }
-
-    // GET ?mode=stato&id=X&stato=Y → aggiorna stato preventivo
-    if ($mode === 'stato') {
-        $id    = intval($_GET['id'] ?? 0);
-        $stato = $_GET['stato'] ?? 'bozza';
-        $stati = ['bozza','inviato','accettato','rifiutato'];
-        if (!$id || !in_array($stato, $stati)) { echo json_encode(['error'=>'Parametri non validi']); exit; }
-        $db   = dbConnect();
-        $stmt = $db->prepare("UPDATE preventivi SET stato=? WHERE id=?");
-        $stmt->bind_param('si', $stato, $id);
-        $stmt->execute();
-        header('Content-Type: application/json');
-        echo json_encode(['success' => true, 'stato' => $stato]);
         exit;
     }
 
