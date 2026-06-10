@@ -1563,11 +1563,10 @@ if (pvValutaEl) pvValutaEl.addEventListener('change', () => pvRenderVoci());
 const PREV_API = '/ardy-preventivo.php';
 
 async function caricaStoricoPrev(sessionId) {
-  const section = document.getElementById('storicoPrevSection');
-  const list    = document.getElementById('storicoPrevList');
-  if (!sessionId) { section.style.display = 'none'; return; }
+  const list = document.getElementById('storicoPrevList');
+  if (!list) return;
+  if (!sessionId) { list.innerHTML = ''; return; }
 
-  section.style.display = 'block';
   list.innerHTML = '<div class="storico-empty">CARICAMENTO...</div>';
 
   try {
@@ -2675,50 +2674,5 @@ function pfStampa() {
   setTimeout(() => w.print(), 500);
 }
 </script>
-<style>
-/* ── ACCORDION ── */
-.acc-section {
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  margin-bottom: 10px;
-  overflow: hidden;
-}
-.acc-header {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  background: var(--surface2, #1a1a1a);
-  border: none;
-  cursor: pointer;
-  color: var(--text, #e0e0e0);
-  font-family: 'DM Mono', monospace;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  transition: background 0.15s;
-}
-.acc-header:hover { background: var(--surface3, #222); }
-.acc-title { font-weight: 500; }
-.acc-chevron {
-  font-size: 14px;
-  transition: transform 0.2s;
-  display: inline-block;
-}
-.acc-section.open .acc-chevron { transform: rotate(180deg); }
-.acc-body {
-  display: none;
-  padding: 16px;
-  border-top: 1px solid var(--border);
-}
-.acc-section.open .acc-body { display: block; }
-.acc-azioni {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  margin-top: 4px;
-}
-</style>
 </body>
 </html>

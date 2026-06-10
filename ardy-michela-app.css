@@ -628,6 +628,22 @@
 
   .modal-result.visible { display: block; }
 
+  /* ── ACCORDION ── */
+  .acc-section { border:1px solid var(--border); border-radius:6px; margin-bottom:10px; overflow:hidden; }
+  .acc-header {
+    width:100%; display:flex; justify-content:space-between; align-items:center;
+    padding:14px 18px; background:var(--surface2); border:none; cursor:pointer;
+    color:var(--text); font-family:'DM Mono',monospace; font-size:11px;
+    text-transform:uppercase; letter-spacing:0.1em; transition:background 0.15s;
+  }
+  .acc-header:hover { background:var(--border); }
+  .acc-title { font-weight:500; }
+  .acc-chevron { font-size:13px; color:var(--text-dim); transition:transform 0.2s; display:inline-block; }
+  .acc-section.open .acc-chevron { transform:rotate(180deg); }
+  .acc-body { display:none; padding:20px; border-top:1px solid var(--border); background:var(--surface); }
+  .acc-section.open .acc-body { display:block; }
+  .acc-azioni { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:4px; }
+
   /* SEZIONE LAVORAZIONI */
   .lavorazioni-section { margin-top:32px; border-top:1px solid var(--border); padding-top:28px; display:none; }
   .lavorazioni-section.visible { display:block; }
