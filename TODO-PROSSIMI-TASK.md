@@ -2,7 +2,9 @@
 
 ---
 
-## TASK 1 — Michela come "capo": notifiche WhatsApp dalla AI
+## TASK 1 — Michela come "capo": notifiche WhatsApp dalla AI ✅ FATTO (sessione 8)
+
+**Implementato:** nuovo `ardy-notifica-michela.php` (libreria + endpoint protetto da `WA_LOOKUP_SECRET` per n8n). In `ardy-proxy.php`: notifica automatica consolidata a lead salvato e/o sopralluogo fissato, + nuovo tool `avvisa_michela` che Sole chiama per reclami/pagamenti/modifiche/richieste fuori standard (prompt aggiornato in `ardy-system.txt`). Dedupe persistente su file per non ripetere la stessa notifica. ⚠️ Restano da fare lato server: impostare `WA_TOKEN`/`WA_PHONE_NUMBER_ID`/`WA_MICHELA_NUMBER` in `ardy-config.php` e — per uscire dalla finestra 24h — far approvare un template Meta (`WA_TEMPLATE_NOTIFICA`). Il ramo WhatsApp (n8n) può chiamare l'endpoint per avvisare Michela riusando lo stesso codice.
 
 **Cosa fa:**
 Dopo ogni evento rilevante nelle chat (lead salvato, appuntamento fissato, cliente con dubbi/reclami/richieste strane), la AI manda automaticamente un messaggio WhatsApp a Michela (351 967 7973) come farebbe una segretaria efficiente.
