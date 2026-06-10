@@ -35,6 +35,18 @@ if ($rateData['count'] > 60) {
     exit();
 }
 
+// Limite giornaliero per IP
+$today       = date('Y-m-d');
+$ipDayFile   = $rateLimitDir . 'ipday_' . md5($ip) . '_lav.json';
+$ipDayData   = file_exists($ipDayFile) ? json_decode(file_get_contents($ipDayFile), true) : [];
+if (($ipDayData['date'] ?? '') !== $today) { $ipDayData = ['date' => $today, 'count' => 0]; }
+$ipDayData['count']++;
+file_put_contents($ipDayFile, json_encode($ipDayData));
+if ($ipDayData['count'] > 60) {
+    echo json_encode(['reply' => 'Hai raggiunto il limite giornaliero. Riprova domani o contatta Michela al 351 967 7973.']);
+    exit();
+}
+
 // Input
 $input   = json_decode(file_get_contents('php://input'), true);
 $message = trim($input['message'] ?? '');
@@ -42,6 +54,21 @@ $history = $input['history'] ?? [];
 $context = $input['context'] ?? '';
 $titolo  = $input['titolo'] ?? '';
 $nome    = trim($input['nome'] ?? '');
+$telefono = preg_replace('/[^0-9+]/', '', $input['telefono'] ?? '');
+$telefono = mb_substr($telefono, 0, 15);
+
+// Limite giornaliero per telefono (se disponibile)
+if ($telefono !== '') {
+    $telDayFile = $rateLimitDir . 'tel_' . md5($telefono) . '_lav.json';
+    $telDayData = file_exists($telDayFile) ? json_decode(file_get_contents($telDayFile), true) : [];
+    if (($telDayData['date'] ?? '') !== $today) { $telDayData = ['date' => $today, 'count' => 0]; }
+    $telDayData['count']++;
+    file_put_contents($telDayFile, json_encode($telDayData));
+    if ($telDayData['count'] > 40) {
+        echo json_encode(['reply' => 'Hai raggiunto il limite giornaliero di messaggi. Riprova domani o contatta Michela al 351 967 7973.']);
+        exit();
+    }
+}
 
 // Limiti di sicurezza sugli input (anti-abuso e anti-prompt-injection)
 $message = mb_substr($message, 0, 2000);

@@ -94,6 +94,18 @@ if (count($ipCountData) > ARDY_IP_MAX_REQUESTS_HOUR) {
     exit();
 }
 
+// Limite giornaliero per IP
+$today      = date('Y-m-d');
+$ipDayFile  = ARDY_RATE_LIMIT_DIR . 'ipday_' . $cleanIp . '.json';
+$ipDayData  = file_exists($ipDayFile) ? json_decode(file_get_contents($ipDayFile), true) : [];
+if (($ipDayData['date'] ?? '') !== $today) { $ipDayData = ['date' => $today, 'count' => 0]; }
+$ipDayData['count']++;
+file_put_contents($ipDayFile, json_encode($ipDayData));
+if ($ipDayData['count'] > 40) {
+    echo json_encode(['reply' => 'Hai raggiunto il limite giornaliero di messaggi. Riprova domani oppure scrivici su ardy-lab.it.']);
+    exit();
+}
+
 // -----------------------------------------------------------
 // INPUT
 // -----------------------------------------------------------

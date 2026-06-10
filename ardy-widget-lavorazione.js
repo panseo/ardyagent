@@ -13,6 +13,7 @@
   var isOpen     = false;
   var isVerified = false;
   var clientName = '';
+  var clientTel  = '';
   var pageContext = '';
   var pageTitle   = '';
   var wpPostId    = '';
@@ -345,6 +346,7 @@
       if (data.verified) {
         isVerified = true;
         clientName = data.nome || '';
+        clientTel  = tel;
 
         // Nascondi verifica, mostra chat
         document.getElementById('ardy-lav-verify').style.display = 'none';
@@ -470,7 +472,8 @@
           history: history,
           context: pageContext,
           titolo: pageTitle,
-          nome: clientName
+          nome: clientName,
+          telefono: clientTel
         })
       });
       var data = await res.json();
