@@ -179,6 +179,10 @@
           <span class="azione-icon">📋</span>
           <span class="azione-label">Note interne</span>
         </button>
+        <button class="azione-btn" onclick="apriVideoUpload()">
+          <span class="azione-icon">🎥</span>
+          <span class="azione-label">Video</span>
+        </button>
         <button class="azione-btn" onclick="openPreventivoPanel()" style="border-color:var(--accent2);">
           <span class="azione-icon">📑</span>
           <span class="azione-label">Preventivo PDF</span>
@@ -668,6 +672,15 @@ function aggiornaContatoreFoto() {
 }
 
 // ─── VIDEO LAVORAZIONE ────────────────────────────────────
+function apriVideoUpload() {
+  const lavSection = document.getElementById('lavSection');
+  if (!lavSection || !lavSection.classList.contains('visible')) {
+    showToast('⚠ Carica video disponibile per clienti in stato ACCONTO', 'error');
+    return;
+  }
+  lavSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => document.getElementById('lavVideoInput').click(), 400);
+}
 const VIDEO_UPLOAD_URL = BASE_URL + '/ardy-upload-video.php';
 const VIDEO_MAX_BYTE   = 150 * 1024 * 1024; // 150 MB, allineato al server
 let lavVideoUrls = []; // URL dei video già caricati su WP
