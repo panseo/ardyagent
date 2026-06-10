@@ -90,6 +90,12 @@ Se manca qualcosa, avvisa Michela PRIMA di procedere con il sollecito.
 
 ---
 
+## PROBABILI / DA VALUTARE PIÙ AVANTI
+
+- **Filtro sidebar di default su ACCONTO** invece di TUTTI: se Michela lavora quasi sempre su lavori in corso, all'apertura la lista a sinistra mostrerebbe subito solo quelli. Da decidere in base al suo modo di lavorare reale.
+
+---
+
 ## Note generali
 
 - Entrambi i task sono indipendenti, possono essere sviluppati separatamente
