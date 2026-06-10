@@ -90,6 +90,41 @@ Se manca qualcosa, avvisa Michela PRIMA di procedere con il sollecito.
 
 ---
 
+## TASK 3 — Notifiche WhatsApp ai clienti nelle fasi di lavorazione
+
+**Stato attuale:** quando si pubblica una fase (`ardy-pubblica-lavorazione.php`), il cliente riceve SOLO un'email (`inviaEmailCliente`, riga ~237). WhatsApp è usato solo in entrata (webhook → n8n), non c'è invio verso i clienti dal PHP.
+
+**Cosa serve:** una funzione `inviaWhatsAppCliente()` accanto a `inviaEmailCliente()` che chiama la Graph API di Meta (`/{phone_number_id}/messages`).
+
+**⚠ MURO DA SAPERE — regola delle 24 ore:**
+Con WhatsApp Business API puoi mandare un messaggio libero a un cliente SOLO se lui ti ha scritto nelle ultime 24 ore. Una notifica "fase completata" arriva quasi sempre fuori da quella finestra → **obbligatorio usare un TEMPLATE pre-approvato da Meta.**
+
+Template da far approvare (esempio):
+> "Ciao {{1}}, aggiornamento sul tuo {{2}}: abbiamo completato la fase '{{3}}'. Guarda qui: {{4}}"
+
+**Requisiti:**
+1. Template approvato da Meta (collo di bottiglia: da poche ore a qualche giorno)
+2. Token WhatsApp + phone_number_id nel config PHP (probabilmente già su n8n, va portato lato server)
+3. Telefono cliente — già presente nel CRM (`clienti.telefono`)
+
+**Stima:** ~mezza giornata, una volta che il template è approvato.
+
+---
+
+## TASK 4 — Comunicazioni straordinarie al cliente (non una fase normale)
+
+**Caso d'uso reale:** durante un restauro emerge un imprevisto (es. restauro precedente pasticciato, strutturalmente solido ma esteticamente da rifare → serve ricostruire la parte mancante con stampo da stampa 3D). Va comunicato al cliente PRIMA di procedere. Non è un avanzamento, è una comunicazione importante.
+
+**Soluzione (no sistema separato):** aggiungere un secondo bottone nella sezione Lavorazione, accanto a "Pubblica fase" → "Comunicazione straordinaria". Stesso flusso di `ardy-pubblica-lavorazione.php` ma:
+- **Sul sito cliente:** blocco visivamente diverso (bordo arancione invece che oro, icona ⚠, intestazione "Comunicazione importante")
+- **Email:** oggetto diverso ("Aggiornamento importante sulla tua lavorazione") e tono che spiega senza allarmare
+- **DB:** colonna/campo `fase_tipo = 'comunicazione'` invece di `'fase'`, così nello storico si distingue
+- Il testo lo genera Claude dalle note brevi di Michela, come per le fasi normali
+
+**Stima:** ~mezza giornata.
+
+---
+
 ## PROBABILI / DA VALUTARE PIÙ AVANTI
 
 - **Filtro sidebar di default su ACCONTO** invece di TUTTI: se Michela lavora quasi sempre su lavori in corso, all'apertura la lista a sinistra mostrerebbe subito solo quelli. Da decidere in base al suo modo di lavorare reale.
