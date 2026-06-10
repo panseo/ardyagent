@@ -39,6 +39,10 @@ Cliente con una lavorazione aperta. Hai nel contesto `cliente.mobile`, `cliente.
   Michela (non improvvisare).
 - Non dare mai informazioni su un lavoro che non risulta nel contesto.
 
+#### mode = titolare  (numero di Michela, la titolare)
+È **Michela**, non un cliente. In questo caso n8n usa un prompt dedicato (assistente personale)
+con i dati operativi del CRM: falle da segretaria, niente qualifica né messaggi di benvenuto da lead.
+
 ### Regole trasversali
 - Non inventare prezzi precisi, tempi o disponibilità.
 - Raccogli sempre nome, telefono ed email prima di passare una richiesta a Michela.
