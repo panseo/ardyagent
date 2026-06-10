@@ -366,6 +366,10 @@ table.firma-t { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
 .fl { font-weight: 700; font-size: 8.5pt; padding: 7px 10px 7px 0; width: 120px; color: #555; text-transform: uppercase; }
 .fv { border-bottom: 1px solid #ccc; padding: 7px 0; font-size: 10pt; }
 .validita { font-size: 10pt; font-weight: 700; margin-top: 16px; padding: 10px 14px; background: #f5f5f5; border-left: 4px solid #111; }
+.privacy-h { font-size: 11pt; font-weight: 700; margin: 22px 0 6px; }
+.privacy-p { font-size: 7.8pt; line-height: 1.5; color: #444; text-align: justify; margin-bottom: 6px; }
+.privacy-consent { font-size: 9pt; line-height: 1.5; margin-top: 12px; padding: 10px 12px; border: 1px solid #111; }
+.privacy-box { display: inline-block; width: 11px; height: 11px; border: 1.5px solid #111; margin-right: 7px; vertical-align: middle; }
 .firma-line-l { width: 48%; float: left; border-top: 1.5px solid #888; padding-top: 6px; font-size: 9pt; color: #666; text-align: center; margin-top: 32px; }
 .firma-line-r { width: 48%; float: right; border-top: 1.5px solid #888; padding-top: 6px; font-size: 9pt; color: #666; text-align: center; margin-top: 32px; }
 
@@ -427,6 +431,16 @@ function buildPagine(array $d, array $voci, float $subtotale, float $bollo, stri
     $footerLeft  = 'Ardy di Michela Panella — P.IVA ' . $d['azienda_piva'];
     $footerRight = 'N° ' . $d['numero_preventivo'] . ' — ' . $d['data_emissione'];
     $footer      = '<div class="footer-line"><span class="footer-left">' . $footerLeft . '</span><span class="footer-right">' . $footerRight . '</span><br style="clear:both"></div>';
+
+    // Informativa privacy / GDPR (Reg. UE 2016/679) — clausola da accettare e firmare
+    $privacyHtml = '
+  <div class="privacy-h">Informativa sul trattamento dei dati personali (art. 13 Reg. UE 2016/679 - GDPR)</div>
+  <p class="privacy-p"><strong>Titolare del trattamento:</strong> ' . $d['azienda_nome'] . ', ' . $d['azienda_indirizzo'] . ' - P.IVA ' . $d['azienda_piva'] . ' - email ' . $d['azienda_email'] . '.</p>
+  <p class="privacy-p"><strong>Finalità e base giuridica:</strong> i dati forniti (nome, indirizzo, P.IVA/C.F., email e dati di contatto) sono trattati per dare esecuzione al presente preventivo/contratto e ai relativi rapporti precontrattuali (art. 6.1.b GDPR), per la fatturazione e per l\'adempimento degli obblighi fiscali, contabili e di legge (art. 6.1.c GDPR).</p>
+  <p class="privacy-p"><strong>Destinatari:</strong> i dati possono essere comunicati a consulente fiscale/commercialista, istituti di pagamento e Autorità competenti, esclusivamente per le finalità sopra indicate. Non sono diffusi né trasferiti fuori dall\'Unione Europea.</p>
+  <p class="privacy-p"><strong>Conservazione:</strong> per la durata del rapporto e, successivamente, per i termini imposti dalla legge (in particolare 10 anni per la documentazione fiscale e contabile).</p>
+  <p class="privacy-p"><strong>Diritti dell\'interessato:</strong> in qualsiasi momento è possibile esercitare i diritti di accesso, rettifica, cancellazione, limitazione, opposizione e portabilità (artt. 15-22 GDPR) scrivendo a ' . $d['azienda_email'] . ', nonché proporre reclamo al Garante per la protezione dei dati personali. Il conferimento dei dati è necessario per la stipula e l\'esecuzione del contratto: il rifiuto rende impossibile dar corso al servizio.</p>
+  <div class="privacy-consent"><span class="privacy-box">&nbsp;</span>Dichiaro di aver letto e compreso l\'informativa che precede e <strong>acconsento al trattamento</strong> dei miei dati personali per le finalità ivi indicate, sottoscrivendo per accettazione il presente preventivo.</div>';
 
     $oggettoDiv = $d['oggetto'] ? '<div class="prev-oggetto">Oggetto: ' . $d['oggetto'] . '</div>' : '';
     $noteDiv    = $d['note']    ? '<p class="proc-p" style="margin-top:12px;">' . nl2br($d['note']) . '</p>' : '';
@@ -498,6 +512,7 @@ function buildPagine(array $d, array $voci, float $subtotale, float $bollo, stri
   <table class="firma-t"><tbody>' . $clienteRows . '</tbody></table>
   <div class="validita">Validità preventivo: 30 giorni dalla data odierna — ' . $d['data_emissione'] . '</div>
   ' . $scadDiv . '
+  ' . $privacyHtml . '
   <div class="firma-line-l">Data di firma: ____ / ____ / ________</div>
   <div class="firma-line-r">Firma del Committente _________________</div>
   <br style="clear:both">
