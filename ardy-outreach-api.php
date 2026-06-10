@@ -5,6 +5,7 @@
 // -----------------------------------------------------------
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
+require_once __DIR__ . '/ardy-auth.php';
 
 header('Access-Control-Allow-Origin: https://ardyagent.ardy-lab.it');
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
@@ -12,6 +13,10 @@ header('Access-Control-Allow-Headers: Content-Type');
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
+
+// Difesa in profondità: invio email di massa + cancellazione dati. Non
+// affidarsi solo al Basic Auth dell'.htaccess — richiedi un utente autenticato.
+ardyRequireAuth();
 
 $input  = json_decode(file_get_contents('php://input'), true) ?? [];
 $action = $input['action'] ?? ($_GET['action'] ?? '');
