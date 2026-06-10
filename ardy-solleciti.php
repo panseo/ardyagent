@@ -24,6 +24,7 @@ date_default_timezone_set('Europe/Rome');
 
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
+require_once __DIR__ . '/ardy-auth.php';
 require_once __DIR__ . '/phpmailer/src/PHPMailer.php';
 require_once __DIR__ . '/phpmailer/src/SMTP.php';
 require_once __DIR__ . '/phpmailer/src/Exception.php';
@@ -37,6 +38,10 @@ header('Access-Control-Allow-Headers: Content-Type');
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
+
+// Difesa in profondità: invio solleciti (WhatsApp/email) + eliminazione casi.
+// Non affidarsi solo al Basic Auth dell'.htaccess.
+ardyRequireAuth();
 
 // -----------------------------------------------------------
 // DB + auto-creazione tabella
