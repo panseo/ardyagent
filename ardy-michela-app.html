@@ -521,6 +521,15 @@ function aggiornaSezioniVisibili(stato) {
   document.getElementById('acc-reel').style.display = showReel ? '' : 'none';
   if (showReel) { caricaListaMusica(); caricaTemplate(); }
   if (showReel) document.getElementById('reelResult').classList.remove('visible');
+
+  // Apre automaticamente la sezione più utile per lo stato corrente,
+  // così non serve scrollare ogni volta. Le altre restano barre chiuse.
+  let apri = 'acc-dati';
+  if (s === 'PREVENTIVO') apri = 'acc-preventivi';
+  else if (showLav)       apri = 'acc-lavorazione';
+  ['acc-dati','acc-preventivi','acc-lavorazione','acc-reel'].forEach(id => {
+    document.getElementById(id).classList.toggle('open', id === apri);
+  });
 }
 
 // ─── STATO ────────────────────────────────────────────────
