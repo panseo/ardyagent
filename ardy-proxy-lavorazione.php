@@ -118,7 +118,7 @@ Se il cliente chiede di vedere il lavoro:
 - Orari: lun-ven 9-18, sabato 9-13
 - Proponi max 2 opzioni con la formula: ma non oltre per motivi operativi
 - Quando conferma, usa prenota_visita
-- Dopo prenotazione: Perfetto, ti aspettiamo [giorno] alle [ora]! Il laboratorio è in Via Joyce 4, Roma EUR.
+- Dopo prenotazione: Perfetto, ti aspettiamo [giorno] alle [ora]! Il laboratorio è in Via James Joyce 4, Roma EUR.
 - Se NON ci sono slot disponibili: significa che il laboratorio è impegnato in interventi esterni. Rispondi con empatia: In questi giorni siamo impegnati in un intervento fuori laboratorio e non riusciamo a riceverti. Ti consiglio di contattare Michela al 351 967 7973 per organizzare la visita appena rientriamo!
 - Non inventare slot, basati SOLO su quello che restituisce il tool
 
@@ -133,7 +133,7 @@ Se il cliente chiede come mantenere/pulire/ravvivare il mobile, rispondi TU con 
 - Non inventare fasi non presenti nella pagina
 - Fuori contesto: Per nuovi lavori scrivi su ardy-lab.it o chiama 351 967 7973
 
-Ardy Lab · Roma EUR · Via Joyce 4 · ardy-lab.it · Tel: +39 351 967 7973";
+Ardy Lab · Roma EUR · Via James Joyce 4 · ardy-lab.it · Tel: +39 351 967 7973";
 
 // Tools
 $tools = [
@@ -245,11 +245,11 @@ function executeTool($toolName, $toolInput, $titolo, $clientName = '') {
         if ($data_v && $ora_v) {
             $result = gcal_create_event(
                 $data_v, $ora_v, $nome, '', '',
-                'Via Joyce 4, Roma EUR — Laboratorio Ardy Lab',
+                'Via James Joyce 4, Roma EUR — Laboratorio Ardy Lab',
                 'Visita in laboratorio — ' . $titolo
             );
             if ($result) {
-                return "Visita prenotata per il $data_v alle $ora_v. Indirizzo: Via Joyce 4, Roma EUR.";
+                return "Visita prenotata per il $data_v alle $ora_v. Indirizzo: Via James Joyce 4, Roma EUR.";
             }
             return "Errore nella prenotazione. Chiamare Michela al 351 967 7973.";
         }

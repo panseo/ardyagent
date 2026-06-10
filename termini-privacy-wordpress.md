@@ -5,9 +5,6 @@
 > prima di pubblicarlo. I punti tra `[[ ... ]]` vanno verificati/compilati.
 >
 > **Da verificare subito:**
-> - **Indirizzo**: nel preventivo risulta *Via Kafka 14, 00143 Roma (RM)*, nel
->   sistema solleciti *Via Joyce 4, Roma*. Usa quello corretto e rendilo coerente
->   ovunque (qui ho messo Via Kafka 14).
 > - **Responsabili esterni** (par. privacy): conferma quali usi davvero
 >   (Brevo, Meta/WhatsApp, Google, Anthropic, n8n, hosting).
 > - Serve una **Cookie Policy** separata se il sito usa cookie/analytics.
@@ -24,7 +21,7 @@ e "Privacy Policy" — e linkale nel footer. Sotto trovi entrambe.
 
 ## 1. Titolare e dati identificativi
 Il presente sito e i servizi offerti sono gestiti da **Ardy di Michela Panella**
-(di seguito "Ardy Lab" o "il Titolare"), con sede in Via Kafka 14, 00143 Roma (RM),
+(di seguito "Ardy Lab" o "il Titolare"), con sede in Via James Joyce 4, 00143 Roma (RM),
 P.IVA 17633931005 — C.F. PNLMHL99A48H501E — email: ardy.documenti@gmail.com —
 sito: www.ardy-lab.it. Attività in regime forfettario ai sensi dell'art. 1,
 commi 54-89, L. 190/2014.
@@ -108,7 +105,7 @@ su questa pagina con la relativa data di aggiornamento.
 **Ultimo aggiornamento: [[gg/mm/aaaa]]**
 
 ## 1. Titolare del trattamento
-**Ardy di Michela Panella** — Via Kafka 14, 00143 Roma (RM) — P.IVA 17633931005 —
+**Ardy di Michela Panella** — Via James Joyce 4, 00143 Roma (RM) — P.IVA 17633931005 —
 email: ardy.documenti@gmail.com. Per ogni richiesta sui tuoi dati puoi scrivere a
 questo indirizzo.
 

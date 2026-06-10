@@ -460,7 +460,7 @@ function brevoSend(string $toEmail, string $toName, string $oggetto, string $cor
   </div>
   <div style="font-size:15px;line-height:1.9;color:#333;">' . $corpoHtml . '</div>
   <div style="margin-top:40px;padding-top:20px;border-top:1px solid #eee;font-size:12px;color:#999;font-family:sans-serif;">
-    <p style="margin:0;"><strong style="color:#333;">Ardy Lab</strong> · Via Kafka 14, 00143 Roma EUR</p>
+    <p style="margin:0;"><strong style="color:#333;">Ardy Lab</strong> · Via James Joyce 4, 00143 Roma EUR</p>
     <p style="margin:4px 0 0;"><a href="https://ardy-lab.it" style="color:#c8a96e;">ardy-lab.it</a></p>
     <p style="margin:8px 0 0;font-size:11px;"><a href="' . $unsubLink . '" style="color:#bbb;">Disiscriviti da questa lista</a></p>
   </div>

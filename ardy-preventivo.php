@@ -121,7 +121,7 @@ $dati = sanitizeInput([
     'oggetto'           => $_POST['oggetto']           ?? '',
     // Azienda — dati fissi forfettario
     'azienda_nome'      => 'Ardy di Michela Panella',
-    'azienda_indirizzo' => 'Via Kafka 14, 00143 Roma (RM)',
+    'azienda_indirizzo' => 'Via James Joyce 4, 00143 Roma (RM)',
     'azienda_piva'      => '17633931005',
     'azienda_cf'        => 'PNLMHL99A48H501E',
     'azienda_email'     => 'ardy.documenti@gmail.com',
@@ -476,7 +476,7 @@ function buildPagine(array $d, array $voci, float $subtotale, float $bollo, stri
   <div class="cover-services">Restauro,<br>ammodernamento<br>InterioDesign<br>Stampa 3D<br>Scenografie</div>
   ' . $coverProj . '
   <div class="cover-divider"></div>
-  <div class="cover-footer-addr">Via Kafka 14, 00143 Roma (RM)</div>
+  <div class="cover-footer-addr">Via James Joyce 4, 00143 Roma (RM)</div>
   <div class="cover-footer-web">www.ardy-lab.it<br>ardy.documenti@gmail.com</div>
 </div>';
 
@@ -548,7 +548,7 @@ function buildPagine(array $d, array $voci, float $subtotale, float $bollo, stri
 <div class="grazie-page">
   <div class="grazie-h">Grazie!</div>
   <div class="grazie-ardy">Ardy</div>
-  <div class="grazie-addr">Via Kafka 14, 00143 Roma (RM)</div>
+  <div class="grazie-addr">Via James Joyce 4, 00143 Roma (RM)</div>
   <div class="grazie-web">www.ardy-lab.it<br>ardy.documenti@gmail.com</div>
 </div>';
 
