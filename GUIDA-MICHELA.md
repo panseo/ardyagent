@@ -150,6 +150,15 @@ computer. Quelli da pubblicare "ora" invece non hanno questo limite.*
 
 💡 *Da telefono funziona benissimo: sei in laboratorio, scatti, pubblichi (o rimandi).*
 
+### ⚠️ Comunicazione straordinaria
+Sotto al pulsante normale c'è un secondo bottone arancione, **⚠ COMUNICAZIONE STRAORDINARIA**.
+Usalo quando durante un lavoro emerge un **imprevisto da segnalare al cliente prima di
+procedere** (es. un danno nascosto, una parte da ricostruire): non è un avanzamento normale.
+Scrivi 2-3 righe su cosa è successo, l'AI prepara un messaggio chiaro e rassicurante, e il
+cliente lo riceve come **avviso speciale** — email con oggetto dedicato e, sulla pagina della
+lavorazione, un riquadro arancione con l'icona ⚠. Ti viene chiesta una **conferma** prima
+dell'invio. Queste comunicazioni **non vanno sui social** e **non entrano nel reel**.
+
 ---
 
 ## 🎬 8. Il Reel finale della lavorazione
@@ -209,7 +218,7 @@ Non tutti arrivano dal sito. Per inserirne uno tu:
 
 Due strumenti automatici riempiono la dashboard senza che tu faccia niente:
 
-- **Il chatbot del sito**: i visitatori chiacchierano con "Ardy", l'assistente.
+- **Il chatbot del sito**: i visitatori chiacchierano con "Sole", l'assistente.
   Quando lasciano i contatti, **il cliente compare qui** e **tu ricevi un'email** di avviso.
   Il chatbot può anche **fissare un sopralluogo** nel tuo Google Calendar.
 
@@ -218,6 +227,45 @@ Due strumenti automatici riempiono la dashboard senza che tu faccia niente:
   **prenotare una visita in laboratorio**.
 
 Tu non devi fare nulla per questi: lavorano da soli e ti portano i contatti già pronti.
+
+💡 **Sole ti avvisa su WhatsApp.** Quando arriva un nuovo contatto, viene fissato un
+sopralluogo, oppure un cliente segnala un reclamo, un problema di pagamento o una richiesta
+particolare, Sole ti manda **un messaggio WhatsApp di riepilogo**, come una segretaria. Per
+riceverli, **saluta Sole su WhatsApp ogni mattina**: basta un "ciao" e per tutta la giornata
+gli avvisi ti arrivano senza costi.
+
+---
+
+## 💸 12. Clienti che non pagano (Morosi)
+
+Il pulsante **💸 MOROSI** (in alto a sinistra, sotto a GUIDA) apre la gestione dei clienti
+che non hanno saldato. È la tua "segretaria ferma ma corretta": prepara i solleciti al posto
+tuo, con il tono giusto e i riferimenti di legge, ma **decidi e approvi sempre tu** prima di inviare.
+
+**Come si fa:**
+1. **Aggiungi il caso**: scegli il cliente dal menù a tendina (nome, telefono, email e
+   collegamento al preventivo si compilano da soli) e indica **importo dovuto** e **scadenza**.
+   Puoi anche inserirlo del tutto a mano.
+2. **🔍 Verifica** (consigliato): controlla che ci sia un preventivo accettato e che il lavoro
+   risulti svolto. Se manca qualcosa di importante ti avvisa **prima** di sollecitare.
+3. **✍️ Genera**: scegli il **livello** e l'AI scrive il messaggio (4 livelli, sempre più fermi).
+4. **Rivedi il testo** (puoi modificarlo), scegli **WhatsApp e/o Email** e premi **Invia**.
+
+| Livello | Quando | Tono |
+|---|---|---|
+| **1** | Primo promemoria | Cordiale, ricorda la scadenza |
+| **2** | Dopo qualche giorno senza risposta | Fermo, richiama l'accordo |
+| **3** | Ancora niente | Formale, cita la normativa (+ PDF preventivo via email) |
+| **4** | Situazione grave | **Diffida formale** — da inviare a mano (raccomandata/PEC) |
+
+Ogni caso ha uno **stato** (Aperto, Pagato, Diffida, Archiviato) che cambi quando il cliente
+paga o la pratica si chiude.
+
+⚠️ *Il **livello 4 (diffida)** non parte da solo: l'AI prepara la bozza, ma la invii tu a mano.
+Per le diffide, una volta fattela controllare da un commercialista o avvocato.*
+
+💡 *Per i solleciti via WhatsApp valgono le regole di WhatsApp: se il cliente non ti ha scritto
+di recente, serve un modello approvato (ci pensiamo noi quando serve). L'**email** funziona sempre.*
 
 ---
 
