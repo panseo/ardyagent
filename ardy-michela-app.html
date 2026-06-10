@@ -1292,7 +1292,11 @@ async function salvaNuovoCliente() {
   btn.disabled = true;
   btn.textContent = 'SALVATAGGIO...';
 
+  // Cliente inserito a mano: serve un session_id nuovo (chiave del record nel CRM)
+  const newSessionId = 'manuale_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+
   const payload = {
+    session_id:    newSessionId,
     nome:          nome,
     cognome:       cognome,
     telefono:      document.getElementById('nc-telefono').value.trim(),
@@ -1309,7 +1313,8 @@ async function salvaNuovoCliente() {
   };
 
   try {
-    const res  = await fetch(UPDATE_URL, {
+    // ardy-save-lead.php fa INSERT (con upsert su session_id), a differenza di update-lead
+    const res  = await fetch(BASE_URL + '/ardy-save-lead.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -1326,7 +1331,7 @@ async function salvaNuovoCliente() {
         Zona: payload.zona, Mobile: payload.mobile,
         Budget: payload.budget, Stato: payload.stato,
         Data_followup: payload.data_followup, Note: payload.note,
-        Session_ID: data.session_id ?? ('MAN-' + Date.now()),
+        Session_ID: data.session_id ?? newSessionId,
       };
       allLeads.unshift(nuovoLead);
       renderList();
@@ -1355,7 +1360,7 @@ async function salvaNuovoCliente() {
       Zona: payload.zona, Mobile: payload.mobile,
       Budget: payload.budget, Stato: payload.stato,
       Data_followup: payload.data_followup, Note: payload.note,
-      Session_ID: 'MAN-' + Date.now(),
+      Session_ID: newSessionId,
     };
     allLeads.unshift(nuovoLead);
     renderList();
