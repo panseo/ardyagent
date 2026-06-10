@@ -51,6 +51,8 @@ ardyagent.ardy-lab.it/
 ├── ardy-guida-michela.html    # Guida d'uso dashboard (HTML stampabile) — linkata dalla dashboard
 ├── GUIDA-MICHELA.md           # Guida d'uso dashboard (versione testo)
 ├── ardy-notifica-michela.php  # Notifiche WhatsApp a Michela (Sole "segretaria") — libreria + endpoint n8n
+├── ardy-solleciti.php         # Solleciti clienti morosi (4 livelli) + invio WA/email — "segretaria antipatica"
+├── ardy-solleciti-system.txt  # Prompt AI "segretaria antipatica" per i solleciti
 ├── ardy-unsubscribe.php       # Gestione unsubscribe email
 ├── ardy-rate-limit/           # ⚠️ NON in repo — rate limiting
 ├── ardy-system.txt            # Prompt sistema agente AI (chatbot pubblico)
@@ -100,6 +102,15 @@ Fasi di lavorazione pubblicate per ogni cliente (usate anche per generare il ree
 
 ```
 id, session_id, fase_nome, testo_breve, testo_generato, foto_urls (JSON), created_at
+```
+
+#### `solleciti_pagamento`
+Casi di clienti morosi gestiti dalla "segretaria antipatica". Auto-creata al primo avvio.
+
+```
+id, session_id, telefono, nome_cliente, email, importo_dovuto, data_scadenza,
+numero_sollecito (0-4), data_ultimo_sollecito, risposta_cliente,
+stato (APERTO/PAGATO/DIFFIDA/ARCHIVIATO), preventivo_ref, note_interne, created_at, updated_at
 ```
 
 #### `libreria_fasi`
@@ -319,6 +330,34 @@ Integrato nella dashboard Michela. Genera documento proforma in formato identico
 
 ---
 
+## 💸 Solleciti clienti morosi ("segretaria antipatica")
+
+Modulo per gestire chi non paga. Pulsante **💸 MOROSI** in sidebar → modale dedicata.
+
+**File:** `ardy-solleciti.php` (API + DB + AI + invio) · `ardy-solleciti-system.txt` (prompt)
+
+### Flusso
+1. Michela inserisce il caso (nome, telefono, email, importo, scadenza, rif. preventivo, note). Opzionale: `session_id` del cliente per collegare il preventivo.
+2. **🔍 Verifica**: controlla il preventivo collegato (totale, stato accettato, condizioni di pagamento) e ricorda di confermare a mano firma/accettazione/acconto.
+3. **✍️ Genera**: l'AI scrive il messaggio del livello scelto (testo modificabile prima dell'invio).
+4. **✦ Invia**: WhatsApp e/o email; il livello e la data vengono registrati.
+
+### 4 livelli di escalation
+| Liv. | Tono | Canale | Riferimenti |
+|---|---|---|---|
+| 1 | Cordiale (promemoria) | WhatsApp | — |
+| 2 | Fermo | WA + email | art. 1326 c.c. (contratto) |
+| 3 | Formale | WA + email (PDF preventivo) | art. 1453 c.c., D.Lgs. 231/2002 (mora) |
+| 4 | Diffida formale | **Invio manuale** (racc. A/R / PEC) | art. 1454 c.c. — stato → DIFFIDA |
+
+> Michela approva sempre il testo prima dell'invio. Il livello 4 non parte in automatico:
+> genera la bozza di diffida da inviare a mano.
+
+### Config WhatsApp (in `ardy-config.php`)
+Riusa `WA_TOKEN` / `WA_PHONE_NUMBER_ID`. Per scrivere al moroso fuori dalla finestra 24h
+serve un **template Meta approvato**: `define('WA_TEMPLATE_SOLLECITO', '...')` (body 1 var `{{1}}`).
+Senza template, l'invio WA libero funziona solo se il cliente ha scritto nelle ultime 24h.
+
 ## 🖥 Dashboard Michela (ardy-michela-app.html)
 
 Single-file HTML con CSS esterno (`ardy-michela-app.css`).
@@ -523,10 +562,14 @@ Interesse concreto da parte della community di artigiani **Farò Arte**: possibi
 
 ## 📝 Note sessioni
 
-**Giugno 2026 — Sessione 8 (notifiche WhatsApp a Michela)**
+**Giugno 2026 — Sessione 8 (notifiche a Michela + segretaria antipatica)**
 - **Task 1 fatto**: Sole avvisa Michela su WhatsApp come una segretaria. Nuovo `ardy-notifica-michela.php` con doppio uso: libreria (`notificaMichela()` / `ardy_wa_send_michela()`, dedupe persistente su file) ed **endpoint HTTP** protetto da `WA_LOOKUP_SECRET`, così anche il ramo WhatsApp via n8n può avvisare Michela riusando lo stesso codice (invio via Cloud API).
 - `ardy-proxy.php`: dopo lead salvato e/o sopralluogo fissato parte una **notifica consolidata** (riepilogo nome/telefono/servizio/mobile/zona/budget/appuntamento/note). Aggiunto il tool **`avvisa_michela`** che Sole chiama per reclami, problemi di pagamento, richieste di modifica e richieste fuori standard; prompt aggiornato in `ardy-system.txt`.
 - Config nuova in `ardy-config.php`: `WA_TOKEN`, `WA_PHONE_NUMBER_ID`, `WA_MICHELA_NUMBER` (+ opzionali `WA_TEMPLATE_NOTIFICA`/`WA_TEMPLATE_LANG`). ⚠️ Per scrivere a Michela fuori dalla finestra 24h serve un **template Meta approvato**.
+- **Task 2 fatto**: modulo gestione clienti morosi. Nuovo `ardy-solleciti.php` (tabella `solleciti_pagamento` auto-creata; API lista/crea/aggiorna/elimina/verifica/genera/invia) + `ardy-solleciti-system.txt` (prompt "segretaria antipatica", 4 livelli con riferimenti normativi: artt. 1326/1453/1454 c.c., D.Lgs. 231/2002).
+- Dashboard: pulsante **💸 MOROSI** → modale con form nuovo caso, lista filtrabile per stato, verifica preventivo collegato, generazione AI del testo (modificabile), scelta canali WhatsApp/email e invio. Livelli 1-3 inviano; livello 4 = bozza diffida da inviare a mano (stato → DIFFIDA).
+- `.htaccess`: aggiunto `ardy-solleciti.php` alle pagine protette da Basic Auth.
+- ⚠️ Per inviare WhatsApp ai morosi fuori dalla finestra 24h serve un **template Meta approvato** (`WA_TEMPLATE_SOLLECITO` in `ardy-config.php`); riusa `WA_TOKEN`/`WA_PHONE_NUMBER_ID`.
 
 **Giugno 2026 — Sessione 7 (deploy via git sul server)**
 - **Deploy automatizzato via git** (chiuso il TODO storico). Prima i file si caricavano a mano via cPanel File Manager.

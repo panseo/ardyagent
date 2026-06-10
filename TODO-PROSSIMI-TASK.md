@@ -51,7 +51,9 @@ predisposto: basta impostare la costante quando il template è approvato.
 
 ---
 
-## TASK 2 — Segretaria antipatica: modulo WhatsApp per clienti morosi
+## TASK 2 — Segretaria antipatica: modulo WhatsApp per clienti morosi ✅ FATTO
+
+**Implementato:** `ardy-solleciti.php` (API: lista/crea/aggiorna/elimina/verifica/genera/invia + tabella `solleciti_pagamento` auto-creata + invio WhatsApp/email), `ardy-solleciti-system.txt` (prompt 4 livelli con riferimenti normativi), sezione dashboard (pulsante **💸 MOROSI** → modale con lista casi, form nuovo caso, verifica preventivo, generazione AI del testo modificabile, scelta canali e invio). Endpoint protetto da Basic Auth (`.htaccess`). Livelli 1-3 inviano via WA/email; livello 4 = bozza diffida da inviare a mano (stato → DIFFIDA). ⚠️ Lato server: per inviare WhatsApp ai morosi fuori dalle 24h serve un template Meta approvato (`WA_TEMPLATE_SOLLECITO`).
 
 **Cosa fa:**
 Modulo WhatsApp dedicato alla gestione dei clienti che non pagano o che trovano scuse. Tono progressivo, formale, con riferimenti normativi. Tutela Ardy senza essere volgare, ma senza fare sconti.

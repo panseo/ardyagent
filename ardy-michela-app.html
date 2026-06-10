@@ -37,6 +37,9 @@
           <button class="btn-nuovo-cliente" onclick="openGestioneLibreria()" style="flex:1;text-align:center;background:none;border:1px solid #444;color:#888;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">LIBRERIA</button>
           <button class="btn-nuovo-cliente" onclick="window.open('ardy-guida-michela.html','_blank')" style="flex:1;text-align:center;background:none;border:1px solid #444;color:#888;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">❓ GUIDA</button>
         </div>
+        <div style="display:flex;gap:5px;margin-top:5px;">
+          <button class="btn-nuovo-cliente" onclick="openMorosi()" style="flex:1;text-align:center;background:none;border:1px solid #8b3e3e;color:#d98a8a;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">💸 MOROSI</button>
+        </div>
       </div>
       <div class="search-box">
         <input type="text" id="search" placeholder="Cerca nome, zona, servizio..." oninput="filterLeads()">
@@ -2391,6 +2394,65 @@ function showToast(msg, type = '') {
 
 <!-- ═══════════════════════════════════════════════════════════ -->
 
+<!-- MODAL MOROSI / SOLLECITI -->
+<div class="modal-overlay" id="morosiOverlay" onclick="if(event.target===this)closeMorosi()">
+  <div class="modal-lg" style="width:820px" onclick="event.stopPropagation()">
+    <div class="modal-lg-head">
+      <h3>💸 CLIENTI MOROSI — SOLLECITI</h3>
+      <button class="modal-lg-close" onclick="closeMorosi()">✕</button>
+    </div>
+    <div class="modal-lg-body">
+
+      <!-- Form nuovo caso -->
+      <details id="morosiNuovoWrap" style="margin-bottom:16px;border:1px solid #333;border-radius:6px;padding:10px 14px;">
+        <summary style="cursor:pointer;color:#c8a96e;font-family:'DM Mono',monospace;font-size:12px;">➕ Nuovo caso moroso</summary>
+        <div class="dark-form-grid" style="margin-top:12px;">
+          <div class="dark-field"><label>Nome cliente *</label><input type="text" id="mo-nome" placeholder="Mario Rossi"></div>
+          <div class="dark-field"><label>Telefono</label><input type="tel" id="mo-telefono" placeholder="+39 340 000 0000"></div>
+          <div class="dark-field"><label>Email</label><input type="email" id="mo-email" placeholder="mario@email.it"></div>
+          <div class="dark-field"><label>Importo dovuto €</label><input type="text" id="mo-importo" placeholder="es. 450"></div>
+          <div class="dark-field"><label>Scadenza pagamento</label><input type="date" id="mo-scadenza"></div>
+          <div class="dark-field"><label>Session ID cliente (per collegare il preventivo)</label><input type="text" id="mo-session" placeholder="opzionale"></div>
+          <div class="dark-field full"><label>Riferimento preventivo / contratto</label><input type="text" id="mo-prev" placeholder="es. PRV-2026-0012, accettato il 10/03/2026"></div>
+          <div class="dark-field full"><label>Note interne</label><textarea id="mo-note" placeholder="Contesto, accordi, eventuali scuse del cliente..."></textarea></div>
+        </div>
+        <div style="text-align:right;margin-top:10px;">
+          <button class="btn-save" onclick="moCrea()">✦ AGGIUNGI CASO</button>
+        </div>
+      </details>
+
+      <!-- Filtro stato -->
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+        <button class="filter-chip active" data-mostato="" onclick="moSetFiltro(this)">TUTTI</button>
+        <button class="filter-chip" data-mostato="APERTO" onclick="moSetFiltro(this)">APERTI</button>
+        <button class="filter-chip" data-mostato="DIFFIDA" onclick="moSetFiltro(this)">DIFFIDA</button>
+        <button class="filter-chip" data-mostato="PAGATO" onclick="moSetFiltro(this)">PAGATI</button>
+        <button class="filter-chip" data-mostato="ARCHIVIATO" onclick="moSetFiltro(this)">ARCHIVIATI</button>
+      </div>
+
+      <div id="morosiList"><div class="storico-empty">CARICAMENTO...</div></div>
+
+      <!-- Pannello generazione/invio -->
+      <div id="moInvioPanel" style="display:none;margin-top:16px;border:1px solid #8b6f3e;border-radius:6px;padding:14px;background:#1a1712;">
+        <div style="font-family:'DM Mono',monospace;font-size:12px;color:#c8a96e;margin-bottom:8px;" id="moInvioTitolo">Sollecito</div>
+        <div id="moAvvisi" style="display:none;font-size:11px;color:#e0b070;background:#2a2310;border-radius:4px;padding:8px 10px;margin-bottom:10px;"></div>
+        <textarea id="moTesto" style="width:100%;min-height:200px;background:#0f0d0a;color:#e8e4dc;border:1px solid #444;border-radius:4px;padding:10px;font-family:'DM Mono',monospace;font-size:12px;line-height:1.5;" placeholder="Il testo generato comparirà qui ed è modificabile prima dell'invio."></textarea>
+        <div id="moCanali" style="display:flex;gap:16px;align-items:center;margin-top:10px;font-size:11px;color:#aaa;">
+          <label style="cursor:pointer;"><input type="checkbox" id="moCanaleWa" checked> WhatsApp</label>
+          <label style="cursor:pointer;"><input type="checkbox" id="moCanaleEmail"> Email</label>
+        </div>
+        <div style="text-align:right;margin-top:12px;display:flex;gap:8px;justify-content:flex-end;">
+          <button class="btn-cancel" onclick="moChiudiInvio()">CHIUDI</button>
+          <button class="btn-cancel" id="moBtnGen" onclick="moRigenera()" style="color:var(--accent);border-color:var(--accent2);">↻ RIGENERA</button>
+          <button class="btn-save" id="moBtnInvia" onclick="moInvia()">✦ INVIA SOLLECITO</button>
+        </div>
+      </div>
+
+      <div id="mo-result" style="display:none;margin-top:12px;padding:10px 14px;border-radius:4px;font-family:'DM Mono',monospace;font-size:11px;"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════════════════
 // PROFORMA — LOGIC
@@ -2681,6 +2743,248 @@ function pfStampa() {
   w.document.write(html);
   w.document.close();
   setTimeout(() => w.print(), 500);
+}
+</script>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// MOROSI / SOLLECITI ("segretaria antipatica")
+// ══════════════════════════════════════════════════════════
+const SOLLECITI_URL = BASE_URL + '/ardy-solleciti.php';
+let moFiltro   = '';     // stato filtrato ('' = tutti)
+let moCasi     = [];     // cache casi caricati
+let moCorrente = null;   // { id, livello } in fase di invio
+
+function openMorosi() {
+  document.getElementById('morosiOverlay').classList.add('open');
+  moChiudiInvio();
+  moCarica();
+}
+function closeMorosi() {
+  document.getElementById('morosiOverlay').classList.remove('open');
+}
+
+function moSetFiltro(btn) {
+  document.querySelectorAll('#morosiOverlay .filter-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  moFiltro = btn.dataset.mostato || '';
+  moRender();
+}
+
+function moMsg(testo, ok) {
+  const r = document.getElementById('mo-result');
+  r.style.display = 'block';
+  r.textContent = testo;
+  r.style.background = ok ? '#16361f' : '#3a1818';
+  r.style.color = ok ? '#7fe0a0' : '#e08080';
+  setTimeout(() => { r.style.display = 'none'; }, 5000);
+}
+
+async function moCarica() {
+  const list = document.getElementById('morosiList');
+  list.innerHTML = '<div class="storico-empty">CARICAMENTO...</div>';
+  try {
+    const res  = await fetch(SOLLECITI_URL + '?mode=lista');
+    const data = await res.json();
+    moCasi = (data && data.success) ? (data.items || []) : [];
+    moRender();
+  } catch (e) {
+    list.innerHTML = '<div class="storico-empty">⚠ Errore caricamento.</div>';
+  }
+}
+
+function moBadgeColore(stato) {
+  return { APERTO:'#e0b070', DIFFIDA:'#e08080', PAGATO:'#7fe0a0', ARCHIVIATO:'#888' }[stato] || '#aaa';
+}
+
+function moRender() {
+  const list = document.getElementById('morosiList');
+  const items = moCasi.filter(c => !moFiltro || c.stato === moFiltro);
+  if (!items.length) {
+    list.innerHTML = '<div class="storico-empty">NESSUN CASO — usa "Nuovo caso moroso" qui sopra</div>';
+    return;
+  }
+  list.innerHTML = items.map(c => {
+    const imp = c.importo_dovuto ? ('€ ' + Number(c.importo_dovuto).toLocaleString('it-IT', {minimumFractionDigits:2})) : '—';
+    const ultimo = c.data_ultimo_sollecito ? c.data_ultimo_sollecito.substring(0,10) : 'mai';
+    const liv = Number(c.numero_sollecito || 0);
+    return `<div style="border:1px solid #333;border-radius:6px;padding:12px 14px;margin-bottom:10px;background:#15130f;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+        <div>
+          <div style="font-family:'DM Sans',sans-serif;font-size:15px;color:#e8e4dc;">${escHtml(c.nome_cliente)}</div>
+          <div style="font-size:11px;color:#999;margin-top:3px;font-family:'DM Mono',monospace;">
+            ${imp} · scad. ${escHtml(c.data_scadenza || '—')} · solleciti inviati: ${liv}/4 · ultimo: ${escHtml(ultimo)}
+          </div>
+          ${c.telefono ? `<div style="font-size:11px;color:#777;margin-top:2px;">📞 ${escHtml(c.telefono)}</div>` : ''}
+          ${c.note_interne ? `<div style="font-size:11px;color:#8a8a8a;margin-top:4px;">📝 ${escHtml(c.note_interne)}</div>` : ''}
+        </div>
+        <span style="font-size:10px;font-family:'DM Mono',monospace;color:${moBadgeColore(c.stato)};border:1px solid ${moBadgeColore(c.stato)};border-radius:3px;padding:2px 6px;white-space:nowrap;">${escHtml(c.stato)}</span>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+        <button class="btn-cancel" style="font-size:10px;padding:4px 8px;" onclick="moVerifica(${c.id})">🔍 Verifica</button>
+        <select id="mo-liv-${c.id}" style="background:#0f0d0a;color:#ddd;border:1px solid #444;border-radius:4px;font-size:11px;padding:4px 6px;">
+          <option value="1">Liv. 1 — cordiale</option>
+          <option value="2">Liv. 2 — fermo</option>
+          <option value="3">Liv. 3 — formale</option>
+          <option value="4">Liv. 4 — diffida</option>
+        </select>
+        <button class="btn-save" style="font-size:10px;padding:4px 10px;" onclick="moGenera(${c.id})">✍️ Genera</button>
+        <select onchange="moCambiaStato(${c.id}, this.value)" style="background:#0f0d0a;color:#ddd;border:1px solid #444;border-radius:4px;font-size:11px;padding:4px 6px;margin-left:auto;">
+          ${['APERTO','PAGATO','DIFFIDA','ARCHIVIATO'].map(s => `<option value="${s}" ${c.stato===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+        <button class="btn-cancel" style="font-size:10px;padding:4px 8px;color:#e08080;border-color:#8b3e3e;" onclick="moElimina(${c.id})">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+  // preseleziona il livello suggerito (prossimo step)
+  items.forEach(c => {
+    const sel = document.getElementById('mo-liv-' + c.id);
+    if (sel) sel.value = String(Math.min(4, Number(c.numero_sollecito || 0) + 1));
+  });
+}
+
+async function moCrea() {
+  const nome = document.getElementById('mo-nome').value.trim();
+  if (!nome) { moMsg('Il nome del cliente è obbligatorio.', false); return; }
+  const payload = {
+    mode: 'crea',
+    nome_cliente: nome,
+    telefono: document.getElementById('mo-telefono').value.trim(),
+    email: document.getElementById('mo-email').value.trim(),
+    importo_dovuto: document.getElementById('mo-importo').value.trim(),
+    data_scadenza: document.getElementById('mo-scadenza').value,
+    session_id: document.getElementById('mo-session').value.trim(),
+    preventivo_ref: document.getElementById('mo-prev').value.trim(),
+    note_interne: document.getElementById('mo-note').value.trim(),
+  };
+  try {
+    const res  = await fetch(SOLLECITI_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (data.success) {
+      ['mo-nome','mo-telefono','mo-email','mo-importo','mo-session','mo-prev','mo-note'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('mo-scadenza').value = '';
+      document.getElementById('morosiNuovoWrap').open = false;
+      moMsg('Caso aggiunto.', true);
+      moCarica();
+    } else { moMsg(data.error || 'Errore.', false); }
+  } catch (e) { moMsg('Errore di rete.', false); }
+}
+
+async function moCambiaStato(id, stato) {
+  try {
+    await fetch(SOLLECITI_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode:'aggiorna', id, stato }) });
+    const c = moCasi.find(x => x.id == id); if (c) c.stato = stato;
+    moRender();
+  } catch (e) { moMsg('Errore aggiornamento stato.', false); }
+}
+
+async function moElimina(id) {
+  if (!confirm('Eliminare definitivamente questo caso?')) return;
+  try {
+    await fetch(SOLLECITI_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode:'elimina', id }) });
+    moCasi = moCasi.filter(x => x.id != id);
+    moRender();
+  } catch (e) { moMsg('Errore eliminazione.', false); }
+}
+
+async function moVerifica(id) {
+  try {
+    const res  = await fetch(SOLLECITI_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode:'verifica', id }) });
+    const data = await res.json();
+    if (data.success) {
+      alert((data.ok ? '✅ Controlli ok.\n\n' : '⚠️ Da verificare prima di sollecitare:\n\n') + (data.avvisi || []).map(a => '• ' + a).join('\n'));
+    } else { moMsg(data.error || 'Errore verifica.', false); }
+  } catch (e) { moMsg('Errore di rete.', false); }
+}
+
+async function moGenera(id) {
+  const livello = Number(document.getElementById('mo-liv-' + id).value);
+  moCorrente = { id, livello };
+  const panel = document.getElementById('moInvioPanel');
+  panel.style.display = 'block';
+  document.getElementById('moInvioTitolo').textContent = 'Sollecito livello ' + livello + (livello===4 ? ' — DIFFIDA (invio manuale)' : '');
+  document.getElementById('moTesto').value = '';
+  document.getElementById('moAvvisi').style.display = 'none';
+  document.getElementById('moCanaleEmail').checked = livello >= 2;
+  document.getElementById('moCanaleWa').checked = livello <= 3;
+  // Livello 4: si invia a mano → niente canali automatici
+  document.getElementById('moCanali').style.display = livello === 4 ? 'none' : 'flex';
+  document.getElementById('moBtnInvia').textContent = livello === 4 ? '✦ REGISTRA DIFFIDA' : '✦ INVIA SOLLECITO';
+  await moRunGenera();
+  panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+async function moRunGenera() {
+  if (!moCorrente) return;
+  const ta = document.getElementById('moTesto');
+  const btn = document.getElementById('moBtnGen');
+  ta.value = 'Generazione in corso...';
+  btn.disabled = true;
+  // mostra avvisi di verifica in linea
+  try {
+    const v = await (await fetch(SOLLECITI_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode:'verifica', id: moCorrente.id }) })).json();
+    if (v.success && v.avvisi && v.avvisi.length) {
+      const box = document.getElementById('moAvvisi');
+      box.style.display = 'block';
+      box.innerHTML = '⚠️ ' + v.avvisi.map(escHtml).join('<br>');
+    }
+  } catch (e) {}
+  try {
+    const res  = await fetch(SOLLECITI_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode:'genera', id: moCorrente.id, livello: moCorrente.livello }) });
+    const data = await res.json();
+    ta.value = data.success ? data.testo : ('⚠ ' + (data.error || 'Errore generazione.'));
+  } catch (e) { ta.value = '⚠ Errore di rete.'; }
+  btn.disabled = false;
+}
+function moRigenera() { moRunGenera(); }
+
+function moChiudiInvio() {
+  moCorrente = null;
+  const p = document.getElementById('moInvioPanel');
+  if (p) p.style.display = 'none';
+}
+
+async function moInvia() {
+  if (!moCorrente) return;
+  const testo = document.getElementById('moTesto').value.trim();
+  if (!testo) { moMsg('Testo vuoto.', false); return; }
+  const canali = [];
+  if (moCorrente.livello !== 4) {
+    if (document.getElementById('moCanaleWa').checked) canali.push('whatsapp');
+    if (document.getElementById('moCanaleEmail').checked) canali.push('email');
+    if (!canali.length) { moMsg('Seleziona almeno un canale.', false); return; }
+  }
+  const btn = document.getElementById('moBtnInvia');
+  btn.disabled = true; btn.textContent = 'INVIO...';
+  try {
+    const res  = await fetch(SOLLECITI_URL, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ mode:'invia', id: moCorrente.id, livello: moCorrente.livello, testo, canali }) });
+    const data = await res.json();
+    if (data.success) {
+      if (data.manuale) {
+        moMsg(data.message || 'Diffida registrata: inviala a mano.', true);
+      } else {
+        const parts = [];
+        if (data.esito) {
+          if (data.esito.whatsapp === true) parts.push('WhatsApp ✓');
+          if (data.esito.whatsapp === false) parts.push('WhatsApp ✗');
+          if (data.esito.email === true) parts.push('Email ✓');
+          if (data.esito.email === false) parts.push('Email ✗');
+        }
+        moMsg('Sollecito inviato. ' + parts.join(' · '), true);
+      }
+      moChiudiInvio();
+      moCarica();
+    } else {
+      const parts = [];
+      if (data.esito) {
+        if (data.esito.whatsapp === false) parts.push('WhatsApp fallito (numero/template?)');
+        if (data.esito.email === false) parts.push('Email fallita (indirizzo?)');
+      }
+      moMsg('Invio non riuscito. ' + (parts.join(' · ') || data.error || ''), false);
+    }
+  } catch (e) { moMsg('Errore di rete.', false); }
+  btn.disabled = false; btn.textContent = moCorrente && moCorrente.livello === 4 ? '✦ REGISTRA DIFFIDA' : '✦ INVIA SOLLECITO';
 }
 </script>
 </body>
