@@ -241,9 +241,13 @@
               <div class="lav-foto-count" id="lavVideoCount"></div>
               <div class="lav-preview" id="lavPreview"></div>
               <div class="lav-preview" id="lavVideoPreview"></div>
-              <button class="btn-pubblica" id="btnPubblica" onclick="pubblicaFase()">
+              <button class="btn-pubblica" id="btnPubblica" onclick="pubblicaFase('fase')">
                 ✦ PUBBLICA FASE + NOTIFICA CLIENTE
               </button>
+              <button class="btn-pubblica" id="btnComunicazione" onclick="pubblicaFase('comunicazione')" style="margin-top:10px;background:none;border:1px solid #e08a3c;color:#e08a3c;">
+                ⚠ COMUNICAZIONE STRAORDINARIA
+              </button>
+              <p style="font-size:11px;color:var(--text-dim);margin:6px 2px 0;">Usa la comunicazione straordinaria per un imprevisto da segnalare al cliente prima di procedere (non è un avanzamento, non va sui social).</p>
               <div class="lav-result" id="lavResult"></div>
 
               <div id="socialPanel" style="display:none;margin-top:18px;border-top:1px dashed var(--border);padding-top:16px;">
@@ -831,22 +835,30 @@ function handleSchedaFotoUpload(event) {
   });
 }
 
-async function pubblicaFase() {
+async function pubblicaFase(tipo) {
+  tipo = (tipo === 'comunicazione') ? 'comunicazione' : 'fase';
+  const isCom = (tipo === 'comunicazione');
   const fase  = document.getElementById('lavFase').value.trim();
   const note  = document.getElementById('lavNote').value.trim();
   const mobile = document.getElementById('lavMobile').value.trim() || (currentLead.Mobile ?? '');
 
-  if (!fase || !note) {
-    showToast('⚠ Inserisci fase e note', 'error');
+  // Per la fase serve il nome fase; per la comunicazione l'oggetto è facoltativo
+  if (!note || (!isCom && !fase)) {
+    showToast(isCom ? '⚠ Scrivi cosa è emerso' : '⚠ Inserisci fase e note', 'error');
+    return;
+  }
+  if (isCom && !confirm('Inviare una COMUNICAZIONE IMPORTANTE al cliente?\nArriverà come avviso speciale (email + pagina lavorazione), distinto da un normale aggiornamento.')) {
     return;
   }
 
-  const btn = document.getElementById('btnPubblica');
+  const btn = document.getElementById(isCom ? 'btnComunicazione' : 'btnPubblica');
+  const btnLabel = btn.textContent;
   btn.disabled = true;
-  btn.textContent = '⏳ PUBBLICAZIONE IN CORSO...';
+  btn.textContent = '⏳ INVIO IN CORSO...';
 
   const payload = {
     session_id:  currentLead.Session_ID,
+    tipo:        tipo,
     fase_nome:   fase,
     note_brevi:  note,
     mobile:      mobile,
@@ -874,7 +886,8 @@ async function pubblicaFase() {
       linkEl.style.display = 'inline';
 
       const result = document.getElementById('lavResult');
-      result.innerHTML = `<strong>✓ Pubblicato!</strong><br><br>${escHtml(data.testo)}<br><br><a href="${safeUrl(data.post_link)}" target="_blank" style="color:var(--accent);">→ ${escHtml(data.post_link)}</a>`;
+      const titolo = isCom ? '⚠ Comunicazione inviata!' : '✓ Pubblicato!';
+      result.innerHTML = `<strong>${titolo}</strong><br><br>${escHtml(data.testo)}<br><br><a href="${safeUrl(data.post_link)}" target="_blank" style="color:var(--accent);">→ ${escHtml(data.post_link)}</a>`;
       result.classList.add('visible');
 
       // Reset form
@@ -887,10 +900,15 @@ async function pubblicaFase() {
       lavVideoUrls = [];
       aggiornaContatoreVideo();
 
-      // Mostra il pannello social: la pubblicazione su FB/IG è ora manuale
-      mostraPannelloSocial(data);
-      aggiornaPannelloReel();
-      showToast('✓ Fase pubblicata e cliente notificato', 'success');
+      if (isCom) {
+        // Una comunicazione straordinaria non va sui social
+        showToast('⚠ Comunicazione inviata al cliente', 'success');
+      } else {
+        // Mostra il pannello social: la pubblicazione su FB/IG è ora manuale
+        mostraPannelloSocial(data);
+        aggiornaPannelloReel();
+        showToast('✓ Fase pubblicata e cliente notificato', 'success');
+      }
     } else {
       showToast('⚠ Errore: ' + (data.error ?? 'sconosciuto'), 'error');
     }
@@ -899,7 +917,7 @@ async function pubblicaFase() {
   }
 
   btn.disabled = false;
-  btn.textContent = '✦ PUBBLICA FASE + NOTIFICA CLIENTE';
+  btn.textContent = btnLabel;
 }
 
 // ─── REEL FINALE ──────────────────────────────────────────

@@ -101,8 +101,11 @@ file_pdf, stato, data_emissione, data_scadenza, created_at, updated_at
 Fasi di lavorazione pubblicate per ogni cliente (usate anche per generare il reel).
 
 ```
-id, session_id, fase_nome, testo_breve, testo_generato, foto_urls (JSON), created_at
+id, session_id, fase_nome, fase_tipo ('fase'|'comunicazione'), testo_breve, testo_generato,
+foto_urls (JSON), video_urls (JSON), created_at
 ```
+> `fase_tipo='comunicazione'` distingue le **comunicazioni straordinarie** (imprevisti segnalati
+> al cliente prima di procedere) dalle normali fasi di avanzamento. Le comunicazioni non entrano nel reel.
 
 #### `solleciti_pagamento`
 Casi di clienti morosi gestiti dalla "segretaria antipatica". Auto-creata al primo avvio.
@@ -571,6 +574,7 @@ Interesse concreto da parte della community di artigiani **Farò Arte**: possibi
 - `.htaccess`: aggiunto `ardy-solleciti.php` alle pagine protette da Basic Auth.
 - ⚠️ Per inviare WhatsApp ai morosi fuori dalla finestra 24h serve un **template Meta approvato** (`WA_TEMPLATE_SOLLECITO` in `ardy-config.php`); riusa `WA_TOKEN`/`WA_PHONE_NUMBER_ID`.
 - **Contesto fattuale all'agente** (rinforzo): in fase di generazione l'AI riceve preventivo (numero/totale/stato/condizioni), **fasi di lavorazione** (prova del lavoro svolto) e **storico WhatsApp** del cliente. Importi e date restano **deterministici** (li fissa il codice, l'AI non li ricalcola). La verifica distingue **bloccanti** (importo mancante, preventivo non accettato → fermano la generazione, con possibilità di "Genera comunque") da **avvisi** (da controllare a mano).
+- **Task 4 fatto — Comunicazioni straordinarie**: secondo bottone **⚠ COMUNICAZIONE STRAORDINARIA** nella sezione lavorazione. Stesso endpoint `ardy-pubblica-lavorazione.php` con `tipo='comunicazione'`: blocco arancione + icona ⚠ sul sito, email con oggetto/tono dedicati, colonna `fasi.fase_tipo`, prompt Claude apposito, niente social; il reel esclude le comunicazioni.
 
 **Giugno 2026 — Sessione 7 (deploy via git sul server)**
 - **Deploy automatizzato via git** (chiuso il TODO storico). Prima i file si caricavano a mano via cPanel File Manager.

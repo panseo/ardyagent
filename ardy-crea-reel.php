@@ -99,7 +99,8 @@ try {
 // -- Raccogli le foto dalle fasi -------------------------------------------
 try {
     $db   = ardyDB();
-    $stmt = $db->prepare("SELECT fase_nome, foto_urls, testo_generato FROM fasi WHERE session_id = ? ORDER BY created_at ASC");
+    // Esclude le comunicazioni straordinarie: nel reel vanno solo le fasi di avanzamento
+    $stmt = $db->prepare("SELECT fase_nome, foto_urls, testo_generato FROM fasi WHERE session_id = ? AND (fase_tipo IS NULL OR fase_tipo <> 'comunicazione') ORDER BY created_at ASC");
     $stmt->execute([$sessionId]);
     $rows = $stmt->fetchAll();
     if ($mobile === '') {
