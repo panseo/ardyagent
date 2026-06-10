@@ -134,7 +134,13 @@ Template da far approvare (esempio):
 
 ---
 
-## TASK 4 — Comunicazioni straordinarie al cliente (non una fase normale)
+## TASK 4 — Comunicazioni straordinarie al cliente (non una fase normale) ✅ FATTO
+
+**Implementato:** stesso endpoint `ardy-pubblica-lavorazione.php` con parametro `tipo` ('fase' | 'comunicazione'). Per le comunicazioni: blocco sul sito con bordo arancione + icona ⚠ + intestazione "Comunicazione importante"; email con oggetto/tono dedicati ("Aggiornamento importante…"); colonna `fasi.fase_tipo` (migrazione idempotente); testo generato da Claude con prompt apposito (spiega l'imprevisto, chiede approvazione se serve, niente social). Reel aggiornato per escludere le comunicazioni. Dashboard: secondo bottone **⚠ COMUNICAZIONE STRAORDINARIA** accanto a "Pubblica fase" (con conferma).
+
+---
+
+## TASK 4 (originale) — Comunicazioni straordinarie al cliente (non una fase normale)
 
 **Caso d'uso reale:** durante un restauro emerge un imprevisto (es. restauro precedente pasticciato, strutturalmente solido ma esteticamente da rifare → serve ricostruire la parte mancante con stampo da stampa 3D). Va comunicato al cliente PRIMA di procedere. Non è un avanzamento, è una comunicazione importante.
 
