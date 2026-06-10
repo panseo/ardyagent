@@ -12,6 +12,19 @@ $ok           = false;
 // Se il login è già configurato, non permettere di sovrascriverlo da qui.
 $giaConfigurato = file_exists($htpasswdPath);
 
+// SICUREZZA: questo è uno strumento di bootstrap una-tantum. Una volta creato
+// il login (.htpasswd esiste), il file deve essere inerte: il deploy lo
+// ripristina ad ogni push (vedi .cpanel.yml) e non è dietro Basic Auth, quindi
+// senza questo blocco resterebbe una pagina pubblica potenzialmente abusabile.
+// Rispondi 403 e non mostrare/eseguire nulla finché il login esiste.
+if ($giaConfigurato) {
+    header('X-Robots-Tag: noindex, nofollow');
+    http_response_code(403);
+    echo 'Login già configurato. Questo strumento è disabilitato. '
+       . 'Per sicurezza, cancella ardy-setup-login.php dal server.';
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$giaConfigurato) {
     $utente   = trim($_POST['utente'] ?? '');
     $password = (string)($_POST['password'] ?? '');
