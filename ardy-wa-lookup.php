@@ -120,14 +120,29 @@ function ardy_riepilogo_settimana(PDO $db): string {
         }
     } catch (PDOException $e) { /* salta */ }
 
-    // Follow-up / sopralluoghi in agenda (prossimi)
+    // Sopralluoghi fissati (data VERA dal calendario, salvata in sopralluogo_at)
+    try {
+        $rows = $db->query("SELECT nome, cognome, zona, sopralluogo_at FROM clienti
+                             WHERE sopralluogo_at IS NOT NULL AND sopralluogo_at >= NOW()
+                          ORDER BY sopralluogo_at ASC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
+        if ($rows) {
+            $out[] = "SOPRALLUOGHI FISSATI (prossimi):";
+            foreach ($rows as $r) {
+                $nome = trim(($r['nome'] ?? '') . ' ' . ($r['cognome'] ?? '')) ?: '(senza nome)';
+                $quando = date('d/m/Y H:i', strtotime((string)$r['sopralluogo_at']));
+                $out[] = "- {$quando} · {$nome}" . ($r['zona'] ? " · " . $r['zona'] : '');
+            }
+        }
+    } catch (PDOException $e) { /* colonna assente o altro: salta */ }
+
+    // Follow-up generici in agenda (campo note follow-up del CRM)
     try {
         $rows = $db->query("SELECT nome, cognome, zona, data_followup FROM clienti
                              WHERE data_followup IS NOT NULL AND data_followup <> ''
                                AND data_followup >= CURDATE()
                           ORDER BY data_followup ASC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
         if ($rows) {
-            $out[] = "FOLLOW-UP / APPUNTAMENTI in agenda:";
+            $out[] = "FOLLOW-UP in agenda:";
             foreach ($rows as $r) {
                 $nome = trim(($r['nome'] ?? '') . ' ' . ($r['cognome'] ?? '')) ?: '(senza nome)';
                 $out[] = "- " . $r['data_followup'] . " · {$nome}" . ($r['zona'] ? " · " . $r['zona'] : '');

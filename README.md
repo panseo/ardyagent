@@ -82,8 +82,11 @@ Lead e clienti con dati lavorazione.
 ```
 id, session_id, nome, cognome, telefono, email,
 servizio, mobile, zona, budget, indirizzo, stato, note,
-data_followup, wp_post_id, wp_post_link, ip_address
+data_followup, wp_post_id, wp_post_link, ip_address,
+sopralluogo_at (data/ora reale del sopralluogo), gcal_event_id (id evento Google Calendar)
 ```
+> `sopralluogo_at` + `gcal_event_id` (auto-creati) salvano la data vera dell'appuntamento e
+> l'id dell'evento: servono per mostrare le date corrette nei riepiloghi e per **spostare** i sopralluoghi.
 
 Campi chiave per il widget lavorazione:
 - `telefono` — usato per verifica identità cliente
@@ -565,6 +568,11 @@ Interesse concreto da parte della community di artigiani **Farò Arte**: possibi
 ---
 
 ## 📝 Note sessioni
+
+**Giugno 2026 — Sessione 9 (modalità titolare WhatsApp + spostamento sopralluoghi)**
+- **Modalità titolare**: `ardy-wa-lookup.php` riconosce il numero di Michela (`WA_MICHELA_NUMBER`) → `mode=titolare`. Sole le fa da assistente personale con un **riepilogo operativo dal CRM** (nuovi lead 7gg, quadro per stato, lavori in corso, sopralluoghi fissati, fasi, morosi). Niente flusso lead.
+- **Spostamento sopralluoghi**: la data vera dell'appuntamento e l'id evento Google ora si salvano nel CRM (`sopralluogo_at`, `gcal_event_id`, auto-creati). Nuove funzioni in `ardy-gcal.php` (`gcal_is_slot_free`, `gcal_update_event`) e nuovo tool **`sposta_appuntamento`** in `ardy-proxy.php`: Sole verifica la disponibilità, sposta l'evento, aggiorna il CRM e avvisa Michela. Risolve anche la confusione sulle date nei riepiloghi (ora legge la data reale).
+- **Fix nuovo cliente da dashboard**: la creazione manuale ora genera un `session_id` e usa `ardy-save-lead.php` (INSERT) invece di `ardy-update-lead.php` (era "session_id mancante").
 
 **Giugno 2026 — Sessione 8 (notifiche a Michela + segretaria antipatica)**
 - **Task 1 fatto**: Sole avvisa Michela su WhatsApp come una segretaria. Nuovo `ardy-notifica-michela.php` con doppio uso: libreria (`notificaMichela()` / `ardy_wa_send_michela()`, dedupe persistente su file) ed **endpoint HTTP** protetto da `WA_LOOKUP_SECRET`, così anche il ramo WhatsApp via n8n può avvisare Michela riusando lo stesso codice (invio via Cloud API).

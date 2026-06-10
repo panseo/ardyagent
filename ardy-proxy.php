@@ -24,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-gcal.php';
+require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-notifica-michela.php';
 require_once __DIR__ . '/phpmailer/src/PHPMailer.php';
 require_once __DIR__ . '/phpmailer/src/SMTP.php';
@@ -225,6 +226,18 @@ $tools = [
         ]
     ],
     [
+        'name'        => 'sposta_appuntamento',
+        'description' => 'Sposta un sopralluogo GIÀ fissato a una nuova data/ora. Usalo quando un cliente che ha già un appuntamento chiede di spostarlo. Prima verifica la disponibilità del nuovo periodo con ottieni_disponibilita_calendario e fatti confermare dal cliente un orario preciso; poi chiama questo strumento. Identifica il cliente col suo numero di telefono.',
+        'input_schema' => [
+            'type'       => 'object',
+            'properties' => [
+                'telefono' => ['type' => 'string', 'description' => 'Numero di telefono con cui il cliente è registrato (serve a ritrovare il suo appuntamento)'],
+                'start'    => ['type' => 'string', 'description' => 'Nuova data e ora di inizio, ISO 8601. Es: 2026-06-20T11:00:00+02:00']
+            ],
+            'required' => ['telefono', 'start']
+        ]
+    ],
+    [
         'name'        => 'avvisa_michela',
         'description' => 'Invia a Michela una notifica WhatsApp breve, come farebbe una segretaria efficiente. Usalo SOLO quando emerge qualcosa che Michela deve sapere subito e che NON è già coperto dal salvataggio lead/appuntamento: un reclamo o insoddisfazione, un problema di pagamento, una richiesta di modifica a un lavoro già concordato, oppure una richiesta fuori standard (tempi urgenti, lavoro particolare). Non usarlo per conversazioni di routine.',
         'input_schema' => [
@@ -288,6 +301,26 @@ function callAnthropic(array $messages, string $system, array $tools, string $ap
         return ['error' => 'curl', 'message' => $err];
     }
     return json_decode($response, true) ?? ['error' => 'json'];
+}
+
+// -----------------------------------------------------------
+// Assicura le colonne per il sopralluogo sulla tabella clienti (idempotente)
+//   sopralluogo_at = data/ora dell'appuntamento · gcal_event_id = id evento Google
+// -----------------------------------------------------------
+function ardy_ensure_sopralluogo_cols(PDO $db): void {
+    static $done = false;
+    if ($done) return;
+    try {
+        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'gcal_event_id'")->fetch()) {
+            $db->exec("ALTER TABLE clienti ADD COLUMN gcal_event_id VARCHAR(128) NULL");
+        }
+        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'sopralluogo_at'")->fetch()) {
+            $db->exec("ALTER TABLE clienti ADD COLUMN sopralluogo_at DATETIME NULL");
+        }
+    } catch (PDOException $e) {
+        error_log('ARDY ENSURE COLS ERROR: ' . $e->getMessage());
+    }
+    $done = true;
 }
 
 // -----------------------------------------------------------
@@ -359,8 +392,10 @@ $maxIterations = 5;
 $iteration     = 0;
 $bookingMade   = false;   // diventa true se viene fissato un sopralluogo
 $bookingWhen   = null;    // DateTime dell'appuntamento
+$bookingEventId = null;   // id evento Google Calendar appena creato
 $leadSaved     = false;   // diventa true quando il lead è salvato nel CRM
 $leadData      = [];      // ultimi dati lead salvati (per il riepilogo a Michela)
+$rescheduleNote = null;   // riepilogo per Michela se un appuntamento viene spostato
 
 while ($iteration < $maxIterations) {
     $iteration++;
@@ -433,6 +468,8 @@ while ($iteration < $maxIterations) {
                         if ($r) {
                             $bookingMade = true;
                             $bookingWhen = $startDt;
+                            // gcal_create_event ritorna l'evento completo: tieni l'id per poterlo spostare in futuro
+                            $bookingEventId = is_array($r) ? ($r['id'] ?? null) : null;
                         }
                         $toolResult = $r
                             ? 'Appuntamento creato con successo nel calendario di Michela.'
@@ -470,6 +507,60 @@ while ($iteration < $maxIterations) {
                     $leadData  = $toolInput;   // per il riepilogo WhatsApp a Michela
                 }
                 $toolResult = isset($r['success']) ? 'Cliente salvato nel CRM.' : 'Errore CRM: ' . json_encode($r);
+
+            } elseif ($toolName === 'sposta_appuntamento') {
+                $tel   = preg_replace('/\D+/', '', (string)($toolInput['telefono'] ?? ''));
+                $start = $toolInput['start'] ?? '';
+                if ($tel === '' || $start === '') {
+                    $toolResult = 'Errore: servono il telefono del cliente e la nuova data/ora.';
+                } else {
+                    try {
+                        $startDt = new DateTime($start);
+                        if ($startDt < new DateTime('now')) {
+                            $toolResult = 'La nuova data è nel passato: chiedi al cliente una data futura.';
+                        } else {
+                            // Trova il cliente e l'evento collegato tramite le ultime 9 cifre del telefono
+                            $db = ardyDB();
+                            ardy_ensure_sopralluogo_cols($db);
+                            $q = $db->prepare(
+                                "SELECT session_id, nome, cognome, gcal_event_id FROM clienti
+                                  WHERE REPLACE(REPLACE(REPLACE(REPLACE(telefono,' ',''),'+',''),'-',''),'.','') LIKE :p
+                                    AND gcal_event_id IS NOT NULL AND gcal_event_id <> ''
+                               ORDER BY updated_at DESC, id DESC LIMIT 1"
+                            );
+                            $q->execute([':p' => '%' . substr($tel, -9)]);
+                            $cli = $q->fetch(PDO::FETCH_ASSOC);
+
+                            if (!$cli) {
+                                $toolResult = 'Non trovo un appuntamento collegato a questo numero. Raccogli la richiesta e di\' che Michela ricontatta il cliente per riorganizzare.';
+                            } else {
+                                $dateStr = $startDt->format('Y-m-d');
+                                $timeStr = $startDt->format('H:i');
+                                $free = gcal_is_slot_free($dateStr, $timeStr, 2);
+                                if ($free === false) {
+                                    $toolResult = 'Quel nuovo orario è già occupato. Proponi al cliente un altro slot tra quelli liberi.';
+                                } else {
+                                    // free === true (libero) oppure null (impossibile verificare): procediamo comunque
+                                    $upd = gcal_update_event($cli['gcal_event_id'], $dateStr, $timeStr, 2);
+                                    if (!$upd) {
+                                        $toolResult = 'Non sono riuscita a spostare l\'appuntamento sul calendario. Riprova o di\' che Michela ricontatta.';
+                                    } else {
+                                        $db->prepare("UPDATE clienti SET sopralluogo_at = :dt, stato = 'SOPRALLUOGO', updated_at = NOW() WHERE session_id = :sid")
+                                           ->execute([':dt' => $startDt->format('Y-m-d H:i:s'), ':sid' => $cli['session_id']]);
+                                        $bookingMade = true;
+                                        $bookingWhen = $startDt;
+                                        $nomeCli = trim(($cli['nome'] ?? '') . ' ' . ($cli['cognome'] ?? '')) ?: 'cliente';
+                                        $rescheduleNote = "📅 Sopralluogo SPOSTATO: " . $nomeCli . " → " . ardy_data_ita($startDt);
+                                        $toolResult = 'Appuntamento spostato con successo al nuovo orario nel calendario di Michela.';
+                                    }
+                                }
+                            }
+                        }
+                    } catch (Exception $e) {
+                        error_log('ARDY SPOSTA APPUNTAMENTO ERROR: ' . $e->getMessage());
+                        $toolResult = 'Errore tecnico nello spostamento. Chiedi al cliente di riprovare.';
+                    }
+                }
 
             } elseif ($toolName === 'avvisa_michela') {
                 $msg = trim((string) ($toolInput['messaggio'] ?? ''));
@@ -600,11 +691,33 @@ if ($bookingMade && $bookingWhen instanceof DateTime && $userEmail && filter_var
 }
 
 // -----------------------------------------------------------
-// NOTIFICA WHATSAPP A MICHELA (lead salvato e/o sopralluogo fissato)
+// PERSISTE L'APPUNTAMENTO NEL CRM (data + id evento Google)
+// Così i riepiloghi mostrano la data vera e l'appuntamento è spostabile in futuro.
+// -----------------------------------------------------------
+if ($bookingEventId && $bookingWhen instanceof DateTime) {
+    try {
+        $db = ardyDB();
+        ardy_ensure_sopralluogo_cols($db);
+        $db->prepare("UPDATE clienti SET gcal_event_id = :eid, sopralluogo_at = :dt, updated_at = NOW() WHERE session_id = :sid")
+           ->execute([
+               ':eid' => $bookingEventId,
+               ':dt'  => $bookingWhen->format('Y-m-d H:i:s'),
+               ':sid' => $cleanSession,
+           ]);
+    } catch (PDOException $e) {
+        error_log('ARDY SOPRALLUOGO PERSIST ERROR: ' . $e->getMessage());
+    }
+}
+
+// -----------------------------------------------------------
+// NOTIFICA WHATSAPP A MICHELA (lead salvato, sopralluogo fissato o spostato)
 // Sole come segretaria: riepilogo breve e azionabile. Dedupe sul contenuto,
 // così non si ripete su ogni messaggio della stessa sessione.
 // -----------------------------------------------------------
-if ($leadSaved || $bookingMade) {
+if ($rescheduleNote !== null) {
+    // Appuntamento spostato: avviso dedicato
+    notificaMichela($rescheduleNote, 'spostato:' . $cleanSession . ':' . md5($rescheduleNote));
+} elseif ($leadSaved || $bookingMade) {
     $nomeCompleto = trim(($leadData['nome'] ?? '') . ' ' . ($leadData['cognome'] ?? ''));
     if ($nomeCompleto === '') $nomeCompleto = 'Nuovo contatto';
     $tel = $leadData['telefono'] ?? $userPhone ?? '';
