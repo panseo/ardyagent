@@ -305,7 +305,7 @@ Michela è in **regime forfettario** — IVA sempre 0%, dicitura legale automati
 ### Dati azienda fissi
 ```
 Ardy di Michela Panella
-Via Kafka 14, 00143 Roma (RM)
+Via James Joyce 4, 00143 Roma (RM)
 P.IVA: 17633931005
 C.F.: PNLMHL99A48H501E
 Email: ardy.documenti@gmail.com
