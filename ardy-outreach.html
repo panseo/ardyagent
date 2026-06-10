@@ -570,6 +570,10 @@ function filterContacts() {
   renderList(q);
 }
 
+// Escape per output in HTML: i contatti possono arrivare da ricerca OSM o
+// inserimento manuale, quindi nome/stato/ecc. non sono fidati (anti-XSS).
+function escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+
 function renderList(q='') {
   const list = document.getElementById('contactList');
   let filtered = allContacts;
@@ -577,10 +581,10 @@ function renderList(q='') {
   if (!filtered.length) { list.innerHTML = '<div class="empty-list">Nessun contatto trovato</div>'; return; }
   list.innerHTML = filtered.map(c => `
     <div class="contact-card ${currentContact?.id==c.id?'selected':''}" onclick="selectContact(${c.id})">
-      <div class="contact-name">${c.nome}</div>
+      <div class="contact-name">${escHtml(c.nome)}</div>
       <div class="contact-meta">
-        <span class="contact-cat">${c.categoria.replace('_',' ')}</span>
-        <span class="stato-badge stato-${c.stato}">${c.stato.replace('_',' ')}</span>
+        <span class="contact-cat">${escHtml(c.categoria.replace('_',' '))}</span>
+        <span class="stato-badge stato-${escHtml(c.stato)}">${escHtml(c.stato.replace('_',' '))}</span>
       </div>
     </div>`).join('');
 }
@@ -672,7 +676,7 @@ function closeMobileDetail() {
 function renderTplOptions() {
   const selects = [document.getElementById('tplSelect'), document.getElementById('campTplSelect')];
   const opts = '<option value="">— Seleziona template —</option>' +
-    allTemplates.map(t => `<option value="${t.id}">${t.nome}</option>`).join('');
+    allTemplates.map(t => `<option value="${t.id}">${escHtml(t.nome)}</option>`).join('');
   selects.forEach(s => { if(s) s.innerHTML = opts; });
 }
 
@@ -732,8 +736,8 @@ function renderCampContacts(cat, contacts) {
     <label class="check-item">
       <input type="checkbox" class="camp-check" value="${c.id}" ${c.email?'':'disabled'} onchange="updateCampCount()">
       <div style="flex:1">
-        <div class="check-nome">${c.nome} ${!c.email?'<span style="color:var(--red);font-size:11px;">(no email)</span>':''}</div>
-        <div class="check-email">${c.email||'—'} · <span class="stato-badge stato-${c.stato}">${c.stato.replace('_',' ')}</span></div>
+        <div class="check-nome">${escHtml(c.nome)} ${!c.email?'<span style="color:var(--red);font-size:11px;">(no email)</span>':''}</div>
+        <div class="check-email">${escHtml(c.email||'—')} · <span class="stato-badge stato-${escHtml(c.stato)}">${escHtml(c.stato.replace('_',' '))}</span></div>
       </div>
     </label>`).join('');
   updateCampCount();
@@ -778,8 +782,8 @@ function renderTplList() {
   el.innerHTML = allTemplates.map(t => `
     <div class="tpl-list-item">
       <div>
-        <div class="tpl-nome">${t.nome}</div>
-        <div class="tpl-cat">${t.categoria||'TUTTE LE CATEGORIE'}</div>
+        <div class="tpl-nome">${escHtml(t.nome)}</div>
+        <div class="tpl-cat">${escHtml(t.categoria||'TUTTE LE CATEGORIE')}</div>
       </div>
       <div class="tpl-actions">
         <button class="btn-sm" onclick="openTplModal(${t.id})">MODIFICA</button>
@@ -880,8 +884,8 @@ function renderSearchResults(zona) {
     <label class="check-item">
       <input type="checkbox" class="lead-check" data-i="${i}" ${c.exists?'disabled':''} onchange="updateLeadCount()">
       <div style="flex:1">
-        <div class="check-nome">${c.nome} ${c.exists?'<span style="color:var(--orange);font-size:11px;">(già presente)</span>':''}</div>
-        <div class="check-email">${[c.indirizzo, c.telefono, c.sito].filter(Boolean).join(' · ')||'—'}</div>
+        <div class="check-nome">${escHtml(c.nome)} ${c.exists?'<span style="color:var(--orange);font-size:11px;">(già presente)</span>':''}</div>
+        <div class="check-email">${escHtml([c.indirizzo, c.telefono, c.sito].filter(Boolean).join(' · ')||'—')}</div>
       </div>
     </label>`).join('');
   updateLeadCount();
