@@ -165,3 +165,67 @@ Template da far approvare (esempio):
 - Entrambi i task sono indipendenti, possono essere sviluppati separatamente
 - Task 1 è più veloce (~2-3 ore di sviluppo)
 - Task 2 richiede nuovo DB + UI dashboard + logica normativa (~1 giornata)
+
+---
+
+# BACKLOG SICUREZZA & PERFORMANCE (checkup giugno 2026)
+
+Già FATTI e in produzione (`main`): hardening `ardy-setup-login.php` (403 dopo setup),
+anti-CSRF cambio stato preventivo (POST + header), difesa in profondità auth su
+outreach/solleciti (`ardy-auth.php`), firma HMAC obbligatoria webhook WhatsApp,
+fix stored XSS in `ardy-outreach.html`, rimozione information disclosure (errori
+generici al client), anti-SSRF su email-finder/crea-reel (`ardy-net.php`),
+informativa privacy GDPR + firma nel preventivo PDF.
+
+## Sicurezza — rimasti
+
+### Priorità ALTA (da fare per primo)
+- **`ardy-proxy.php` — rate-limit basato su header falsificabili.** `X-Forwarded-For`/
+  `CF-Connecting-IP` sono fidati ciecamente: chi non passa da Cloudflare può falsificarli
+  e azzerare il rate-limit. Impatto: **costo** (ogni richiesta che passa chiama l'API
+  Anthropic a pagamento). Fix: fidarsi dell'header solo se `REMOTE_ADDR` è in un range
+  Cloudflare noto, altrimenti usare `REMOTE_ADDR`.
+
+### Priorità MEDIA
+- **`ardy-save-lead.php` — nessun rate-limit.** Endpoint pubblico: si può riempire la
+  tabella `clienti` di lead spazzatura. Fix: rate-limit per IP/sessione.
+- **Upload dir eseguibili.** `ARDY_UPLOAD_DIR`, `reels/`, `preventivi_pdf/`: aggiungere un
+  `.htaccess` con motore PHP disattivato (`php_flag engine off` / `RemoveHandler`) o
+  spostare fuori dalla web root.
+- **PII in `ardy-wa-log.json`.** Salva numero/nome/testo in chiaro e cresce con input
+  webhook. Ridurre i dati loggati + rotazione/retention.
+
+### Priorità BASSA
+- **OAuth Google senza `state`** (`ardy-gcal-auth.php`): aggiungere parametro `state`
+  casuale verificato (CSRF su OAuth).
+- **`get_stats` SQL** (`ardy-outreach-api.php`): unica query con interpolazione
+  (`WHERE categoria='$cat'`, oggi da array interno → non sfruttabile). Parametrizzare.
+- **`mode=download` preventivo**: serve qualsiasi PDF della cartella a chi è dietro Basic
+  Auth (no ownership). Basso rischio (utente unico), ma da legare alla sessione se servisse.
+
+## Performance — rimasti (da audit dedicato)
+
+### Alto impatto / basso sforzo
+- **Ricerca telefono full-scan** (`ardy-wa-lookup.php`, `ardy-proxy.php`):
+  `REPLACE(...) LIKE '%...'` impedisce l'uso di indici sul percorso WhatsApp.
+  Fix: colonna `telefono_last9` normalizzata + indice, match esatto.
+- **DDL su ogni request** (`SHOW COLUMNS`/`ALTER`/`CREATE TABLE IF NOT EXISTS` in
+  `ardy-proxy.php`, `ardy-stats.php`, `ardy-pubblica-lavorazione.php`,
+  `ardy-libreria-api.php`, `ardy-reel-template-api.php`): spostare in una migrazione
+  one-shot, togliere dal path di richiesta.
+- **`ardy-crm-api.php`**: `SELECT *` su `clienti` senza `LIMIT`. Selezionare solo le
+  colonne usate + paginazione + indice su `updated_at`.
+- **Quick-win** (1-2 righe): `finfo::file()` invece di `buffer(file_get_contents())` in
+  `ardy-lead-foto.php`; memoizzare in `static` i system-prompt riletti da disco
+  (`ardy-wa-lookup.php`, `ardy-proxy.php`).
+
+### Da pianificare
+- Cache PDF preventivo per content-hash + memoizzazione logo base64 (`ardy-preventivo.php`).
+- Estrarre JS/CSS dalle HTML monolitiche + header cache/cache-busting.
+- Rate-limit su APCu/Redis invece che su file (`ardy-proxy.php`).
+- Unificare `dbConnect()` (mysqli) di `ardy-preventivo.php` sul PDO di `ardyDB()`.
+
+## Termini & Condizioni / Privacy
+- Aggiornare la pagina **termini e condizioni su WordPress** (ardy-lab.it), coerente con
+  l'informativa GDPR ora presente nel preventivo PDF. (Testo da preparare e incollare;
+  fuori da questo repo.)
