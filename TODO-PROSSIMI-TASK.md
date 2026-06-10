@@ -177,14 +177,33 @@ fix stored XSS in `ardy-outreach.html`, rimozione information disclosure (errori
 generici al client), anti-SSRF su email-finder/crea-reel (`ardy-net.php`),
 informativa privacy GDPR + firma nel preventivo PDF.
 
+## Protezioni a livello infrastruttura (server VPS)
+
+Il server fornisce già, **a monte dell'applicazione**, diversi livelli di difesa.
+Vanno tenuti presenti perché mitigano (anche se non eliminano) alcuni dei punti
+applicativi qui sotto:
+- **OVH Edge Network Firewall + Anti-DDoS** — filtraggio L3/L4 e mitigazione DDoS
+  volumetrici all'ingresso della rete OVH.
+- **Fail2ban** — ban automatico degli IP dopo tentativi ripetuti/falliti
+  (brute-force su login, abusi).
+- **ModSecurity (WAF)** — regole applicative contro pattern di SQLi/XSS/LFI ecc.
+- **mod_hulk / HULK (cPanel)** — protezione anti brute-force sui login HTTP.
+
+Effetto sui punti sotto: **brute-force, DoS e flood** sono già contenuti a livello
+server; i rate-limit applicativi restano utili come difesa in profondità e — nel
+caso del proxy — soprattutto per il **controllo costi** dell'API a pagamento, non
+come unica barriera anti-abuso. La protezione applicativa va comunque mantenuta
+(il WAF non conosce la logica di business né l'autorizzazione per-endpoint).
+
 ## Sicurezza — rimasti
 
 ### Priorità ALTA (da fare per primo)
 - **`ardy-proxy.php` — rate-limit basato su header falsificabili.** `X-Forwarded-For`/
   `CF-Connecting-IP` sono fidati ciecamente: chi non passa da Cloudflare può falsificarli
   e azzerare il rate-limit. Impatto: **costo** (ogni richiesta che passa chiama l'API
-  Anthropic a pagamento). Fix: fidarsi dell'header solo se `REMOTE_ADDR` è in un range
-  Cloudflare noto, altrimenti usare `REMOTE_ADDR`.
+  Anthropic a pagamento). Nota: DoS/flood già mitigati da OVH/Fail2ban/HULK; qui il
+  punto è il controllo costi. Fix: fidarsi dell'header solo se `REMOTE_ADDR` è in un
+  range Cloudflare noto, altrimenti usare `REMOTE_ADDR`.
 
 ### Priorità MEDIA
 - **`ardy-save-lead.php` — nessun rate-limit.** Endpoint pubblico: si può riempire la
