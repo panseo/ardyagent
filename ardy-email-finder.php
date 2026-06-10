@@ -7,6 +7,7 @@
 
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
+require_once __DIR__ . '/ardy-net.php';
 
 $db = ardyDB();
 
@@ -63,23 +64,14 @@ echo "==============================\n";
 // ============================================================
 function cercaEmail(string $url): ?string {
     if (empty($url)) return null;
-    
-    // Assicura schema
-    if (!preg_match('/^https?:\/\//', $url)) {
-        $url = 'https://' . $url;
-    }
-    
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT,        15);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($ch, CURLOPT_MAXREDIRS,      3);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_USERAGENT,      'Mozilla/5.0 (compatible; ArdyBot/1.0)');
-    $html = curl_exec($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    
+
+    // Fetch anti-SSRF: valida host/schema, blocca IP interni, verifica TLS,
+    // ri-valida i redirect (vedi ardy-net.php).
+    $resp = ardySafeHttpGet($url, 15, 3);
+    if ($resp === null) return null;
+    $html = $resp['body'];
+    $code = $resp['code'];
+
     if (!$html || $code >= 400) return null;
     
     // Cerca email nel testo (pattern standard)

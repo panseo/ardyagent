@@ -10,6 +10,7 @@ set_time_limit(600);
 
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
+require_once __DIR__ . '/ardy-net.php';
 
 header('Access-Control-Allow-Origin: https://ardyagent.ardy-lab.it');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -167,8 +168,10 @@ $usedItems  = [];   // gli item effettivamente elaborati (per prima/dopo)
 $idx = 0;
 foreach ($items as $it) {
     $url = $it['url'];
-    $bin = @file_get_contents($url);
-    if ($bin === false || strlen($bin) < 100) continue;
+    $resp = ardySafeHttpGet($url, 20, 3, 26214400); // max 25 MB, anti-SSRF
+    if ($resp === null) continue;
+    $bin = $resp['body'];
+    if (!is_string($bin) || strlen($bin) < 100) continue;
     $src = $tmpDir . 'src_' . $idx . '.img';
     file_put_contents($src, $bin);
 
@@ -199,9 +202,11 @@ $titleSlide = $showTitolo ? slideTitolo($tmpDir, $normFiles[0], $logo, $font, $m
 // -- Slide finale "Prima -> Dopo" (prima e ultima foto + logo) -------------
 $finalSlide = null;
 if ($showFinale) {
-    $primaBin = @file_get_contents($usedItems[0]['url']);
-    $dopoBin  = @file_get_contents(end($usedItems)['url']);
-    if ($primaBin !== false && $dopoBin !== false) {
+    $primaResp = ardySafeHttpGet($usedItems[0]['url'], 20, 3, 26214400);
+    $dopoResp  = ardySafeHttpGet(end($usedItems)['url'], 20, 3, 26214400);
+    if ($primaResp !== null && $dopoResp !== null) {
+        $primaBin = $primaResp['body'];
+        $dopoBin  = $dopoResp['body'];
         $primaSrc = $tmpDir . 'prima.img';
         $dopoSrc  = $tmpDir . 'dopo.img';
         file_put_contents($primaSrc, $primaBin);
