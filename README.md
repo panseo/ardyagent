@@ -50,6 +50,7 @@ ardyagent.ardy-lab.it/
 ├── ardy-lista-musica.php      # Elenca le tracce in assets/reel-music/
 ├── ardy-guida-michela.html    # Guida d'uso dashboard (HTML stampabile) — linkata dalla dashboard
 ├── GUIDA-MICHELA.md           # Guida d'uso dashboard (versione testo)
+├── MANUALE-SOLE.md            # Mansionario dell'assistente AI Sole (canali, mansioni, regole)
 ├── ardy-notifica-michela.php  # Notifiche WhatsApp a Michela (Sole "segretaria") — libreria + endpoint n8n
 ├── ardy-solleciti.php         # Solleciti clienti morosi (4 livelli) + invio WA/email — "segretaria antipatica"
 ├── ardy-solleciti-system.txt  # Prompt AI "segretaria antipatica" per i solleciti
