@@ -32,6 +32,25 @@ Dopo ogni evento rilevante nelle chat (lead salvato, appuntamento fissato, clien
 
 ---
 
+## 📌 TEMPLATE WHATSAPP META (da non dimenticare)
+
+Stato attuale: le notifiche WhatsApp partono in **testo libero**, quindi funzionano solo
+entro la **finestra 24h** dall'ultimo messaggio del destinatario. Per ora si sfrutta il
+"saluto del mattino" di Michela a Sole (gratis, nessun template). Funziona, ma se lei
+dimentica di salutare le notifiche di quel giorno si perdono.
+
+Template da far approvare su Meta (WhatsApp Manager → Modelli messaggi, categoria **Utility**),
+body con **una variabile `{{1}}`**, lingua `it`:
+- [ ] **`notifica_michela`** — notifiche a Michela (Task 1). Poi in `ardy-config.php`: `define('WA_TEMPLATE_NOTIFICA','notifica_michela');`
+- [ ] **`sollecito_pagamento`** — solleciti ai morosi fuori dalle 24h (Task 2). Poi: `define('WA_TEMPLATE_SOLLECITO','sollecito_pagamento');`
+- [ ] **template fasi cliente** — aggiornamenti lavorazione ai clienti (Task 3, vedi sotto): es. "Ciao {{1}}, aggiornamento sul tuo {{2}}: completata la fase '{{3}}'. Guarda qui: {{4}}"
+
+Note: categoria Utility = approvazione rapida e costo minimo (~3-4 cent/msg, solo verso
+i clienti; le notifiche a Michela sono pochissime → costo trascurabile). Codice già
+predisposto: basta impostare la costante quando il template è approvato.
+
+---
+
 ## TASK 2 — Segretaria antipatica: modulo WhatsApp per clienti morosi
 
 **Cosa fa:**
