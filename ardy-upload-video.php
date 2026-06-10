@@ -125,7 +125,8 @@ $wpFile = [
 ];
 $attachId = media_handle_sideload($wpFile, 0);
 if (is_wp_error($attachId)) {
-    echo json_encode(['success' => false, 'error' => $attachId->get_error_message()]);
+    error_log('ARDY UPLOAD VIDEO WP ERROR: ' . $attachId->get_error_message());
+    echo json_encode(['success' => false, 'error' => 'Caricamento del media non riuscito']);
     exit();
 }
 

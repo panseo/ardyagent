@@ -225,8 +225,9 @@ try {
 
     $mpdf->Output($pdfPath, 'F');
 } catch (\Exception $e) {
+    error_log('ARDY PREVENTIVO MPDF ERROR: ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['error' => 'Errore mPDF: ' . $e->getMessage()]);
+    echo json_encode(['error' => 'Errore nella generazione del PDF']);
     exit;
 }
 
