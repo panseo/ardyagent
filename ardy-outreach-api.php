@@ -487,8 +487,14 @@ function brevoSend(string $toEmail, string $toName, string $oggetto, string $cor
     $err  = curl_error($ch);
     curl_close($ch);
 
-    if ($err)               return ['ok' => false, 'error' => 'Curl: ' . $err];
-    if ($code < 200 || $code >= 300) return ['ok' => false, 'error' => "HTTP $code: $res"];
+    if ($err) {
+        error_log('ARDY BREVO CURL: ' . $err);
+        return ['ok' => false, 'error' => 'Errore di connessione al servizio email'];
+    }
+    if ($code < 200 || $code >= 300) {
+        error_log("ARDY BREVO HTTP $code: $res");
+        return ['ok' => false, 'error' => "Invio non riuscito (HTTP $code)"];
+    }
     return ['ok' => true];
 }
 

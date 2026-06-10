@@ -221,7 +221,8 @@ if ($wpPostId) {
     ], true);
 
     if (is_wp_error($result)) {
-        echo json_encode(['success' => false, 'error' => $result->get_error_message()]);
+        error_log('ARDY PUBBLICA WP UPDATE ERROR: ' . $result->get_error_message());
+        echo json_encode(['success' => false, 'error' => 'Aggiornamento della pagina non riuscito']);
         exit();
     }
     $postLink = get_permalink($wpPostId);
@@ -238,7 +239,8 @@ if ($wpPostId) {
     ], true);
 
     if (is_wp_error($result)) {
-        echo json_encode(['success' => false, 'error' => $result->get_error_message()]);
+        error_log('ARDY PUBBLICA WP INSERT ERROR: ' . $result->get_error_message());
+        echo json_encode(['success' => false, 'error' => 'Pubblicazione della pagina non riuscita']);
         exit();
     }
 
