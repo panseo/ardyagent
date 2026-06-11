@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scheda Cliente — Modello Ardy Lab</title>
+<style>
+  :root{ --oro:#b89150; --scuro:#1a1a1a; --bordo:#d8d2c4; }
+  *{ box-sizing:border-box; }
+  body{ font-family:'Segoe UI',Arial,Helvetica,sans-serif; color:var(--scuro); background:#f2efe9; margin:0; padding:24px; line-height:1.5; }
+  .wrap{ max-width:760px; margin:0 auto; }
+  .hint{ background:#fff8e6; border:1px solid #e6d8a8; border-radius:8px; padding:12px 16px; font-size:13px; color:#705c1f; margin-bottom:18px; }
+  .hint b{ color:#5a4a13; }
+
+  /* Foglio (anche layout di stampa) */
+  .foglio{ background:#fff; border:1px solid var(--bordo); border-radius:10px; padding:34px 38px; box-shadow:0 2px 10px rgba(0,0,0,.06); }
+  .testata{ display:flex; align-items:center; justify-content:space-between; border-bottom:3px solid var(--oro); padding-bottom:12px; margin-bottom:22px; }
+  .testata h1{ font-size:20px; margin:0; letter-spacing:1px; }
+  .testata .brand{ font-size:13px; color:var(--oro); font-weight:700; letter-spacing:2px; text-transform:uppercase; }
+  .sezione{ font-size:12px; text-transform:uppercase; letter-spacing:1.5px; color:var(--oro); font-weight:700; margin:18px 0 8px; border-bottom:1px solid var(--bordo); padding-bottom:4px; }
+
+  .riga{ display:flex; align-items:baseline; gap:10px; padding:7px 0; border-bottom:1px dotted #e3ddd0; }
+  .riga label{ flex:0 0 165px; font-weight:600; font-size:14px; }
+  .riga .valore{ flex:1; }
+  .riga input, .riga textarea, .riga select{
+    width:100%; border:0; border-bottom:1px solid transparent; background:transparent;
+    font:inherit; color:var(--scuro); padding:2px 2px; outline:none; resize:vertical;
+  }
+  .riga input:focus, .riga textarea:focus, .riga select:focus{ border-bottom-color:var(--oro); background:#fffdf7; }
+  textarea{ min-height:54px; }
+  .nota-piede{ margin-top:20px; font-size:11px; color:#999; border-top:1px solid var(--bordo); padding-top:10px; }
+
+  .azioni{ text-align:center; margin:22px 0 8px; }
+  .azioni button{ background:var(--scuro); color:#fff; border:0; padding:11px 22px; border-radius:8px; font-size:14px; cursor:pointer; margin:0 6px; }
+  .azioni button.secondario{ background:#fff; color:var(--scuro); border:1px solid var(--scuro); }
+
+  /* In stampa: nasconde i contorni dei campi, mostra solo testo pulito */
+  @media print{
+    body{ background:#fff; padding:0; }
+    .hint, .azioni{ display:none !important; }
+    .foglio{ border:0; box-shadow:none; border-radius:0; padding:18mm 16mm; }
+    .riga{ border-bottom:1px solid #e3ddd0; }
+    .riga input, .riga textarea, .riga select{ border-bottom:0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hint">
+    <b>Come si usa.</b> Compila i campi qui sotto, poi premi <b>“Salva come PDF”</b>
+    (nella finestra di stampa scegli “Salva come PDF”). Il PDF ottenuto ha le etichette
+    fisse <i>Nome:, Telefono:, …</i> con testo digitale: caricandolo nella dashboard
+    (📥 Importa da PDF) o inviandolo a Sole, i dati vengono estratti in automatico.
+    <br>⚠️ Non scansionare/fotografare un foglio scritto a mano: serve un PDF con testo,
+    non un’immagine.
+  </div>
+
+  <div class="foglio" id="foglio">
+    <div class="testata">
+      <h1>Scheda Cliente</h1>
+      <span class="brand">Ardy Lab</span>
+    </div>
+
+    <div class="sezione">Dati cliente</div>
+    <div class="riga"><label>Nome:</label><span class="valore"><input id="f-nome" placeholder=""></span></div>
+    <div class="riga"><label>Cognome:</label><span class="valore"><input id="f-cognome" placeholder=""></span></div>
+    <div class="riga"><label>Telefono:</label><span class="valore"><input id="f-telefono" placeholder=""></span></div>
+    <div class="riga"><label>Email:</label><span class="valore"><input id="f-email" placeholder=""></span></div>
+    <div class="riga"><label>Indirizzo:</label><span class="valore"><input id="f-indirizzo" placeholder=""></span></div>
+    <div class="riga"><label>Zona:</label><span class="valore"><input id="f-zona" placeholder=""></span></div>
+
+    <div class="sezione">Richiesta / Preventivo</div>
+    <div class="riga"><label>Servizio:</label><span class="valore"><input id="f-servizio" placeholder="es. Restauro mobile"></span></div>
+    <div class="riga"><label>Mobile/Pezzo:</label><span class="valore"><input id="f-mobile" placeholder="es. Credenza anni 60"></span></div>
+    <div class="riga"><label>Oggetto:</label><span class="valore"><input id="f-oggetto" placeholder="descrizione del lavoro"></span></div>
+    <div class="riga"><label>Totale:</label><span class="valore"><input id="f-totale" placeholder="es. 850,00 €"></span></div>
+    <div class="riga"><label>Stato:</label><span class="valore">
+      <select id="f-stato">
+        <option value="LEAD">LEAD</option>
+        <option value="SOPRALLUOGO">SOPRALLUOGO</option>
+        <option value="PREVENTIVO" selected>PREVENTIVO</option>
+        <option value="ACCONTO">ACCONTO</option>
+        <option value="STANDBY">STANDBY</option>
+        <option value="PERSO">PERSO</option>
+      </select>
+    </span></div>
+    <div class="riga" style="align-items:flex-start;"><label>Note:</label><span class="valore"><textarea id="f-note" placeholder="note libere"></textarea></span></div>
+
+    <div class="nota-piede">Modello scheda cliente — Ardy di Michela Panella · ardy-lab.it</div>
+  </div>
+
+  <div class="azioni">
+    <button class="secondario" onclick="pulisci()">Svuota</button>
+    <button onclick="window.print()">🖨️ Salva come PDF</button>
+  </div>
+
+</div>
+
+<script>
+  // Riflette i valori dentro gli attributi così restano nel PDF anche se il browser
+  // non stampa gli <input>: per <input> mostriamo il testo accanto all'etichetta.
+  function pulisci(){
+    document.querySelectorAll('#foglio input, #foglio textarea').forEach(el => el.value = '');
+    document.getElementById('f-stato').value = 'PREVENTIVO';
+  }
+  // Salva la bozza in locale così non si perde se chiude per sbaglio.
+  const campi = ['f-nome','f-cognome','f-telefono','f-email','f-indirizzo','f-zona','f-servizio','f-mobile','f-oggetto','f-totale','f-stato','f-note'];
+  campi.forEach(id => {
+    const el = document.getElementById(id);
+    const v = localStorage.getItem('tmpl_'+id);
+    if (v !== null && el) el.value = v;
+    el && el.addEventListener('input', () => localStorage.setItem('tmpl_'+id, el.value));
+  });
+</script>
+</body>
+</html>

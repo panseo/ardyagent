@@ -39,6 +39,19 @@
      Per preventivi a opzioni (es. Laura: €350/€700) lasciare `totale` vuoto, importi in `note`.
    - Dati mancanti nei PDF (telefono/email, stato accettato): farseli dare a parte.
 
+**✅ FATTO — Importa scheda da PDF dalla dashboard (parte 1 dello Scenario 1).**
+   - **`ardy-template-scheda-cliente.html`**: modello "Scheda Cliente" con etichette fisse
+     (`Nome:, Cognome:, Telefono:, Email:, Indirizzo:, Zona:, Servizio:, Mobile/Pezzo:,
+     Oggetto:, Totale:, Stato:, Note:`), fillable → "Salva come PDF" (testo digitale).
+   - **`ardy-import-scheda-pdf.php`**: endpoint Basic Auth con due modi — `?mode=extract`
+     (manda il PDF a Claude come *documento* e ritorna i campi in JSON) e `?mode=save`
+     (upsert cliente con `session_id` deterministico per telefono/nome + eventuale
+     preventivo con PDF allegato in `preventivi_pdf/`).
+   - **Dashboard**: pulsante **📥 PDF** in sidebar → modale: carica PDF → 🔍 Estrai →
+     campi precompilati e correggibili → ✦ Crea scheda → lista aggiornata.
+   - Riusa `ARDY_API_KEY`/modello del proxy. Stesso backend riutilizzabile per il ramo
+     WhatsApp. ⚠️ Il PDF deve avere testo digitale (no scansioni/foto).
+
 **3. Feature "Sole crea scheda da WhatsApp" — SCENARIO 1 (l'unico approvato).**
    Michela detta/invia a Sole i dati di un cliente nuovo e Sole popola la scheda CRM.
    - **Input previsto**: testo/vocale **oppure** un **PDF su template FISSO ed etichettato**

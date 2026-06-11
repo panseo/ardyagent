@@ -35,6 +35,8 @@ ardyagent.ardy-lab.it/
 ├── ardy-config.php            # ⚠️ NON in repo — credenziali DB
 ├── ardy-crm-api.php           # API CRM interna
 ├── ardy-import-preventivi.php # Import temporaneo preventivi storici da CSV (migrazione una-tantum)
+├── ardy-import-scheda-pdf.php # Importa una scheda cliente da un PDF (estrazione AI) → dashboard
+├── ardy-template-scheda-cliente.html # Modello PDF "Scheda Cliente" (etichette fisse, fillable)
 ├── ardy-gcal.php              # Integrazione Google Calendar
 ├── ardy-gcal-auth.php         # OAuth Google Calendar
 ├── ardy-gcal-token.json       # ⚠️ NON in repo — token OAuth

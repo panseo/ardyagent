@@ -39,6 +39,7 @@
         </div>
         <div style="display:flex;gap:5px;margin-top:5px;">
           <button class="btn-nuovo-cliente" onclick="openMorosi()" style="flex:1;text-align:center;background:none;border:1px solid #8b3e3e;color:#d98a8a;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">💸 MOROSI</button>
+          <button class="btn-nuovo-cliente" onclick="openImportPdf()" style="flex:1;text-align:center;background:none;border:1px solid #3e6f8b;color:#8ec0d9;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">📥 PDF</button>
         </div>
       </div>
       <div class="search-box">
@@ -1370,6 +1371,96 @@ async function salvaNuovoCliente() {
   btn.textContent = '✦ SALVA CLIENTE';
 }
 
+// ══════════════════════════════════════════════════════════
+// IMPORTA SCHEDA DA PDF (estrazione AI + creazione scheda)
+// ══════════════════════════════════════════════════════════
+
+let impPdfFile = null;
+
+function openImportPdf() {
+  impPdfFile = null;
+  document.getElementById('imp-file').value = '';
+  document.getElementById('imp-step-upload').style.display = 'block';
+  document.getElementById('imp-step-review').style.display = 'none';
+  document.getElementById('imp-result').style.display = 'none';
+  document.getElementById('imp-btn-estrai').style.display = '';
+  document.getElementById('imp-btn-crea').style.display = 'none';
+  document.getElementById('importPdfOverlay').classList.add('open');
+}
+
+function closeImportPdf() {
+  document.getElementById('importPdfOverlay').classList.remove('open');
+}
+
+async function estraiSchedaPdf() {
+  const file = document.getElementById('imp-file').files[0];
+  if (!file) { showResult('imp-result', '⚠ Seleziona un PDF.', 'error'); return; }
+  if (file.type !== 'application/pdf') { showResult('imp-result', '⚠ Il file deve essere un PDF.', 'error'); return; }
+  impPdfFile = file;
+
+  const btn = document.getElementById('imp-btn-estrai');
+  btn.disabled = true; btn.textContent = 'LETTURA IN CORSO...';
+  document.getElementById('imp-result').style.display = 'none';
+
+  try {
+    const fd = new FormData();
+    fd.append('pdf', file);
+    const res  = await fetch(BASE_URL + '/ardy-import-scheda-pdf.php?mode=extract', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!data.ok) { showResult('imp-result', '⚠ ' + (data.error || 'Estrazione fallita.'), 'error'); return; }
+
+    const d = data.dati || {};
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+    set('imp-nome', d.nome); set('imp-cognome', d.cognome); set('imp-telefono', d.telefono);
+    set('imp-email', d.email); set('imp-indirizzo', d.indirizzo); set('imp-zona', d.zona);
+    set('imp-servizio', d.servizio); set('imp-mobile', d.mobile); set('imp-oggetto', d.oggetto);
+    set('imp-totale', d.totale); set('imp-note', d.note);
+    const st = (d.stato || 'PREVENTIVO').toUpperCase();
+    const sel = document.getElementById('imp-stato');
+    sel.value = [...sel.options].some(o => o.value === st) ? st : 'PREVENTIVO';
+
+    document.getElementById('imp-step-upload').style.display = 'none';
+    document.getElementById('imp-step-review').style.display = 'block';
+    document.getElementById('imp-btn-estrai').style.display = 'none';
+    document.getElementById('imp-btn-crea').style.display = '';
+    showResult('imp-result', '✓ Dati estratti. Controlla e correggi, poi crea la scheda.', 'success');
+  } catch(e) {
+    showResult('imp-result', '⚠ Errore di rete durante l\'estrazione.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '🔍 ESTRAI DATI';
+  }
+}
+
+async function creaSchedaDaPdf() {
+  const nome = document.getElementById('imp-nome').value.trim();
+  const cognome = document.getElementById('imp-cognome').value.trim();
+  const telefono = document.getElementById('imp-telefono').value.trim();
+  if (!nome && !cognome && !telefono) {
+    showResult('imp-result', '⚠ Serve almeno nome, cognome o telefono.', 'error'); return;
+  }
+  const btn = document.getElementById('imp-btn-crea');
+  btn.disabled = true; btn.textContent = 'CREAZIONE...';
+
+  try {
+    const fd = new FormData();
+    ['nome','cognome','telefono','email','indirizzo','zona','servizio','mobile','oggetto','totale','stato','note']
+      .forEach(k => fd.append(k, document.getElementById('imp-' + k).value.trim()));
+    if (impPdfFile) fd.append('pdf', impPdfFile);
+
+    const res  = await fetch(BASE_URL + '/ardy-import-scheda-pdf.php?mode=save', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!data.ok) { showResult('imp-result', '⚠ ' + (data.error || 'Salvataggio fallito.'), 'error'); return; }
+
+    showResult('imp-result', '✓ Scheda creata per ' + (data.cliente || 'cliente') + '.', 'success');
+    if (typeof loadLeads === 'function') { await loadLeads(); }
+    setTimeout(() => { closeImportPdf(); showToast('✓ Scheda importata dal PDF', 'success'); }, 1000);
+  } catch(e) {
+    showResult('imp-result', '⚠ Errore di rete durante il salvataggio.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '✦ CREA SCHEDA';
+  }
+}
+
 function showResult(id, msg, type) {
   const el = document.getElementById(id);
   el.textContent = msg;
@@ -1994,6 +2085,70 @@ function showToast(msg, type = '') {
     <div class="modal-lg-actions">
       <button class="btn-cancel" onclick="closeNuovoCliente()">ANNULLA</button>
       <button class="btn-save" id="btn-nc-salva" onclick="salvaNuovoCliente()">✦ SALVA CLIENTE</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL IMPORTA SCHEDA DA PDF -->
+<div class="modal-overlay" id="importPdfOverlay" onclick="if(event.target===this)closeImportPdf()">
+  <div class="modal-lg" onclick="event.stopPropagation()">
+    <div class="modal-lg-head">
+      <h3>📥 IMPORTA SCHEDA DA PDF</h3>
+      <button class="modal-lg-close" onclick="closeImportPdf()">✕</button>
+    </div>
+    <div class="modal-lg-body">
+
+      <!-- STEP 1: caricamento -->
+      <div id="imp-step-upload">
+        <p style="font-size:12px;color:#aaa;line-height:1.6;margin:0 0 12px;">
+          Carica un PDF compilato sul <a href="ardy-template-scheda-cliente.html" target="_blank" style="color:#8ec0d9;">modello “Scheda Cliente”</a>
+          (etichette fisse, testo digitale — non una scansione). I dati vengono estratti
+          automaticamente; potrai rivederli prima di creare la scheda.
+        </p>
+        <div class="dark-field full">
+          <label>File PDF della scheda</label>
+          <input type="file" id="imp-file" accept="application/pdf">
+        </div>
+        <div style="margin-top:8px;">
+          <a href="ardy-template-scheda-cliente.html" target="_blank" style="font-size:11px;color:#888;">↗ Apri/stampa il modello vuoto</a>
+        </div>
+      </div>
+
+      <!-- STEP 2: revisione campi estratti -->
+      <div id="imp-step-review" style="display:none;">
+        <div class="dark-form-grid">
+          <div class="dark-section-label">Dati estratti — controlla e correggi</div>
+          <div class="dark-field"><label>Nome</label><input type="text" id="imp-nome"></div>
+          <div class="dark-field"><label>Cognome</label><input type="text" id="imp-cognome"></div>
+          <div class="dark-field"><label>Telefono</label><input type="tel" id="imp-telefono"></div>
+          <div class="dark-field"><label>Email</label><input type="email" id="imp-email"></div>
+          <div class="dark-field full"><label>Indirizzo</label><input type="text" id="imp-indirizzo"></div>
+          <div class="dark-field"><label>Zona</label><input type="text" id="imp-zona"></div>
+          <div class="dark-field"><label>Servizio</label><input type="text" id="imp-servizio"></div>
+          <div class="dark-field"><label>Mobile / Pezzo</label><input type="text" id="imp-mobile"></div>
+          <div class="dark-field"><label>Oggetto preventivo</label><input type="text" id="imp-oggetto"></div>
+          <div class="dark-field"><label>Totale</label><input type="text" id="imp-totale" placeholder="es. 850,00"></div>
+          <div class="dark-field"><label>Stato</label>
+            <select id="imp-stato">
+              <option value="LEAD">LEAD</option>
+              <option value="SOPRALLUOGO">SOPRALLUOGO</option>
+              <option value="PREVENTIVO">PREVENTIVO</option>
+              <option value="ACCONTO">ACCONTO</option>
+              <option value="STANDBY">STANDBY</option>
+              <option value="PERSO">PERSO</option>
+            </select>
+          </div>
+          <div class="dark-field full"><label>Note</label><textarea id="imp-note"></textarea></div>
+        </div>
+        <p style="font-size:11px;color:#888;margin-top:8px;">Se compili Oggetto o Totale, viene creato anche un preventivo nello “Storico” con il PDF allegato.</p>
+      </div>
+
+      <div id="imp-result" style="display:none;margin-top:12px;padding:10px 14px;border-radius:4px;font-family:'DM Mono',monospace;font-size:11px;"></div>
+    </div>
+    <div class="modal-lg-actions">
+      <button class="btn-cancel" onclick="closeImportPdf()">ANNULLA</button>
+      <button class="btn-save" id="imp-btn-estrai" onclick="estraiSchedaPdf()">🔍 ESTRAI DATI</button>
+      <button class="btn-save" id="imp-btn-crea" style="display:none;" onclick="creaSchedaDaPdf()">✦ CREA SCHEDA</button>
     </div>
   </div>
 </div>
