@@ -535,6 +535,10 @@ permette il deploy push-button da cPanel (richiede Jailed Shell).
 
 ### Dashboard Michela
 - [ ] Layout PDF da rifinire graficamente
+- [x] **Render e prima/dopo nel preventivo** — dal pannello preventivo si caricano i
+  render della proposta (il 1° va in copertina) e le foto stato attuale; il PDF aggiunge
+  una pagina "La nostra proposta" (griglia render o coppie prima/dopo). Immagini
+  ridimensionate lato client e inviate in base64 a `ardy-preventivo.php`.
 - [ ] Pagina "I nostri lavori" con foto portfolio nel PDF
 - [ ] Invio email automatico preventivo al cliente
 - [ ] Fix chatbot pubblico (`ardy-proxy.php` — errore API)

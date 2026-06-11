@@ -1548,6 +1548,7 @@ function apriPreventivoConDati(sessionId, dati, voci){
   document.getElementById('pv-cl-indirizzo').value   = dati.indirizzo || '';
   pvVoci = (voci && voci.length) ? voci.map((v,i) => Object.assign({ id: Date.now() + i }, v)) : [];
   if (!pvVoci.length) { pvAddVoce(); } else { pvRenderVoci(); if (typeof pvAggiornaTotale === 'function') pvAggiornaTotale(); }
+  pvResetImmagini();
   document.getElementById('preventivoOverlay').classList.add('open');
 }
 
@@ -1588,6 +1589,7 @@ function openPreventivoPanel() {
   // Reset voci
   pvVoci = [];
   pvAddVoce();
+  pvResetImmagini();
 
   document.getElementById('preventivoOverlay').classList.add('open');
 }
@@ -1714,7 +1716,72 @@ function pvRaccogliFormData() {
     fd.append('voci[' + i + '][prezzo]',      v.prezzo || 0);
     fd.append('voci[' + i + '][sconto]',      v.sconto || 0);
   });
+  // Immagini (base64 già ridimensionate)
+  pvRender.forEach((b, i)       => fd.append('render[' + i + ']', b));
+  pvStatoAttuale.forEach((b, i) => fd.append('stato_attuale[' + i + ']', b));
   return fd;
+}
+
+// ── Render / foto del preventivo ──────────────────────────────────────────
+let pvRender = [];
+let pvStatoAttuale = [];
+
+// Ridimensiona un'immagine lato client (max lato lungo) e ritorna data-URL JPEG.
+function pvResizeImg(file, maxLato = 1400, q = 0.82) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let { width:w, height:h } = img;
+        if (w > maxLato || h > maxLato) {
+          if (w >= h) { h = Math.round(h * maxLato / w); w = maxLato; }
+          else        { w = Math.round(w * maxLato / h); h = maxLato; }
+        }
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL('image/jpeg', q));
+      };
+      img.onerror = reject;
+      img.src = fr.result;
+    };
+    fr.onerror = reject;
+    fr.readAsDataURL(file);
+  });
+}
+
+async function pvCaricaImg(input, tipo) {
+  const arr   = tipo === 'render' ? pvRender : pvStatoAttuale;
+  const files = [...input.files];
+  for (const f of files) {
+    if (!f.type.startsWith('image/')) continue;
+    if (arr.length >= 8) { showToast('⚠ Max 8 immagini per sezione', 'error'); break; }
+    try { arr.push(await pvResizeImg(f)); } catch(e) { showToast('⚠ Immagine non leggibile', 'error'); }
+  }
+  input.value = '';
+  pvRenderThumbs(tipo);
+}
+
+function pvRenderThumbs(tipo) {
+  const arr = tipo === 'render' ? pvRender : pvStatoAttuale;
+  const box = document.getElementById(tipo === 'render' ? 'pv-render-thumbs' : 'pv-stato-thumbs');
+  box.innerHTML = arr.map((b, i) =>
+    `<div style="position:relative;width:62px;height:62px;border-radius:6px;overflow:hidden;border:1px solid var(--border);">
+       <img src="${b}" style="width:100%;height:100%;object-fit:cover;">
+       <button onclick="pvDelImg('${tipo}',${i})" style="position:absolute;top:0;right:0;background:rgba(0,0,0,.6);color:#fff;border:0;cursor:pointer;width:18px;height:18px;line-height:1;font-size:12px;">✕</button>
+     </div>`).join('');
+}
+
+function pvDelImg(tipo, i) {
+  (tipo === 'render' ? pvRender : pvStatoAttuale).splice(i, 1);
+  pvRenderThumbs(tipo);
+}
+
+function pvResetImmagini() {
+  pvRender = []; pvStatoAttuale = [];
+  const a = document.getElementById('pv-render-thumbs'); if (a) a.innerHTML = '';
+  const b = document.getElementById('pv-stato-thumbs');  if (b) b.innerHTML = '';
 }
 
 function pvAnteprima() {
@@ -2391,6 +2458,18 @@ function showToast(msg, type = '') {
         <div class="dark-field full" style="flex-direction:row;align-items:center;gap:10px;">
           <input type="checkbox" id="pv-firma" checked style="width:auto;accent-color:var(--accent);">
           <label for="pv-firma" style="text-transform:none;letter-spacing:0;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);">Includi spazio firma nel PDF</label>
+        </div>
+
+        <div class="dark-section-label">Render e foto — proposta di progetto</div>
+        <div class="dark-field full">
+          <label>Render della proposta <span style="color:var(--muted);">(il 1° finisce in copertina)</span></label>
+          <input type="file" id="pv-render" accept="image/*" multiple onchange="pvCaricaImg(this,'render')">
+          <div id="pv-render-thumbs" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
+        </div>
+        <div class="dark-field full">
+          <label>Foto stato attuale <span style="color:var(--muted);">(per il prima/dopo, facoltativo)</span></label>
+          <input type="file" id="pv-stato" accept="image/*" multiple onchange="pvCaricaImg(this,'stato')">
+          <div id="pv-stato-thumbs" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
         </div>
       </div>
     </div>
