@@ -81,13 +81,17 @@ function estraiDaPdf(): array {
 
     $system = "Sei un estrattore di dati. Ricevi un PDF \"Scheda Cliente\" di Ardy Lab "
         . "con etichette fisse (Nome:, Cognome:, Telefono:, Email:, Indirizzo:, Zona:, "
-        . "Servizio:, Mobile/Pezzo:, Oggetto:, Totale:, Stato:, Note:). "
+        . "Servizio:, Mobile/Pezzo:, Oggetto:, Manodopera:, Materiali:, Trasporti:, Totale:, Stato:, Note:). "
         . "Estrai i valori e rispondi ESCLUSIVAMENTE con un oggetto JSON valido, senza "
         . "testo prima o dopo, senza code fence. Chiavi obbligatorie: nome, cognome, "
-        . "telefono, email, indirizzo, zona, servizio, mobile, oggetto, totale, stato, note. "
-        . "Se un campo non è presente usa stringa vuota. Per 'totale' restituisci solo il "
-        . "numero con la virgola decimale (es. 850,00) o stringa vuota. Per 'stato' usa uno "
-        . "tra LEAD, SOPRALLUOGO, PREVENTIVO, ACCONTO, STANDBY, PERSO (maiuscolo).";
+        . "telefono, email, indirizzo, zona, servizio, mobile, oggetto, manodopera, "
+        . "materiali, trasporti, stato, note. "
+        . "Se un campo non è presente usa stringa vuota. Gli importi (manodopera, trasporti) "
+        . "come numero con la virgola decimale (es. 850,00) o stringa vuota. "
+        . "'materiali' è un ARRAY di oggetti {\"descrizione\":..., \"importo\":\"60,00\"}, uno per "
+        . "ogni voce di materiale elencata (es. \"3 confezioni vernice — 60,00 €\"); array vuoto se "
+        . "non ce ne sono. Non sommare i materiali in un'unica voce: mantienili separati. "
+        . "Per 'stato' usa uno tra LEAD, SOPRALLUOGO, PREVENTIVO, ACCONTO, STANDBY, PERSO (maiuscolo).";
 
     $messages = [[
         'role' => 'user',
@@ -109,8 +113,19 @@ function estraiDaPdf(): array {
 
     // Normalizza le chiavi attese
     $out = [];
-    foreach (['nome','cognome','telefono','email','indirizzo','zona','servizio','mobile','oggetto','totale','stato','note'] as $k) {
+    foreach (['nome','cognome','telefono','email','indirizzo','zona','servizio','mobile','oggetto','manodopera','trasporti','stato','note'] as $k) {
         $out[$k] = isset($dati[$k]) ? trim((string)$dati[$k]) : '';
+    }
+    // Materiali: lista di {descrizione, importo}
+    $out['materiali'] = [];
+    if (!empty($dati['materiali']) && is_array($dati['materiali'])) {
+        foreach ($dati['materiali'] as $m) {
+            if (!is_array($m)) continue;
+            $desc = trim((string)($m['descrizione'] ?? $m['desc'] ?? ''));
+            $imp  = trim((string)($m['importo'] ?? $m['imp'] ?? ''));
+            if ($desc === '' && $imp === '') continue;
+            $out['materiali'][] = ['descrizione' => $desc, 'importo' => $imp];
+        }
     }
     return ['ok' => true, 'dati' => $out];
 }
@@ -122,7 +137,28 @@ function salvaScheda(array $statiCli, array $statiPrev): array {
     $telefono = preg_replace('/[^0-9+]/', '', $_POST['telefono'] ?? '');
     $email    = trim($_POST['email'] ?? '');
     $oggetto  = trim($_POST['oggetto'] ?? '');
-    $totale   = parseImporto($_POST['totale'] ?? '');
+
+    // Voci del preventivo: manodopera + materiali (lista) + trasporti.
+    $manodopera = parseImporto($_POST['manodopera'] ?? '');
+    $trasporti  = parseImporto($_POST['trasporti'] ?? '');
+    $materiali  = [];
+    if (!empty($_POST['materiali'])) {
+        $dec = json_decode($_POST['materiali'], true);
+        if (is_array($dec)) {
+            foreach ($dec as $m) {
+                $d = trim((string)($m['descrizione'] ?? ''));
+                $imp = parseImporto((string)($m['importo'] ?? ''));
+                if ($d === '' && $imp === null) continue;
+                $materiali[] = ['descrizione' => $d, 'importo' => $imp];
+            }
+        }
+    }
+    // Totale = somma delle voci; se non ci sono voci, usa l'eventuale 'totale' inviato.
+    $sommaVoci = ($manodopera ?? 0) + ($trasporti ?? 0);
+    foreach ($materiali as $m) $sommaVoci += ($m['importo'] ?? 0);
+    $totale = $sommaVoci > 0 ? $sommaVoci : parseImporto($_POST['totale'] ?? '');
+
+    $creaPrev = ($_POST['crea_preventivo'] ?? '1') === '1';
 
     if ($nome === '' && $cognome === '' && $telefono === '') {
         return ['ok' => false, 'error' => 'Serve almeno nome, cognome o telefono.'];
@@ -167,9 +203,21 @@ function salvaScheda(array $statiCli, array $statiPrev): array {
             ':note' => (trim($_POST['note'] ?? '')) ?: null,
         ]);
 
-        // Preventivo solo se c'è oggetto o totale
+        // Preventivo: creato solo se richiesto (crea_preventivo) e se c'è qualcosa.
+        // Quando la dashboard rigenera in stile Ardy, passa crea_preventivo=0 e crea
+        // il preventivo col generatore PDF (template Ardy) lato pannello preventivi.
         $numero = '';
-        if ($oggetto !== '' || $totale !== null) {
+        if ($creaPrev && ($oggetto !== '' || $totale !== null)) {
+            // Riepilogo voci nelle note del preventivo, così la scomposizione non si perde.
+            $righe = [];
+            if ($manodopera) $righe[] = 'Manodopera: € ' . number_format($manodopera, 2, ',', '.');
+            foreach ($materiali as $m) {
+                $righe[] = 'Materiale: ' . $m['descrizione']
+                    . ($m['importo'] !== null ? ' — € ' . number_format($m['importo'], 2, ',', '.') : '');
+            }
+            if ($trasporti) $righe[] = 'Trasporti: € ' . number_format($trasporti, 2, ',', '.');
+            $noteBase = trim($_POST['note'] ?? '');
+            $notePrev = trim($noteBase . ($righe ? "\n" . implode("\n", $righe) : ''));
             $numero  = 'PDF-' . date('Y') . '-' . substr(md5($sessionId . $oggetto . microtime()), 0, 6);
             $filePdf = '';
             $tmp = pdfTmpValido();
@@ -190,7 +238,7 @@ function salvaScheda(array $statiCli, array $statiPrev): array {
             $db->prepare($sqlPrev)->execute([
                 ':sid' => $sessionId, ':numero' => $numero, ':tipo' => 'Preventivo Servizi',
                 ':oggetto' => $oggetto, ':clinome' => $cliNome, ':cliemail' => $email,
-                ':note' => (trim($_POST['note'] ?? '')) ?: null,
+                ':note' => $notePrev ?: null,
                 ':sub' => $totale ?? 0, ':tot' => $totale ?? 0,
                 ':filepdf' => $filePdf, ':stato' => $statoPrev, ':dataem' => date('d/m/Y'),
             ]);

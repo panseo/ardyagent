@@ -51,6 +51,13 @@
      campi precompilati e correggibili → ✦ Crea scheda → lista aggiornata.
    - Riusa `ARDY_API_KEY`/modello del proxy. Stesso backend riutilizzabile per il ramo
      WhatsApp. ⚠️ Il PDF deve avere testo digitale (no scansioni/foto).
+   - **Voci preventivo nel modello**: il template ha ora **Manodopera**, **Materiali**
+     (lista voce-per-voce: descrizione + importo, NON forfettario) e **Trasporti**, con
+     **Totale auto-calcolato**. L'estrazione AI restituisce `materiali[]` separati.
+   - **Rigenera in stile Ardy**: dall'import, oltre a "✦ Crea scheda" (allega il PDF
+     originale), c'è "📄 + Preventivo Ardy" che crea la scheda e apre il **generatore
+     preventivi precompilato** (manodopera + materiali + trasporti come voci) per produrre
+     il PDF col template grafico Ardy.
 
 **3. Feature "Sole crea scheda da WhatsApp" — SCENARIO 1 (l'unico approvato).**
    Michela detta/invia a Sole i dati di un cliente nuovo e Sole popola la scheda CRM.

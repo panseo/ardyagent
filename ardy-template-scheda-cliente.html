@@ -30,6 +30,13 @@
   textarea{ min-height:54px; }
   .nota-piede{ margin-top:20px; font-size:11px; color:#999; border-top:1px solid var(--bordo); padding-top:10px; }
 
+  .mat-row{ display:flex; gap:8px; align-items:center; padding:3px 0; }
+  .mat-row input.desc{ flex:1; }
+  .mat-row input.imp{ flex:0 0 110px; }
+  .mat-del{ flex:0 0 auto; border:0; background:none; color:#c0392b; cursor:pointer; font-size:16px; line-height:1; padding:0 4px; }
+  .add-mat{ margin-top:6px; background:#fff; border:1px solid var(--oro); color:#7a6020; padding:4px 12px; border-radius:6px; font-size:12px; cursor:pointer; }
+  input.imp{ text-align:right; }
+
   .azioni{ text-align:center; margin:22px 0 8px; }
   .azioni button{ background:var(--scuro); color:#fff; border:0; padding:11px 22px; border-radius:8px; font-size:14px; cursor:pointer; margin:0 6px; }
   .azioni button.secondario{ background:#fff; color:var(--scuro); border:1px solid var(--scuro); }
@@ -41,6 +48,7 @@
     .foglio{ border:0; box-shadow:none; border-radius:0; padding:18mm 16mm; }
     .riga{ border-bottom:1px solid #e3ddd0; }
     .riga input, .riga textarea, .riga select{ border-bottom:0; }
+    .add-mat, .mat-del{ display:none !important; }
   }
 </style>
 </head>
@@ -74,7 +82,19 @@
     <div class="riga"><label>Servizio:</label><span class="valore"><input id="f-servizio" placeholder="es. Restauro mobile"></span></div>
     <div class="riga"><label>Mobile/Pezzo:</label><span class="valore"><input id="f-mobile" placeholder="es. Credenza anni 60"></span></div>
     <div class="riga"><label>Oggetto:</label><span class="valore"><input id="f-oggetto" placeholder="descrizione del lavoro"></span></div>
-    <div class="riga"><label>Totale:</label><span class="valore"><input id="f-totale" placeholder="es. 850,00 €"></span></div>
+    <div class="riga"><label>Manodopera:</label><span class="valore"><input id="f-manodopera" class="imp" placeholder="es. 400,00 €" oninput="ricalcola()"></span></div>
+
+    <div class="riga" style="align-items:flex-start;">
+      <label>Materiali:</label>
+      <span class="valore">
+        <div id="materiali-lista"></div>
+        <button type="button" class="add-mat" onclick="aggiungiMateriale()">+ aggiungi materiale</button>
+        <div style="font-size:11px;color:#999;margin-top:4px;">Una voce per riga (descrizione + importo). Es. “3 confezioni vernice — 60,00 €”.</div>
+      </span>
+    </div>
+
+    <div class="riga"><label>Trasporti:</label><span class="valore"><input id="f-trasporti" class="imp" placeholder="es. 30,00 €" oninput="ricalcola()"></span></div>
+    <div class="riga"><label>Totale:</label><span class="valore"><input id="f-totale" readonly style="font-weight:700;color:#5a4a13;" placeholder="calcolato automaticamente"></span></div>
     <div class="riga"><label>Stato:</label><span class="valore">
       <select id="f-stato">
         <option value="LEAD">LEAD</option>
@@ -98,20 +118,73 @@
 </div>
 
 <script>
-  // Riflette i valori dentro gli attributi così restano nel PDF anche se il browser
-  // non stampa gli <input>: per <input> mostriamo il testo accanto all'etichetta.
-  function pulisci(){
-    document.querySelectorAll('#foglio input, #foglio textarea').forEach(el => el.value = '');
-    document.getElementById('f-stato').value = 'PREVENTIVO';
+  const campi = ['f-nome','f-cognome','f-telefono','f-email','f-indirizzo','f-zona','f-servizio','f-mobile','f-oggetto','f-manodopera','f-trasporti','f-stato','f-note'];
+
+  // "1.450,00" / "1450.00" / "€ 30" → numero, 0 se vuoto.
+  function parseImp(s){
+    s = (s||'').toString().replace(/[^\d,.\-]/g,'');
+    if (s === '') return 0;
+    if (s.indexOf(',') !== -1 && s.indexOf('.') !== -1){
+      s = (s.lastIndexOf(',') > s.lastIndexOf('.')) ? s.replace(/\./g,'').replace(',','.') : s.replace(/,/g,'');
+    } else if (s.indexOf(',') !== -1){ s = s.replace(',','.'); }
+    const n = parseFloat(s); return isNaN(n) ? 0 : n;
   }
-  // Salva la bozza in locale così non si perde se chiude per sbaglio.
-  const campi = ['f-nome','f-cognome','f-telefono','f-email','f-indirizzo','f-zona','f-servizio','f-mobile','f-oggetto','f-totale','f-stato','f-note'];
-  campi.forEach(id => {
-    const el = document.getElementById(id);
-    const v = localStorage.getItem('tmpl_'+id);
-    if (v !== null && el) el.value = v;
-    el && el.addEventListener('input', () => localStorage.setItem('tmpl_'+id, el.value));
-  });
+  function fmtEuro(n){ return n.toLocaleString('it-IT',{minimumFractionDigits:2, maximumFractionDigits:2}) + ' €'; }
+
+  function aggiungiMateriale(desc, imp){
+    const row = document.createElement('div');
+    row.className = 'mat-row';
+    row.innerHTML = '<input class="desc" placeholder="descrizione (es. 3 confezioni vernice)"> '
+      + '<input class="imp" placeholder="0,00 €"> '
+      + '<button type="button" class="mat-del" title="rimuovi" onclick="this.parentNode.remove();ricalcola();salvaBozza();">✕</button>';
+    document.getElementById('materiali-lista').appendChild(row);
+    const [d,i] = row.querySelectorAll('input');
+    if (desc) d.value = desc;
+    if (imp !== undefined && imp !== '') i.value = imp;
+    d.addEventListener('input', salvaBozza);
+    i.addEventListener('input', () => { ricalcola(); salvaBozza(); });
+    return row;
+  }
+
+  function leggiMateriali(){
+    return [...document.querySelectorAll('#materiali-lista .mat-row')].map(r => {
+      const [d,i] = r.querySelectorAll('input');
+      return { desc: d.value.trim(), imp: i.value.trim() };
+    }).filter(m => m.desc !== '' || m.imp !== '');
+  }
+
+  function ricalcola(){
+    let tot = parseImp(document.getElementById('f-manodopera').value)
+            + parseImp(document.getElementById('f-trasporti').value);
+    leggiMateriali().forEach(m => tot += parseImp(m.imp));
+    document.getElementById('f-totale').value = tot > 0 ? fmtEuro(tot) : '';
+  }
+
+  function salvaBozza(){
+    const dati = {};
+    campi.forEach(id => dati[id] = document.getElementById(id).value);
+    dati.materiali = leggiMateriali();
+    localStorage.setItem('tmpl_scheda', JSON.stringify(dati));
+  }
+
+  function pulisci(){
+    document.querySelectorAll('#foglio input, #foglio textarea').forEach(el => { if(!el.readOnly) el.value = ''; });
+    document.getElementById('materiali-lista').innerHTML = '';
+    document.getElementById('f-stato').value = 'PREVENTIVO';
+    document.getElementById('f-totale').value = '';
+    localStorage.removeItem('tmpl_scheda');
+  }
+
+  // Ripristino bozza
+  (function(){
+    let dati = {};
+    try { dati = JSON.parse(localStorage.getItem('tmpl_scheda') || '{}'); } catch(e){}
+    campi.forEach(id => { if (dati[id] !== undefined) document.getElementById(id).value = dati[id]; });
+    campi.forEach(id => document.getElementById(id).addEventListener('input', () => { ricalcola(); salvaBozza(); }));
+    (Array.isArray(dati.materiali) ? dati.materiali : []).forEach(m => aggiungiMateriale(m.desc, m.imp));
+    if (!document.querySelector('#materiali-lista .mat-row')) aggiungiMateriale(); // una riga vuota di partenza
+    ricalcola();
+  })();
 </script>
 </body>
 </html>
