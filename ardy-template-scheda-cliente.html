@@ -80,7 +80,14 @@
 
     <div class="sezione">Richiesta / Preventivo</div>
     <div class="riga"><label>Servizio:</label><span class="valore"><input id="f-servizio" placeholder="es. Restauro mobile"></span></div>
-    <div class="riga"><label>Mobile/Pezzo:</label><span class="valore"><input id="f-mobile" placeholder="es. Credenza anni 60"></span></div>
+    <div class="riga" style="align-items:flex-start;">
+      <label>Mobile/Pezzo:</label>
+      <span class="valore">
+        <div id="mobili-lista"></div>
+        <button type="button" class="add-mat" onclick="aggiungiPezzo()">+ aggiungi pezzo</button>
+        <div style="font-size:11px;color:#999;margin-top:4px;">Un pezzo per riga (es. “credenza anni 60”, “coppia di comodini”).</div>
+      </span>
+    </div>
     <div class="riga"><label>Oggetto:</label><span class="valore"><input id="f-oggetto" placeholder="descrizione del lavoro"></span></div>
     <div class="riga"><label>Manodopera:</label><span class="valore"><input id="f-manodopera" class="imp" placeholder="es. 400,00 €" oninput="ricalcola()"></span></div>
 
@@ -118,7 +125,22 @@
 </div>
 
 <script>
-  const campi = ['f-nome','f-cognome','f-telefono','f-email','f-indirizzo','f-zona','f-servizio','f-mobile','f-oggetto','f-manodopera','f-trasporti','f-stato','f-note'];
+  const campi = ['f-nome','f-cognome','f-telefono','f-email','f-indirizzo','f-zona','f-servizio','f-oggetto','f-manodopera','f-trasporti','f-stato','f-note'];
+
+  function aggiungiPezzo(val){
+    const row = document.createElement('div');
+    row.className = 'mat-row';
+    row.innerHTML = '<input class="desc" placeholder="es. credenza anni 60"> '
+      + '<button type="button" class="mat-del" title="rimuovi" onclick="this.parentNode.remove();salvaBozza();">✕</button>';
+    document.getElementById('mobili-lista').appendChild(row);
+    const inp = row.querySelector('input');
+    if (val) inp.value = val;
+    inp.addEventListener('input', salvaBozza);
+    return row;
+  }
+  function leggiPezzi(){
+    return [...document.querySelectorAll('#mobili-lista .mat-row input')].map(i => i.value.trim()).filter(v => v !== '');
+  }
 
   // "1.450,00" / "1450.00" / "€ 30" → numero, 0 se vuoto.
   function parseImp(s){
@@ -164,12 +186,15 @@
     const dati = {};
     campi.forEach(id => dati[id] = document.getElementById(id).value);
     dati.materiali = leggiMateriali();
+    dati.mobili    = leggiPezzi();
     localStorage.setItem('tmpl_scheda', JSON.stringify(dati));
   }
 
   function pulisci(){
     document.querySelectorAll('#foglio input, #foglio textarea').forEach(el => { if(!el.readOnly) el.value = ''; });
     document.getElementById('materiali-lista').innerHTML = '';
+    document.getElementById('mobili-lista').innerHTML = '';
+    aggiungiPezzo();
     document.getElementById('f-stato').value = 'PREVENTIVO';
     document.getElementById('f-totale').value = '';
     localStorage.removeItem('tmpl_scheda');
@@ -183,6 +208,8 @@
     campi.forEach(id => document.getElementById(id).addEventListener('input', () => { ricalcola(); salvaBozza(); }));
     (Array.isArray(dati.materiali) ? dati.materiali : []).forEach(m => aggiungiMateriale(m.desc, m.imp));
     if (!document.querySelector('#materiali-lista .mat-row')) aggiungiMateriale(); // una riga vuota di partenza
+    (Array.isArray(dati.mobili) ? dati.mobili : []).forEach(p => aggiungiPezzo(p));
+    if (!document.querySelector('#mobili-lista .mat-row')) aggiungiPezzo();
     ricalcola();
   })();
 </script>

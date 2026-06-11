@@ -1274,6 +1274,7 @@ function eliminaPending(id) {
 
 function openNuovoCliente() {
   document.getElementById('nc-result').style.display = 'none';
+  pezzoReset('nc-mobili');
   document.getElementById('nuovoClienteOverlay').classList.add('open');
 }
 
@@ -1305,7 +1306,7 @@ async function salvaNuovoCliente() {
     indirizzo:     document.getElementById('nc-indirizzo').value.trim(),
     servizio:      document.getElementById('nc-servizio').value,
     zona:          document.getElementById('nc-zona').value.trim(),
-    mobile:        document.getElementById('nc-mobile').value.trim(),
+    mobile:        pezzoLeggi('nc-mobili').join(' · '),
     budget:        document.getElementById('nc-budget').value.trim(),
     stato:         document.getElementById('nc-stato').value,
     data_followup: document.getElementById('nc-followup').value,
@@ -1340,10 +1341,11 @@ async function salvaNuovoCliente() {
         closeNuovoCliente();
         // Reset form
         ['nc-nome','nc-cognome','nc-telefono','nc-email','nc-indirizzo',
-         'nc-zona','nc-mobile','nc-budget','nc-note','nc-followup'].forEach(id => {
+         'nc-zona','nc-budget','nc-note','nc-followup'].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.value = '';
         });
+        pezzoReset('nc-mobili');
         document.getElementById('nc-servizio').selectedIndex = 0;
         document.getElementById('nc-stato').selectedIndex = 0;
         showToast('✓ Nuovo cliente aggiunto', 'success');
@@ -1387,6 +1389,7 @@ function openImportPdf() {
   document.getElementById('imp-btn-crea').style.display = 'none';
   document.getElementById('imp-btn-crea-prev').style.display = 'none';
   document.getElementById('imp-materiali').innerHTML = '';
+  pezzoReset('imp-mobili');
   document.getElementById('importPdfOverlay').classList.add('open');
 }
 
@@ -1415,8 +1418,12 @@ async function estraiSchedaPdf() {
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
     set('imp-nome', d.nome); set('imp-cognome', d.cognome); set('imp-telefono', d.telefono);
     set('imp-email', d.email); set('imp-indirizzo', d.indirizzo); set('imp-zona', d.zona);
-    set('imp-servizio', d.servizio); set('imp-mobile', d.mobile); set('imp-oggetto', d.oggetto);
+    set('imp-servizio', d.servizio); set('imp-oggetto', d.oggetto);
     set('imp-manodopera', d.manodopera); set('imp-trasporti', d.trasporti); set('imp-note', d.note);
+    // Mobile/Pezzo (lista)
+    document.getElementById('imp-mobili').innerHTML = '';
+    (Array.isArray(d.mobili) ? d.mobili : []).forEach(p => pezzoAdd('imp-mobili', p));
+    if (!document.querySelector('#imp-mobili .pezzo-row')) pezzoAdd('imp-mobili');
     // Materiali (lista)
     document.getElementById('imp-materiali').innerHTML = '';
     (Array.isArray(d.materiali) ? d.materiali : []).forEach(m => impAddMateriale(m.descrizione, m.importo));
@@ -1447,6 +1454,25 @@ function impParseImp(s){
     s = (s.lastIndexOf(',') > s.lastIndexOf('.')) ? s.replace(/\./g,'').replace(',','.') : s.replace(/,/g,'');
   } else if (s.indexOf(',') !== -1){ s = s.replace(',','.'); }
   const n = parseFloat(s); return isNaN(n) ? 0 : n;
+}
+
+// Lista pezzi (Mobile/Pezzo multiplo) — generica per container.
+function pezzoAdd(containerId, val){
+  const box = document.getElementById(containerId);
+  const row = document.createElement('div');
+  row.className = 'pezzo-row';
+  row.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:4px;';
+  row.innerHTML = '<input type="text" class="pezzo" placeholder="es. credenza anni 60" style="flex:1;">'
+    + '<button type="button" onclick="this.parentNode.remove();" style="background:none;border:0;color:var(--red);cursor:pointer;font-size:15px;">✕</button>';
+  box.appendChild(row);
+  if (val) row.querySelector('input').value = val;
+}
+function pezzoLeggi(containerId){
+  return [...document.querySelectorAll('#'+containerId+' .pezzo-row input')].map(i => i.value.trim()).filter(v => v !== '');
+}
+function pezzoReset(containerId){
+  const box = document.getElementById(containerId);
+  if (box) { box.innerHTML = ''; pezzoAdd(containerId); }
 }
 
 function impAddMateriale(desc, imp){
@@ -1493,8 +1519,9 @@ async function creaSchedaDaPdf(conPreventivoArdy){
   const materiali = impLeggiMateriali();
   try {
     const fd = new FormData();
-    ['nome','cognome','telefono','email','indirizzo','zona','servizio','mobile','oggetto','manodopera','trasporti','stato','note']
+    ['nome','cognome','telefono','email','indirizzo','zona','servizio','oggetto','manodopera','trasporti','stato','note']
       .forEach(k => fd.append(k, document.getElementById('imp-' + k).value.trim()));
+    fd.append('mobile', pezzoLeggi('imp-mobili').join(' · '));
     fd.append('materiali', JSON.stringify(materiali));
     // Con preventivo Ardy: il backend NON crea il preventivo "semplice", lo genera il pannello col template.
     fd.append('crea_preventivo', conPreventivoArdy ? '0' : '1');
@@ -2212,9 +2239,10 @@ function showToast(msg, type = '') {
           <label>Zona</label>
           <input type="text" id="nc-zona" placeholder="es. Milano Nord">
         </div>
-        <div class="dark-field">
-          <label>Mobile / Pezzo</label>
-          <input type="text" id="nc-mobile" placeholder="es. Credenza anni 60">
+        <div class="dark-field full">
+          <label>Mobile / Pezzo (uno o più)</label>
+          <div id="nc-mobili"></div>
+          <button type="button" class="btn-secondary" style="margin-top:6px;font-size:11px;padding:4px 10px;" onclick="pezzoAdd('nc-mobili')">+ aggiungi pezzo</button>
         </div>
         <div class="dark-field">
           <label>Budget indicativo</label>
@@ -2282,7 +2310,11 @@ function showToast(msg, type = '') {
           <div class="dark-field full"><label>Indirizzo</label><input type="text" id="imp-indirizzo"></div>
           <div class="dark-field"><label>Zona</label><input type="text" id="imp-zona"></div>
           <div class="dark-field"><label>Servizio</label><input type="text" id="imp-servizio"></div>
-          <div class="dark-field"><label>Mobile / Pezzo</label><input type="text" id="imp-mobile"></div>
+          <div class="dark-field full">
+            <label>Mobile / Pezzo (uno o più)</label>
+            <div id="imp-mobili"></div>
+            <button type="button" class="btn-secondary" style="margin-top:6px;font-size:11px;padding:4px 10px;" onclick="pezzoAdd('imp-mobili')">+ aggiungi pezzo</button>
+          </div>
           <div class="dark-field full"><label>Oggetto / lavoro</label><input type="text" id="imp-oggetto"></div>
           <div class="dark-field"><label>Manodopera (€)</label><input type="text" id="imp-manodopera" placeholder="es. 400,00" oninput="impRicalcola()"></div>
           <div class="dark-field"><label>Trasporti (€)</label><input type="text" id="imp-trasporti" placeholder="es. 30,00" oninput="impRicalcola()"></div>

@@ -84,8 +84,10 @@ function estraiDaPdf(): array {
         . "Servizio:, Mobile/Pezzo:, Oggetto:, Manodopera:, Materiali:, Trasporti:, Totale:, Stato:, Note:). "
         . "Estrai i valori e rispondi ESCLUSIVAMENTE con un oggetto JSON valido, senza "
         . "testo prima o dopo, senza code fence. Chiavi obbligatorie: nome, cognome, "
-        . "telefono, email, indirizzo, zona, servizio, mobile, oggetto, manodopera, "
+        . "telefono, email, indirizzo, zona, servizio, mobili, oggetto, manodopera, "
         . "materiali, trasporti, stato, note. "
+        . "'mobili' è un ARRAY di stringhe, una per ogni pezzo elencato sotto 'Mobile/Pezzo:' "
+        . "(es. [\"credenza anni 60\", \"coppia di comodini\"]); array vuoto se non indicato. "
         . "Se un campo non è presente usa stringa vuota. Gli importi (manodopera, trasporti) "
         . "come numero con la virgola decimale (es. 850,00) o stringa vuota. "
         . "'materiali' è un ARRAY di oggetti {\"descrizione\":..., \"importo\":\"60,00\"}, uno per "
@@ -113,8 +115,21 @@ function estraiDaPdf(): array {
 
     // Normalizza le chiavi attese
     $out = [];
-    foreach (['nome','cognome','telefono','email','indirizzo','zona','servizio','mobile','oggetto','manodopera','trasporti','stato','note'] as $k) {
+    foreach (['nome','cognome','telefono','email','indirizzo','zona','servizio','oggetto','manodopera','trasporti','stato','note'] as $k) {
         $out[$k] = isset($dati[$k]) ? trim((string)$dati[$k]) : '';
+    }
+    // Mobili: lista di pezzi (accetta array o stringa con separatori comuni)
+    $out['mobili'] = [];
+    if (!empty($dati['mobili']) && is_array($dati['mobili'])) {
+        foreach ($dati['mobili'] as $m) {
+            $v = trim((string)(is_array($m) ? ($m['descrizione'] ?? '') : $m));
+            if ($v !== '') $out['mobili'][] = $v;
+        }
+    } elseif (!empty($dati['mobile'])) {
+        foreach (preg_split('/[;,·\n]+/', (string)$dati['mobile']) as $v) {
+            $v = trim($v);
+            if ($v !== '') $out['mobili'][] = $v;
+        }
     }
     // Materiali: lista di {descrizione, importo}
     $out['materiali'] = [];
