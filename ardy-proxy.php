@@ -25,6 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-gcal.php';
 require_once __DIR__ . '/ardy-db.php';
+require_once __DIR__ . '/ardy-net.php';
 require_once __DIR__ . '/ardy-notifica-michela.php';
 require_once __DIR__ . '/phpmailer/src/PHPMailer.php';
 require_once __DIR__ . '/phpmailer/src/SMTP.php';
@@ -38,14 +39,12 @@ use PHPMailer\PHPMailer\Exception;
 
 // -----------------------------------------------------------
 // IP DELL'UTENTE
+// CF-Connecting-IP / X-Forwarded-For sono fidati SOLO se la richiesta arriva
+// da un edge Cloudflare noto (vedi ardyClientIp in ardy-net.php), altrimenti
+// si usa REMOTE_ADDR: così l'IP del rate-limit non è falsificabile da chi
+// colpisce l'origin direttamente, evitando abusi sull'API a pagamento.
 // -----------------------------------------------------------
-$clientIp = $_SERVER['HTTP_CF_CONNECTING_IP']
-         ?? $_SERVER['HTTP_X_FORWARDED_FOR']
-         ?? $_SERVER['REMOTE_ADDR']
-         ?? 'unknown';
-if (strpos($clientIp, ',') !== false) {
-    $clientIp = trim(explode(',', $clientIp)[0]);
-}
+$clientIp = ardyClientIp();
 $cleanIp = preg_replace('/[^a-zA-Z0-9_\-\.]/', '', $clientIp);
 
 // -----------------------------------------------------------

@@ -198,12 +198,12 @@ come unica barriera anti-abuso. La protezione applicativa va comunque mantenuta
 ## Sicurezza — rimasti
 
 ### Priorità ALTA (da fare per primo)
-- **`ardy-proxy.php` — rate-limit basato su header falsificabili.** `X-Forwarded-For`/
-  `CF-Connecting-IP` sono fidati ciecamente: chi non passa da Cloudflare può falsificarli
-  e azzerare il rate-limit. Impatto: **costo** (ogni richiesta che passa chiama l'API
-  Anthropic a pagamento). Nota: DoS/flood già mitigati da OVH/Fail2ban/HULK; qui il
-  punto è il controllo costi. Fix: fidarsi dell'header solo se `REMOTE_ADDR` è in un
-  range Cloudflare noto, altrimenti usare `REMOTE_ADDR`.
+- ✅ **FATTO — `ardy-proxy.php` — rate-limit basato su header falsificabili.** Nuovo
+  helper `ardyClientIp()` in `ardy-net.php`: `CF-Connecting-IP`/`X-Forwarded-For` sono
+  fidati **solo** se `REMOTE_ADDR` è in un range Cloudflare noto (CIDR match v4/v6 con
+  `ardyIpInCidr`/`ardyIsCloudflareIp`), altrimenti si usa `REMOTE_ADDR` non falsificabile.
+  Chi colpisce l'origin direttamente non può più ruotare l'IP per azzerare il rate-limit
+  e far costare richieste all'API Anthropic.
 
 ### Priorità MEDIA
 - **`ardy-save-lead.php` — nessun rate-limit.** Endpoint pubblico: si può riempire la
