@@ -148,6 +148,30 @@ function ardyClientIp(): string {
 }
 
 /**
+ * Mette un `.htaccess` "no-PHP" in una cartella di upload, così un file
+ * caricato (es. una finta foto `.php`) non può essere eseguito dal server.
+ * Disabilita SOLO gli script: pdf/mp4/foto restano serviti normalmente.
+ * Idempotente: scrive il file una sola volta.
+ */
+function ardyHardenUploadDir(string $dir): void {
+    if ($dir === '' || !is_dir($dir)) return;
+    $htaccess = rtrim($dir, '/') . '/.htaccess';
+    if (file_exists($htaccess)) return;
+
+    $rules = <<<HT
+# Generato da ardyHardenUploadDir() — niente esecuzione di script in questa cartella.
+# I file leciti (pdf, mp4, immagini) restano serviti; solo gli script sono bloccati.
+RemoveHandler .php .php3 .php4 .php5 .php7 .php8 .phtml .phar .cgi .pl .py
+RemoveType .php .php3 .php4 .php5 .php7 .php8 .phtml .phar
+<FilesMatch "\.(?:php[0-9]?|phtml|phps|phar|cgi|pl|py|sh|asp|aspx|jsp)\$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+HT;
+    @file_put_contents($htaccess, $rules);
+}
+
+/**
  * GET HTTP sicuro: valida l'URL iniziale e ogni redirect, limita protocolli e
  * dimensione, verifica il TLS. Ritorna ['body'=>string,'code'=>int] o null.
  */

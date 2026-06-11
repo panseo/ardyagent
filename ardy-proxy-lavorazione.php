@@ -7,6 +7,7 @@
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-gcal.php';
+require_once __DIR__ . '/ardy-net.php';
 
 date_default_timezone_set('Europe/Rome');
 
@@ -23,7 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // Rate limiting
 $rateLimitDir = __DIR__ . '/ardy-rate-limit/';
 if (!is_dir($rateLimitDir)) mkdir($rateLimitDir, 0755, true);
-$ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+// IP reale del client: dietro Cloudflare REMOTE_ADDR è l'edge (condiviso da
+// tutti gli utenti); ardyClientIp() risale all'IP vero in modo non falsificabile.
+$ip = ardyClientIp();
 $rateLimitFile = $rateLimitDir . md5($ip) . '_lav.json';
 $now = time();
 $rateData = file_exists($rateLimitFile) ? json_decode(file_get_contents($rateLimitFile), true) : ['count' => 0, 'reset' => $now + 3600];

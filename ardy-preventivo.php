@@ -13,6 +13,8 @@ header('X-Content-Type-Options: nosniff');
 
 date_default_timezone_set('Europe/Rome');
 
+require_once __DIR__ . '/ardy-net.php';
+
 define('MPDF_VENDOR', __DIR__ . '/vendor/autoload.php');
 define('PDF_OUTPUT_DIR', __DIR__ . '/preventivi_pdf/');
 define('LOGO_PATH',      __DIR__ . '/assets/logo.png');
@@ -22,6 +24,7 @@ if (!is_dir(PDF_OUTPUT_DIR) && !mkdir(PDF_OUTPUT_DIR, 0755, true) && !is_dir(PDF
     echo json_encode(['error' => 'Impossibile creare la cartella PDF']);
     exit;
 }
+ardyHardenUploadDir(PDF_OUTPUT_DIR); // i PDF generati non devono eseguire script
 if (!file_exists(MPDF_VENDOR)) {
     http_response_code(500);
     echo json_encode(['error' => 'mPDF non installato. Esegui: php composer.phar require mpdf/mpdf']);

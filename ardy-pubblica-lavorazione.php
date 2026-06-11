@@ -13,6 +13,7 @@ define('ARDY_WP_LOAD', '/home/micoperibg/public_html/archivio/wp-load.php');
 // -----------------------------------------------------------
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
+require_once __DIR__ . '/ardy-net.php';
 
 // -----------------------------------------------------------
 // 2. CORS E PREFLIGHT (deve rispondere PRIMA di caricare WP)
@@ -90,6 +91,7 @@ if (!is_dir($sessionDir) && !mkdir($sessionDir, 0755, true) && !is_dir($sessionD
     echo json_encode(['success' => false, 'error' => 'Impossibile creare la cartella di upload']);
     exit();
 }
+ardyHardenUploadDir(rtrim(ARDY_UPLOAD_DIR, '/')); // niente esecuzione script tra gli upload
 
 $savedImageUrls = [];
 $savedImageIds  = [];   // ID attachment WP, in parallelo a $savedImageUrls

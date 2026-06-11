@@ -4,14 +4,48 @@
 // Chiamato da ardy-proxy.php quando Claude usa il tool salva_lead_crm
 // -----------------------------------------------------------
 
+require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
+require_once __DIR__ . '/ardy-net.php';
 
 header('Access-Control-Allow-Origin: https://ardyagent.ardy-lab.it');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Allow-Headers: Content-Type, X-Ardy-Internal');
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
+
+// IP reale del client (a prova di spoofing — vedi ardy-net.php)
+$ip = ardyClientIp();
+
+// -----------------------------------------------------------
+// RATE LIMIT PER IP — endpoint pubblico: evita che si riempia la
+// tabella `clienti` di lead spazzatura con POST diretti.
+// Le chiamate interne (proxy chatbot) portano un secret e sono esenti,
+// così il flusso legittimo server-side non viene mai strozzato.
+// -----------------------------------------------------------
+$internalSecret = defined('ARDY_INTERNAL_SECRET') ? ARDY_INTERNAL_SECRET : '';
+$providedSecret = $_SERVER['HTTP_X_ARDY_INTERNAL'] ?? '';
+$isTrusted = $internalSecret !== '' && hash_equals($internalSecret, $providedSecret);
+
+if (!$isTrusted && defined('ARDY_RATE_LIMIT_DIR')) {
+    $dir = ARDY_RATE_LIMIT_DIR;
+    if (!is_dir($dir)) @mkdir($dir, 0755, true);
+    $now     = time();
+    $cleanIp = preg_replace('/[^a-zA-Z0-9_\-\.]/', '', $ip);
+    $rlFile  = $dir . 'savelead_' . md5($cleanIp) . '.json';
+    $hits    = file_exists($rlFile) ? (json_decode(file_get_contents($rlFile), true) ?: []) : [];
+    // tieni solo gli ultimi 24h
+    $hits = array_values(array_filter($hits, fn($t) => ($now - $t) < 86400));
+    $lastHour = count(array_filter($hits, fn($t) => ($now - $t) < 3600));
+    if ($lastHour >= 15 || count($hits) >= 50) {
+        http_response_code(429);
+        echo json_encode(['success' => false, 'error' => 'Troppe richieste. Riprova più tardi.']);
+        exit();
+    }
+    $hits[] = $now;
+    file_put_contents($rlFile, json_encode($hits));
+}
 
 $input     = json_decode(file_get_contents('php://input'), true);
 $sessionId = $input['session_id'] ?? '';
@@ -20,10 +54,6 @@ if (empty($sessionId)) {
     echo json_encode(['success' => false, 'error' => 'session_id mancante']);
     exit();
 }
-
-// IP del visitatore — sempre rilevato dal server, mai accettato dal client
-// (impedisce lo spoofing dell'indirizzo IP nei dati salvati)
-$ip = $_SERVER['REMOTE_ADDR'] ?? null;
 
 try {
     $db = ardyDB();

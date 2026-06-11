@@ -14,6 +14,7 @@ date_default_timezone_set('Europe/Rome');
 define('ARDY_WP_LOAD', '/home/micoperibg/public_html/archivio/wp-load.php');
 
 require_once __DIR__ . '/ardy-config.php';
+require_once __DIR__ . '/ardy-net.php';
 
 header('Access-Control-Allow-Origin: https://ardyagent.ardy-lab.it');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -90,6 +91,7 @@ if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
     echo json_encode(['success' => false, 'error' => 'cartella non creabile']);
     exit();
 }
+ardyHardenUploadDir(rtrim(ARDY_UPLOAD_DIR, '/')); // niente esecuzione script tra gli upload
 
 $filename = 'video_' . date('Ymd_His') . '_' . uniqid() . '.' . $ext;
 $filepath = $dir . $filename;

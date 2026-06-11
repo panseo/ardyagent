@@ -8,6 +8,7 @@
 // -----------------------------------------------------------
 
 require_once __DIR__ . '/ardy-config.php';
+require_once __DIR__ . '/ardy-net.php';
 
 header('Access-Control-Allow-Origin: https://ardyagent.ardy-lab.it');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
@@ -86,6 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode(['success' => false, 'error' => 'cartella non creabile']);
         exit();
     }
+    ardyHardenUploadDir(rtrim(ARDY_UPLOAD_DIR, '/')); // niente esecuzione script tra gli upload
 
     $maxImgByte = 12 * 1024 * 1024; // 12 MB per immagine
     $saved = 0;

@@ -53,6 +53,9 @@ $cleanIp = preg_replace('/[^a-zA-Z0-9_\-\.]/', '', $clientIp);
 foreach ([ARDY_RATE_LIMIT_DIR, ARDY_UPLOAD_DIR] as $dir) {
     if (!is_dir($dir)) mkdir($dir, 0755, true);
 }
+// Le cartelle di upload non devono eseguire script (foto/file caricati).
+ardyHardenUploadDir(ARDY_UPLOAD_DIR);
+ardyHardenUploadDir(ARDY_RATE_LIMIT_DIR);
 
 // -----------------------------------------------------------
 // PULIZIA AUTOMATICA FILE RATE-LIMIT VECCHI
@@ -498,7 +501,12 @@ while ($iteration < $maxIterations) {
                 ]));
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                 curl_setopt($ch, CURLOPT_TIMEOUT,        15);
-                curl_setopt($ch, CURLOPT_HTTPHEADER,     ['Content-Type: application/json']);
+                $saveHeaders = ['Content-Type: application/json'];
+                if (defined('ARDY_INTERNAL_SECRET') && ARDY_INTERNAL_SECRET !== '') {
+                    // marca la chiamata come interna → esente dal rate-limit pubblico
+                    $saveHeaders[] = 'X-Ardy-Internal: ' . ARDY_INTERNAL_SECRET;
+                }
+                curl_setopt($ch, CURLOPT_HTTPHEADER,     $saveHeaders);
                 $r = json_decode(curl_exec($ch), true);
                 curl_close($ch);
                 if (isset($r['success'])) {
