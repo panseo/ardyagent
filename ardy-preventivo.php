@@ -68,6 +68,26 @@ if ($mode === 'stato') {
     exit;
 }
 
+// ─── Elimina preventivo (solo BOZZA) — POST + header custom (anti-CSRF) ──────────
+if ($mode === 'delete') {
+    header('Content-Type: application/json');
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405); header('Allow: POST');
+        echo json_encode(['error' => 'Metodo non consentito. Usa POST.']); exit;
+    }
+    if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') !== 'XMLHttpRequest') {
+        http_response_code(403); echo json_encode(['error' => 'Richiesta non autorizzata']); exit;
+    }
+    $id = intval($_POST['id'] ?? 0);
+    if (!$id) { http_response_code(400); echo json_encode(['error' => 'id mancante']); exit; }
+    $db   = dbConnect();
+    $stmt = $db->prepare("DELETE FROM preventivi WHERE id=? AND stato='bozza'");
+    $stmt->bind_param('i', $id);
+    $stmt->execute();
+    echo json_encode(['success' => true, 'deleted' => $stmt->affected_rows]);
+    exit;
+}
+
 // ─── Endpoint GET ─────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
@@ -385,40 +405,54 @@ if (!file_exists($ltMarker)) {
     @$db->query("ALTER TABLE preventivi MODIFY voci_json LONGTEXT");
     @file_put_contents($ltMarker, '1');
 }
-$stmt        = $db->prepare("
-    INSERT INTO preventivi
-        (session_id, numero, tipo, oggetto, cliente_nome, cliente_email,
-         note, condizioni, voci_json, subtotale, grand_total,
-         file_pdf, stato, data_emissione, data_scadenza)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    ON DUPLICATE KEY UPDATE
-        tipo=VALUES(tipo), oggetto=VALUES(oggetto),
-        note=VALUES(note), condizioni=VALUES(condizioni),
-        voci_json=VALUES(voci_json), subtotale=VALUES(subtotale),
-        grand_total=VALUES(grand_total), file_pdf=VALUES(file_pdf),
-        stato=VALUES(stato), data_scadenza=VALUES(data_scadenza),
-        updated_at=NOW()
-");
 $stato = 'bozza';
-$stmt->bind_param('sssssssssddssss',
-    $sessionId,
-    $dati['numero_preventivo'],
-    $dati['tipo_preventivo'],
-    $dati['oggetto'],
-    $dati['cliente_nome'],
-    $dati['cliente_email'],
-    $dati['note'],
-    $dati['condizioni'],
-    $vociJson,
-    $subtotale,
-    $grand_total,
-    $nomeFile,
-    $stato,
-    $dati['data_emissione'],
-    $dati['data_scadenza']
-);
-$stmt->execute();
-$prevId = $db->insert_id ?: $stmt->insert_id;
+
+// Modifica di una bozza esistente: si AGGIORNA la stessa riga (per id), non se ne
+// crea una nuova. Senza questo — e senza UNIQUE su `numero` — ogni rigenerazione
+// di una bozza inseriva un duplicato.
+$editId  = intval($_POST['prev_id'] ?? 0);
+$isEdit  = false;
+if ($editId > 0) {
+    $c = $db->prepare("SELECT stato FROM preventivi WHERE id=? LIMIT 1");
+    $c->bind_param('i', $editId);
+    $c->execute();
+    $c->bind_result($statoRiga);
+    if ($c->fetch() && $statoRiga === 'bozza') $isEdit = true;
+    $c->close();
+}
+
+if ($isEdit) {
+    $stmt = $db->prepare("
+        UPDATE preventivi SET
+            tipo=?, oggetto=?, cliente_nome=?, cliente_email=?, note=?, condizioni=?,
+            voci_json=?, subtotale=?, grand_total=?, file_pdf=?, data_emissione=?, data_scadenza=?,
+            updated_at=NOW()
+        WHERE id=? AND stato='bozza'
+    ");
+    $stmt->bind_param('sssssssddsssi',
+        $dati['tipo_preventivo'], $dati['oggetto'], $dati['cliente_nome'], $dati['cliente_email'],
+        $dati['note'], $dati['condizioni'], $vociJson, $subtotale, $grand_total,
+        $nomeFile, $dati['data_emissione'], $dati['data_scadenza'], $editId
+    );
+    $stmt->execute();
+    $prevId = $editId;
+} else {
+    $stmt = $db->prepare("
+        INSERT INTO preventivi
+            (session_id, numero, tipo, oggetto, cliente_nome, cliente_email,
+             note, condizioni, voci_json, subtotale, grand_total,
+             file_pdf, stato, data_emissione, data_scadenza)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    ");
+    $stmt->bind_param('sssssssssddssss',
+        $sessionId, $dati['numero_preventivo'], $dati['tipo_preventivo'], $dati['oggetto'],
+        $dati['cliente_nome'], $dati['cliente_email'], $dati['note'], $dati['condizioni'],
+        $vociJson, $subtotale, $grand_total, $nomeFile, $stato,
+        $dati['data_emissione'], $dati['data_scadenza']
+    );
+    $stmt->execute();
+    $prevId = $db->insert_id ?: $stmt->insert_id;
+}
 
 if ($mode === 'save') {
     header('Content-Type: application/json');

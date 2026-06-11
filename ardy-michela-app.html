@@ -1566,6 +1566,7 @@ async function creaSchedaDaPdf(conPreventivoArdy){
 // Apre il pannello preventivi precompilato (senza dipendere da currentLead).
 function apriPreventivoConDati(sessionId, dati, voci){
   pvCurrentSessionId = sessionId || '';
+  pvEditId = null; // nuovo preventivo
   document.getElementById('pv-numero').value         = pvGeneraNumero();
   document.getElementById('pv-data-emissione').value = new Date().toISOString().split('T')[0];
   document.getElementById('pv-data-scadenza').value  = pvDataScadenza(30);
@@ -1600,6 +1601,7 @@ const PREVENTIVO_URL = BASE_URL + '/ardy-preventivo.php';
 let pvOpzioni = [];
 let pvLibTarget = null;
 let pvOpzSeq = 1;
+let pvEditId = null;   // id del preventivo in modifica (null = nuovo → INSERT)
 
 let pvCurrentSessionId = '';
 
@@ -1608,6 +1610,7 @@ function openPreventivoPanel() {
 
   // Salva session_id prima che currentLead possa cambiare
   pvCurrentSessionId = currentLead.Session_ID ?? '';
+  pvEditId = null; // nuovo preventivo
 
   // Pre-compila con i dati del lead corrente
   const l = currentLead;
@@ -1809,6 +1812,8 @@ function pvRaccogliFormData() {
   });
   // Copertina (immagine unica a tutta pagina)
   if (pvCopertina) fd.append('copertina', pvCopertina);
+  // Id se stiamo modificando una bozza (→ UPDATE invece di nuovo INSERT)
+  if (pvEditId) fd.append('prev_id', pvEditId);
   return fd;
 }
 
@@ -1935,6 +1940,7 @@ async function pvGeneraPDF() {
     a.click();
     document.body.removeChild(a);
 
+    if (data.id) pvEditId = data.id; // se rigenera senza chiudere, aggiorna la stessa riga
     showToast('✓ PDF generato: ' + data.numero, 'success');
     closePreventivoPanel();
     caricaStoricoPrev(pvCurrentSessionId);
@@ -2004,7 +2010,8 @@ function renderStoricoPrev(preventivi) {
             ).join('')}
           </select>
           ${p.stato === 'bozza'
-            ? `<button class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="modificaPreventivo(${p.id})">✏️ Modifica</button>`
+            ? `<button class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="modificaPreventivo(${p.id})">✏️ Modifica</button>
+               <button class="btn-secondary" style="padding:4px 8px;font-size:11px;" title="Elimina bozza" onclick="eliminaPreventivo(${p.id})">🗑</button>`
             : `<span title="Definitivo: non modificabile" style="font-size:11px;color:var(--muted);padding:4px 6px;">🔒</span>`}
           ${p.file_pdf ? `<button class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="scaricaPrevDB('${p.file_pdf}')">⬇ PDF</button>` : ''}
         </div>
@@ -2034,6 +2041,25 @@ function scaricaPrevDB(file) {
   window.open(PREV_API + '?mode=download&file=' + encodeURIComponent(file), '_blank');
 }
 
+// Elimina una bozza (es. per ripulire eventuali doppioni). Solo bozze.
+async function eliminaPreventivo(id) {
+  if (!confirm('Eliminare questa bozza di preventivo? L\'operazione è definitiva.')) return;
+  try {
+    const res  = await fetch(PREV_API + '?mode=delete', {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      body: new URLSearchParams({ id: id })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.deleted ? '✓ Bozza eliminata' : 'Niente da eliminare (non è una bozza)', data.deleted ? 'success' : 'error');
+      caricaStoricoPrev(pvCurrentSessionId || (currentLead?.Session_ID ?? ''));
+    } else {
+      showToast('⚠ ' + (data.error || 'Errore eliminazione'), 'error');
+    }
+  } catch(e) { showToast('⚠ Errore di rete', 'error'); }
+}
+
 // Converte una data "gg/mm/aaaa" nel formato ISO "aaaa-mm-gg" per l'input date.
 function itDateToIso(s) {
   if (!s) return '';
@@ -2056,6 +2082,7 @@ async function modificaPreventivo(id) {
     const setV = (id2, v) => { const el = document.getElementById(id2); if (el != null && v != null) el.value = v; };
 
     pvCurrentSessionId = data.session_id || pvCurrentSessionId || '';
+    pvEditId = id; // modifica: si aggiorna QUESTA riga, niente doppioni
     setV('pv-tipo', dd.tipo_preventivo || dd.tipo || 'Preventivo Servizi');
     setV('pv-numero', data.numero || dd.numero_preventivo || '');
     setV('pv-data-emissione', itDateToIso(dd.data_emissione));
