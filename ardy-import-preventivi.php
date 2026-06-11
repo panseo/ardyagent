@@ -35,6 +35,10 @@ if (defined('ARDY_IMPORT_DISABILITATO') && ARDY_IMPORT_DISABILITATO === true) {
 
 date_default_timezone_set('Europe/Rome');
 
+// Cartella dei PDF dei preventivi (stessa usata da ardy-preventivo.php per il
+// download dallo "Storico"). I PDF caricati qui vengono salvati con questo nome.
+define('PDF_OUTPUT_DIR', __DIR__ . '/preventivi_pdf/');
+
 // Colonne attese nel CSV (intestazione). L'ordine è libero: si va per nome.
 // Solo `oggetto` e `totale` sono di fatto necessari per un preventivo utile;
 // il resto è opzionale.
@@ -65,7 +69,7 @@ if ($mode === 'template') {
         '', 'Restauro', 'Roma', 'Coppia di comodini d\'epoca con piani in marmo', '',
         'PREVENTIVO',
         'ARD-2026-0001', 'Restauro conservativo coppia comodini con piani in marmo', '360,00',
-        'inviato', '18/05/2026', '', '', 'Preventivo storico migrato',
+        'inviato', '18/05/2026', '', 'Preventivo_Restauro_Alessandra_Masu.pdf', 'Preventivo storico migrato',
     ], ';');
     fclose($out);
     exit;
@@ -87,6 +91,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // PDF caricati insieme al CSV: mappa basename-normalizzato → tmp_name.
+    // Il collegamento con la riga avviene tramite la colonna `file_pdf`.
+    $pdfMap = raccogliPdf();
+
     $report   = [];
     $okCount  = 0;
     $skipCount = 0;
@@ -97,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     foreach ($righe as $i => $r) {
         $numRiga = $i + 2; // +1 header, +1 base-1 per l'utente
-        $res = importaRiga($db, $r, $dryRun, $STATI_CLIENTE, $STATI_PREVENTIVO);
+        $res = importaRiga($db, $r, $dryRun, $STATI_CLIENTE, $STATI_PREVENTIVO, $pdfMap);
         $report[] = ['riga' => $numRiga, 'esito' => $res['esito'], 'msg' => $res['msg']];
         if ($res['esito'] === 'ok')   $okCount++;
         if ($res['esito'] === 'skip') $skipCount++;
@@ -160,7 +168,7 @@ function leggiCsv(string $path): ?array {
 }
 
 /** Importa una singola riga. In dry-run non scrive nulla. */
-function importaRiga(PDO $db, array $r, bool $dryRun, array $statiCli, array $statiPrev): array {
+function importaRiga(PDO $db, array $r, bool $dryRun, array $statiCli, array $statiPrev, array $pdfMap = []): array {
     $nome     = $r['nome']     ?? '';
     $cognome  = $r['cognome']  ?? '';
     $telefono = preg_replace('/[^0-9+]/', '', $r['telefono'] ?? '');
@@ -197,9 +205,20 @@ function importaRiga(PDO $db, array $r, bool $dryRun, array $statiCli, array $st
 
     $cliNomeCompleto = trim($nome . ' ' . $cognome);
 
+    // PDF allegato: la riga indica il nome del file in `file_pdf`; lo cerchiamo
+    // tra i PDF caricati col form (chiave normalizzata = basename minuscolo).
+    $filePdfReq = basename(trim($r['file_pdf'] ?? ''));
+    $pdfKey     = strtolower($filePdfReq);
+    $pdfMsg     = '';
+    if ($filePdfReq !== '') {
+        $pdfMsg = isset($pdfMap[$pdfKey])
+            ? " · PDF \"{$filePdfReq}\" ✓"
+            : " · ⚠ PDF \"{$filePdfReq}\" non caricato (la scheda resterà senza file)";
+    }
+
     if ($dryRun) {
         $tot = $totale !== null ? '€ ' . number_format($totale, 2, ',', '.') : '—';
-        return ['esito' => 'ok', 'msg' => "Cliente \"{$cliNomeCompleto}\" → preventivo {$numero} ({$tot}, {$statoPrev})."];
+        return ['esito' => 'ok', 'msg' => "Cliente \"{$cliNomeCompleto}\" → preventivo {$numero} ({$tot}, {$statoPrev}){$pdfMsg}."];
     }
 
     try {
@@ -243,9 +262,17 @@ function importaRiga(PDO $db, array $r, bool $dryRun, array $statiCli, array $st
         }
 
         $subtotale = $totale ?? 0;
-        // file_pdf: solo il basename (no path-traversal). Se il PDF originale
-        // viene copiato in preventivi_pdf/, dallo "Storico" si potrà riscaricare.
-        $filePdf = basename(trim($r['file_pdf'] ?? ''));
+        // Se il PDF è stato caricato col form, lo salviamo in preventivi_pdf/
+        // (nome normalizzato) così dallo "Storico" si riscarica. Se la riga cita
+        // un file ma non è stato caricato, lasciamo file_pdf vuoto (niente link).
+        $filePdf = '';
+        if ($filePdfReq !== '' && isset($pdfMap[$pdfKey])) {
+            $salvato = salvaPdf($pdfMap[$pdfKey], $filePdfReq);
+            if ($salvato === null) {
+                return ['esito' => 'err', 'msg' => "PDF \"{$filePdfReq}\" non valido o non salvabile."];
+            }
+            $filePdf = $salvato;
+        }
         $sqlPrev = "INSERT INTO preventivi
                       (session_id, numero, tipo, oggetto, cliente_nome, cliente_email,
                        note, condizioni, voci_json, subtotale, grand_total,
@@ -270,12 +297,55 @@ function importaRiga(PDO $db, array $r, bool $dryRun, array $statiCli, array $st
             ':datasc'  => ($r['scadenza'] ?? '') ?: '',
         ]);
 
-        return ['esito' => 'ok', 'msg' => "Importato: cliente \"{$cliNomeCompleto}\" + preventivo {$numero}."];
+        $msgPdf = $filePdf !== '' ? ' (PDF allegato)' : '';
+        return ['esito' => 'ok', 'msg' => "Importato: cliente \"{$cliNomeCompleto}\" + preventivo {$numero}{$msgPdf}."];
 
     } catch (PDOException $e) {
         error_log('ARDY IMPORT ERROR riga: ' . $e->getMessage());
         return ['esito' => 'err', 'msg' => 'Errore DB su questa riga (vedi log server).'];
     }
+}
+
+/** Raccoglie i PDF caricati col campo file multiplo `pdf[]` in una mappa
+ *  basename-minuscolo → percorso temporaneo. Scarta gli upload non riusciti. */
+function raccogliPdf(): array {
+    $map = [];
+    if (empty($_FILES['pdf']) || !is_array($_FILES['pdf']['tmp_name'] ?? null)) {
+        return $map;
+    }
+    foreach ($_FILES['pdf']['tmp_name'] as $i => $tmp) {
+        if (($_FILES['pdf']['error'][$i] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) continue;
+        if (!is_uploaded_file($tmp)) continue;
+        $nome = strtolower(basename($_FILES['pdf']['name'][$i] ?? ''));
+        if ($nome === '') continue;
+        $map[$nome] = $tmp;
+    }
+    return $map;
+}
+
+/** Valida che il file temporaneo sia un PDF e lo salva in preventivi_pdf/ con
+ *  un nome normalizzato. Ritorna il nome salvato, o null in caso di errore. */
+function salvaPdf(string $tmp, string $nomeOriginale): ?string {
+    // Verifica che sia davvero un PDF (MIME reale), non solo l'estensione
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mime  = $finfo->file($tmp);
+    if ($mime !== 'application/pdf') return null;
+
+    if (!is_dir(PDF_OUTPUT_DIR) && !mkdir(PDF_OUTPUT_DIR, 0755, true) && !is_dir(PDF_OUTPUT_DIR)) {
+        return null;
+    }
+
+    // Nome sicuro: solo caratteri innocui, sempre con estensione .pdf
+    $base = preg_replace('/[^A-Za-z0-9._-]+/', '_', basename($nomeOriginale));
+    $base = trim($base, '._-');
+    if ($base === '') $base = 'preventivo';
+    if (!preg_match('/\.pdf$/i', $base)) $base .= '.pdf';
+    $base = 'import_' . $base; // prefisso per non collidere coi PDF generati
+
+    $dest = PDF_OUTPUT_DIR . $base;
+    if (!copy($tmp, $dest)) return null;
+    @chmod($dest, 0644);
+    return $base;
 }
 
 /** "1.450,00" / "1450.00" / "€ 1.450" → float, oppure null se vuoto. */
@@ -320,9 +390,11 @@ function renderReport(array $report, int $ok, int $skip, int $err, bool $dryRun)
     $confermaForm = '';
     if ($dryRun && $err === 0 && $ok > 0) {
         $confermaForm = '<form method="post" enctype="multipart/form-data" class="conferma">'
-            . '<p><strong>Per scrivere davvero sul database</strong>, ricarica lo stesso CSV e spunta la conferma:</p>'
-            . '<input type="file" name="csv" accept=".csv" required> '
-            . '<label><input type="checkbox" name="conferma" value="1" required> Confermo l\'import definitivo</label> '
+            . '<p><strong>Per scrivere davvero sul database</strong>, riseleziona gli stessi file e spunta la conferma '
+            . '(i file caricati non si conservano tra una pagina e l\'altra):</p>'
+            . '<p>CSV:<br><input type="file" name="csv" accept=".csv" required></p>'
+            . '<p>PDF (se vuoi allegarli):<br><input type="file" name="pdf[]" accept="application/pdf" multiple></p>'
+            . '<p><label><input type="checkbox" name="conferma" value="1" required> Confermo l\'import definitivo</label></p>'
             . '<button type="submit">Importa per davvero</button></form>';
     }
 
@@ -343,16 +415,23 @@ function renderPagina(string $contenuto, string $titolo = 'Import preventivi sto
           <li><a href="?mode=template"><strong>Scarica il CSV-modello</strong></a> e aprilo con Excel o Fogli Google.</li>
           <li>Compila una riga per ogni vecchio preventivo (cancella la riga d\'esempio).
               Servono almeno il <em>cliente</em> e l\'<em>oggetto</em> o il <em>totale</em>; il resto è facoltativo.</li>
-          <li>Salva come <strong>CSV</strong> e caricalo qui sotto: prima vedi un\'<strong>anteprima</strong> (non scrive nulla),
-              poi confermi per importare davvero.</li>
+          <li>(Facoltativo) Per allegare i PDF alle schede: nella colonna <code>file_pdf</code> scrivi
+              il nome del file PDF, poi qui sotto seleziona <strong>tutti i PDF</strong> insieme al CSV.</li>
+          <li>Carica: prima vedi un\'<strong>anteprima</strong> (non scrive nulla), poi spunta la conferma
+              e reinvia per importare davvero.</li>
         </ol>
         <p class="cols"><strong>Colonne:</strong> ' . h($colonne) . '</p>
         <form method="post" enctype="multipart/form-data" class="upload">
-          <input type="file" name="csv" accept=".csv" required>
-          <button type="submit">Anteprima import</button>
+          <p><strong>1. File CSV</strong><br><input type="file" name="csv" accept=".csv" required></p>
+          <p><strong>2. PDF dei preventivi</strong> (facoltativo, selezione multipla)<br>
+             <input type="file" name="pdf[]" accept="application/pdf" multiple></p>
+          <p><label><input type="checkbox" name="conferma" value="1"> Conferma import definitivo
+             (lascia vuoto per la sola anteprima)</label></p>
+          <button type="submit">Carica</button>
         </form>
         <p class="nota">Strumento temporaneo per la migrazione. È idempotente: ricaricarlo non crea doppioni
-        (clienti raggruppati per telefono, preventivi per numero).</p>';
+        (clienti raggruppati per telefono, preventivi per numero). I PDF vengono salvati in
+        <code>preventivi_pdf/</code> e collegati allo "Storico" della scheda.</p>';
     } else {
         $form = $contenuto;
     }
@@ -369,7 +448,8 @@ function renderPagina(string $contenuto, string $titolo = 'Import preventivi sto
       table.rep th,table.rep td{border:1px solid #ddd;padding:6px 8px;text-align:left;vertical-align:top}
       tr.ok td{background:#eefaf0} tr.skip td{background:#fff8e6} tr.err td{background:#fdecec}
       .err{color:#a00} .ok2{color:#080} .nota{font-size:12px;color:#777}
-      label{font-size:14px}
+      label{font-size:14px} code{background:#eee;padding:1px 5px;border-radius:3px;font-size:13px}
+      .upload p,.conferma p{margin:10px 0}
     </style></head><body>
     <h1>📥 ' . h($titolo) . '</h1>' . $form . '</body></html>';
 }
