@@ -2,10 +2,11 @@
 
 ---
 
-## 🟡 SESSIONE IN CORSO — Migrazione preventivi storici + Sole crea scheda (branch `claude/busy-cray-3ek3lu`)
+## 🟡 IN CORSO — Migrazione preventivi storici + Sole crea scheda (branch `claude/busy-cray-3ek3lu`)
 
 > ⚠️ **NIENTE è ancora in produzione.** Tutto è committato sul branch
-> `claude/busy-cray-3ek3lu` ma **non deployato**. Primo passo al ritorno: deploy.
+> `claude/busy-cray-3ek3lu` ma **non deployato**. Primo passo della prossima
+> sessione: **deploy**.
 
 ### ✅ Fatto (in repo, da deployare)
 - **`ardy-import-preventivi.php`** — strumento *una-tantum* per migrare i preventivi
@@ -24,28 +25,58 @@
 - **`.gitignore`**: esclude `import-preventivi*.csv` (contengono PII clienti).
 - README aggiornato con la nuova riga file.
 
-### ⏭️ Da riprendere al ritorno (in ordine)
-1. **DEPLOY del branch** sul server: `git pull` del branch + `./deploy.sh`
-   (oppure merge su `main` e deploy). Senza questo, l'import non è raggiungibile online.
-2. **Raccolta preventivi storici**: Michela li mette in una **cartella Google Drive**.
-   - Claude **può leggere da Drive** (tool Google Drive disponibili): appena la cartella
-     è condivisa/creata, dato il link/nome, estrarre i dati e generare il **CSV già
-     compilato** (con `file_pdf` valorizzato). In alternativa Michela invia i PDF in chat.
+### ⏭️ Prossima sessione — da riprendere in ordine
+
+**1. DEPLOY del branch** sul server: `git pull` del branch + `./deploy.sh`
+   (oppure merge su `main` e deploy). Senza questo l'import non è raggiungibile online.
+
+**2. Raccolta + import dei preventivi storici.** Michela li mette in una **cartella
+   Google Drive**.
+   - Claude **può leggere da Drive** (tool Google Drive disponibili): dato il link/nome
+     della cartella, estrarre i dati e generare il **CSV già compilato** (con `file_pdf`
+     valorizzato). In alternativa Michela invia i PDF in chat.
    - Esempio già prodotto: 2 preventivi (Alessandra Masu, Laura) → CSV inviato a Michela.
-     Nota: per preventivi a opzioni (es. Laura: €350/€700) lasciare `totale` vuoto e
-     mettere gli importi in `note`.
+     Per preventivi a opzioni (es. Laura: €350/€700) lasciare `totale` vuoto, importi in `note`.
    - Dati mancanti nei PDF (telefono/email, stato accettato): farseli dare a parte.
-3. **Feature "Sole crea scheda da WhatsApp"** (richiesta Michela). Oggi la modalità
-   **titolare** (`ardy-wa-lookup.php`) è **read-only**: Sole riepiloga il CRM ma non ha
-   tool di scrittura, quindi NON può creare una scheda da dati dettati su WhatsApp.
-   Per abilitarlo servono:
-   - **Lato repo**: nuovo endpoint tipo `ardy-wa-crea-scheda.php` (genera session_id +
-     crea la scheda, riusa logica `ardy-save-lead.php`) + aggiornare il prompt titolare
-     (Sole raccoglie i dati, li ripete per conferma, poi salva) + notifica conferma.
-   - **Lato n8n (fuori repo)**: il nodo Code deve intercettare la volontà di salvare e
-     chiamare l'endpoint. Approccio consigliato senza tool nativi: Sole emette un marker
-     strutturato `[[CREA_SCHEDA]]{...json...}` che il nodo Code parsa e inoltra.
-     → preparare snippet n8n pronto da incollare.
+
+**3. Feature "Sole crea scheda da WhatsApp" — SCENARIO 1 (l'unico approvato).**
+   Michela detta/invia a Sole i dati di un cliente nuovo e Sole popola la scheda CRM.
+   - **Input previsto**: testo/vocale **oppure** un **PDF su template FISSO ed etichettato**
+     (campi `Cliente: / Telefono: / Email: / Indirizzo: / Oggetto: / Totale: / Stato: / Note:`).
+     Il template lo definiamo noi, allineato 1:1 ai campi della scheda. Con etichette
+     costanti l'estrazione è affidabile (la fa Claude, già nel flusso). Sole **ripete i
+     dati per conferma** prima di salvare.
+   - ⚠️ **Requisito**: il PDF deve avere **livello di testo digitale** (generato da
+     Word/Doc/Canva/nostro generatore), **NON una scansione/foto** (servirebbe OCR, fragile).
+   - **Stato attuale**: la modalità **titolare** (`ardy-wa-lookup.php`) è **read-only** —
+     Sole riepiloga il CRM ma **non ha tool di scrittura**, quindi oggi NON può creare schede.
+   - **Da costruire**:
+     - *Lato repo*: nuovo endpoint `ardy-wa-crea-scheda.php` (genera session_id + crea la
+       scheda, riusa logica `ardy-save-lead.php`); prompt titolare aggiornato (raccoglie i
+       dati → conferma → salva); notifica di conferma.
+     - *Lato n8n (fuori repo)*: il ramo WhatsApp è **solo testo**, senza azioni. Serve un
+       "action layer": Sole emette un marker `[[CREA_SCHEDA]]{...json...}` che il nodo Code
+       intercetta e inoltra all'endpoint. → preparare snippet n8n pronto da incollare.
+     - *Primo micro-task consigliato*: disegnare il **template standard** (lista esatta
+       campi + ordine) per Michela.
+
+### ❌ Scenari WhatsApp VALUTATI e SCARTATI (non riproporre)
+Michela aveva ipotizzato WhatsApp come "telecomando" della webapp. Decisione presa:
+- **Foto/video su WhatsApp → attivano una fase di lavoro**: NO. (Richiederebbe pipeline
+  media: webhook che passa il media ID + n8n che scarica da Meta, oggi assenti.)
+- **WhatsApp come canale unico di gestione ("telecomando")**: NO.
+Si tiene **solo lo Scenario 1** (creazione scheda da dati/PDF-template).
+
+### 💶 Nota costi WhatsApp (per riferimento)
+- **Michela ↔ Sole**: è lei a iniziare → conversazione *user-initiated* → messaggi di
+  **servizio gratis** col modello Meta attuale. Gestire il CRM parlando con Sole costa ~0 lato Meta.
+- I costi Meta scattano solo per messaggi **business→cliente fuori dalle 24h** → **template
+  a pagamento** (Utility pochi cent, Marketing più caro). Riguarda le notifiche ai clienti
+  (fasi/solleciti), non Michela. ⚠️ Tariffe variano per paese/tempo: verificare rate card Meta.
+- **Costo dominante reale = API Claude per messaggio** (system prompt grosso: include
+  `ardy-system.txt` + riepilogo CRM ad ogni messaggio). Ottimizzabile con prompt caching.
+- Altre voci: storage media (WP Media Library), eSIM/n8n (già pagati). Media Meta **scadono**
+  → vanno scaricati subito col media ID.
 
 ---
 
