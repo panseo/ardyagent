@@ -1573,6 +1573,8 @@ function apriPreventivoConDati(sessionId, dati, voci){
   document.getElementById('pv-cl-nome').value        = ((dati.nome||'') + ' ' + (dati.cognome||'')).trim();
   document.getElementById('pv-cl-email').value       = dati.email || '';
   document.getElementById('pv-cl-indirizzo').value   = dati.indirizzo || '';
+  document.getElementById('pv-analisi').value        = '';
+  document.getElementById('pv-analisi-prompt').value = '';
   const opz = pvNuovaOpzione('');
   opz.voci = (voci && voci.length) ? voci.map(v => Object.assign(pvNuovaVoce(), v)) : [pvNuovaVoce()];
   pvOpzioni = [opz];
@@ -1616,6 +1618,8 @@ function openPreventivoPanel() {
   document.getElementById('pv-cl-nome').value         = ((l.Nome??'') + ' ' + (l.Cognome??'')).trim();
   document.getElementById('pv-cl-email').value        = l.Email     ?? '';
   document.getElementById('pv-cl-indirizzo').value    = l.Indirizzo ?? '';
+  document.getElementById('pv-analisi').value         = '';
+  document.getElementById('pv-analisi-prompt').value  = '';
 
   // Reset opzioni (parte con una sola opzione = preventivo singolo)
   pvOpzioni = [];
@@ -1767,7 +1771,7 @@ function pvRaccogliFormData() {
     cliente_piva: 'pv-cl-piva', cliente_email: 'pv-cl-email',
     cliente_indirizzo: 'pv-cl-indirizzo',
     aliquota_iva: 'pv-iva', valuta: 'pv-valuta',
-    note: 'pv-note', condizioni: 'pv-condizioni',
+    note: 'pv-note', condizioni: 'pv-condizioni', analisi: 'pv-analisi',
   };
   Object.entries(map).forEach(([name, id]) => {
     const el = document.getElementById(id);
@@ -1874,6 +1878,27 @@ function pvDelImgOpz(opzId, slot) {
 function pvResetImmagini() {
   pvCopertina = '';
   pvRenderCopertina();
+}
+
+async function pvGeneraAnalisi() {
+  const btn = document.getElementById('btn-pv-analisi');
+  btn.disabled = true; const lbl = btn.textContent; btn.textContent = '✨ scrivo...';
+  try {
+    const vociTxt = pvOpzioni.flatMap(o => o.voci.map(v => v.desc)).filter(Boolean).join('; ');
+    const fd = new FormData();
+    fd.append('prompt',    document.getElementById('pv-analisi-prompt').value.trim());
+    fd.append('oggetto',   document.getElementById('pv-oggetto').value.trim());
+    fd.append('voci_desc', vociTxt);
+    const res  = await fetch(PREV_API + '?mode=ai', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!data.ok) { showToast('⚠ ' + (data.error || 'AI non disponibile'), 'error'); return; }
+    document.getElementById('pv-analisi').value = data.testo || '';
+    showToast('✓ Testo generato — puoi modificarlo', 'success');
+  } catch(e) {
+    showToast('⚠ Errore durante la generazione', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = lbl;
+  }
 }
 
 function pvAnteprima() {
@@ -2036,6 +2061,7 @@ async function modificaPreventivo(id) {
     setV('pv-data-emissione', itDateToIso(dd.data_emissione));
     setV('pv-data-scadenza', itDateToIso(dd.data_scadenza));
     setV('pv-oggetto', dd.oggetto);
+    setV('pv-analisi', dd.analisi);
     setV('pv-cl-nome', dd.cliente_nome);
     setV('pv-cl-email', dd.cliente_email);
     setV('pv-cl-indirizzo', dd.cliente_indirizzo);
@@ -2588,6 +2614,14 @@ function showToast(msg, type = '') {
       </div>
 
       <div class="dark-form-grid">
+        <div class="dark-field full">
+          <label>Analisi degli interventi <span style="color:var(--muted);">(va nella pagina "Dettaglio Tecnico" del PDF)</span></label>
+          <div style="display:flex;gap:6px;margin-bottom:6px;">
+            <input type="text" id="pv-analisi-prompt" placeholder="Cosa dire all'AI (es. 'restauro conservativo, pulitura, ritocco foglia oro')..." style="flex:1;">
+            <button type="button" class="btn-secondary" id="btn-pv-analisi" style="white-space:nowrap;" onclick="pvGeneraAnalisi()">✨ Scrivi con AI</button>
+          </div>
+          <textarea id="pv-analisi" placeholder="Descrizione professionale degli interventi (scrivila tu o generala con l'AI, poi modificala)..." style="min-height:90px;"></textarea>
+        </div>
         <div class="dark-field full">
           <label>Note</label>
           <textarea id="pv-note" placeholder="Note per il cliente..."></textarea>

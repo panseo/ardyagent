@@ -141,6 +141,38 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+// ─── AI: scrive l'analisi descrittiva degli interventi ──────────────────────────
+if ($mode === 'ai') {
+    header('Content-Type: application/json');
+    require_once __DIR__ . '/ardy-config.php';
+    if (!defined('ARDY_API_KEY') || ARDY_API_KEY === '') {
+        http_response_code(500);
+        echo json_encode(['error' => 'Chiave API non configurata sul server.']);
+        exit;
+    }
+    $prompt  = trim($_POST['prompt']    ?? '');
+    $oggetto = trim($_POST['oggetto']   ?? '');
+    $vociTxt = trim($_POST['voci_desc'] ?? '');
+    $mobile  = trim($_POST['mobile']    ?? '');
+    $sys = "Sei un maestro restauratore ed ebanista di Ardy Lab. Scrivi un'ANALISI "
+        . "DESCRITTIVA degli interventi per un preventivo di restauro, in italiano, tono "
+        . "professionale ma chiaro e rassicurante per il cliente. 1-2 paragrafi (max ~130 "
+        . "parole). Descrivi le lavorazioni e il metodo basandoti SOLO sui dati forniti, "
+        . "senza inventare dettagli, SENZA prezzi e senza elenchi puntati. Rispondi solo col testo.";
+    $ctx = ($oggetto !== '' ? "Oggetto del lavoro: $oggetto\n" : '')
+        . ($mobile !== ''  ? "Pezzo: $mobile\n" : '')
+        . ($vociTxt !== '' ? "Voci di lavorazione: $vociTxt\n" : '')
+        . "Indicazioni di Michela: " . ($prompt !== '' ? $prompt : 'descrivi gli interventi in modo professionale.');
+    $resp = callAnthropicTesto($sys, $ctx, ARDY_API_KEY);
+    if (!$resp['ok']) {
+        http_response_code(502);
+        echo json_encode(['error' => $resp['error']]);
+        exit;
+    }
+    echo json_encode(['ok' => true, 'testo' => trim($resp['text'])]);
+    exit;
+}
+
 // ─── Raccolta dati ─────────────────────────────────────────────────────────────
 
 $dati = sanitizeInput([
@@ -149,6 +181,7 @@ $dati = sanitizeInput([
     'data_emissione'    => $_POST['data_emissione']    ?? date('d/m/Y'),
     'data_scadenza'     => $_POST['data_scadenza']     ?? '',
     'oggetto'           => $_POST['oggetto']           ?? '',
+    'analisi'           => $_POST['analisi']           ?? '',
     // Azienda — dati fissi forfettario
     'azienda_nome'      => 'Ardy di Michela Panella',
     'azienda_indirizzo' => 'Via James Joyce 4, 00143 Roma (RM)',
@@ -331,6 +364,7 @@ $editPayload = [
         'data_emissione'    => $_POST['data_emissione']    ?? '',
         'data_scadenza'     => $_POST['data_scadenza']     ?? '',
         'oggetto'           => $_POST['oggetto']           ?? '',
+        'analisi'           => $_POST['analisi']           ?? '',
         'cliente_nome'      => $_POST['cliente_nome']      ?? '',
         'cliente_indirizzo' => $_POST['cliente_indirizzo'] ?? '',
         'cliente_email'     => $_POST['cliente_email']     ?? '',
@@ -443,6 +477,30 @@ function fmtEuro(float $v): string {
 function logoBase64(): string {
     if (!file_exists(LOGO_PATH)) return '';
     return 'data:' . mime_content_type(LOGO_PATH) . ';base64,' . base64_encode(file_get_contents(LOGO_PATH));
+}
+
+/** Genera testo con Claude. Ritorna ['ok'=>bool,'text'=>..,'error'=>..]. */
+function callAnthropicTesto(string $system, string $userText, string $apiKey): array {
+    $payload = json_encode([
+        'model'      => 'claude-sonnet-4-6',
+        'max_tokens' => 450,
+        'system'     => $system,
+        'messages'   => [['role' => 'user', 'content' => $userText]],
+    ]);
+    $ch = curl_init('https://api.anthropic.com/v1/messages');
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true, CURLOPT_POSTFIELDS => $payload, CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 60, CURLOPT_CONNECTTIMEOUT => 20,
+        CURLOPT_SSL_VERIFYPEER => true, CURLOPT_SSL_VERIFYHOST => 2,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'x-api-key: ' . $apiKey, 'anthropic-version: 2023-06-01'],
+    ]);
+    $r = curl_exec($ch); $err = curl_error($ch); curl_close($ch);
+    if ($err) { error_log('ARDY PREV AI: ' . $err); return ['ok' => false, 'error' => 'Errore di rete con il servizio AI.']; }
+    $d = json_decode($r, true);
+    if (!is_array($d) || isset($d['error'])) { error_log('ARDY PREV AI API: ' . substr((string)$r, 0, 300)); return ['ok' => false, 'error' => 'Il servizio AI ha risposto con un errore.']; }
+    $t = '';
+    foreach ($d['content'] ?? [] as $b) { if (($b['type'] ?? '') === 'text') $t .= $b['text']; }
+    return ['ok' => true, 'text' => $t];
 }
 
 /** Valida una lista di data-URL immagine (jpeg/png/webp), scartando le non valide
@@ -649,7 +707,7 @@ function buildPagine(array $d, array $opzioni, float $bollo, string $spedizione,
   <div class="prev-title">' . $d['tipo_preventivo'] . '</div>
   ' . $oggettoDiv . '
   <div class="proc-h">Procedimento Tecnico Dettagliato</div>
-  <p class="proc-p">Il lavoro verrà eseguito seguendo rigorosi standard artigianali per garantire la massima qualità e durata nel tempo.</p>
+  <p class="proc-p">' . ($d['analisi'] ? nl2br($d['analisi']) : 'Il lavoro verrà eseguito seguendo rigorosi standard artigianali per garantire la massima qualità e durata nel tempo.') . '</p>
   ' . $noteDiv . '
   ' . $footer . '
 </div>';
