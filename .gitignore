@@ -7,6 +7,9 @@ composer.lock
 ardy-config.php
 ardy-gcal-token.json
 
+# CSV di import preventivi (contengono dati personali dei clienti — PII)
+import-preventivi*.csv
+
 # Cartelle con dati
 preventivi_pdf/
 preventivi-pdf/
