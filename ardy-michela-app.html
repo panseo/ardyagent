@@ -1573,8 +1573,10 @@ function apriPreventivoConDati(sessionId, dati, voci){
   document.getElementById('pv-cl-nome').value        = ((dati.nome||'') + ' ' + (dati.cognome||'')).trim();
   document.getElementById('pv-cl-email').value       = dati.email || '';
   document.getElementById('pv-cl-indirizzo').value   = dati.indirizzo || '';
-  pvVoci = (voci && voci.length) ? voci.map((v,i) => Object.assign({ id: Date.now() + i }, v)) : [];
-  if (!pvVoci.length) { pvAddVoce(); } else { pvRenderVoci(); if (typeof pvAggiornaTotale === 'function') pvAggiornaTotale(); }
+  const opz = pvNuovaOpzione('');
+  opz.voci = (voci && voci.length) ? voci.map(v => Object.assign(pvNuovaVoce(), v)) : [pvNuovaVoce()];
+  pvOpzioni = [opz];
+  pvRenderOpzioni();
   pvResetImmagini();
   document.getElementById('preventivoOverlay').classList.add('open');
 }
@@ -1593,7 +1595,9 @@ function showResult(id, msg, type) {
 // ══════════════════════════════════════════════════════════
 
 const PREVENTIVO_URL = BASE_URL + '/ardy-preventivo.php';
-let pvVoci = [];
+let pvOpzioni = [];
+let pvLibTarget = null;
+let pvOpzSeq = 1;
 
 let pvCurrentSessionId = '';
 
@@ -1613,9 +1617,9 @@ function openPreventivoPanel() {
   document.getElementById('pv-cl-email').value        = l.Email     ?? '';
   document.getElementById('pv-cl-indirizzo').value    = l.Indirizzo ?? '';
 
-  // Reset voci
-  pvVoci = [];
-  pvAddVoce();
+  // Reset opzioni (parte con una sola opzione = preventivo singolo)
+  pvOpzioni = [];
+  pvAddOpzione();
   pvResetImmagini();
 
   document.getElementById('preventivoOverlay').classList.add('open');
@@ -1636,60 +1640,92 @@ function pvDataScadenza(giorni) {
   return d.toISOString().split('T')[0];
 }
 
-function pvAddVoce() {
-  pvVoci.push({ id: Date.now(), desc: '', qty: 1, um: 'h', prezzo: 0, sconto: 0 });
-  pvRenderVoci();
-}
+// ── Opzioni di preventivo (pacchetti): ognuna ha le sue voci e il suo totale ──
+function pvEscAttr(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function pvNuovaVoce(){ return { id: 'v' + Date.now() + Math.floor(Math.random()*10000), desc:'', qty:1, um:'', prezzo:0, sconto:0 }; }
+function pvNuovaOpzione(nome){ return { id: 'o' + (pvOpzSeq++) + '_' + Date.now(), nome: nome || '', voci: [] }; }
 
-function pvDelVoce(id) {
-  pvVoci = pvVoci.filter(v => v.id !== id);
-  pvRenderVoci();
+function pvAddOpzione(){
+  const o = pvNuovaOpzione('');
+  o.voci.push(pvNuovaVoce());
+  pvOpzioni.push(o);
+  pvRenderOpzioni();
 }
+function pvDelOpzione(opzId){
+  pvOpzioni = pvOpzioni.filter(o => o.id !== opzId);
+  if (!pvOpzioni.length) pvAddOpzione(); else pvRenderOpzioni();
+}
+function pvUpdateOpzNome(opzId, val){ const o = pvOpzioni.find(o => o.id === opzId); if (o) o.nome = val; }
 
-function pvUpdateVoce(id, campo, val) {
-  const v = pvVoci.find(x => x.id === id);
+function pvAddVoce(opzId){
+  const o = pvOpzioni.find(o => o.id === opzId);
+  if (!o) return;
+  o.voci.push(pvNuovaVoce());
+  pvRenderOpzioni();
+}
+function pvDelVoce(opzId, voceId){
+  const o = pvOpzioni.find(o => o.id === opzId);
+  if (!o) return;
+  o.voci = o.voci.filter(v => v.id !== voceId);
+  pvRenderOpzioni();
+}
+function pvUpdateVoce(opzId, voceId, campo, val){
+  const o = pvOpzioni.find(o => o.id === opzId);
+  if (!o) return;
+  const v = o.voci.find(v => v.id === voceId);
   if (!v) return;
-  v[campo] = (campo === 'desc' || campo === 'um') ? val : parseFloat(val) || 0;
-  // Aggiorna solo la cella importo della riga, senza ri-renderizzare tutto
+  v[campo] = (campo === 'desc' || campo === 'um') ? val : (parseFloat(val) || 0);
   const imp = v.qty * v.prezzo * (1 - v.sconto / 100);
   const valuta = document.getElementById('pv-valuta').value;
-  const row = document.querySelector(`[data-voce-id="${id}"]`);
+  const row = document.querySelector(`[data-voce-id="${voceId}"]`);
   if (row) row.querySelector('.prev-voci-importo').textContent = pvFmt(imp, valuta);
-  pvAggiornaTotale();
+  pvAggiornaTotali();
 }
 
-function pvRenderVoci() {
-  const tbody  = document.getElementById('pv-voci-tbody');
+function pvSubOpz(o){ return o.voci.reduce((s, v) => s + v.qty * v.prezzo * (1 - v.sconto / 100), 0); }
+
+function pvRenderOpzioni(){
+  const cont   = document.getElementById('pv-opzioni-container');
   const valuta = document.getElementById('pv-valuta').value;
-  tbody.innerHTML = pvVoci.map(v => {
-    const imp = v.qty * v.prezzo * (1 - v.sconto / 100);
-    return `<tr data-voce-id="${v.id}">
-      <td><input type="text" value="${v.desc}" placeholder="Descrizione..."
-        oninput="pvUpdateVoce(${v.id},'desc',this.value)"
-        onchange="pvUpdateVoce(${v.id},'desc',this.value)"></td>
-      <td><input type="number" value="${v.qty}" min="0" step="0.5" style="width:52px"
-        oninput="pvUpdateVoce(${v.id},'qty',this.value)"
-        onchange="pvUpdateVoce(${v.id},'qty',this.value)"></td>
-      <td><input type="text" value="${v.um}" style="width:36px"
-        oninput="pvUpdateVoce(${v.id},'um',this.value)"
-        onchange="pvUpdateVoce(${v.id},'um',this.value)"></td>
-      <td><input type="number" value="${v.prezzo}" min="0" step="0.01"
-        oninput="pvUpdateVoce(${v.id},'prezzo',this.value)"
-        onchange="pvUpdateVoce(${v.id},'prezzo',this.value)"></td>
-      <td><input type="number" value="${v.sconto}" min="0" max="100" style="width:44px"
-        oninput="pvUpdateVoce(${v.id},'sconto',this.value)"
-        onchange="pvUpdateVoce(${v.id},'sconto',this.value)"></td>
-      <td class="prev-voci-importo">${pvFmt(imp, valuta)}</td>
-      <td><button class="btn-del-voce-dark" onclick="pvDelVoce(${v.id})">✕</button></td>
-    </tr>`;
+  const multi  = pvOpzioni.length > 1;
+  cont.innerHTML = pvOpzioni.map((o, idx) => {
+    const lettera = String.fromCharCode(65 + idx);
+    const righe = o.voci.map(v => {
+      const imp = v.qty * v.prezzo * (1 - v.sconto / 100);
+      return `<tr data-voce-id="${v.id}">
+        <td><input type="text" value="${pvEscAttr(v.desc)}" placeholder="Descrizione..." oninput="pvUpdateVoce('${o.id}','${v.id}','desc',this.value)" onchange="pvUpdateVoce('${o.id}','${v.id}','desc',this.value)"></td>
+        <td><input type="number" value="${v.qty}" min="0" step="0.5" style="width:52px" oninput="pvUpdateVoce('${o.id}','${v.id}','qty',this.value)" onchange="pvUpdateVoce('${o.id}','${v.id}','qty',this.value)"></td>
+        <td><input type="text" value="${pvEscAttr(v.um)}" style="width:36px" oninput="pvUpdateVoce('${o.id}','${v.id}','um',this.value)" onchange="pvUpdateVoce('${o.id}','${v.id}','um',this.value)"></td>
+        <td><input type="number" value="${v.prezzo}" min="0" step="0.01" oninput="pvUpdateVoce('${o.id}','${v.id}','prezzo',this.value)" onchange="pvUpdateVoce('${o.id}','${v.id}','prezzo',this.value)"></td>
+        <td><input type="number" value="${v.sconto}" min="0" max="100" style="width:44px" oninput="pvUpdateVoce('${o.id}','${v.id}','sconto',this.value)" onchange="pvUpdateVoce('${o.id}','${v.id}','sconto',this.value)"></td>
+        <td class="prev-voci-importo">${pvFmt(imp, valuta)}</td>
+        <td><button class="btn-del-voce-dark" onclick="pvDelVoce('${o.id}','${v.id}')">✕</button></td>
+      </tr>`;
+    }).join('');
+    const ph = multi ? ('Nome opzione ' + lettera + ' (es. Restauro completo)') : 'Nome opzione (facoltativo)';
+    return `<div class="pv-opzione" style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+        <input type="text" value="${pvEscAttr(o.nome)}" placeholder="${ph}" oninput="pvUpdateOpzNome('${o.id}',this.value)" style="flex:1;font-weight:600;">
+        ${multi ? `<button class="btn-del-voce-dark" onclick="pvDelOpzione('${o.id}')" title="rimuovi opzione">✕ opzione</button>` : ''}
+      </div>
+      <table class="prev-voci-table">
+        <thead><tr><th style="width:36%">Descrizione</th><th style="width:9%">Qtà</th><th style="width:8%">UM</th><th style="width:15%">Prezzo unit.</th><th style="width:8%">Sc.%</th><th style="width:14%">Importo</th><th style="width:10%"></th></tr></thead>
+        <tbody>${righe}</tbody>
+      </table>
+      <button class="btn-add-voce-dark" onclick="pvAddVoce('${o.id}')">+ AGGIUNGI VOCE</button>
+      <button class="btn-add-voce-dark" onclick="openLibreria('${o.id}')" style="margin-top:6px;border-color:var(--accent2);color:var(--accent);">📚 LIBRERIA</button>
+      <div class="prev-totale-row" style="margin-top:8px;"><div class="prev-totale-box"><div class="lbl">Totale opzione${multi ? (' ' + lettera) : ''}</div><div class="val" data-opz-tot="${o.id}">${pvFmt(pvSubOpz(o), valuta)}</div></div></div>
+    </div>`;
   }).join('');
-  pvAggiornaTotale();
+  pvAggiornaTotali();
 }
 
-function pvAggiornaTotale() {
+function pvAggiornaTotali(){
   const valuta = document.getElementById('pv-valuta').value;
-  const sub    = pvVoci.reduce((s, v) => s + v.qty * v.prezzo * (1 - v.sconto / 100), 0);
-  document.getElementById('pv-totale-live').textContent = pvFmt(sub, valuta);
+  pvOpzioni.forEach(o => {
+    const el = document.querySelector(`[data-opz-tot="${o.id}"]`);
+    if (el) el.textContent = pvFmt(pvSubOpz(o), valuta);
+  });
 }
 
 function pvFmt(val, valuta) {
@@ -1735,13 +1771,16 @@ function pvRaccogliFormData() {
   fd.append('spedizione', 'gratis');
   fd.append('acconto_perc', '30');
   fd.append('tempi_consegna', '20 giorni lavorativi');
-  // Voci con indice esplicito per PHP
-  pvVoci.forEach((v, i) => {
-    fd.append('voci[' + i + '][descrizione]', v.desc || '');
-    fd.append('voci[' + i + '][quantita]',    v.qty  || 1);
-    fd.append('voci[' + i + '][unita]',       v.um   || '');
-    fd.append('voci[' + i + '][prezzo]',      v.prezzo || 0);
-    fd.append('voci[' + i + '][sconto]',      v.sconto || 0);
+  // Opzioni (pacchetti), ognuna con le sue voci. Indici espliciti per PHP.
+  pvOpzioni.forEach((o, oi) => {
+    fd.append('opzioni[' + oi + '][nome]', o.nome || '');
+    o.voci.forEach((v, i) => {
+      fd.append('opzioni[' + oi + '][voci][' + i + '][descrizione]', v.desc || '');
+      fd.append('opzioni[' + oi + '][voci][' + i + '][quantita]',    v.qty  || 1);
+      fd.append('opzioni[' + oi + '][voci][' + i + '][unita]',       v.um   || '');
+      fd.append('opzioni[' + oi + '][voci][' + i + '][prezzo]',      v.prezzo || 0);
+      fd.append('opzioni[' + oi + '][voci][' + i + '][sconto]',      v.sconto || 0);
+    });
   });
   // Immagini (base64 già ridimensionate)
   pvRender.forEach((b, i)       => fd.append('render[' + i + ']', b));
@@ -1864,7 +1903,7 @@ async function pvGeneraPDF() {
 
 // Aggiorna totale quando cambia valuta
 const pvValutaEl = document.getElementById('pv-valuta');
-if (pvValutaEl) pvValutaEl.addEventListener('change', () => pvRenderVoci());
+if (pvValutaEl) pvValutaEl.addEventListener('change', () => pvRenderOpzioni());
 
 // ══════════════════════════════════════════════════════════
 // STORICO PREVENTIVI
@@ -2001,7 +2040,8 @@ let libCatAttiva = 'Tutte';
 
 // ── PICKER (dal form preventivo) ──────────────────────────────────────────────
 
-async function openLibreria() {
+async function openLibreria(opzId) {
+  pvLibTarget = opzId || (pvOpzioni[pvOpzioni.length - 1] && pvOpzioni[pvOpzioni.length - 1].id) || null;
   libCatAttiva = 'Tutte';
   document.getElementById('lib-picker-search').value = '';
   renderLibCats('lib-picker-cats', false);
@@ -2055,10 +2095,13 @@ function usaFaseDaLibreria(id) {
   const fasi = libLoad();
   const f    = fasi.find(x => x.id === id);
   if (!f) return;
-  // Aggiunge una voce nel preventivo con la descrizione della fase
-  const nuovaVoce = { id: Date.now(), desc: f.nome + (f.desc ? ' — ' + f.desc : ''), qty: 1, um: '', prezzo: 0, sconto: 0 };
-  pvVoci.push(nuovaVoce);
-  pvRenderVoci();
+  // Aggiunge una voce all'opzione selezionata (o all'ultima)
+  const o = pvOpzioni.find(o => o.id === pvLibTarget) || pvOpzioni[pvOpzioni.length - 1];
+  if (!o) return;
+  const nuovaVoce = pvNuovaVoce();
+  nuovaVoce.desc = f.nome + (f.desc ? ' — ' + f.desc : '');
+  o.voci.push(nuovaVoce);
+  pvRenderOpzioni();
   closeLibreria();
   showToast('✓ Fase aggiunta: ' + f.nome, 'success');
 }
@@ -2446,32 +2489,12 @@ function showToast(msg, type = '') {
         </div>
       </div>
 
-      <!-- Voci -->
+      <!-- Opzioni / Voci -->
       <div style="margin-top:20px;">
-        <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);">Voci / Servizi</div>
-        <table class="prev-voci-table">
-          <thead>
-            <tr>
-              <th style="width:36%">Descrizione</th>
-              <th style="width:9%">Qtà</th>
-              <th style="width:8%">UM</th>
-              <th style="width:15%">Prezzo unit.</th>
-              <th style="width:8%">Sc.%</th>
-              <th style="width:14%">Importo</th>
-              <th style="width:10%"></th>
-            </tr>
-          </thead>
-          <tbody id="pv-voci-tbody"></tbody>
-        </table>
-        <button class="btn-add-voce-dark" onclick="pvAddVoce()">+ AGGIUNGI VOCE</button>
-        <button class="btn-add-voce-dark" onclick="openLibreria()" style="margin-top:6px;border-color:var(--accent2);color:var(--accent);">📚 SCEGLI DA LIBRERIA</button>
-      </div>
-
-      <div class="prev-totale-row">
-        <div class="prev-totale-box">
-          <div class="lbl">Totale (esente IVA)</div>
-          <div class="val" id="pv-totale-live">€ 0,00</div>
-        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--border);">Opzioni di preventivo</div>
+        <div style="font-size:11px;color:var(--muted);margin:0 0 12px;">Ogni opzione ha le sue voci e il suo totale; il cliente sceglie. Se ne lasci una sola (senza nome) il preventivo resta singolo.</div>
+        <div id="pv-opzioni-container"></div>
+        <button class="btn-add-voce-dark" onclick="pvAddOpzione()" style="border-color:var(--accent);color:var(--accent);font-weight:600;">+ AGGIUNGI OPZIONE</button>
       </div>
 
       <div class="dark-form-grid">

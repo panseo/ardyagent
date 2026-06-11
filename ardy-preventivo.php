@@ -148,41 +148,71 @@ $dati = sanitizeInput([
     'spedizione'        => $_POST['spedizione']        ?? 'gratis',
 ]);
 
-// Voci
-$voci = [];
-if (!empty($_POST['voci']) && is_array($_POST['voci'])) {
-    foreach ($_POST['voci'] as $v) {
-        $desc     = htmlspecialchars(trim($v['descrizione'] ?? ''), ENT_QUOTES, 'UTF-8');
-        $qty      = floatval($v['quantita'] ?? 1);
-        $um       = htmlspecialchars(trim($v['unita'] ?? ''), ENT_QUOTES, 'UTF-8');
-        $prezzo   = floatval($v['prezzo'] ?? 0);
-        $sconto   = floatval($v['sconto'] ?? 0);
-        if ($desc === '') continue;
-        $importo  = $qty * $prezzo * (1 - $sconto / 100);
-        $voci[]   = compact('desc','qty','um','prezzo','sconto','importo');
+// Parser di una lista di voci grezze → voci normalizzate con importo.
+$parseVoci = function ($raw): array {
+    $out = [];
+    if (!empty($raw) && is_array($raw)) {
+        foreach ($raw as $v) {
+            $desc   = htmlspecialchars(trim($v['descrizione'] ?? ''), ENT_QUOTES, 'UTF-8');
+            $qty    = floatval($v['quantita'] ?? 1);
+            $um     = htmlspecialchars(trim($v['unita'] ?? ''), ENT_QUOTES, 'UTF-8');
+            $prezzo = floatval($v['prezzo'] ?? 0);
+            $sconto = floatval($v['sconto'] ?? 0);
+            if ($desc === '') continue;
+            $importo = $qty * $prezzo * (1 - $sconto / 100);
+            $out[] = compact('desc', 'qty', 'um', 'prezzo', 'sconto', 'importo');
+        }
+    }
+    return $out;
+};
+
+// Bollo / spedizione: per-documento, inclusi nel totale di OGNI opzione (il
+// cliente ne sceglie una, quindi ciascuna mostra il suo prezzo finale).
+$bollo    = floatval($dati['bollo']);
+$sped_val = strtolower(trim($dati['spedizione']));
+$sped_num = (is_numeric($sped_val)) ? floatval($sped_val) : 0;
+
+// Opzioni a pacchetto: ognuna con le sue voci e il suo totale.
+// Fallback legacy: se arriva 'voci' piatto, diventa un'opzione unica senza nome.
+$opzioni = [];
+if (!empty($_POST['opzioni']) && is_array($_POST['opzioni'])) {
+    foreach ($_POST['opzioni'] as $o) {
+        $voci = $parseVoci($o['voci'] ?? null);
+        if (empty($voci)) continue;
+        $sub = array_sum(array_column($voci, 'importo'));
+        $opzioni[] = [
+            'nome'      => htmlspecialchars(trim($o['nome'] ?? ''), ENT_QUOTES, 'UTF-8'),
+            'voci'      => $voci,
+            'subtotale' => $sub,
+            'totale'    => $sub + $bollo + $sped_num,
+        ];
     }
 }
-if (empty($voci)) {
+if (empty($opzioni) && !empty($_POST['voci'])) {
+    $voci = $parseVoci($_POST['voci']);
+    if (!empty($voci)) {
+        $sub = array_sum(array_column($voci, 'importo'));
+        $opzioni[] = ['nome' => '', 'voci' => $voci, 'subtotale' => $sub, 'totale' => $sub + $bollo + $sped_num];
+    }
+}
+if (empty($opzioni)) {
     http_response_code(400);
     echo json_encode(['error' => 'Inserisci almeno una voce.']);
     exit;
 }
+
+// Totali rappresentativi per il DB / risposta: prima opzione.
+$subtotale   = $opzioni[0]['subtotale'];
+$grand_total = $opzioni[0]['totale'];
 
 // Immagini: render della proposta + foto stato attuale (data-URL base64, già
 // ridimensionate dal client). Validate per tipo MIME e dimensione.
 $renders      = parseImgDataUris($_POST['render']        ?? null);
 $statoAttuale = parseImgDataUris($_POST['stato_attuale'] ?? null);
 
-// Calcoli
-$subtotale   = array_sum(array_column($voci, 'importo'));
-$bollo       = floatval($dati['bollo']);
-$sped_val    = strtolower(trim($dati['spedizione']));
-$sped_num    = (is_numeric($sped_val)) ? floatval($sped_val) : 0;
-$grand_total = $subtotale + $bollo + $sped_num;
-
 if ($mode === 'preview') {
     header('Content-Type: text/html; charset=utf-8');
-    $pagine = buildPagine($dati, $voci, $subtotale, $bollo, $sped_val, $grand_total, $renders, $statoAttuale);
+    $pagine = buildPagine($dati, $opzioni, $bollo, $sped_val, $renders, $statoAttuale);
     $css    = buildCss();
     echo '<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8">'
        . '<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">'
@@ -199,7 +229,7 @@ if ($mode === 'preview') {
 // DEBUG: scarica HTML grezzo
 if ($mode === 'debug') {
     header('Content-Type: text/plain; charset=utf-8');
-    $pagine = buildPagine($dati, $voci, $subtotale, $bollo, $sped_val, $grand_total, $renders, $statoAttuale);
+    $pagine = buildPagine($dati, $opzioni, $bollo, $sped_val, $renders, $statoAttuale);
     foreach ($pagine as $i => $p) {
         echo "=== PAGINA " . ($i+1) . " ===\n" . $p . "\n\n";
     }
@@ -225,7 +255,7 @@ try {
     $mpdf->WriteHTML($css, \Mpdf\HTMLParserMode::HEADER_CSS);
 
     // Pagine separate
-    $pagine = buildPagine($dati, $voci, $subtotale, $bollo, $sped_val, $grand_total, $renders, $statoAttuale);
+    $pagine = buildPagine($dati, $opzioni, $bollo, $sped_val, $renders, $statoAttuale);
     foreach ($pagine as $i => $pageHtml) {
         if ($i > 0) $mpdf->AddPage();
         $mpdf->WriteHTML($pageHtml, \Mpdf\HTMLParserMode::HTML_BODY);
@@ -241,7 +271,7 @@ try {
 
 // ─── Salva nel DB ─────────────────────────────────────────────────────────────
 $sessionId   = $_POST['session_id'] ?? '';
-$vociJson    = json_encode($voci);
+$vociJson    = json_encode($opzioni);
 $db          = dbConnect();
 $stmt        = $db->prepare("
     INSERT INTO preventivi
@@ -443,30 +473,32 @@ table.firma-t { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
 // PAGINE — array di stringhe HTML, una per pagina
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function buildPagine(array $d, array $voci, float $subtotale, float $bollo, string $spedizione, float $grandTotal, array $renders = [], array $statoAttuale = []): array {
+function buildPagine(array $d, array $opzioni, float $bollo, string $spedizione, array $renders = [], array $statoAttuale = []): array {
 
     $mostraStoria = ($d['mostra_storia'] ?? '1') === '1';
     $valuta       = $d['valuta'];
+    $multiOpz     = count($opzioni) > 1;
 
-    // Righe voci
-    $righeVoci = '';
-    foreach ($voci as $v) {
-        $qty = ($v['qty'] != 1) ? number_format($v['qty'], 0, ',', '.') : '1';
-        $um  = $v['um'] ? ' ' . $v['um'] : '';
-        $righeVoci .= '<tr>'
-            . '<td>' . $v['desc'] . '</td>'
-            . '<td class="tc">' . $qty . $um . '</td>'
-            . '<td class="tr">' . fmtEuro($v['prezzo']) . '</td>'
-            . '<td class="tr bold">' . fmtEuro($v['importo']) . '</td>'
-            . '</tr>';
-    }
-
-    // Subtotale, bollo, spedizione, grand total
+    // Renderer delle righe di UNA opzione (voci + subtotale/bollo/sped/totale).
     $spedDisplay = (strtolower($spedizione) === 'gratis' || $spedizione === '0') ? 'gratis' : fmtEuro(floatval($spedizione));
-    $righeVoci .= '<tr class="row-sub"><td colspan="3" class="tr">Subtotal</td><td class="tr bold">' . fmtEuro($subtotale) . '</td></tr>';
-    $righeVoci .= '<tr><td colspan="3" class="tr">Bollo</td><td class="tr">' . fmtEuro($bollo) . '</td></tr>';
-    $righeVoci .= '<tr><td colspan="3" class="tr">Spedizione</td><td class="tr">' . $spedDisplay . '</td></tr>';
-    $righeVoci .= '<tr class="row-grand"><td colspan="3" class="tr">Grand total</td><td class="tr bold">' . fmtEuro($grandTotal) . '</td></tr>';
+    $righeOpzione = function (array $opz) use ($bollo, $spedDisplay): string {
+        $r = '';
+        foreach ($opz['voci'] as $v) {
+            $qty = ($v['qty'] != 1) ? number_format($v['qty'], 0, ',', '.') : '1';
+            $um  = $v['um'] ? ' ' . $v['um'] : '';
+            $r .= '<tr>'
+                . '<td>' . $v['desc'] . '</td>'
+                . '<td class="tc">' . $qty . $um . '</td>'
+                . '<td class="tr">' . fmtEuro($v['prezzo']) . '</td>'
+                . '<td class="tr bold">' . fmtEuro($v['importo']) . '</td>'
+                . '</tr>';
+        }
+        $r .= '<tr class="row-sub"><td colspan="3" class="tr">Subtotale</td><td class="tr bold">' . fmtEuro($opz['subtotale']) . '</td></tr>';
+        $r .= '<tr><td colspan="3" class="tr">Bollo</td><td class="tr">' . fmtEuro($bollo) . '</td></tr>';
+        $r .= '<tr><td colspan="3" class="tr">Spedizione</td><td class="tr">' . $spedDisplay . '</td></tr>';
+        $r .= '<tr class="row-grand"><td colspan="3" class="tr">Totale</td><td class="tr bold">' . fmtEuro($opz['totale']) . '</td></tr>';
+        return $r;
+    };
 
     // Condizioni
     $acconto = floatval($d['acconto_perc'] ?? 30);
@@ -589,20 +621,31 @@ function buildPagine(array $d, array $voci, float $subtotale, float $bollo, stri
 </div>';
 
     // ── PAGINA 4: COSTI ───────────────────────────────────────────────────────
+    // Un blocco-tabella per ogni opzione; se l'opzione è una sola, resta come prima.
+    $thead = '<thead><tr>'
+        . '<th style="width:45%">Descrizione</th>'
+        . '<th class="tc" style="width:13%">Quantità</th>'
+        . '<th class="tr" style="width:18%">Prezzo unitario</th>'
+        . '<th class="tr" style="width:18%">Totale</th>'
+        . '</tr></thead>';
+    $blocchiCosti = '';
+    foreach ($opzioni as $idx => $opz) {
+        $titoloOpz = $multiOpz
+            ? '<div class="budget-sub" style="font-size:13pt;color:#111;margin-top:20px;">Opzione ' . chr(65 + $idx)
+                . ($opz['nome'] !== '' ? ' — ' . $opz['nome'] : '') . '</div>'
+            : '<div class="budget-sub">Dettaglio dei Costi</div>';
+        $blocchiCosti .= $titoloOpz
+            . '<table class="costi">' . $thead . '<tbody>' . $righeOpzione($opz) . '</tbody></table>';
+    }
+    $notaScelta = $multiOpz
+        ? '<p class="cond-p" style="font-style:normal;margin-top:10px;">Le opzioni sopra sono <strong>alternative tra loro</strong>: il prezzo indicato per ciascuna è il totale finale di quell\'opzione. Indica nella pagina di accettazione l\'opzione prescelta.</p>'
+        : '';
     $pagine[] = '
 <div class="inner">
   <div class="budget-h1">Restauro Creativo</div>
   <div class="budget-h2"><strong>Budget</strong> materiali <em>e</em> manodopera</div>
-  <div class="budget-sub">Dettaglio dei Costi</div>
-  <table class="costi">
-    <thead><tr>
-      <th style="width:45%">Descrizione</th>
-      <th class="tc" style="width:13%">Quantità</th>
-      <th class="tr" style="width:18%">Prezzo unitario</th>
-      <th class="tr" style="width:18%">Totale</th>
-    </tr></thead>
-    <tbody>' . $righeVoci . '</tbody>
-  </table>
+  ' . $blocchiCosti . '
+  ' . $notaScelta . '
   <div class="cond-h">Condizioni di Fornitura</div>
   <div class="cond-p">' . $condHtml . '</div>
   ' . $footer . '
@@ -615,6 +658,7 @@ function buildPagine(array $d, array $voci, float $subtotale, float $bollo, stri
   <p class="firma-intro">Il sottoscritto ________________________________, accettando il presente preventivo, fornisce i propri dati di fatturazione:</p>
   <table class="firma-t"><tbody>' . $clienteRows . '</tbody></table>
   <div class="validita">Validità preventivo: 30 giorni dalla data odierna — ' . $d['data_emissione'] . '</div>
+  ' . ($multiOpz ? '<div class="validita" style="margin-top:8px;">Opzione prescelta (A / B / C ...): ______________________________</div>' : '') . '
   ' . $scadDiv . '
   ' . $privacyHtml . '
   <div class="firma-line-l">Data di firma: ____ / ____ / ________</div>
