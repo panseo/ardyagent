@@ -1978,6 +1978,9 @@ function renderStoricoPrev(preventivi) {
               `<option value="${k}" ${k===p.stato?'selected':''}>${v}</option>`
             ).join('')}
           </select>
+          ${p.stato === 'bozza'
+            ? `<button class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="modificaPreventivo(${p.id})">✏️ Modifica</button>`
+            : `<span title="Definitivo: non modificabile" style="font-size:11px;color:var(--muted);padding:4px 6px;">🔒</span>`}
           ${p.file_pdf ? `<button class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="scaricaPrevDB('${p.file_pdf}')">⬇ PDF</button>` : ''}
         </div>
       </div>
@@ -2004,6 +2007,67 @@ async function aggiornaStatoPrev(id, stato, sel) {
 
 function scaricaPrevDB(file) {
   window.open(PREV_API + '?mode=download&file=' + encodeURIComponent(file), '_blank');
+}
+
+// Converte una data "gg/mm/aaaa" nel formato ISO "aaaa-mm-gg" per l'input date.
+function itDateToIso(s) {
+  if (!s) return '';
+  if (s.includes('-')) return s; // già ISO
+  const m = s.split('/');
+  return m.length === 3 ? `${m[2]}-${m[1].padStart(2,'0')}-${m[0].padStart(2,'0')}` : '';
+}
+
+// Riapre una BOZZA nel pannello preventivo per modificarla (poi "Genera PDF"
+// la rigenera sovrascrivendo lo stesso numero). I definitivi sono bloccati.
+async function modificaPreventivo(id) {
+  try {
+    const res  = await fetch(PREV_API + '?mode=get&id=' + encodeURIComponent(id));
+    const data = await res.json();
+    if (data.error) { showToast('⚠ ' + data.error, 'error'); return; }
+    if (data.stato && data.stato !== 'bozza') { showToast('🔒 Preventivo definitivo: non modificabile', 'error'); return; }
+
+    const pl = data.payload || {};
+    const dd = pl.dati || data.row || {};
+    const setV = (id2, v) => { const el = document.getElementById(id2); if (el != null && v != null) el.value = v; };
+
+    pvCurrentSessionId = data.session_id || pvCurrentSessionId || '';
+    setV('pv-tipo', dd.tipo_preventivo || dd.tipo || 'Preventivo Servizi');
+    setV('pv-numero', data.numero || dd.numero_preventivo || '');
+    setV('pv-data-emissione', itDateToIso(dd.data_emissione));
+    setV('pv-data-scadenza', itDateToIso(dd.data_scadenza));
+    setV('pv-oggetto', dd.oggetto);
+    setV('pv-cl-nome', dd.cliente_nome);
+    setV('pv-cl-email', dd.cliente_email);
+    setV('pv-cl-indirizzo', dd.cliente_indirizzo);
+    setV('pv-cl-piva', dd.cliente_piva);
+    setV('pv-valuta', dd.valuta || 'EUR');
+    setV('pv-note', dd.note);
+    setV('pv-condizioni', dd.condizioni);
+    const stCb = document.getElementById('pv-storia'); if (stCb) stCb.checked = (dd.mostra_storia ?? '1') === '1';
+    const fiCb = document.getElementById('pv-firma');  if (fiCb) fiCb.checked = (dd.mostra_firma  ?? '1') === '1';
+
+    // Opzioni (con voci e prima/dopo)
+    const opzRaw = pl.opzioni ? Object.values(pl.opzioni) : [];
+    pvOpzioni = opzRaw.map(o => ({
+      id: 'o' + (pvOpzSeq++) + '_' + Date.now() + Math.floor(Math.random()*1000),
+      nome: o.nome || '',
+      prima: o.prima || '',
+      dopo: o.dopo || '',
+      voci: Object.values(o.voci || {}).map(v => ({
+        id: 'v' + Date.now() + Math.floor(Math.random()*100000),
+        desc: v.descrizione || '', qty: parseFloat(v.quantita) || 1,
+        um: v.unita || '', prezzo: parseFloat(v.prezzo) || 0, sconto: parseFloat(v.sconto) || 0
+      }))
+    }));
+    if (!pvOpzioni.length) { pvOpzioni = []; pvAddOpzione(); } else { pvRenderOpzioni(); }
+    pvCopertina = pl.copertina || '';
+    pvRenderCopertina();
+
+    document.getElementById('preventivoOverlay').classList.add('open');
+    showToast('✏️ Bozza riaperta — modifica e poi "Genera PDF"', 'success');
+  } catch(e) {
+    showToast('⚠ Errore nel caricare la bozza', 'error');
+  }
 }
 
 // ══════════════════════════════════════════════════════════

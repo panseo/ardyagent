@@ -87,6 +87,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         exit;
     }
 
+    // GET ?mode=get&id=XXX → dati completi di un preventivo per ri-aprirlo/modificarlo
+    if ($mode === 'get') {
+        $id = intval($_GET['id'] ?? 0);
+        header('Content-Type: application/json');
+        if (!$id) { http_response_code(400); echo json_encode(['error' => 'id mancante']); exit; }
+        $db   = dbConnect();
+        $stmt = $db->prepare("SELECT numero, tipo, oggetto, cliente_nome, cliente_email, note, condizioni, voci_json, stato, data_emissione, data_scadenza, session_id FROM preventivi WHERE id=? LIMIT 1");
+        $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        if (!$row) { http_response_code(404); echo json_encode(['error' => 'Preventivo non trovato']); exit; }
+        $payload = json_decode($row['voci_json'] ?? '', true);
+        echo json_encode([
+            'stato'      => $row['stato'],
+            'numero'     => $row['numero'],
+            'session_id' => $row['session_id'],
+            'payload'    => is_array($payload) ? $payload : null,
+            'row'        => [
+                'tipo' => $row['tipo'], 'oggetto' => $row['oggetto'],
+                'cliente_nome' => $row['cliente_nome'], 'cliente_email' => $row['cliente_email'],
+                'note' => $row['note'], 'condizioni' => $row['condizioni'],
+                'data_emissione' => $row['data_emissione'], 'data_scadenza' => $row['data_scadenza'],
+            ],
+        ]);
+        exit;
+    }
+
     // GET ?mode=download&file=XXX → scarica PDF già generato
     if ($mode === 'download') {
         $file = basename($_GET['file'] ?? '');
@@ -242,6 +269,24 @@ if ($mode === 'debug') {
 $nomeFile = 'preventivo_' . preg_replace('/[^a-zA-Z0-9_\-]/', '_', $dati['numero_preventivo']) . '.pdf';
 $pdfPath  = PDF_OUTPUT_DIR . $nomeFile;
 
+// Blocco modifica: una bozza è modificabile, ma un preventivo già definitivo
+// (stato diverso da 'bozza') non si può sovrascrivere rigenerandolo.
+if ($mode === 'save') {
+    $dbLock = dbConnect();
+    $stL = $dbLock->prepare("SELECT stato FROM preventivi WHERE numero=? LIMIT 1");
+    $stL->bind_param('s', $dati['numero_preventivo']);
+    $stL->execute();
+    $stL->bind_result($statoEsistente);
+    $esiste = $stL->fetch();
+    $stL->close();
+    if ($esiste && $statoEsistente !== 'bozza') {
+        header('Content-Type: application/json');
+        http_response_code(409);
+        echo json_encode(['error' => 'Questo preventivo è ormai "' . $statoEsistente . '" e non è più modificabile.']);
+        exit;
+    }
+}
+
 try {
     $mpdf = new \Mpdf\Mpdf([
         'mode'              => 'utf-8',
@@ -274,8 +319,38 @@ try {
 
 // ─── Salva nel DB ─────────────────────────────────────────────────────────────
 $sessionId   = $_POST['session_id'] ?? '';
-$vociJson    = json_encode($opzioni);
+// In voci_json salviamo il payload GREZZO completo (non escapato), così la bozza
+// si può riaprire nel form e ri-modificare: opzioni (con prima/dopo), copertina e
+// i campi del preventivo. Le immagini sono base64 → serve LONGTEXT.
+$editPayload = [
+    'opzioni'   => $_POST['opzioni'] ?? null,
+    'copertina' => $_POST['copertina'] ?? '',
+    'dati'      => [
+        'numero_preventivo' => $_POST['numero_preventivo'] ?? $dati['numero_preventivo'],
+        'tipo_preventivo'   => $_POST['tipo_preventivo']   ?? '',
+        'data_emissione'    => $_POST['data_emissione']    ?? '',
+        'data_scadenza'     => $_POST['data_scadenza']     ?? '',
+        'oggetto'           => $_POST['oggetto']           ?? '',
+        'cliente_nome'      => $_POST['cliente_nome']      ?? '',
+        'cliente_indirizzo' => $_POST['cliente_indirizzo'] ?? '',
+        'cliente_email'     => $_POST['cliente_email']     ?? '',
+        'cliente_piva'      => $_POST['cliente_piva']      ?? '',
+        'cliente_cf'        => $_POST['cliente_cf']        ?? '',
+        'valuta'            => $_POST['valuta']            ?? 'EUR',
+        'note'              => $_POST['note']              ?? '',
+        'condizioni'        => $_POST['condizioni']        ?? '',
+        'mostra_storia'     => $_POST['mostra_storia']     ?? '1',
+        'mostra_firma'      => $_POST['mostra_firma']      ?? '1',
+    ],
+];
+$vociJson    = json_encode($editPayload);
 $db          = dbConnect();
+// Garantisce una sola volta che voci_json regga il payload (immagini base64).
+$ltMarker = PDF_OUTPUT_DIR . '.voci_longtext';
+if (!file_exists($ltMarker)) {
+    @$db->query("ALTER TABLE preventivi MODIFY voci_json LONGTEXT");
+    @file_put_contents($ltMarker, '1');
+}
 $stmt        = $db->prepare("
     INSERT INTO preventivi
         (session_id, numero, tipo, oggetto, cliente_nome, cliente_email,
