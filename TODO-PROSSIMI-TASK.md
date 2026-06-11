@@ -276,21 +276,28 @@ come unica barriera anti-abuso. La protezione applicativa va comunque mantenuta
 ## Sicurezza — rimasti
 
 ### Priorità ALTA (da fare per primo)
-- **`ardy-proxy.php` — rate-limit basato su header falsificabili.** `X-Forwarded-For`/
-  `CF-Connecting-IP` sono fidati ciecamente: chi non passa da Cloudflare può falsificarli
-  e azzerare il rate-limit. Impatto: **costo** (ogni richiesta che passa chiama l'API
-  Anthropic a pagamento). Nota: DoS/flood già mitigati da OVH/Fail2ban/HULK; qui il
-  punto è il controllo costi. Fix: fidarsi dell'header solo se `REMOTE_ADDR` è in un
-  range Cloudflare noto, altrimenti usare `REMOTE_ADDR`.
+- ✅ **FATTO — `ardy-proxy.php` — rate-limit basato su header falsificabili.** Nuovo
+  helper `ardyClientIp()` in `ardy-net.php`: `CF-Connecting-IP`/`X-Forwarded-For` sono
+  fidati **solo** se `REMOTE_ADDR` è in un range Cloudflare noto (CIDR match v4/v6 con
+  `ardyIpInCidr`/`ardyIsCloudflareIp`), altrimenti si usa `REMOTE_ADDR` non falsificabile.
+  Chi colpisce l'origin direttamente non può più ruotare l'IP per azzerare il rate-limit
+  e far costare richieste all'API Anthropic.
 
 ### Priorità MEDIA
-- **`ardy-save-lead.php` — nessun rate-limit.** Endpoint pubblico: si può riempire la
-  tabella `clienti` di lead spazzatura. Fix: rate-limit per IP/sessione.
-- **Upload dir eseguibili.** `ARDY_UPLOAD_DIR`, `reels/`, `preventivi_pdf/`: aggiungere un
-  `.htaccess` con motore PHP disattivato (`php_flag engine off` / `RemoveHandler`) o
-  spostare fuori dalla web root.
-- **PII in `ardy-wa-log.json`.** Salva numero/nome/testo in chiaro e cresce con input
-  webhook. Ridurre i dati loggati + rotazione/retention.
+- ✅ **FATTO — `ardy-save-lead.php` — rate-limit per IP.** Endpoint pubblico: ora max
+  15/ora e 50/giorno per IP reale (`ardyClientIp()`). Le chiamate interne del proxy
+  portano l'header `X-Ardy-Internal` col secret `ARDY_INTERNAL_SECRET` e sono esenti,
+  così il flusso legittimo non viene strozzato. ⚠️ Lato server: definire
+  `ARDY_INTERNAL_SECRET` in `ardy-config.php` (stringa casuale) per attivare l'esenzione.
+- ✅ **FATTO — Upload dir eseguibili.** Nuovo helper `ardyHardenUploadDir()` in
+  `ardy-net.php` che scrive un `.htaccess` no-PHP (RemoveHandler + Deny sugli script,
+  ma pdf/mp4/immagini restano serviti). Chiamato su `ARDY_UPLOAD_DIR`, `reels/`,
+  `preventivi_pdf/` (proxy, lead-foto, upload-video, pubblica-lavorazione, crea-reel,
+  preventivo). Idempotente.
+- ✅ **FATTO — PII in `ardy-wa-log.json`.** Il webhook non salva più il payload intero:
+  ora logga solo metadati (timestamp, numero mascherato `***1234`, tipo, lunghezza testo,
+  msg_id), niente nome né testo in chiaro; retention scesa da 100 a 50. Le conversazioni
+  restano nel DB `wa_messaggi`.
 
 ### Priorità BASSA
 - **OAuth Google senza `state`** (`ardy-gcal-auth.php`): aggiungere parametro `state`

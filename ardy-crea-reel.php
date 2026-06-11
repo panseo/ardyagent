@@ -154,6 +154,7 @@ $reelsDir = __DIR__ . '/reels/';
 if (!is_dir($reelsDir) && !mkdir($reelsDir, 0755, true) && !is_dir($reelsDir)) {
     fail('Impossibile creare la cartella reels', 500);
 }
+ardyHardenUploadDir($reelsDir); // i reels non devono eseguire script
 $tmpDir = $reelsDir . 'tmp_' . $sessionId . '_' . uniqid() . '/';
 if (!mkdir($tmpDir, 0755, true)) fail('Impossibile creare cartella temporanea', 500);
 

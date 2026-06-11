@@ -457,6 +457,15 @@ define('WA_TEMPLATE_LANG',     'it');
 > ha scritto al numero Sole nelle ultime 24h. Per notifiche affidabili in qualsiasi
 > momento serve far approvare un template a Meta e impostare `WA_TEMPLATE_NOTIFICA`.
 
+### Secret interno per chiamate server→server (in `ardy-config.php`)
+```php
+define('ARDY_INTERNAL_SECRET', '...'); // stringa casuale lunga
+```
+> Usato da `ardy-proxy.php` quando chiama `ardy-save-lead.php` (header `X-Ardy-Internal`):
+> marca la richiesta come interna ed esente dal rate-limit pubblico dell'endpoint
+> (15/ora, 50/giorno per IP). Senza il secret il salvataggio funziona comunque, ma le
+> chiamate del proxy ricadono sotto lo stesso limite per IP.
+
 ### File da creare manualmente sul server (NON in repo)
 - `ardy-config.php` — credenziali DB + API keys
 - `ardy-gcal-token.json` — token Google Calendar

@@ -58,14 +58,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $input = json_decode($rawBody, true);
 
-    // Log per debug
-    $logFile = __DIR__ . '/ardy-wa-log.json';
-    $logs = file_exists($logFile) ? json_decode(file_get_contents($logFile), true) : [];
-    $logs[] = ['time' => date('Y-m-d H:i:s'), 'data' => $input];
-    // Tieni solo gli ultimi 100 log
-    if (count($logs) > 100) $logs = array_slice($logs, -100);
-    file_put_contents($logFile, json_encode($logs, JSON_PRETTY_PRINT));
-
     // Estrai il messaggio
     $entry = $input['entry'][0] ?? null;
     if (!$entry) { http_response_code(200); echo 'OK'; exit(); }
@@ -94,6 +86,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $timestamp  = $message['timestamp'] ?? '';
     $contactName = $contact['profile']['name'] ?? 'Sconosciuto';
     $phoneNumId  = $metadata['phone_number_id'] ?? '';
+
+    // Log di debug minimale: niente PII in chiaro. Mascheriamo il numero
+    // (solo ultime 4 cifre), non salviamo nome né testo del messaggio (solo
+    // tipo e lunghezza), retention ridotta. Serve a verificare il flusso, non
+    // a conservare le conversazioni (quelle stanno nel DB wa_messaggi).
+    $logFile = __DIR__ . '/ardy-wa-log.json';
+    $logs = file_exists($logFile) ? (json_decode(file_get_contents($logFile), true) ?: []) : [];
+    $logs[] = [
+        'time'     => date('Y-m-d H:i:s'),
+        'from'     => $from !== '' ? ('***' . substr($from, -4)) : '',
+        'type'     => $msgType,
+        'text_len' => mb_strlen($msgText),
+        'msg_id'   => $msgId,
+    ];
+    if (count($logs) > 50) $logs = array_slice($logs, -50);
+    file_put_contents($logFile, json_encode($logs, JSON_PRETTY_PRINT));
 
     // Inoltra a n8n per l'elaborazione
     $n8nWebhookUrl = 'https://n8n.ardy-lab.it/webhook/ardy-whatsapp';
