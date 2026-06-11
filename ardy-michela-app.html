@@ -1643,7 +1643,22 @@ function pvDataScadenza(giorni) {
 // ── Opzioni di preventivo (pacchetti): ognuna ha le sue voci e il suo totale ──
 function pvEscAttr(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 function pvNuovaVoce(){ return { id: 'v' + Date.now() + Math.floor(Math.random()*10000), desc:'', qty:1, um:'', prezzo:0, sconto:0 }; }
-function pvNuovaOpzione(nome){ return { id: 'o' + (pvOpzSeq++) + '_' + Date.now(), nome: nome || '', voci: [] }; }
+function pvNuovaOpzione(nome){ return { id: 'o' + (pvOpzSeq++) + '_' + Date.now(), nome: nome || '', voci: [], prima: '', dopo: '' }; }
+
+// Slot immagine (prima/dopo) per la card opzione — HTML.
+function pvSlotImg(o, slot, etichetta){
+  const img = o[slot];
+  const inner = img
+    ? `<div style="position:relative;">
+         <img src="${img}" style="width:100%;height:80px;object-fit:cover;border-radius:5px;display:block;">
+         <button onclick="pvDelImgOpz('${o.id}','${slot}')" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:0;cursor:pointer;width:18px;height:18px;line-height:1;font-size:12px;border-radius:3px;">✕</button>
+       </div>`
+    : `<label style="display:flex;align-items:center;justify-content:center;height:80px;border:1px dashed var(--border);border-radius:5px;cursor:pointer;color:var(--muted);font-size:11px;">
+         + ${etichetta}
+         <input type="file" accept="image/*" style="display:none;" onchange="pvCaricaImgOpz(this,'${o.id}','${slot}')">
+       </label>`;
+  return `<div style="flex:1;"><div style="font-size:10px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px;">${etichetta}</div>${inner}</div>`;
+}
 
 function pvAddOpzione(){
   const o = pvNuovaOpzione('');
@@ -1708,6 +1723,10 @@ function pvRenderOpzioni(){
         <input type="text" value="${pvEscAttr(o.nome)}" placeholder="${ph}" oninput="pvUpdateOpzNome('${o.id}',this.value)" style="flex:1;font-weight:600;">
         ${multi ? `<button class="btn-del-voce-dark" onclick="pvDelOpzione('${o.id}')" title="rimuovi opzione">✕ opzione</button>` : ''}
       </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        ${pvSlotImg(o, 'prima', 'Prima')}
+        ${pvSlotImg(o, 'dopo', 'Dopo')}
+      </div>
       <table class="prev-voci-table">
         <thead><tr><th style="width:36%">Descrizione</th><th style="width:9%">Qtà</th><th style="width:8%">UM</th><th style="width:15%">Prezzo unit.</th><th style="width:8%">Sc.%</th><th style="width:14%">Importo</th><th style="width:10%"></th></tr></thead>
         <tbody>${righe}</tbody>
@@ -1771,9 +1790,11 @@ function pvRaccogliFormData() {
   fd.append('spedizione', 'gratis');
   fd.append('acconto_perc', '30');
   fd.append('tempi_consegna', '20 giorni lavorativi');
-  // Opzioni (pacchetti), ognuna con le sue voci. Indici espliciti per PHP.
+  // Opzioni (pacchetti), ognuna con le sue voci e la sua coppia prima/dopo.
   pvOpzioni.forEach((o, oi) => {
     fd.append('opzioni[' + oi + '][nome]', o.nome || '');
+    if (o.prima) fd.append('opzioni[' + oi + '][prima]', o.prima);
+    if (o.dopo)  fd.append('opzioni[' + oi + '][dopo]',  o.dopo);
     o.voci.forEach((v, i) => {
       fd.append('opzioni[' + oi + '][voci][' + i + '][descrizione]', v.desc || '');
       fd.append('opzioni[' + oi + '][voci][' + i + '][quantita]',    v.qty  || 1);
@@ -1782,15 +1803,13 @@ function pvRaccogliFormData() {
       fd.append('opzioni[' + oi + '][voci][' + i + '][sconto]',      v.sconto || 0);
     });
   });
-  // Immagini (base64 già ridimensionate)
-  pvRender.forEach((b, i)       => fd.append('render[' + i + ']', b));
-  pvStatoAttuale.forEach((b, i) => fd.append('stato_attuale[' + i + ']', b));
+  // Copertina (immagine unica a tutta pagina)
+  if (pvCopertina) fd.append('copertina', pvCopertina);
   return fd;
 }
 
 // ── Render / foto del preventivo ──────────────────────────────────────────
-let pvRender = [];
-let pvStatoAttuale = [];
+let pvCopertina = '';
 
 // Ridimensiona un'immagine lato client (max lato lungo) e ritorna data-URL JPEG.
 function pvResizeImg(file, maxLato = 1400, q = 0.82) {
@@ -1817,37 +1836,44 @@ function pvResizeImg(file, maxLato = 1400, q = 0.82) {
   });
 }
 
-async function pvCaricaImg(input, tipo) {
-  const arr   = tipo === 'render' ? pvRender : pvStatoAttuale;
-  const files = [...input.files];
-  for (const f of files) {
-    if (!f.type.startsWith('image/')) continue;
-    if (arr.length >= 8) { showToast('⚠ Max 8 immagini per sezione', 'error'); break; }
-    try { arr.push(await pvResizeImg(f)); } catch(e) { showToast('⚠ Immagine non leggibile', 'error'); }
+// Copertina (immagine unica a tutta pagina)
+async function pvCaricaCopertina(input) {
+  const f = input.files[0];
+  if (f && f.type.startsWith('image/')) {
+    try { pvCopertina = await pvResizeImg(f, 1800, 0.85); } catch(e) { showToast('⚠ Immagine non leggibile', 'error'); }
   }
   input.value = '';
-  pvRenderThumbs(tipo);
+  pvRenderCopertina();
+}
+function pvRenderCopertina() {
+  const box = document.getElementById('pv-copertina-thumb');
+  if (!box) return;
+  box.innerHTML = pvCopertina
+    ? `<div style="position:relative;display:inline-block;border-radius:6px;overflow:hidden;border:1px solid var(--border);">
+         <img src="${pvCopertina}" style="height:90px;display:block;">
+         <button onclick="pvCopertina='';pvRenderCopertina();" style="position:absolute;top:0;right:0;background:rgba(0,0,0,.6);color:#fff;border:0;cursor:pointer;width:18px;height:18px;line-height:1;font-size:12px;">✕</button>
+       </div>`
+    : '';
 }
 
-function pvRenderThumbs(tipo) {
-  const arr = tipo === 'render' ? pvRender : pvStatoAttuale;
-  const box = document.getElementById(tipo === 'render' ? 'pv-render-thumbs' : 'pv-stato-thumbs');
-  box.innerHTML = arr.map((b, i) =>
-    `<div style="position:relative;width:62px;height:62px;border-radius:6px;overflow:hidden;border:1px solid var(--border);">
-       <img src="${b}" style="width:100%;height:100%;object-fit:cover;">
-       <button onclick="pvDelImg('${tipo}',${i})" style="position:absolute;top:0;right:0;background:rgba(0,0,0,.6);color:#fff;border:0;cursor:pointer;width:18px;height:18px;line-height:1;font-size:12px;">✕</button>
-     </div>`).join('');
+// Immagini prima/dopo di una singola opzione
+async function pvCaricaImgOpz(input, opzId, slot) {
+  const o = pvOpzioni.find(o => o.id === opzId);
+  const f = input.files[0];
+  if (o && f && f.type.startsWith('image/')) {
+    try { o[slot] = await pvResizeImg(f); } catch(e) { showToast('⚠ Immagine non leggibile', 'error'); }
+  }
+  input.value = '';
+  pvRenderOpzioni();
 }
-
-function pvDelImg(tipo, i) {
-  (tipo === 'render' ? pvRender : pvStatoAttuale).splice(i, 1);
-  pvRenderThumbs(tipo);
+function pvDelImgOpz(opzId, slot) {
+  const o = pvOpzioni.find(o => o.id === opzId);
+  if (o) { o[slot] = ''; pvRenderOpzioni(); }
 }
 
 function pvResetImmagini() {
-  pvRender = []; pvStatoAttuale = [];
-  const a = document.getElementById('pv-render-thumbs'); if (a) a.innerHTML = '';
-  const b = document.getElementById('pv-stato-thumbs');  if (b) b.innerHTML = '';
+  pvCopertina = '';
+  pvRenderCopertina();
 }
 
 function pvAnteprima() {
@@ -2515,17 +2541,13 @@ function showToast(msg, type = '') {
           <label for="pv-firma" style="text-transform:none;letter-spacing:0;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);">Includi spazio firma nel PDF</label>
         </div>
 
-        <div class="dark-section-label">Render e foto — proposta di progetto</div>
+        <div class="dark-section-label">Immagine di copertina</div>
         <div class="dark-field full">
-          <label>Render della proposta <span style="color:var(--muted);">(il 1° finisce in copertina)</span></label>
-          <input type="file" id="pv-render" accept="image/*" multiple onchange="pvCaricaImg(this,'render')">
-          <div id="pv-render-thumbs" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
+          <label>Copertina <span style="color:var(--muted);">(immagine unica a tutta pagina, pagina 1 del PDF)</span></label>
+          <input type="file" id="pv-copertina" accept="image/*" onchange="pvCaricaCopertina(this)">
+          <div id="pv-copertina-thumb" style="margin-top:8px;"></div>
         </div>
-        <div class="dark-field full">
-          <label>Foto stato attuale <span style="color:var(--muted);">(per il prima/dopo, facoltativo)</span></label>
-          <input type="file" id="pv-stato" accept="image/*" multiple onchange="pvCaricaImg(this,'stato')">
-          <div id="pv-stato-thumbs" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
-        </div>
+        <p style="font-size:11px;color:var(--muted);margin:-2px 0 0;">Le immagini <b>prima/dopo</b> si caricano dentro ogni opzione qui sopra (una coppia per opzione).</p>
       </div>
     </div>
     <div class="modal-lg-actions">

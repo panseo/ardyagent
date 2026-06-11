@@ -180,11 +180,15 @@ if (!empty($_POST['opzioni']) && is_array($_POST['opzioni'])) {
         $voci = $parseVoci($o['voci'] ?? null);
         if (empty($voci)) continue;
         $sub = array_sum(array_column($voci, 'importo'));
+        $prima = parseImgDataUris(isset($o['prima']) && is_string($o['prima']) ? [$o['prima']] : []);
+        $dopo  = parseImgDataUris(isset($o['dopo'])  && is_string($o['dopo'])  ? [$o['dopo']]  : []);
         $opzioni[] = [
             'nome'      => htmlspecialchars(trim($o['nome'] ?? ''), ENT_QUOTES, 'UTF-8'),
             'voci'      => $voci,
             'subtotale' => $sub,
             'totale'    => $sub + $bollo + $sped_num,
+            'prima'     => $prima[0] ?? '',
+            'dopo'      => $dopo[0] ?? '',
         ];
     }
 }
@@ -192,7 +196,7 @@ if (empty($opzioni) && !empty($_POST['voci'])) {
     $voci = $parseVoci($_POST['voci']);
     if (!empty($voci)) {
         $sub = array_sum(array_column($voci, 'importo'));
-        $opzioni[] = ['nome' => '', 'voci' => $voci, 'subtotale' => $sub, 'totale' => $sub + $bollo + $sped_num];
+        $opzioni[] = ['nome' => '', 'voci' => $voci, 'subtotale' => $sub, 'totale' => $sub + $bollo + $sped_num, 'prima' => '', 'dopo' => ''];
     }
 }
 if (empty($opzioni)) {
@@ -205,14 +209,13 @@ if (empty($opzioni)) {
 $subtotale   = $opzioni[0]['subtotale'];
 $grand_total = $opzioni[0]['totale'];
 
-// Immagini: render della proposta + foto stato attuale (data-URL base64, già
-// ridimensionate dal client). Validate per tipo MIME e dimensione.
-$renders      = parseImgDataUris($_POST['render']        ?? null);
-$statoAttuale = parseImgDataUris($_POST['stato_attuale'] ?? null);
+// Immagine di copertina (unica, a tutta pagina). Le prima/dopo stanno dentro le opzioni.
+$covArr    = parseImgDataUris(isset($_POST['copertina']) && is_string($_POST['copertina']) ? [$_POST['copertina']] : []);
+$copertina = $covArr[0] ?? '';
 
 if ($mode === 'preview') {
     header('Content-Type: text/html; charset=utf-8');
-    $pagine = buildPagine($dati, $opzioni, $bollo, $sped_val, $renders, $statoAttuale);
+    $pagine = buildPagine($dati, $opzioni, $bollo, $sped_val, $copertina);
     $css    = buildCss();
     echo '<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8">'
        . '<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">'
@@ -229,7 +232,7 @@ if ($mode === 'preview') {
 // DEBUG: scarica HTML grezzo
 if ($mode === 'debug') {
     header('Content-Type: text/plain; charset=utf-8');
-    $pagine = buildPagine($dati, $opzioni, $bollo, $sped_val, $renders, $statoAttuale);
+    $pagine = buildPagine($dati, $opzioni, $bollo, $sped_val, $copertina);
     foreach ($pagine as $i => $p) {
         echo "=== PAGINA " . ($i+1) . " ===\n" . $p . "\n\n";
     }
@@ -255,7 +258,7 @@ try {
     $mpdf->WriteHTML($css, \Mpdf\HTMLParserMode::HEADER_CSS);
 
     // Pagine separate
-    $pagine = buildPagine($dati, $opzioni, $bollo, $sped_val, $renders, $statoAttuale);
+    $pagine = buildPagine($dati, $opzioni, $bollo, $sped_val, $copertina);
     foreach ($pagine as $i => $pageHtml) {
         if ($i > 0) $mpdf->AddPage();
         $mpdf->WriteHTML($pageHtml, \Mpdf\HTMLParserMode::HTML_BODY);
@@ -400,20 +403,17 @@ body { font-family: Arial, sans-serif; font-size: 10pt; color: #111; line-height
 .cover-footer-addr { font-size: 9pt; color: #aaa; line-height: 1.7; text-decoration: underline; }
 .cover-footer-web { font-size: 9pt; font-weight: 700; color: #fff; line-height: 1.9; margin-top: 8px; }
 .cover-project { font-size: 13pt; color: #7bb8d4; margin-top: 20px; }
-.cover-render { margin-top: 22px; }
-.cover-render img { width: 100%; max-height: 320px; object-fit: cover; border-radius: 4px; }
 
-/* PROPOSTA (render + prima/dopo) */
-.proposal-h { font-size: 22pt; font-weight: 700; margin-bottom: 8px; }
-.proposal-sub { font-size: 11pt; font-weight: 700; font-style: italic; color: #555; margin: 16px 0 8px; }
-.grid-row { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-.grid-cell { width: 50%; padding: 4px; vertical-align: top; }
-.grid-cell img { width: 100%; max-height: 200px; object-fit: cover; border-radius: 4px; border: 1px solid #eee; }
-.ba-row { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-.ba-cell { width: 50%; padding: 4px; vertical-align: top; text-align: center; }
-.ba-cell img { width: 100%; max-height: 200px; object-fit: cover; border-radius: 4px; border: 1px solid #eee; }
-.ba-tag { font-size: 8.5pt; font-weight: 700; text-transform: uppercase; color: #777; margin-bottom: 4px; letter-spacing: 0.5px; }
-.ba-empty { color: #bbb; padding: 30px 0; }
+/* COPERTINA A TUTTA PAGINA (immagine unica, full-bleed) */
+.cover-full { width: 210mm; height: 297mm; margin: 0; padding: 0; }
+
+/* PROPOSTA per opzione (prima/dopo) — niente object-fit: mPDF non lo supporta */
+.proposal-h { font-size: 20pt; font-weight: 700; margin-bottom: 6px; }
+.ba-row { width: 100%; border-collapse: collapse; margin: 8px 0 14px; }
+.ba-cell { width: 50%; padding: 5px; vertical-align: top; text-align: center; }
+.ba-img { width: 100%; height: auto; border: 1px solid #eee; border-radius: 4px; }
+.ba-tag { font-size: 9pt; font-weight: 700; text-transform: uppercase; color: #777; margin-bottom: 4px; letter-spacing: 0.5px; }
+.ba-empty { color: #bbb; padding: 28px 0; border: 1px dashed #ddd; border-radius: 4px; }
 
 /* PAGINE INTERNE */
 .inner { padding: 22mm 18mm; }
@@ -473,7 +473,7 @@ table.firma-t { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
 // PAGINE — array di stringhe HTML, una per pagina
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function buildPagine(array $d, array $opzioni, float $bollo, string $spedizione, array $renders = [], array $statoAttuale = []): array {
+function buildPagine(array $d, array $opzioni, float $bollo, string $spedizione, string $copertina = ''): array {
 
     $mostraStoria = ($d['mostra_storia'] ?? '1') === '1';
     $valuta       = $d['valuta'];
@@ -539,64 +539,23 @@ function buildPagine(array $d, array $opzioni, float $bollo, string $spedizione,
     $pagine = [];
 
     // ── PAGINA 1: COPERTINA ───────────────────────────────────────────────────
-    // Se c'è almeno un render, il primo finisce in copertina come immagine grande.
-    $coverImg = !empty($renders)
-        ? '<div class="cover-render"><img src="' . $renders[0] . '" alt=""></div>'
-        : '';
-    $pagine[] = '
+    // Se c'è un'immagine di copertina, occupa l'intera pagina (full-bleed).
+    // Altrimenti si usa la copertina testuale nera classica.
+    if ($copertina !== '') {
+        $pagine[] = '<div class="cover-full" style="background-image:url(\'' . $copertina . '\');background-size:cover;background-position:center;background-repeat:no-repeat;"></div>';
+    } else {
+        $pagine[] = '
 <div class="cover">
   <div class="cover-logo">ardy<br>lab</div>
   <div class="cover-services">Restauro,<br>ammodernamento<br>InterioDesign<br>Stampa 3D<br>Scenografie</div>
   ' . $coverProj . '
-  ' . $coverImg . '
   <div class="cover-divider"></div>
   <div class="cover-footer-addr">Via James Joyce 4, 00143 Roma (RM)</div>
   <div class="cover-footer-web">www.ardy-lab.it<br>ardy.documenti@gmail.com</div>
 </div>';
-
-    // ── PAGINA "LA NOSTRA PROPOSTA" (render + prima/dopo) ──────────────────────
-    if (!empty($renders) || !empty($statoAttuale)) {
-        $sezioni = '';
-
-        // Prima/Dopo: se ci sono SIA stato attuale SIA render, affianca a coppie.
-        if (!empty($statoAttuale) && !empty($renders)) {
-            $coppie = '';
-            $n = max(count($statoAttuale), count($renders));
-            for ($i = 0; $i < $n; $i++) {
-                $prima = isset($statoAttuale[$i]) ? '<img src="' . $statoAttuale[$i] . '" alt="">' : '<div class="ba-empty">—</div>';
-                $dopo  = isset($renders[$i])      ? '<img src="' . $renders[$i] . '" alt="">'      : '<div class="ba-empty">—</div>';
-                $coppie .= '<table class="ba-row"><tr>'
-                    . '<td class="ba-cell"><div class="ba-tag">Stato attuale</div>' . $prima . '</td>'
-                    . '<td class="ba-cell"><div class="ba-tag">Resa proposta</div>' . $dopo . '</td>'
-                    . '</tr></table>';
-            }
-            $sezioni .= '<div class="proposal-sub">Prima / Dopo</div>' . $coppie;
-        } else {
-            // Solo render → griglia; solo stato attuale → griglia etichettata. 2 per riga.
-            $imgs = !empty($renders) ? $renders : $statoAttuale;
-            $tit  = !empty($renders) ? 'Render della proposta' : 'Stato attuale';
-            $tab = '';
-            foreach (array_chunk($imgs, 2) as $riga) {
-                $celle = '';
-                foreach ($riga as $img) {
-                    $celle .= '<td class="grid-cell"><img src="' . $img . '" alt=""></td>';
-                }
-                if (count($riga) === 1) $celle .= '<td class="grid-cell"></td>';
-                $tab .= '<table class="grid-row"><tr>' . $celle . '</tr></table>';
-            }
-            $sezioni .= '<div class="proposal-sub">' . $tit . '</div>' . $tab;
-        }
-
-        $pagine[] = '
-<div class="inner">
-  <div class="proposal-h">La nostra proposta</div>
-  ' . ($d['oggetto'] ? '<div class="prev-oggetto">' . $d['oggetto'] . '</div>' : '') . '
-  ' . $sezioni . '
-  ' . $footer . '
-</div>';
     }
 
-    // ── PAGINA 2: STORIA (opzionale) ──────────────────────────────────────────
+    // ── STORIA (opzionale) ────────────────────────────────────────────────────
     if ($mostraStoria) {
         $pagine[] = '
 <div class="inner">
@@ -620,31 +579,47 @@ function buildPagine(array $d, array $opzioni, float $bollo, string $spedizione,
   ' . $footer . '
 </div>';
 
-    // ── PAGINA 4: COSTI ───────────────────────────────────────────────────────
-    // Un blocco-tabella per ogni opzione; se l'opzione è una sola, resta come prima.
+    // ── UNA PAGINA PER OPZIONE: prima/dopo in testa + costi di quell'opzione ───
     $thead = '<thead><tr>'
         . '<th style="width:45%">Descrizione</th>'
         . '<th class="tc" style="width:13%">Quantità</th>'
         . '<th class="tr" style="width:18%">Prezzo unitario</th>'
         . '<th class="tr" style="width:18%">Totale</th>'
         . '</tr></thead>';
-    $blocchiCosti = '';
+    $cellaImg = function (string $img, string $tag): string {
+        $contenuto = $img !== '' ? '<img class="ba-img" src="' . $img . '">' : '<div class="ba-empty">—</div>';
+        return '<td class="ba-cell"><div class="ba-tag">' . $tag . '</div>' . $contenuto . '</td>';
+    };
     foreach ($opzioni as $idx => $opz) {
-        $titoloOpz = $multiOpz
-            ? '<div class="budget-sub" style="font-size:13pt;color:#111;margin-top:20px;">Opzione ' . chr(65 + $idx)
-                . ($opz['nome'] !== '' ? ' — ' . $opz['nome'] : '') . '</div>'
-            : '<div class="budget-sub">Dettaglio dei Costi</div>';
-        $blocchiCosti .= $titoloOpz
-            . '<table class="costi">' . $thead . '<tbody>' . $righeOpzione($opz) . '</tbody></table>';
+        $titolo = $multiOpz
+            ? 'Opzione ' . chr(65 + $idx) . ($opz['nome'] !== '' ? ' — ' . $opz['nome'] : '')
+            : ($opz['nome'] !== '' ? $opz['nome'] : 'La nostra proposta');
+
+        $primaDopo = '';
+        if ($opz['prima'] !== '' || $opz['dopo'] !== '') {
+            $primaDopo = '<table class="ba-row"><tr>'
+                . $cellaImg($opz['prima'], 'Prima')
+                . $cellaImg($opz['dopo'], 'Dopo')
+                . '</tr></table>';
+        }
+
+        $pagine[] = '
+<div class="inner">
+  <div class="proposal-h">' . $titolo . '</div>
+  ' . ($d['oggetto'] ? '<div class="prev-oggetto">' . $d['oggetto'] . '</div>' : '') . '
+  ' . $primaDopo . '
+  <div class="budget-sub">Dettaglio dei Costi</div>
+  <table class="costi">' . $thead . '<tbody>' . $righeOpzione($opz) . '</tbody></table>
+  ' . $footer . '
+</div>';
     }
+
+    // ── CONDIZIONI (+ nota scelta opzione) ────────────────────────────────────
     $notaScelta = $multiOpz
-        ? '<p class="cond-p" style="font-style:normal;margin-top:10px;">Le opzioni sopra sono <strong>alternative tra loro</strong>: il prezzo indicato per ciascuna è il totale finale di quell\'opzione. Indica nella pagina di accettazione l\'opzione prescelta.</p>'
+        ? '<p class="cond-p" style="font-style:normal;">Le opzioni presentate sono <strong>alternative tra loro</strong>: il prezzo indicato per ciascuna è il totale finale di quell\'opzione. Indica nella pagina di accettazione l\'opzione prescelta.</p>'
         : '';
     $pagine[] = '
 <div class="inner">
-  <div class="budget-h1">Restauro Creativo</div>
-  <div class="budget-h2"><strong>Budget</strong> materiali <em>e</em> manodopera</div>
-  ' . $blocchiCosti . '
   ' . $notaScelta . '
   <div class="cond-h">Condizioni di Fornitura</div>
   <div class="cond-p">' . $condHtml . '</div>
