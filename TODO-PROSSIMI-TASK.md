@@ -2,6 +2,53 @@
 
 ---
 
+## 🟡 SESSIONE IN CORSO — Migrazione preventivi storici + Sole crea scheda (branch `claude/busy-cray-3ek3lu`)
+
+> ⚠️ **NIENTE è ancora in produzione.** Tutto è committato sul branch
+> `claude/busy-cray-3ek3lu` ma **non deployato**. Primo passo al ritorno: deploy.
+
+### ✅ Fatto (in repo, da deployare)
+- **`ardy-import-preventivi.php`** — strumento *una-tantum* per migrare i preventivi
+  già fatti (senza CRM) nel database. Una riga CSV per preventivo → upsert in
+  `clienti` (session_id deterministico) + insert in `preventivi`. Caratteristiche:
+  - CSV-modello scaricabile (`?mode=template`), colonne: nome, cognome, telefono,
+    email, indirizzo, servizio, zona, mobile, budget, stato_cliente, numero,
+    oggetto, totale, stato_preventivo, data, scadenza, file_pdf, note.
+  - **Anteprima dry-run** (non scrive) → conferma → scrittura con rollback se errori.
+  - **Idempotente**: clienti raggruppati per telefono/nome, preventivi per `numero`.
+  - **Upload PDF**: si caricano i PDF originali insieme al CSV; la colonna `file_pdf`
+    li collega, vengono salvati in `preventivi_pdf/` (validati MIME, prefisso
+    `import_`) e compaiono nello "Storico" della scheda (bottone ⬇ PDF).
+  - Protetto da Basic Auth (aggiunto a `.htaccess`) + guard `ardyRequireAuth()`.
+  - Disattivabile a fine migrazione: `define('ARDY_IMPORT_DISABILITATO', true)`.
+- **`.gitignore`**: esclude `import-preventivi*.csv` (contengono PII clienti).
+- README aggiornato con la nuova riga file.
+
+### ⏭️ Da riprendere al ritorno (in ordine)
+1. **DEPLOY del branch** sul server: `git pull` del branch + `./deploy.sh`
+   (oppure merge su `main` e deploy). Senza questo, l'import non è raggiungibile online.
+2. **Raccolta preventivi storici**: Michela li mette in una **cartella Google Drive**.
+   - Claude **può leggere da Drive** (tool Google Drive disponibili): appena la cartella
+     è condivisa/creata, dato il link/nome, estrarre i dati e generare il **CSV già
+     compilato** (con `file_pdf` valorizzato). In alternativa Michela invia i PDF in chat.
+   - Esempio già prodotto: 2 preventivi (Alessandra Masu, Laura) → CSV inviato a Michela.
+     Nota: per preventivi a opzioni (es. Laura: €350/€700) lasciare `totale` vuoto e
+     mettere gli importi in `note`.
+   - Dati mancanti nei PDF (telefono/email, stato accettato): farseli dare a parte.
+3. **Feature "Sole crea scheda da WhatsApp"** (richiesta Michela). Oggi la modalità
+   **titolare** (`ardy-wa-lookup.php`) è **read-only**: Sole riepiloga il CRM ma non ha
+   tool di scrittura, quindi NON può creare una scheda da dati dettati su WhatsApp.
+   Per abilitarlo servono:
+   - **Lato repo**: nuovo endpoint tipo `ardy-wa-crea-scheda.php` (genera session_id +
+     crea la scheda, riusa logica `ardy-save-lead.php`) + aggiornare il prompt titolare
+     (Sole raccoglie i dati, li ripete per conferma, poi salva) + notifica conferma.
+   - **Lato n8n (fuori repo)**: il nodo Code deve intercettare la volontà di salvare e
+     chiamare l'endpoint. Approccio consigliato senza tool nativi: Sole emette un marker
+     strutturato `[[CREA_SCHEDA]]{...json...}` che il nodo Code parsa e inoltra.
+     → preparare snippet n8n pronto da incollare.
+
+---
+
 ## TASK 1 — Michela come "capo": notifiche WhatsApp dalla AI ✅ FATTO (sessione 8)
 
 **Implementato:** nuovo `ardy-notifica-michela.php` (libreria + endpoint protetto da `WA_LOOKUP_SECRET` per n8n). In `ardy-proxy.php`: notifica automatica consolidata a lead salvato e/o sopralluogo fissato, + nuovo tool `avvisa_michela` che Sole chiama per reclami/pagamenti/modifiche/richieste fuori standard (prompt aggiornato in `ardy-system.txt`). Dedupe persistente su file per non ripetere la stessa notifica. ⚠️ Restano da fare lato server: impostare `WA_TOKEN`/`WA_PHONE_NUMBER_ID`/`WA_MICHELA_NUMBER` in `ardy-config.php` e — per uscire dalla finestra 24h — far approvare un template Meta (`WA_TEMPLATE_NOTIFICA`). Il ramo WhatsApp (n8n) può chiamare l'endpoint per avvisare Michela riusando lo stesso codice.
