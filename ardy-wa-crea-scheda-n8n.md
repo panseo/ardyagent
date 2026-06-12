@@ -76,3 +76,27 @@ return [{ json: { reply: aiText } }];
 - **Niente marker** → il testo passa invariato (Sole sta ancora raccogliendo/confermando).
 - **Marker presente** → scheda creata/aggiornata (upsert per telefono/nome, niente doppioni)
   e il marker non arriva mai a Michela.
+
+## Come testarlo — frase d'esempio (Michela → Sole)
+
+Michela scrive (o detta a voce) su WhatsApp, in un messaggio solo o spezzato:
+
+> **Michela:** «Sole, segnami un cliente nuovo: Mario Rossi, 333 1234567, vuole rilaccare
+> una credenza anni 60, zona Prati. Mettilo come lead.»
+
+Sole ripete e chiede conferma (NON salva ancora):
+
+> **Sole:** «Ok! Ti rileggo: Mario Rossi, 📞 333 1234567, servizio rilaccatura, mobile
+> "credenza anni 60", zona Prati, stato LEAD. Confermo e salvo?»
+
+Michela conferma:
+
+> **Michela:** «Sì, salva.»
+
+Sole risponde con la conferma + (dietro le quinte) il marker che n8n intercetta:
+
+> **Sole:** «Fatto, scheda creata ✅»
+> `[[CREA_SCHEDA]]{"nome":"Mario","cognome":"Rossi","telefono":"3331234567","email":"","indirizzo":"","zona":"Prati","servizio":"rilaccatura","mobile":"credenza anni 60","stato":"LEAD","note":""}`
+
+Risultato: in dashboard compare la scheda di **Mario Rossi** (stato LEAD). Se Michela ridetta
+lo stesso telefono, la scheda viene **aggiornata**, non duplicata.

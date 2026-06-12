@@ -76,6 +76,9 @@ Come una segretaria, Sole avvisa Michela su WhatsApp quando succede qualcosa di 
 
 > Le notifiche partono in modo gratuito se Michela ha scritto a Sole nelle ultime 24h (basta un saluto al mattino).
 
+### 7. Creare una scheda cliente su dettatura di Michela (WhatsApp)
+Quando Michela detta a Sole un cliente nuovo (es. *«Sole, segnami Mario Rossi, 333 1234567, vuole rilaccare una credenza, zona Prati»*), Sole raccoglie i dati, **li rilegge e chiede conferma**, e solo dopo il "sì" crea la scheda nel CRM. Stessa scheda se Michela ridetta lo stesso telefono (niente doppioni). Per ora crea **solo la scheda cliente** (il preventivo si fa dalla dashboard).
+
 ---
 
 ## ✍️ Cosa scrive Sole per Michela (dalla dashboard)
