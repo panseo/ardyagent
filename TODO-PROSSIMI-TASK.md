@@ -15,6 +15,40 @@ Codice già su `main`. Da fare appena Michela è disponibile:
 
 ---
 
+## 💡 IDEA DA SVILUPPARE — "Buongiorno di Sole": briefing del mattino + stato In Lavorazione
+
+Contesto: Michela ogni mattina saluta Sole su WhatsApp (serve già a riaprire la finestra 24h
+gratuita). Idea: trasformare quel saluto in un **briefing operativo automatico**.
+
+### Parte A — Briefing del mattino (alla prima risposta del giorno)
+Quando Michela scrive il primo messaggio del giorno (modalità titolare), Sole risponde con
+un riepilogo della giornata, in due blocchi:
+1. **Impegni dal Google Calendar** — appuntamenti/sopralluoghi di oggi (e magari domani).
+   Riusare l'integrazione `ardy-gcal.php` (già legge il calendario di Michela).
+2. **Lavori in corso dalla dashboard** — i clienti in lavorazione e a che punto sono.
+   - Oggi il riepilogo titolare (`ardy_riepilogo_settimana` in `ardy-wa-lookup.php`) mostra
+     già "LAVORI IN CORSO (ACCONTO)". Da arricchire con lo stato/fasi (vedi Parte B).
+- Nota fattibilità: il riepilogo CRM c'è già; l'aggiunta del calendario è la parte nuova.
+  ⚠️ "Alla PRIMA risposta del giorno" richiede di sapere se è il primo messaggio di oggi
+  (flag/data ultimo briefing per numero) — altrimenti lo ripeterebbe a ogni messaggio.
+  In alternativa, Sole lo dà quando Michela lo chiede ("come va oggi?").
+
+### Parte B — Nuovo stato "In Lavorazione" + date lavoro
+Aggiungere uno stato cliente dedicato ai lavori effettivamente in corso (oggi si usa ACCONTO):
+- **Nuovo stato `IN_LAVORAZIONE`** (bottone in dashboard, accanto agli altri stati).
+- Quando un cliente passa a questo stato, comparire/compilare due campi nuovi:
+  - `inizio_lavoro` (data inizio lavoro)
+  - `fine_lavoro_prevista` (data fine prevista)
+- Tocca: colonne nuove in `clienti` (auto-create difensive), UI dashboard
+  (`ardy-michela-app.html/.css`), salvataggio (`ardy-save-lead.php`/`ardy-update-lead.php`),
+  e il riepilogo titolare (mostrare "in lavorazione: da X a Y prevista").
+- Così il briefing del mattino (Parte A) può dire "oggi consegna prevista per il mobile di
+  Mario Rossi" e simili.
+
+Priorità: media. Parte B è prerequisito utile per rendere ricco il briefing della Parte A.
+
+---
+
 ## 🟢 Sessione 10 (Giugno 2026) — Preventivo PDF avanzato + import scheda + sicurezza
 
 Tutto **deployato su `main`**. Riepilogo di ciò che è stato fatto in questa sessione:
