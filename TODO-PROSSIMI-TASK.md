@@ -49,6 +49,40 @@ Costruito un primo pezzo, semplice e a basso rischio (su `main`, **deployato e f
 
 ---
 
+## ⚡ PROSSIMA SESSIONE — Risparmio risorse: prompt caching + compressione dati
+Obiettivo: tagliare il **costo dominante (API Claude per messaggio)** e alleggerire DB/disco.
+
+### A) Prompt caching — audit & completamento (stato REALE già verificato)
+Fatti utili (modello attuale `claude-sonnet-4-6` → prefisso minimo cacheabile **2048 token**;
+lettura cache ~0.1×, scrittura 1.25× a 5min / 2× a 1h; il caching è un **match di prefisso**:
+qualsiasi byte che cambia nel prefisso invalida tutto ciò che segue).
+
+- ✅ **`ardy-proxy.php` (chat web di Sole)**: GIÀ mette `cache_control: ephemeral` su system
+  (`ardy-system.txt`, statico) + ultimo tool (righe ~264/271). Il system è il file fisso → ottimo.
+  → **Da fare**: verificare che i hit arrivino davvero leggendo `usage.cache_read_input_tokens`
+  nella risposta (loggarlo). Se è 0, c'è un invalidatore nascosto.
+- ⚠️ **`ardy-proxy-lavorazione.php`**: passa `system` come **stringa semplice, SENZA cache_control**
+  (riga ~184). → trasformarlo in blocco `[['type'=>'text','text'=>$s,'cacheControl'=>['type'=>'ephemeral']]]`.
+- ⚠️ **Ramo WhatsApp (n8n) = il costo grosso**: il system grande + il **riepilogo CRM** rigenerato ad
+  ogni messaggio (`ardy-wa-lookup.php`). ATTENZIONE: se il riepilogo CRM (volatile) è concatenato
+  DENTRO il system, il prefisso cambia ogni volta → cache **inutile**. Va **SPLITTATO**: parte statica
+  (prompt fisso) col breakpoint cache, riepilogo CRM **DOPO** (in un messaggio separato, non nel system).
+  Il `cache_control` va impostato nel **nodo HTTP di n8n** (fuori repo) + ristrutturare `ardy-wa-lookup.php`
+  per restituire le due parti separate. Questo è il guadagno maggiore.
+- Quick-win collegato: **memoizzare in `static`** i system letti da disco (`file_get_contents`)
+  in `ardy-proxy.php`/`ardy-wa-lookup.php` (già nel backlog perf sotto).
+
+### B) Compressione dati / disco (server 200GB condiviso)
+- **Foto all'upload**: ridimensionare/comprimere le immagini scheda quando entrano
+  (`ardy-lead-foto.php`/`ardy-upload-video.php`) → meno peso su disco fin da subito.
+- **gzip** sulle risposte JSON/HTML degli endpoint (se non già attivo a livello server/.htaccess).
+- **Preventivi base64 in DB** (`preventivi.voci_json` LONGTEXT): pesano molto nel DB. Valutare se
+  tenerli tutti o rigenerare il PDF on-demand / spostare le immagini fuori dal DB.
+- Quick-win perf già listati nel backlog in fondo (DDL ad ogni request, `SELECT *` senza LIMIT,
+  `finfo`, indice telefono normalizzato): buon momento per chiuderli insieme.
+
+---
+
 ## ⏳ DA PROVARE con Michela — "Sole crea scheda da WhatsApp"
 Codice già su `main`. Da fare appena Michela è disponibile:
 1. **Deploy sul server** (porta online l'endpoint + il nuovo prompt titolare):
