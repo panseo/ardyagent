@@ -109,8 +109,17 @@ Tutto **deployato su `main`**. Riepilogo di ciò che è stato fatto in questa se
      preventivi precompilato** (manodopera + materiali + trasporti come voci) per produrre
      il PDF col template grafico Ardy.
 
-**3. Feature "Sole crea scheda da WhatsApp" — SCENARIO 1 (l'unico approvato).**
+**3. ✅ FATTO — Feature "Sole crea scheda da WhatsApp" — SCENARIO 1 (l'unico approvato).**
    Michela detta/invia a Sole i dati di un cliente nuovo e Sole popola la scheda CRM.
+   - **Implementato (testo/vocale, solo scheda cliente)**: nuovo endpoint `ardy-wa-crea-scheda.php`
+     (server-to-server, protetto da `WA_LOOKUP_SECRET`); upsert in `clienti` con `session_id`
+     deterministico `wa-…` (niente doppioni). Prompt titolare aggiornato (`ardy-wa-lookup.php`):
+     raccolta campi → conferma esplicita → marker `[[CREA_SCHEDA]]{...json...}`. Snippet n8n pronto
+     in `ardy-wa-crea-scheda-n8n.md`. Campi: nome, cognome, telefono, email, indirizzo, zona,
+     servizio, mobile, stato (default LEAD), note. **Decisione**: solo scheda, NO preventivo (si fa da dashboard).
+   - ⚠️ **Lato n8n (da fare a mano)**: incollare il nodo Code di `ardy-wa-crea-scheda-n8n.md` nel
+     ramo WhatsApp e impostare `WA_LOOKUP_SECRET`. ⏭️ **Possibile estensione futura**: ramo PDF-template
+     (riusa `ardy-import-scheda-pdf.php?mode=extract`) e scheda+preventivo da voce.
    - **Input previsto**: testo/vocale **oppure** un **PDF su template FISSO ed etichettato**
      (campi `Cliente: / Telefono: / Email: / Indirizzo: / Oggetto: / Totale: / Stato: / Note:`).
      Il template lo definiamo noi, allineato 1:1 ai campi della scheda. Con etichette

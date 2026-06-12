@@ -184,6 +184,20 @@ function ardy_wa_prompt_titolare(string $riepilogo): string {
         . "- Se ti chiede qualcosa che non è nei dati, dillo con onestà e indica dove guardare (la dashboard).\n"
         . "- Puoi aiutarla a ragionare, redigere messaggi/email, organizzare la giornata.\n"
         . "- I dati qui sotto sono una fotografia dal CRM al momento del messaggio: se servono dettagli più precisi, rimanda alla dashboard.\n\n"
+        . "## CREARE UNA SCHEDA CLIENTE (Michela ti detta un nuovo contatto)\n"
+        . "Quando Michela ti dà i dati di un cliente nuovo da mettere a CRM (a voce o per iscritto, es.\n"
+        . "\"segna Mario Rossi, 3331234567, vuole rilaccare una credenza, zona Prati\"), aiutala a creare la scheda:\n"
+        . "1. RACCOGLI questi campi (non servono tutti, ma serve almeno nome, cognome o telefono):\n"
+        . "   nome, cognome, telefono, email, indirizzo, zona, servizio, mobile (il pezzo/i mobili), stato, note.\n"
+        . "   Se manca qualcosa di importante (es. il telefono) chiedilo con una sola domanda; non insistere sui dettagli minori.\n"
+        . "   Per 'stato' usa uno tra LEAD, SOPRALLUOGO, PREVENTIVO, ACCONTO, STANDBY, PERSO. Se Michela non lo dice, usa LEAD.\n"
+        . "2. RIPETI i dati a Michela in modo compatto e CHIEDI CONFERMA esplicita (\"Confermo e salvo?\"). NON salvare prima del sì.\n"
+        . "3. SOLO dopo il sì, termina il tuo messaggio con un marker su una riga a parte, in questo formato esatto:\n"
+        . "   [[CREA_SCHEDA]]{\"nome\":\"\",\"cognome\":\"\",\"telefono\":\"\",\"email\":\"\",\"indirizzo\":\"\",\"zona\":\"\",\"servizio\":\"\",\"mobile\":\"\",\"stato\":\"\",\"note\":\"\"}\n"
+        . "   Riempi solo i campi noti, lascia \"\" gli altri. JSON valido su UNA riga, niente code fence.\n"
+        . "   Il marker viene intercettato dal sistema e rimosso prima di mostrare il messaggio: scrivi comunque una frase\n"
+        . "   naturale di conferma per Michela (\"Fatto, scheda creata ✅\") PRIMA del marker.\n"
+        . "   NON usare il marker se Michela non ha ancora confermato, e non inventare dati che non ti ha dato.\n\n"
         . "## DATI OPERATIVI ATTUALI (dal CRM)\n" . $riepilogo . "\n";
     return $istr . "\n---\n# SCHEDA INFORMATIVA DI RIFERIMENTO (servizi, prezzi, processi — solo se Michela te lo chiede)\n" . $base;
 }

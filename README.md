@@ -592,6 +592,11 @@ Interesse concreto da parte della community di artigiani **Farò Arte**: possibi
 
 ## 📝 Note sessioni
 
+**Giugno 2026 — Sessione 11 (Sole crea scheda da WhatsApp — Scenario 1)**
+- **`ardy-wa-crea-scheda.php`**: nuovo endpoint server-to-server (stesso `WA_LOOKUP_SECRET` del lookup). In modalità titolare, Michela detta a Sole un cliente nuovo → Sole raccoglie i campi, li ripete, e **dopo conferma** emette un marker `[[CREA_SCHEDA]]{...json...}`. n8n intercetta il marker e POSTa il JSON all'endpoint, che fa l'**upsert** in `clienti` (`session_id` deterministico `wa-…` per telefono/nome → niente doppioni) e ritorna un riepilogo. Solo scheda cliente (no preventivo). Campi: nome, cognome, telefono, email, indirizzo, zona, servizio, mobile, stato, note.
+- **Prompt titolare** aggiornato in `ardy-wa-lookup.php` (`ardy_wa_prompt_titolare`): istruzioni raccolta → conferma esplicita → marker.
+- **`ardy-wa-crea-scheda-n8n.md`**: snippet del nodo Code n8n pronto da incollare (estrae il marker, chiama l'endpoint, ripulisce il messaggio per Michela).
+
 **Giugno 2026 — Sessione 9 (modalità titolare WhatsApp + spostamento sopralluoghi)**
 - **Modalità titolare**: `ardy-wa-lookup.php` riconosce il numero di Michela (`WA_MICHELA_NUMBER`) → `mode=titolare`. Sole le fa da assistente personale con un **riepilogo operativo dal CRM** (nuovi lead 7gg, quadro per stato, lavori in corso, sopralluoghi fissati, fasi, morosi). Niente flusso lead.
 - **Spostamento sopralluoghi**: la data vera dell'appuntamento e l'id evento Google ora si salvano nel CRM (`sopralluogo_at`, `gcal_event_id`, auto-creati). Nuove funzioni in `ardy-gcal.php` (`gcal_is_slot_free`, `gcal_update_event`) e nuovo tool **`sposta_appuntamento`** in `ardy-proxy.php`: Sole verifica la disponibilità, sposta l'evento, aggiorna il CRM e avvisa Michela. Risolve anche la confusione sulle date nei riepiloghi (ora legge la data reale).
