@@ -32,6 +32,20 @@ if (file_exists(__DIR__ . '/ardy-config.php')) {
 }
 
 // -----------------------------------------------------------
+// Sanifica un testo per usarlo come parametro {{1}} di un template WhatsApp.
+// Meta (err 132018) vieta nei parametri: a-capo, tab e 4+ spazi consecutivi.
+// -----------------------------------------------------------
+if (!function_exists('ardy_wa_template_param')) {
+function ardy_wa_template_param(string $t): string {
+    $t = str_replace(["\r\n", "\r"], "\n", $t);
+    $t = preg_replace('/\n+/', ' · ', $t);  // a-capo (anche multipli) → separatore
+    $t = str_replace("\t", ' ', $t);          // tab → spazio
+    $t = preg_replace('/ {2,}/', ' ', $t);    // spazi multipli → uno (copre il limite dei 4)
+    return trim($t);
+}
+}
+
+// -----------------------------------------------------------
 // Invio grezzo del messaggio a Michela via WhatsApp Cloud API
 // -----------------------------------------------------------
 if (!function_exists('ardy_wa_send_michela')) {
@@ -49,6 +63,8 @@ function ardy_wa_send_michela(string $messaggio): bool {
 
     if (defined('WA_TEMPLATE_NOTIFICA') && WA_TEMPLATE_NOTIFICA !== '') {
         // Template pre-approvato: aggira la finestra 24h. Body con una sola variabile {{1}}.
+        // ⚠️ Meta rifiuta (err 132018) i parametri template con a-capo/tab o 4+ spazi:
+        // appiattisco il testo (newline → " · ") prima di inviarlo.
         $payload = [
             'messaging_product' => 'whatsapp',
             'to'                => $to,
@@ -58,7 +74,7 @@ function ardy_wa_send_michela(string $messaggio): bool {
                 'language'   => ['code' => defined('WA_TEMPLATE_LANG') && WA_TEMPLATE_LANG !== '' ? WA_TEMPLATE_LANG : 'it'],
                 'components'  => [[
                     'type'       => 'body',
-                    'parameters' => [['type' => 'text', 'text' => $messaggio]],
+                    'parameters' => [['type' => 'text', 'text' => ardy_wa_template_param($messaggio)]],
                 ]],
             ],
         ];

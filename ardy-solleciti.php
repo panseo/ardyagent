@@ -308,6 +308,15 @@ function genera_messaggio(PDO $db, array $caso, int $livello): array {
 // -----------------------------------------------------------
 // Helper: invio WhatsApp al cliente (testo o template)
 // -----------------------------------------------------------
+// Appiattisce il testo per il parametro {{1}} del template (Meta vieta a-capo/tab/4+ spazi).
+function sollecito_wa_template_param(string $t): string {
+    $t = str_replace(["\r\n", "\r"], "\n", $t);
+    $t = preg_replace('/\n+/', ' · ', $t);
+    $t = str_replace("\t", ' ', $t);
+    $t = preg_replace('/ {2,}/', ' ', $t);
+    return trim($t);
+}
+
 function sollecito_invia_whatsapp(string $telefono, string $testo): bool {
     if (!defined('WA_TOKEN') || !defined('WA_PHONE_NUMBER_ID') || WA_TOKEN === '' || WA_PHONE_NUMBER_ID === '') {
         error_log('ARDY SOLLECITI WA: config mancante');
@@ -328,7 +337,8 @@ function sollecito_invia_whatsapp(string $telefono, string $testo): bool {
                 'language'   => ['code' => defined('WA_TEMPLATE_LANG') && WA_TEMPLATE_LANG !== '' ? WA_TEMPLATE_LANG : 'it'],
                 'components'  => [[
                     'type'       => 'body',
-                    'parameters' => [['type' => 'text', 'text' => mb_substr($testo, 0, 1000)]],
+                    // Meta vieta a-capo/tab/4+ spazi nei parametri template (err 132018) → appiattisci.
+                    'parameters' => [['type' => 'text', 'text' => sollecito_wa_template_param(mb_substr($testo, 0, 1000))]],
                 ]],
             ],
         ];
