@@ -2,13 +2,64 @@
 
 ---
 
-## 🟡 IN CORSO — Migrazione preventivi storici + Sole crea scheda (branch `claude/busy-cray-3ek3lu`)
+## 🟢 Sessione 10 (Giugno 2026) — Preventivo PDF avanzato + import scheda + sicurezza
 
-> ⚠️ **NIENTE è ancora in produzione.** Tutto è committato sul branch
-> `claude/busy-cray-3ek3lu` ma **non deployato**. Primo passo della prossima
-> sessione: **deploy**.
+Tutto **deployato su `main`**. Riepilogo di ciò che è stato fatto in questa sessione:
 
-### ✅ Fatto (in repo, da deployare)
+### Sicurezza (hardening)
+- ✅ **Anti-spoofing rate-limit** (`ardy-proxy.php`): `ardyClientIp()` in `ardy-net.php`
+  si fida di `CF-Connecting-IP`/`X-Forwarded-For` solo se `REMOTE_ADDR` è un edge
+  Cloudflare noto (CIDR match v4/v6), altrimenti usa `REMOTE_ADDR`. Protegge i costi API.
+- ✅ **Rate-limit `ardy-save-lead.php`** (15/ora, 50/giorno per IP); le chiamate interne
+  del proxy sono esenti via `ARDY_INTERNAL_SECRET` (header `X-Ardy-Internal`).
+- ✅ **Upload dir no-PHP**: `ardyHardenUploadDir()` mette un `.htaccess` che blocca gli
+  script in `ARDY_UPLOAD_DIR`, `reels/`, `preventivi_pdf/` (pdf/mp4/foto restano serviti).
+- ✅ **Meno PII nel log WhatsApp**: `ardy-whatsapp-webhook.php` logga solo metadati
+  (numero mascherato, tipo, lunghezza), retention 100→50.
+
+### Importa scheda da PDF (Scenario 1 — lato dashboard)
+- ✅ `ardy-template-scheda-cliente.html` (modello etichettato, con **Mobile/Pezzo lista**,
+  **Manodopera**, **Materiali** voce-per-voce, **Trasporti**, totale auto).
+- ✅ `ardy-import-scheda-pdf.php` (estrazione AI da PDF: `mode=extract`/`mode=save`).
+- ✅ Dashboard: pulsante **📥 PDF** → estrai → correggi → "Crea scheda" o "+ Preventivo Ardy".
+
+### Generatore preventivi — redesign completo
+- ✅ **Opzioni a pacchetto**: più alternative per lo stesso lavoro, ognuna con le sue voci
+  e il suo totale; il cliente sceglie. Una sola opzione = preventivo singolo come prima.
+- ✅ **Copertina full-bleed**: immagine unica a tutta pagina (campo dedicato; `background-size:cover`).
+- ✅ **Prima/Dopo per opzione**: ogni opzione ha la sua coppia (caricata nella card) e la
+  sua pagina nel PDF (prima/dopo in testa + costi). Impaginazione rifatta mPDF-friendly
+  (niente `object-fit`/flex).
+- ✅ **Analisi degli interventi con AI**: campo + box prompt → `mode=ai` (Claude) scrive il
+  testo descrittivo (pagina "Dettaglio Tecnico"), modificabile.
+- ✅ **Bozza modificabile, poi bloccata**: bozza riapribile dallo Storico (✏️ Modifica,
+  payload completo salvato in `voci_json` LONGTEXT); diventa definitiva (🔒) passando a
+  Inviato/Accettato (il server rifiuta la sovrascrittura). Cestino 🗑 per le bozze.
+- ✅ **Fix doppioni**: la modifica fa UPDATE della stessa riga (via `prev_id`), non più un
+  nuovo INSERT ad ogni rigenerazione (la tabella non ha UNIQUE su `numero`).
+
+### ⚠️ Lato server da verificare/configurare
+- `define('ARDY_INTERNAL_SECRET', '...')` in `ardy-config.php` (esenta il proxy dal
+  rate-limit di save-lead). Senza, funziona comunque ma il proxy ricade nel limite per IP.
+- Alla 1ª generazione preventivo dopo il deploy parte l'ALTER automatico di `voci_json`
+  → LONGTEXT (serve permesso ALTER all'utente DB; se manca, lanciare a mano in phpMyAdmin:
+  `ALTER TABLE preventivi MODIFY voci_json LONGTEXT;`).
+- (Opzionale) **UNIQUE su `preventivi.numero`** dopo aver ripulito i doppioni: renderebbe
+  l'upsert robusto anche senza `prev_id`.
+
+### 🔭 Possibili rifiniture preventivo (da valutare con l'uso)
+- Interruzione di pagina per opzione se le voci sono tante.
+- Copertina via `<img>` a piena pagina se `background-size:cover` desse problemi su mPDF.
+- Altezze/crop immagini prima/dopo.
+- "Modifica/Duplica" preventivo come base per uno nuovo.
+
+---
+
+## 🟡 STORICO — Migrazione preventivi storici + Sole crea scheda (branch `claude/busy-cray-3ek3lu`)
+
+> ✅ **Deployato.** L'import (CSV e PDF singolo) è in produzione su `main`.
+
+### ✅ Fatto (in produzione)
 - **`ardy-import-preventivi.php`** — strumento *una-tantum* per migrare i preventivi
   già fatti (senza CRM) nel database. Una riga CSV per preventivo → upsert in
   `clienti` (session_id deterministico) + insert in `preventivi`. Caratteristiche:
@@ -25,12 +76,11 @@
 - **`.gitignore`**: esclude `import-preventivi*.csv` (contengono PII clienti).
 - README aggiornato con la nuova riga file.
 
-### ⏭️ Prossima sessione — da riprendere in ordine
+### ⏭️ Da riprendere in ordine
 
-**1. DEPLOY del branch** sul server: `git pull` del branch + `./deploy.sh`
-   (oppure merge su `main` e deploy). Senza questo l'import non è raggiungibile online.
+**1. ✅ DEPLOY fatto.** Tutto su `main` e in produzione.
 
-**2. Raccolta + import dei preventivi storici.** Michela li mette in una **cartella
+**2. ⏳ Raccolta + import dei preventivi storici.** Michela li mette in una **cartella
    Google Drive**.
    - Claude **può leggere da Drive** (tool Google Drive disponibili): dato il link/nome
      della cartella, estrarre i dati e generare il **CSV già compilato** (con `file_pdf`
