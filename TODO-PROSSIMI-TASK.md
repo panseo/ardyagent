@@ -8,15 +8,15 @@ Contesto: server **200GB condiviso con 5 domini** → lo spazio conta. I file pe
 preventivo **incorporano le immagini in base64** → cancellare le foto originali NON rompe i
 documenti. Le foto pubblicate sul **sito** stanno nella Media Library di WordPress (separata) → si lasciano.
 
-### ✅ FATTO (giugno 2026) — versione "leggera": Libera spazio per i PERSI
-Costruito un primo pezzo, semplice e a basso rischio (su `main`, **da deployare**):
+### ✅ FATTO e IN PRODUZIONE (giugno 2026) — versione "leggera": Libera spazio per i PERSI
+Costruito un primo pezzo, semplice e a basso rischio (su `main`, **deployato e funzionante**):
 - **`ardy-archivia-persi.php`** (POST): trova i clienti in stato **PERSO** e **SPOSTA** (non cancella)
   le loro cartelle foto in `ARDY_UPLOAD_DIR/_da_liberare/<session>/` e i reel in `reels/_da_liberare/`.
   Idempotente; non tocca DB/sito/preventivi; `session_id` sanificato; quarantena hardenizzata (no-PHP).
 - **Dashboard**: pulsante **🧹 LIBERA SPAZIO (PERSI)** in sidebar → conferma → riepilogo (spazio raccolto +
   i due percorsi da svuotare a mano sul server via File Manager/FTP).
 - Filosofia: il codice **sposta**, Michela **cancella a mano** quando vuole → zero rischio di perdite.
-- ⚠️ **Deploy**: caricare `ardy-archivia-persi.php` (nuovo) + `ardy-michela-app.html` (aggiornato) sul server.
+- ✅ Deployato e testato in produzione: il pulsante 🧹 funziona.
 
 ### ⏭️ Resta da fare (versione completa, opzionale) — decisioni già prese con Michela
 
