@@ -41,6 +41,9 @@
           <button class="btn-nuovo-cliente" onclick="openMorosi()" style="flex:1;text-align:center;background:none;border:1px solid #8b3e3e;color:#d98a8a;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">💸 MOROSI</button>
           <button class="btn-nuovo-cliente" onclick="openImportPdf()" style="flex:1;text-align:center;background:none;border:1px solid #3e6f8b;color:#8ec0d9;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">📥 PDF</button>
         </div>
+        <div style="display:flex;gap:5px;margin-top:5px;">
+          <button class="btn-nuovo-cliente" onclick="archiviaPersi()" title="Sposta in una cartella di quarantena le foto e i reel dei clienti PERSI, così puoi cancellarli a mano dal server e liberare spazio. Non cancella nulla." style="flex:1;text-align:center;background:none;border:1px solid #6f6f6f;color:#aaa;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">🧹 LIBERA SPAZIO (PERSI)</button>
+        </div>
       </div>
       <div class="search-box">
         <input type="text" id="search" placeholder="Cerca nome, zona, servizio..." oninput="filterLeads()">
@@ -349,6 +352,7 @@ const REEL_URL        = BASE_URL + '/ardy-crea-reel.php';
 const REEL_PUB_URL    = BASE_URL + '/ardy-pubblica-reel.php';
 const REEL_TPL_URL    = BASE_URL + '/ardy-reel-template-api.php';
 const MUSICA_URL      = BASE_URL + '/ardy-lista-musica.php';
+const ARCHIVIA_URL    = BASE_URL + '/ardy-archivia-persi.php';
 
 // ─── STATE ────────────────────────────────────────────────
 let allLeads       = [];
@@ -2429,6 +2433,43 @@ function showToast(msg, type = '') {
   t.textContent = msg;
   t.className = `toast ${type} show`;
   setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ─── LIBERA SPAZIO: archivia foto/reel dei clienti PERSI ──────────
+async function archiviaPersi() {
+  if (!confirm(
+    'LIBERA SPAZIO\n\n' +
+    'Sposta le foto e i reel dei clienti in stato PERSO in una cartella di quarantena ' +
+    'sul server (_da_liberare).\n\n' +
+    'NON cancella niente: i file li elimini tu a mano dal server quando vuoi. ' +
+    'Dati, schede e preventivi restano intatti.\n\nProcedo?'
+  )) return;
+
+  showToast('🧹 Sto raccogliendo le foto dei persi…');
+  try {
+    const res  = await fetch(ARCHIVIA_URL, { method: 'POST' });
+    const data = await res.json();
+    if (!data.ok) { showToast('⚠ ' + (data.error || 'Errore'), 'error'); return; }
+
+    if (data.cartelle_foto === 0 && data.reel_spostati === 0) {
+      showToast('✓ Niente da liberare: nessuna foto dei persi da spostare', 'success');
+      return;
+    }
+
+    showToast(`✓ Liberati ${data.spazio} — ora cancellali dal server`, 'success');
+    alert(
+      'FATTO ✓\n\n' +
+      `Clienti persi controllati: ${data.clienti_persi}\n` +
+      `Cartelle foto spostate: ${data.cartelle_foto}\n` +
+      `Reel spostati: ${data.reel_spostati}\n` +
+      `Spazio raccolto: ${data.spazio}\n\n` +
+      'Ora vai sul server (File Manager / FTP) e svuota a mano:\n' +
+      `• Foto:  ${data.percorso_foto}\n` +
+      `• Reel:  ${data.percorso_reel}`
+    );
+  } catch (e) {
+    showToast('⚠ Errore di rete', 'error');
+  }
 }
 </script>
 <!-- MODAL NUOVO CLIENTE -->
