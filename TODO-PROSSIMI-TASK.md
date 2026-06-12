@@ -2,6 +2,19 @@
 
 ---
 
+## ⏳ DA PROVARE con Michela — "Sole crea scheda da WhatsApp"
+Codice già su `main`. Da fare appena Michela è disponibile:
+1. **Deploy sul server** (porta online l'endpoint + il nuovo prompt titolare):
+   `runuser -u micoperibg -- bash -c 'cd ~/repositories/ardyagent && git pull origin main && ./deploy.sh'`
+   ⚠️ Senza deploy l'endpoint `ardy-wa-crea-scheda.php` non esiste ancora sul server.
+2. **Nodo n8n**: già aggiornato col blocco "3b" (intercetta `[[CREA_SCHEDA]]`).
+3. **Prova end-to-end** dal numero di Michela: scrivere a Sole
+   «segnami un cliente nuovo: Mario Rossi, 333 1234567, vuole rilaccare una credenza, zona Prati, mettilo come lead»
+   → Sole rilegge → "sì, salva" → attesa "Scheda creata ✅" + scheda in dashboard (stato LEAD).
+4. Se errore: guardare **Executions** del nodo Code in n8n e leggere l'output.
+
+---
+
 ## 🟢 Sessione 10 (Giugno 2026) — Preventivo PDF avanzato + import scheda + sicurezza
 
 Tutto **deployato su `main`**. Riepilogo di ciò che è stato fatto in questa sessione:
