@@ -261,10 +261,27 @@ if ($featuredImageId !== null) {
 }
 
 // -----------------------------------------------------------
-// 10. EMAIL AL CLIENTE
+// 10. NOTIFICHE AL CLIENTE (email + WhatsApp)
 // -----------------------------------------------------------
 if ($clienteEmail) {
     inviaEmailCliente($clienteEmail, $clienteNome, $mobileTitolo, $faseNome, $testoGenerato, $postLink, $isComunicazione);
+}
+
+// WhatsApp al cliente: solo per le FASI normali (non le comunicazioni straordinarie) e solo
+// se il template Meta è configurato (fuori dalle 24h serve il template approvato).
+// Il telefono non arriva nell'input → lo leggo dal CRM tramite session_id.
+if (!$isComunicazione && defined('WA_TEMPLATE_FASI') && WA_TEMPLATE_FASI !== '') {
+    try {
+        $dbTel = ardyDB();
+        $stTel = $dbTel->prepare("SELECT telefono FROM clienti WHERE session_id = :sid LIMIT 1");
+        $stTel->execute([':sid' => $sessionId]);
+        $telCliente = (string)($stTel->fetchColumn() ?: '');
+        if ($telCliente !== '') {
+            inviaWhatsAppCliente($telCliente, $clienteNome, $mobileTitolo, $faseNome, $postLink);
+        }
+    } catch (Throwable $e) {
+        error_log('ARDY PUBBLICA WA CLIENTE: ' . $e->getMessage());
+    }
 }
 
 // -----------------------------------------------------------
@@ -366,6 +383,70 @@ Il tono deve essere artigianale, competente e rassicurante. Non usare elenchi pu
     }
     $data = json_decode($res, true);
     return $data['content'][0]['text'] ?? $noteBrevi;
+}
+
+// Sanifica un valore per i parametri {{n}} dei template (Meta vieta a-capo/tab/4+ spazi).
+function ardy_wa_param_clean(string $t): string {
+    $t = str_replace(["\r\n", "\r", "\n", "\t"], ' ', $t);
+    $t = preg_replace('/ {2,}/', ' ', $t);
+    return trim($t);
+}
+
+// Notifica WhatsApp al cliente sull'avanzamento di una fase.
+// Usa il template Meta a 4 variabili WA_TEMPLATE_FASI:
+//   {{1}} nome · {{2}} mobile/oggetto · {{3}} fase · {{4}} link pagina lavorazione
+function inviaWhatsAppCliente(string $telefono, string $nome, string $mobile, string $fase, string $link): bool {
+    if (!defined('WA_TOKEN') || !defined('WA_PHONE_NUMBER_ID') || WA_TOKEN === '' || WA_PHONE_NUMBER_ID === '') {
+        error_log('ARDY PUBBLICA WA CLIENTE: config WA mancante');
+        return false;
+    }
+    $to = preg_replace('/\D+/', '', $telefono);
+    if ($to === '') return false;
+    if (strlen($to) === 10 && $to[0] === '3') $to = '39' . $to; // numeri IT salvati senza prefisso
+
+    $pNome   = ardy_wa_param_clean($nome)   ?: 'cliente';
+    $pMobile = ardy_wa_param_clean($mobile) ?: 'lavoro';
+    $pFase   = ardy_wa_param_clean($fase)   ?: 'aggiornamento';
+    $pLink   = ardy_wa_param_clean($link);
+
+    $payload = [
+        'messaging_product' => 'whatsapp',
+        'to'                => $to,
+        'type'              => 'template',
+        'template'          => [
+            'name'       => WA_TEMPLATE_FASI,
+            'language'   => ['code' => defined('WA_TEMPLATE_LANG') && WA_TEMPLATE_LANG !== '' ? WA_TEMPLATE_LANG : 'it'],
+            'components'  => [[
+                'type'       => 'body',
+                'parameters' => [
+                    ['type' => 'text', 'text' => $pNome],
+                    ['type' => 'text', 'text' => $pMobile],
+                    ['type' => 'text', 'text' => $pFase],
+                    ['type' => 'text', 'text' => $pLink],
+                ],
+            ]],
+        ],
+    ];
+
+    $ch = curl_init('https://graph.facebook.com/v21.0/' . rawurlencode((string)WA_PHONE_NUMBER_ID) . '/messages');
+    curl_setopt_array($ch, [
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => json_encode($payload, JSON_UNESCAPED_UNICODE),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 15,
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_SSL_VERIFYHOST => 2,
+        CURLOPT_HTTPHEADER     => ['Content-Type: application/json', 'Authorization: Bearer ' . WA_TOKEN],
+    ]);
+    $resp = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err  = curl_error($ch);
+    curl_close($ch);
+    if ($err || $code >= 300) {
+        error_log('ARDY PUBBLICA WA CLIENTE ERROR: http=' . $code . ' err=' . $err . ' resp=' . $resp);
+        return false;
+    }
+    return true;
 }
 
 function inviaEmailCliente(string $email, string $nome, string $mobile, string $fase, string $testo, string $link, bool $isComunicazione = false): void {

@@ -272,7 +272,10 @@ body con **una variabile `{{1}}`**, lingua `it`:
       ammettono a-capo/tab/4+ spazi (err 132018): risolto con `ardy_wa_template_param()`.
 - [x] **`sollecito_pagamento`** ✅ APPROVATO + collegato (`WA_TEMPLATE_SOLLECITO` in config). Stesso
       fix anti-newline lato `ardy-solleciti.php` (`sollecito_wa_template_param`). Da provare con un caso vero.
-- [ ] **template fasi cliente** — aggiornamenti lavorazione ai clienti (Task 3, vedi sotto): es. "Ciao {{1}}, aggiornamento sul tuo {{2}}: completata la fase '{{3}}'. Guarda qui: {{4}}"
+- [ ] **`aggiornamento_fase`** — aggiornamenti lavorazione ai clienti (Task 3). **Codice già pronto**
+      (`inviaWhatsAppCliente()` in `ardy-pubblica-lavorazione.php`, 4 variabili {{1}}nome {{2}}mobile
+      {{3}}fase {{4}}link). Manca solo: creare+approvare il template su Meta e poi in `ardy-config.php`:
+      `define('WA_TEMPLATE_FASI','aggiornamento_fase');`
 
 Note: categoria Utility = approvazione rapida e costo minimo (~3-4 cent/msg, solo verso
 i clienti; le notifiche a Michela sono pochissime → costo trascurabile). Codice già
