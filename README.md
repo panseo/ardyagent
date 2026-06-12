@@ -400,12 +400,9 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
 - Business Portfolio verificato
 - Webhook configurato: `https://ardyagent.ardy-lab.it/ardy-whatsapp-webhook.php`
 - Token verifica: `ardy_wa_verify_2026`
-- Numero Michela (+39 351 967 7973) registrato come ON_PREMISE
+- Numero Sole (+39 379 375 6437) registrato 
 
-### Blocco attuale
-Il numero di Michela è usato sull'app WhatsApp Business del telefono. Per Cloud API serve un **numero dedicato** (seconda SIM). Registrare il numero di Michela sulla Cloud API disconnetterebbe l'app dal telefono.
-
-### Architettura prevista (da completare con SIM dedicata)
+### Architettura 
 ```
 [Cliente scrive su WhatsApp]
     ↓ Meta Cloud API
@@ -455,9 +452,6 @@ define('WA_MICHELA_NUMBER',  '393519677973');    // numero di Michela, formato i
 define('WA_TEMPLATE_NOTIFICA', '');              // template Meta approvato (body 1 var {{1}}) — aggira la finestra 24h
 define('WA_TEMPLATE_LANG',     'it');
 ```
-> ⚠️ Senza un **template approvato** il messaggio libero a Michela arriva solo se lei
-> ha scritto al numero Sole nelle ultime 24h. Per notifiche affidabili in qualsiasi
-> momento serve far approvare un template a Meta e impostare `WA_TEMPLATE_NOTIFICA`.
 
 ### Secret interno per chiamate server→server (in `ardy-config.php`)
 ```php
@@ -554,7 +548,6 @@ permette il deploy push-button da cPanel (richiede Jailed Shell).
 
 ### Integrazioni social
 - [ ] **Google Business** — attendere aumento quote API, poi configurare nodo n8n
-- [ ] **Instagram** — collegare a pagina Ardy dopo 9 giugno (attesa 7gg Meta)
 - [ ] **LinkedIn** — integrare per outreach B2B
 
 ### Ardy Outreach
@@ -566,27 +559,11 @@ permette il deploy push-button da cPanel (richiede Jailed Shell).
 ### Infrastruttura
 - [ ] Migrazione server (pianificata — da definire tempistiche)
 - [ ] Automatizzare deploy da GitHub al server (ora manuale via cPanel)
-- [ ] **Deploy via git sul server** — trasformare la cartella del sito in un checkout git (serve token GitHub read-only sul repo privato), così gli aggiornamenti diventano un solo `git pull`
+- [ ] Deploy via git sul server
 
 ### Dashboard / Lavorazioni
 - [x] **Caricamento video delle lavorazioni** — nelle fasi si possono caricare anche video (oltre alle foto). Upload multipart via `ardy-upload-video.php` → Media Library WP; incorporati come `<video>` nel post e salvati in `fasi.video_urls` (sessione 7)
 - [ ] Autenticare il dominio `ardy-lab.it` su Brevo (DKIM/SPF) ed evitare il mittente Gmail (deliverability)
-
-### Riuso / Multi-cliente (white-label)
-Richiesta: replicare il sistema per altri artigiani (es. un collega che fa mobili e infissi su misura, non restauro) con prompt e branding diversi. Fattibile: ~90% del codice è riutilizzabile, cambiano prompt + configurazione.
-- [ ] **Parametrizzare i valori fissi nel codice** → spostare in `ardy-config.php` tutto ciò che oggi è hardcoded (dominio `ardyagent.ardy-lab.it` nei CORS e negli URL, telefono `351 967 7973`, email, indirizzo, nome attività…), così un nuovo cliente = nuovo file di config + nuovo prompt, senza toccare il codice
-- [ ] **Checklist di setup per nuovo cliente** — account da aprire e configurare in ordine: chiave Anthropic, Brevo (mittente/dominio), Google Calendar OAuth, database CRM, (opzionale) Meta/n8n per reel/social; branding e dominio
-- [ ] Riscrivere `ardy-system.txt` per il nuovo mestiere (mobili/infissi su misura): servizi, listino/forbici, processo di qualifica, sopralluogo, tono
-- [ ] Installazione **separata** per cliente (copia del progetto sul suo dominio/hosting + sua config) — attività isolate, niente dati condivisi
-- [ ] (Visione) Trasformarlo in un piccolo prodotto white-label da offrire ad altri artigiani
-
-#### Opportunità community "Farò Arte" (artigiani romani)
-Interesse concreto da parte della community di artigiani **Farò Arte**: possibili più installazioni. Validato da un lead reale già acquisito. Procedere con calma e in modo ripetibile.
-- [ ] **Pilota Farò Arte** — primo cliente della community (collega o altro) per rodare il processo di onboarding end-to-end
-- [ ] **Definire pacchetto e prezzo** — modello suggerito: *setup una-tantum + canone mensile* (manutenzione/aggiornamenti)
-- [ ] **Costi vivi da girare al cliente** — chiave Anthropic, Brevo, hosting, dominio (non assorbibili su molti clienti)
-- [ ] **Bozza di offerta** da mostrare alla community (cosa include, prezzi, costi ricorrenti)
-- [ ] Sequenza consigliata: 1) finire il template parametrizzato → 2) 1 pilota → 3) apertura come pacchetto ripetibile
 
 ---
 
