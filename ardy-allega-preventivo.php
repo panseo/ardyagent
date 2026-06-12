@@ -11,15 +11,15 @@
 //   → salva il PDF in preventivi_pdf/ e inserisce una voce in `preventivi`
 //     con file_pdf valorizzato → compare nello Storico col bottone ⬇ PDF.
 //
-// Protetto da Basic Auth (.htaccess) + guard ardyRequireAuth().
+// Protetto da Basic Auth (.htaccess), come ardy-preventivo.php / ardy-crm-api.php
+// (no ardyRequireAuth(): su questo server l'header Authorization non arriva a PHP
+//  in CGI/FPM, e una seconda guardia rifarebbe la login al fetch).
 // -----------------------------------------------------------
 
 require_once __DIR__ . '/ardy-config.php';
-require_once __DIR__ . '/ardy-auth.php';
 require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-net.php';
 
-ardyRequireAuth();
 date_default_timezone_set('Europe/Rome');
 header('Content-Type: application/json; charset=utf-8');
 
