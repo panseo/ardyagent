@@ -25,14 +25,19 @@ require_once __DIR__ . '/ardy-db.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-// ── Protezione via segreto condiviso con n8n (stessa di ardy-wa-lookup.php) ──
-if (defined('WA_LOOKUP_SECRET') && WA_LOOKUP_SECRET !== '') {
-    $sent = $_SERVER['HTTP_X_ARDY_SECRET'] ?? ($_GET['secret'] ?? '');
-    if (!hash_equals(WA_LOOKUP_SECRET, (string)$sent)) {
-        http_response_code(403);
-        echo json_encode(['success' => false, 'error' => 'non autorizzato']);
-        exit();
-    }
+// ── Protezione via segreto condiviso con n8n ──
+// A differenza di ardy-wa-lookup.php (read-only), QUESTO endpoint SCRIVE nel CRM:
+// fail-closed → se il segreto non è configurato, rifiuta tutto (niente write aperti).
+if (!defined('WA_LOOKUP_SECRET') || WA_LOOKUP_SECRET === '') {
+    http_response_code(503);
+    echo json_encode(['success' => false, 'error' => 'endpoint non configurato']);
+    exit();
+}
+$sent = $_SERVER['HTTP_X_ARDY_SECRET'] ?? ($_GET['secret'] ?? '');
+if (!hash_equals(WA_LOOKUP_SECRET, (string)$sent)) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => 'non autorizzato']);
+    exit();
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
