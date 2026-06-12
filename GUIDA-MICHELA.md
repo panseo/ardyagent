@@ -93,8 +93,39 @@ copi il testo. L'AI usa i dati del cliente per personalizzarlo.
 ## 📄 6. Preventivi e Proforma
 
 ### Preventivo PDF
-Crei un preventivo completo in PDF (con i tuoi dati aziendali, IVA 0% regime
-forfettario, marca da bollo). Compili le voci, vedi l'anteprima, salvi il PDF.
+Apri **+ PREVENTIVO PDF** sulla scheda di un cliente: i dati del cliente si compilano
+da soli. Poi:
+
+1. **Opzioni** — Puoi proporre **più alternative** per lo stesso lavoro (es. "Restauro
+   completo" e "Ravvivatura"). Ogni opzione ha **le sue voci** e **il suo totale**: usa
+   **+ AGGIUNGI OPZIONE**. Se lasci una sola opzione (senza nome), esce un preventivo
+   singolo come sempre.
+2. **Voci** — Dentro ogni opzione aggiungi le righe (descrizione, quantità, prezzo, sconto)
+   con **+ AGGIUNGI VOCE**, oppure pescale dalla **📚 LIBRERIA**. Il totale dell'opzione
+   si aggiorna da solo.
+3. **Immagini** —
+   - **Copertina**: una foto/render che diventa la **prima pagina a tutta pagina** del PDF.
+   - **Prima / Dopo**: dentro **ogni opzione** carichi la foto *prima* e il render *dopo*;
+     finiscono in testa alla pagina di quell'opzione.
+4. **Analisi degli interventi** — Scrivi due parole nel box (es. "restauro conservativo,
+   pulitura, ritocco foglia oro") e premi **✨ Scrivi con AI**: l'assistente scrive il
+   testo professionale che va nella pagina "Dettaglio Tecnico". Puoi **modificarlo** a mano.
+5. **👁 Anteprima** (non salva e non costa nulla) per controllare l'impaginazione → poi
+   **⬇ Genera PDF**: il PDF viene salvato nello **Storico** come **bozza** e scaricato.
+
+### Modificare una bozza (e quando si blocca)
+- Finché è **BOZZA**, il preventivo si può **riaprire e correggere**: nello Storico clicca
+  **✏️ Modifica**, cambia quello che vuoi e rigenera (sovrascrive lo stesso preventivo).
+- Quando lo sposti su **Inviato** o **Accettato** diventa **definitivo** 🔒 e **non si
+  modifica più**.
+- Il **🗑** sulle bozze serve a cancellarne una (utile per eliminare doppioni).
+
+### Importa scheda da PDF (📥 PDF)
+Per un **cliente nuovo** (non ancora a sistema) puoi partire da un PDF compilato sul
+**modello "Scheda Cliente"**: pulsante **📥 PDF** in alto a sinistra → carica il PDF →
+**🔍 Estrai** (l'AI legge i dati) → controlli/correggi → **✦ Crea scheda** (oppure
+**📄 + Preventivo Ardy** per creare anche il preventivo). ⚠️ Il PDF deve avere **testo
+digitale** (non una foto/scansione).
 
 ### Proforma
 Il bottone **📄 Proforma** apre un generatore con **3 scenari pronti**:
@@ -106,7 +137,8 @@ Scegli lo scenario, i dati del cliente si compilano da soli, e generi il documen
 
 ### Storico preventivi
 Per ogni cliente vedi l'elenco dei preventivi già fatti, con il loro stato
-(bozza, inviato, accettato, rifiutato).
+(bozza, inviato, accettato, rifiutato), il pulsante **✏️ Modifica** (solo sulle bozze),
+il **🗑** e **⬇ PDF** per riscaricarli.
 
 ---
 

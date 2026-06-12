@@ -534,11 +534,18 @@ permette il deploy push-button da cPanel (richiede Jailed Shell).
 - [ ] **Inbox WhatsApp nella dashboard** — Michela legge le conversazioni Sole↔cliente (dati già in `wa_messaggi`), può mettere Sole **in pausa** per una chat, **rispondere manualmente** (invio via Cloud API, token in `ardy-config.php`) e riattivare Sole. Il nodo n8n deve controllare il flag di pausa prima di rispondere. NB: finestra 24h per i messaggi liberi.
 
 ### Dashboard Michela
-- [ ] Layout PDF da rifinire graficamente
-- [x] **Render e prima/dopo nel preventivo** — dal pannello preventivo si caricano i
-  render della proposta (il 1° va in copertina) e le foto stato attuale; il PDF aggiunge
-  una pagina "La nostra proposta" (griglia render o coppie prima/dopo). Immagini
-  ridimensionate lato client e inviate in base64 a `ardy-preventivo.php`.
+- [x] **Preventivo PDF avanzato** (`ardy-preventivo.php` + pannello dashboard):
+  - **Opzioni a pacchetto**: più alternative per lo stesso lavoro, ognuna con le sue voci
+    e il suo totale; una pagina costi per opzione. Una sola opzione = preventivo singolo.
+  - **Copertina** immagine unica a tutta pagina (full-bleed, `background-size:cover`) +
+    **Prima/Dopo per opzione** (in testa alla pagina dell'opzione). Immagini ridotte lato
+    client e inviate in base64 (impaginazione mPDF-friendly, niente `object-fit`).
+  - **Analisi degli interventi con AI**: `mode=ai` (Claude) scrive il testo descrittivo
+    della pagina "Dettaglio Tecnico" da un prompt; modificabile.
+  - **Bozza modificabile** (✏️ riapre dal payload in `voci_json` LONGTEXT), si **blocca** 🔒
+    passando a Inviato/Accettato; **🗑** elimina le bozze. Modifica = UPDATE per `prev_id`
+    (niente più doppioni).
+- [ ] Layout PDF da rifinire graficamente (interruzioni pagina per opzione, ecc.)
 - [ ] Pagina "I nostri lavori" con foto portfolio nel PDF
 - [ ] Invio email automatico preventivo al cliente
 - [ ] Fix chatbot pubblico (`ardy-proxy.php` — errore API)
