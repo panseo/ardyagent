@@ -46,11 +46,26 @@
   <tr><td><b>LEAD</b></td><td>Nuovo contatto, primo interesse</td></tr>
   <tr><td><b>SOPRALLUOGO</b></td><td>Va fatto / è stato fissato un sopralluogo</td></tr>
   <tr><td><b>PREVENTIVO</b></td><td>Gli hai mandato (o stai facendo) un preventivo</td></tr>
-  <tr><td><b>ACCONTO</b></td><td>Ha pagato l'acconto → il lavoro parte!</td></tr>
+  <tr><td><b>ACCONTO</b></td><td>Ha pagato l'acconto → il lavoro può partire</td></tr>
+  <tr><td><b>IN LAVORAZIONE</b></td><td>Il lavoro è in corso (con data di inizio e di fine prevista — vedi sotto)</td></tr>
+  <tr><td><b>CONSEGNATO</b></td><td>Lavoro finito e consegnato al cliente</td></tr>
+  <tr><td><b>PAGATO</b></td><td>Saldato del tutto → pratica chiusa con successo</td></tr>
   <tr><td><b>STANDBY</b></td><td>In pausa, da risentire più avanti</td></tr>
   <tr><td><b>PERSO</b></td><td>Trattativa chiusa senza accordo</td></tr>
 </table>
 <p>Cambiare stato è utile anche per <b>ritrovare</b> i clienti con i filtri di sinistra.</p>
+
+<p><b>Lo stato IN LAVORAZIONE e le date.</b> Quando metti un cliente in <b>IN LAVORAZIONE</b>, nella sua scheda
+compaiono due date da compilare: <b>inizio lavoro</b> e <b>fine prevista</b>. Servono a tenere sotto controllo le
+scadenze:</p>
+<ul>
+  <li>Se una data è <b>vicina (entro 4 giorni)</b>, oggi, o <b>già passata</b>, la scheda te lo segnala in
+      <b>rosso</b> — così vedi a colpo d'occhio cosa sta per <b>partire</b> o cosa devi <b>chiudere</b>.</li>
+  <li>Gli stessi lavori urgenti finiscono nel <b>"buongiorno" di Sole su WhatsApp</b> (vedi più avanti), così
+      ogni mattina sai cosa è impellente senza aprire la dashboard.</li>
+</ul>
+<div class="tip">L'inizio lavoro può essere una data futura (un lavoro che <b>sta per partire</b>): l'avviso scatta
+sia quando si avvicina l'inizio sia quando si avvicina la fine.</div>
 
 <h2>4. Modificare i dati di un cliente</h2>
 <p>Nella scheda a destra trovi i campi: Nome, Cognome, Telefono, Email, Servizio, Zona, Mobile, Budget, Indirizzo, Note, Data follow-up. <b>Sono tutti modificabili.</b> Se un cliente ha sbagliato l'email, o manca il telefono, clicca nel campo e correggilo.</p>
@@ -143,6 +158,13 @@
 </ul>
 <p>Tu non devi fare nulla per questi: lavorano da soli e ti portano i contatti già pronti.</p>
 <div class="tip"><b>Sole ti avvisa su WhatsApp.</b> Quando arriva un nuovo contatto, viene fissato un sopralluogo, oppure un cliente segnala un reclamo, un problema di pagamento o una richiesta particolare, Sole ti manda <b>un messaggio WhatsApp di riepilogo</b>, come farebbe una segretaria. Per riceverli, ricordati di <b>salutare Sole su WhatsApp ogni mattina</b>: basta un "ciao" e per tutta la giornata gli avvisi ti arrivano senza costi.</div>
+<div class="tip"><b>Il "buongiorno" di Sole.</b> Quando saluti Sole la mattina (o le chiedi "come va oggi?"), oltre ad aprire la giornata ti manda un <b>riepilogo della giornata</b>:
+<ul>
+  <li><b>Gli impegni di oggi</b> presi dal tuo <b>Google Calendar</b> — distingue 🏠 sopralluoghi e 💬 consulenze, mettendo in cima quelli più vicini;</li>
+  <li><b>I lavori in corso</b> (IN LAVORAZIONE) con la loro <b>data di fine prevista</b>;</li>
+  <li>In evidenza i <b>🔴 lavori urgenti</b> — quelli che partono o vanno chiusi <b>entro 4 giorni</b>.</li>
+</ul>
+È come avere una segretaria che ti dice "ecco cosa hai oggi e cosa scade a giorni".</div>
 
 <h2>12. Clienti che non pagano (Morosi)</h2>
 <p>Il pulsante <b>💸 MOROSI</b> (in alto a sinistra, sotto a GUIDA) apre la gestione dei clienti che non hanno saldato. È la tua "segretaria ferma ma corretta": prepara i solleciti al posto tuo, con il tono giusto e i riferimenti di legge, ma <b>decidi e approvi sempre tu</b> prima di inviare.</p>
@@ -163,6 +185,15 @@
 <p>Ogni caso ha uno <b>stato</b> (Aperto, Pagato, Diffida, Archiviato) che puoi cambiare quando il cliente paga o la pratica si chiude.</p>
 <div class="warn">Il <b>livello 4 (diffida)</b> non parte da solo: l'AI prepara la bozza, ma la invii tu a mano. Per le diffide, una volta fattela controllare da un commercialista o avvocato.</div>
 <div class="tip">Per i solleciti via WhatsApp valgono le regole di WhatsApp: se il cliente non ti ha scritto di recente, serve un modello approvato (ci pensiamo noi quando serve). L'<b>email</b> invece funziona sempre.</div>
+
+<h2>13. Liberare spazio dai clienti persi</h2>
+<p>Le foto e i video (reel) dei lavori occupano spazio sul server. Per i clienti in stato <b>PERSO</b> — dove
+ormai non servono più — c'è il pulsante <b>🧹 LIBERA SPAZIO (PERSI)</b> (in alto a sinistra).</p>
+<p>Quando lo premi, il sistema <b>raccoglie in una cartella</b> sul server le foto e i reel di <b>tutti</b> i clienti
+persi, e ti dice <b>quanto spazio</b> ha messo da parte e <b>dove</b>. A quel punto, se vuoi, vai sul server (o ce lo
+fai fare a noi) e <b>cancelli quella cartella</b> per liberare spazio davvero.</p>
+<div class="tip">È <b>sicuro</b>: il pulsante <b>non cancella niente</b> da solo, si limita a <b>spostare</b> i file in un
+posto unico. La scheda del cliente, i suoi dati e gli eventuali preventivi <b>restano intatti</b>.</div>
 
 <h2>In due righe</h2>
 <ol>
