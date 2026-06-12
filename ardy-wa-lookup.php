@@ -120,33 +120,50 @@ function ardy_riepilogo_settimana(PDO $db): string {
         }
     } catch (PDOException $e) { /* salta */ }
 
-    // Lavori IN LAVORAZIONE (con fine prevista) + evidenza URGENTI (scadenza entro 4 giorni).
+    // Lavori IN LAVORAZIONE + evidenza URGENTI: scadenza entro 4 giorni, considerando
+    // SIA l'inizio (lavoro che sta per partire) SIA la fine prevista (sta per chiudere).
     // Colonne create dalla dashboard (ardy-update-lead.php): qui sono opzionali → try difensivo.
     try {
         $rows = $db->query("SELECT nome, cognome, mobile, inizio_lavoro, fine_lavoro_prevista
                               FROM clienti WHERE UPPER(stato)='IN_LAVORAZIONE'
-                          ORDER BY (fine_lavoro_prevista IS NULL), fine_lavoro_prevista ASC")
+                          ORDER BY (fine_lavoro_prevista IS NULL), fine_lavoro_prevista ASC,
+                                   (inizio_lavoro IS NULL), inizio_lavoro ASC")
                    ->fetchAll(PDO::FETCH_ASSOC);
         if ($rows) {
             $urgenti = [];
             $lista   = [];
+            $oggiTs  = strtotime('today');
             foreach ($rows as $r) {
                 $nome = trim(($r['nome'] ?? '') . ' ' . ($r['cognome'] ?? '')) ?: '(senza nome)';
                 $mob  = $r['mobile'] ? ' · ' . $r['mobile'] : '';
+                $ini  = $r['inizio_lavoro'] ?? '';
                 $fine = $r['fine_lavoro_prevista'] ?? '';
-                $ggTxt = '';
-                if ($fine) {
-                    $gg = (int)floor((strtotime($fine . ' 00:00:00') - strtotime('today')) / 86400);
-                    $quando = date('d/m', strtotime($fine));
-                    if ($gg < 0)        $ggTxt = " · fine prevista {$quando} (SCADUTO da " . (-$gg) . "g)";
-                    elseif ($gg === 0)  $ggTxt = " · fine prevista OGGI";
-                    else                $ggTxt = " · fine prevista {$quando} (fra {$gg}g)";
-                    if ($gg <= 4) $urgenti[] = "- {$nome}{$mob}{$ggTxt}";
+                $note = [];
+                $urg  = false;
+
+                if ($ini) {
+                    $gg = (int)floor((strtotime($ini . ' 00:00:00') - $oggiTs) / 86400);
+                    $quando = date('d/m', strtotime($ini));
+                    if ($gg > 0 && $gg <= 4) { $note[] = "inizia {$quando} (fra {$gg}g)"; $urg = true; }
+                    elseif ($gg === 0)       { $note[] = "inizia OGGI";                    $urg = true; }
+                    elseif ($gg < 0)         { $note[] = "iniziato {$quando}"; }
+                    else                     { $note[] = "inizia {$quando}"; }
                 }
-                $lista[] = "- {$nome}{$mob}{$ggTxt}";
+                if ($fine) {
+                    $gg = (int)floor((strtotime($fine . ' 00:00:00') - $oggiTs) / 86400);
+                    $quando = date('d/m', strtotime($fine));
+                    if ($gg < 0)        { $note[] = "fine prevista {$quando} (SCADUTO da " . (-$gg) . "g)"; $urg = true; }
+                    elseif ($gg === 0)  { $note[] = "fine prevista OGGI";                   $urg = true; }
+                    elseif ($gg <= 4)   { $note[] = "fine prevista {$quando} (fra {$gg}g)"; $urg = true; }
+                    else                { $note[] = "fine prevista {$quando} (fra {$gg}g)"; }
+                }
+
+                $line = "- {$nome}{$mob}" . ($note ? " · " . implode(" · ", $note) : '');
+                if ($urg) $urgenti[] = $line;
+                $lista[] = $line;
             }
             if ($urgenti) {
-                $out[] = "🔴 URGENTI (scadenza entro 4 giorni): " . count($urgenti);
+                $out[] = "🔴 URGENTI (entro 4 giorni — inizio o fine): " . count($urgenti);
                 foreach ($urgenti as $u) $out[] = $u;
             }
             $out[] = "IN LAVORAZIONE: " . count($rows);

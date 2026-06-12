@@ -217,7 +217,7 @@
               <div class="lav-row">
                 <div style="flex:1;">
                   <label class="lav-date-label">Inizio lavoro</label>
-                  <input type="date" class="lav-input" id="dInizioLavoro" oninput="markDirty()">
+                  <input type="date" class="lav-input" id="dInizioLavoro" oninput="markDirty();aggiornaAvvisoScadenza()">
                 </div>
                 <div style="flex:1;">
                   <label class="lav-date-label">Fine prevista</label>
@@ -558,20 +558,37 @@ function aggiornaSezioniVisibili(stato) {
   });
 }
 
-// Avviso "scadenza vicina": evidenzia se la fine prevista è entro 4 giorni.
+// Avviso "scadenza vicina": scatta a 4 giorni SIA per l'inizio (lavoro che sta per
+// partire) SIA per la fine prevista (lavoro che sta per chiudere).
 function aggiornaAvvisoScadenza() {
-  const el   = document.getElementById('lavScadenzaHint');
-  const val  = document.getElementById('dFineLavoroPrevista')?.value || '';
+  const el = document.getElementById('lavScadenzaHint');
   if (!el) return;
-  if (!val) { el.style.display = 'none'; return; }
+  const vIni = document.getElementById('dInizioLavoro')?.value || '';
+  const vFin = document.getElementById('dFineLavoroPrevista')?.value || '';
   const oggi = new Date(); oggi.setHours(0,0,0,0);
-  const fine = new Date(val + 'T00:00:00');
-  const gg   = Math.round((fine - oggi) / 86400000);
+  const gg   = v => Math.round((new Date(v + 'T00:00:00') - oggi) / 86400000);
+  const parts = [];
+  let urgente = false;
+
+  if (vIni) {
+    const g = gg(vIni);
+    if (g > 0 && g <= 4) { parts.push('🔴 Inizia fra ' + g + ' g'); urgente = true; }
+    else if (g === 0)    { parts.push('🔴 Inizia OGGI');            urgente = true; }
+    else if (g > 4)      { parts.push('🟢 Inizia fra ' + g + ' g'); }
+    // g < 0 → già iniziato: nessun avviso d'inizio
+  }
+  if (vFin) {
+    const g = gg(vFin);
+    if (g < 0)        { parts.push('⛔ Fine scaduta da ' + (-g) + ' g'); urgente = true; }
+    else if (g === 0) { parts.push('🔴 Fine OGGI');                       urgente = true; }
+    else if (g <= 4)  { parts.push('🔴 Fine fra ' + g + ' g');            urgente = true; }
+    else              { parts.push('🟢 Fine fra ' + g + ' g'); }
+  }
+
+  if (!parts.length) { el.style.display = 'none'; return; }
   el.style.display = '';
-  if (gg < 0)        { el.textContent = '⛔ Scaduto da ' + (-gg) + ' g'; el.className = 'lav-scadenza-hint urgente'; }
-  else if (gg === 0) { el.textContent = '🔴 Scade OGGI';                 el.className = 'lav-scadenza-hint urgente'; }
-  else if (gg <= 4)  { el.textContent = '🔴 URGENTE — fra ' + gg + ' g';  el.className = 'lav-scadenza-hint urgente'; }
-  else               { el.textContent = '🟢 fra ' + gg + ' g';            el.className = 'lav-scadenza-hint'; }
+  el.textContent = parts.join('  ·  ');
+  el.className = 'lav-scadenza-hint' + (urgente ? ' urgente' : '');
 }
 
 // ─── STATO ────────────────────────────────────────────────

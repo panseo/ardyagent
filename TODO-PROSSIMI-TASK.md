@@ -44,7 +44,9 @@ un riepilogo della giornata. Deve far emergere SUBITO ciò che è impellente. Tr
   salvate da `saveLead()`. Whitelist stato aggiornata in `ardy-import-scheda-pdf.php` e `ardy-wa-crea-scheda.php`.
 - **Riepilogo titolare** (`ardy-wa-lookup.php`) ora ha i blocchi **IN LAVORAZIONE** (con fine prevista)
   e **🔴 URGENTI (≤4 giorni)** → questa è già la parte "lavori" del briefing.
-- **Regola urgenza**: urgente se `fine_lavoro_prevista` ≤ oggi+4 giorni.
+- **Regola urgenza**: l'inizio lavoro è una **data X** (non per forza oggi). Un lavoro è
+  urgente se è entro 4 giorni **l'inizio** (sta per partire) **oppure** la **fine prevista**
+  (sta per chiudere). L'avviso in dashboard e il blocco URGENTI del briefing mostrano entrambi.
 
 ### Parte A — RESTA DA FARE: aggiungere il calendario al briefing
 La parte "lavori" del briefing è pronta (vedi Parte B). Mancano:
