@@ -107,8 +107,7 @@ Tutto **deployato su `main`**. Riepilogo di ciò che è stato fatto in questa se
   nuovo INSERT ad ogni rigenerazione (la tabella non ha UNIQUE su `numero`).
 
 ### ⚠️ Lato server da verificare/configurare
-- `define('ARDY_INTERNAL_SECRET', '...')` in `ardy-config.php` (esenta il proxy dal
-  rate-limit di save-lead). Senza, funziona comunque ma il proxy ricade nel limite per IP.
+- ✅ **FATTO** — `ARDY_INTERNAL_SECRET` e `WA_LOOKUP_SECRET` impostati in `ardy-config.php`.
 - Alla 1ª generazione preventivo dopo il deploy parte l'ALTER automatico di `voci_json`
   → LONGTEXT (serve permesso ALTER all'utente DB; se manca, lanciare a mano in phpMyAdmin:
   `ALTER TABLE preventivi MODIFY voci_json LONGTEXT;`).
