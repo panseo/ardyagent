@@ -1156,6 +1156,20 @@
   .dark-field textarea::placeholder { color: var(--text-dim); }
   .dark-field select option { background: var(--surface2); }
   .dark-field textarea { resize: vertical; min-height: 70px; }
+  /* Campo "Nome opzione" nel generatore preventivi — stile coerente col tema scuro */
+  .pv-opz-nome {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 12px;
+    border-radius: 4px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .pv-opz-nome:focus { border-color: var(--accent); }
+  .pv-opz-nome::placeholder { color: var(--text-dim); }
 
   .dark-sep {
     grid-column: 1 / -1;

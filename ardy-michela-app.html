@@ -1788,7 +1788,7 @@ function pvRenderOpzioni(){
     const ph = multi ? ('Nome opzione ' + lettera + ' (es. Restauro completo)') : 'Nome opzione (facoltativo)';
     return `<div class="pv-opzione" style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;">
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
-        <input type="text" value="${pvEscAttr(o.nome)}" placeholder="${ph}" oninput="pvUpdateOpzNome('${o.id}',this.value)" style="flex:1;font-weight:600;">
+        <input type="text" class="pv-opz-nome" value="${pvEscAttr(o.nome)}" placeholder="${ph}" oninput="pvUpdateOpzNome('${o.id}',this.value)" style="flex:1;font-weight:600;">
         ${multi ? `<button class="btn-del-voce-dark" onclick="pvDelOpzione('${o.id}')" title="rimuovi opzione">✕ opzione</button>` : ''}
       </div>
       <div style="display:flex;gap:8px;margin-bottom:10px;">
