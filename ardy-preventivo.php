@@ -293,6 +293,10 @@ $grand_total = $opzioni[0]['totale'];
 $covArr    = parseImgDataUris(isset($_POST['copertina']) && is_string($_POST['copertina']) ? [$_POST['copertina']] : []);
 $copertina = $covArr[0] ?? '';
 
+// Immagine opzionale per la pagina "Procedimento Tecnico Dettagliato".
+$aiaArr = parseImgDataUris(isset($_POST['analisi_img']) && is_string($_POST['analisi_img']) ? [$_POST['analisi_img']] : []);
+$dati['analisi_img'] = $aiaArr[0] ?? '';
+
 if ($mode === 'preview') {
     header('Content-Type: text/html; charset=utf-8');
     $pagine = buildPagine($dati, $opzioni, $bollo, $sped_val, $copertina);
@@ -378,6 +382,7 @@ $sessionId   = $_POST['session_id'] ?? '';
 $editPayload = [
     'opzioni'   => $_POST['opzioni'] ?? null,
     'copertina' => $_POST['copertina'] ?? '',
+    'analisi_img' => $_POST['analisi_img'] ?? '',
     'dati'      => [
         'numero_preventivo' => $_POST['numero_preventivo'] ?? $dati['numero_preventivo'],
         'tipo_preventivo'   => $_POST['tipo_preventivo']   ?? '',
@@ -597,6 +602,8 @@ body { font-family: Arial, sans-serif; font-size: 10pt; color: #111; line-height
 .prev-oggetto { font-size: 10pt; font-weight: 700; margin-bottom: 18px; text-transform: uppercase; }
 .proc-h { font-size: 11pt; font-weight: 700; margin: 14px 0 6px; }
 .proc-p { font-size: 10pt; line-height: 1.7; }
+.proc-img-wrap { text-align: center; margin-top: 18px; }
+.proc-img { max-width: 100%; max-height: 135mm; border: 1px solid #eee; border-radius: 4px; }
 
 /* TABELLA COSTI */
 .budget-h1 { font-size: 18pt; font-weight: 700; text-align: right; line-height: 1.1; }
@@ -742,6 +749,7 @@ function buildPagine(array $d, array $opzioni, float $bollo, string $spedizione,
   ' . $oggettoDiv . '
   <div class="proc-h">Procedimento Tecnico Dettagliato</div>
   <p class="proc-p">' . ($d['analisi'] ? nl2br($d['analisi']) : 'Il lavoro verrà eseguito seguendo rigorosi standard artigianali per garantire la massima qualità e durata nel tempo.') . '</p>
+  ' . (!empty($d['analisi_img']) ? '<div class="proc-img-wrap"><img class="proc-img" src="' . $d['analisi_img'] . '"></div>' : '') . '
   ' . $noteDiv . '
   ' . $footer . '
 </div>';

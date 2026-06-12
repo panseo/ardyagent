@@ -1873,6 +1873,8 @@ function pvRaccogliFormData() {
   });
   // Copertina (immagine unica a tutta pagina)
   if (pvCopertina) fd.append('copertina', pvCopertina);
+  // Immagine pagina "Dettaglio Tecnico"
+  if (pvAnalisiImg) fd.append('analisi_img', pvAnalisiImg);
   // Id se stiamo modificando una bozza (→ UPDATE invece di nuovo INSERT)
   if (pvEditId) fd.append('prev_id', pvEditId);
   return fd;
@@ -1880,6 +1882,7 @@ function pvRaccogliFormData() {
 
 // ── Render / foto del preventivo ──────────────────────────────────────────
 let pvCopertina = '';
+let pvAnalisiImg = '';
 
 // Ridimensiona un'immagine lato client (max lato lungo) e ritorna data-URL JPEG.
 function pvResizeImg(file, maxLato = 1400, q = 0.82) {
@@ -1926,6 +1929,26 @@ function pvRenderCopertina() {
     : '';
 }
 
+// Immagine della pagina "Dettaglio Tecnico"
+async function pvCaricaAnalisiImg(input) {
+  const f = input.files[0];
+  if (f && f.type.startsWith('image/')) {
+    try { pvAnalisiImg = await pvResizeImg(f, 1600, 0.85); } catch(e) { showToast('⚠ Immagine non leggibile', 'error'); }
+  }
+  input.value = '';
+  pvRenderAnalisiImg();
+}
+function pvRenderAnalisiImg() {
+  const box = document.getElementById('pv-analisi-img-thumb');
+  if (!box) return;
+  box.innerHTML = pvAnalisiImg
+    ? `<div style="position:relative;display:inline-block;border-radius:6px;overflow:hidden;border:1px solid var(--border);">
+         <img src="${pvAnalisiImg}" style="height:90px;display:block;">
+         <button onclick="pvAnalisiImg='';pvRenderAnalisiImg();" style="position:absolute;top:0;right:0;background:rgba(0,0,0,.6);color:#fff;border:0;cursor:pointer;width:18px;height:18px;line-height:1;font-size:12px;">✕</button>
+       </div>`
+    : '';
+}
+
 // Immagini prima/dopo di una singola opzione
 async function pvCaricaImgOpz(input, opzId, slot) {
   const o = pvOpzioni.find(o => o.id === opzId);
@@ -1944,6 +1967,8 @@ function pvDelImgOpz(opzId, slot) {
 function pvResetImmagini() {
   pvCopertina = '';
   pvRenderCopertina();
+  pvAnalisiImg = '';
+  pvRenderAnalisiImg();
 }
 
 async function pvGeneraAnalisi() {
@@ -2228,6 +2253,8 @@ async function modificaPreventivo(id) {
     if (!pvOpzioni.length) { pvOpzioni = []; pvAddOpzione(); } else { pvRenderOpzioni(); }
     pvCopertina = pl.copertina || '';
     pvRenderCopertina();
+    pvAnalisiImg = pl.analisi_img || '';
+    pvRenderAnalisiImg();
 
     document.getElementById('preventivoOverlay').classList.add('open');
     showToast('✏️ Bozza riaperta — modifica e poi "Genera PDF"', 'success');
@@ -2837,6 +2864,9 @@ async function archiviaPersi() {
             <button type="button" class="btn-secondary" id="btn-pv-analisi" style="white-space:nowrap;" onclick="pvGeneraAnalisi()">✨ Scrivi con AI</button>
           </div>
           <textarea id="pv-analisi" placeholder="Descrizione professionale degli interventi (scrivila tu o generala con l'AI, poi modificala)..." style="min-height:90px;"></textarea>
+          <label style="margin-top:8px;">Immagine per questa pagina <span style="color:var(--muted);">(facoltativa — riempie lo spazio sotto il testo)</span></label>
+          <input type="file" id="pv-analisi-img" accept="image/*" onchange="pvCaricaAnalisiImg(this)">
+          <div id="pv-analisi-img-thumb" style="margin-top:8px;"></div>
         </div>
         <div class="dark-field full">
           <label>Note</label>
