@@ -56,6 +56,16 @@ La parte "lavori" del briefing è pronta (vedi Parte B). Mancano:
    così il riepilogo lungo parte da solo solo al primo "buongiorno", non a ogni messaggio.
    Senza, funziona comunque quando Michela chiede "come va oggi?".
 
+### Miglioria UX (ipotesi) — popup date all'attivazione dello stato
+Oggi le date (inizio / fine prevista) si inseriscono nella sezione "Lavorazione in corso",
+visibile solo dopo aver messo lo stato IN_LAVORAZIONE. Idea: quando si **clicca il bottone
+stato IN_LAVORAZIONE**, aprire **in automatico un piccolo popup/modale** che chiede subito le
+due date, così non serve scrollare a cercarle. Conferma → salva e chiude; Annulla → lascia lo
+stato con date vuote (compilabili dopo nella sezione).
+- Tocca solo la dashboard (`ardy-michela-app.html/.css`): nuovo modale + hook su `setStato`
+  quando il nuovo stato è IN_LAVORAZIONE. Riusa i campi/salvataggio già esistenti.
+- Priorità: bassa (comodità, non blocca nulla).
+
 Priorità: media.
 
 ---
