@@ -24,11 +24,24 @@ if (empty($sessionId)) {
 try {
     $db = ardyDB();
 
+    // Colonne lavorazione (idempotente): date inizio/fine prevista del lavoro.
+    try {
+        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'inizio_lavoro'")->fetch()) {
+            $db->exec("ALTER TABLE clienti ADD COLUMN inizio_lavoro DATE NULL");
+        }
+        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'fine_lavoro_prevista'")->fetch()) {
+            $db->exec("ALTER TABLE clienti ADD COLUMN fine_lavoro_prevista DATE NULL");
+        }
+    } catch (PDOException $e) {
+        error_log('ARDY UPDATE LEAD ENSURE COLS: ' . $e->getMessage());
+    }
+
     $fields = [
         'nome', 'cognome', 'telefono', 'email',
         'servizio', 'mobile', 'zona', 'budget',
         'indirizzo', 'stato', 'note',
-        'data_followup', 'wp_post_id', 'wp_post_link'
+        'data_followup', 'inizio_lavoro', 'fine_lavoro_prevista',
+        'wp_post_id', 'wp_post_link'
     ];
 
     $set    = ['`updated_at` = NOW()']; // aggiorna sempre il timestamp

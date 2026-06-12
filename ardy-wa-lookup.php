@@ -120,6 +120,40 @@ function ardy_riepilogo_settimana(PDO $db): string {
         }
     } catch (PDOException $e) { /* salta */ }
 
+    // Lavori IN LAVORAZIONE (con fine prevista) + evidenza URGENTI (scadenza entro 4 giorni).
+    // Colonne create dalla dashboard (ardy-update-lead.php): qui sono opzionali → try difensivo.
+    try {
+        $rows = $db->query("SELECT nome, cognome, mobile, inizio_lavoro, fine_lavoro_prevista
+                              FROM clienti WHERE UPPER(stato)='IN_LAVORAZIONE'
+                          ORDER BY (fine_lavoro_prevista IS NULL), fine_lavoro_prevista ASC")
+                   ->fetchAll(PDO::FETCH_ASSOC);
+        if ($rows) {
+            $urgenti = [];
+            $lista   = [];
+            foreach ($rows as $r) {
+                $nome = trim(($r['nome'] ?? '') . ' ' . ($r['cognome'] ?? '')) ?: '(senza nome)';
+                $mob  = $r['mobile'] ? ' · ' . $r['mobile'] : '';
+                $fine = $r['fine_lavoro_prevista'] ?? '';
+                $ggTxt = '';
+                if ($fine) {
+                    $gg = (int)floor((strtotime($fine . ' 00:00:00') - strtotime('today')) / 86400);
+                    $quando = date('d/m', strtotime($fine));
+                    if ($gg < 0)        $ggTxt = " · fine prevista {$quando} (SCADUTO da " . (-$gg) . "g)";
+                    elseif ($gg === 0)  $ggTxt = " · fine prevista OGGI";
+                    else                $ggTxt = " · fine prevista {$quando} (fra {$gg}g)";
+                    if ($gg <= 4) $urgenti[] = "- {$nome}{$mob}{$ggTxt}";
+                }
+                $lista[] = "- {$nome}{$mob}{$ggTxt}";
+            }
+            if ($urgenti) {
+                $out[] = "🔴 URGENTI (scadenza entro 4 giorni): " . count($urgenti);
+                foreach ($urgenti as $u) $out[] = $u;
+            }
+            $out[] = "IN LAVORAZIONE: " . count($rows);
+            foreach (array_slice($lista, 0, 12) as $l) $out[] = $l;
+        }
+    } catch (PDOException $e) { /* colonne assenti o altro: salta */ }
+
     // Sopralluoghi fissati (data VERA dal calendario, salvata in sopralluogo_at)
     try {
         $rows = $db->query("SELECT nome, cognome, zona, sopralluogo_at FROM clienti

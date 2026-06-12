@@ -33,6 +33,8 @@ try {
             'Stato'         => $r['stato']          ?? 'LEAD',
             'Note'          => $r['note']           ?? '',
             'Data_followup' => $r['data_followup']  ?? '',
+            'Inizio_lavoro'         => $r['inizio_lavoro']        ?? '',
+            'Fine_lavoro_prevista'  => $r['fine_lavoro_prevista'] ?? '',
             'wp_post_id'    => $r['wp_post_id']     ?? '',
             'wp_post_link'  => $r['wp_post_link']   ?? '',
             'created_at'    => $r['created_at']     ?? '',

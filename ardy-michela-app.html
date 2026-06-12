@@ -53,6 +53,7 @@
       <button class="filter-chip" data-stato="SOPRALLUOGO" onclick="setFilter(this)">SOPRALLUOGO</button>
       <button class="filter-chip" data-stato="PREVENTIVO" onclick="setFilter(this)">PREVENTIVO</button>
       <button class="filter-chip" data-stato="ACCONTO" onclick="setFilter(this)">ACCONTO</button>
+      <button class="filter-chip" data-stato="IN_LAVORAZIONE" onclick="setFilter(this)">IN LAVORAZIONE</button>
       <button class="filter-chip" data-stato="CONSEGNATO" onclick="setFilter(this)">CONSEGNATO</button>
       <button class="filter-chip" data-stato="PAGATO" onclick="setFilter(this)">PAGATO</button>
       <button class="filter-chip" data-stato="STANDBY" onclick="setFilter(this)">STANDBY</button>
@@ -211,6 +212,19 @@
           <div class="lavorazioni-section visible" id="lavSection">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
               <a href="#" class="lav-post-link" id="lavPostLink" target="_blank" style="display:none;">Vedi post →</a>
+            </div>
+            <div class="lav-date-box">
+              <div class="lav-row">
+                <div style="flex:1;">
+                  <label class="lav-date-label">Inizio lavoro</label>
+                  <input type="date" class="lav-input" id="dInizioLavoro" oninput="markDirty()">
+                </div>
+                <div style="flex:1;">
+                  <label class="lav-date-label">Fine prevista</label>
+                  <input type="date" class="lav-input" id="dFineLavoroPrevista" oninput="markDirty();aggiornaAvvisoScadenza()">
+                </div>
+              </div>
+              <div id="lavScadenzaHint" class="lav-scadenza-hint" style="display:none;"></div>
             </div>
             <div class="lav-form">
               <div class="lav-row">
@@ -470,6 +484,8 @@ function renderDetail() {
   document.getElementById('dIndirizzo').value       = l.Indirizzo ?? '';
   document.getElementById('dNote').value            = l.Note      ?? '';
   document.getElementById('dDataFollowup').value    = l.Data_followup ?? '';
+  document.getElementById('dInizioLavoro').value        = l.Inizio_lavoro ?? '';
+  document.getElementById('dFineLavoroPrevista').value  = l.Fine_lavoro_prevista ?? '';
   document.getElementById('dSessionId').textContent = l.Session_ID ?? '—';
 
   // Foto della scheda — sempre, in ogni stato
@@ -479,7 +495,7 @@ function renderDetail() {
   aggiornaSezioniVisibili(l.Stato ?? '');
 
   // Stato buttons
-  const stati = ['LEAD','SOPRALLUOGO','PREVENTIVO','ACCONTO','CONSEGNATO','PAGATO','STANDBY','PERSO'];
+  const stati = ['LEAD','SOPRALLUOGO','PREVENTIVO','ACCONTO','IN_LAVORAZIONE','CONSEGNATO','PAGATO','STANDBY','PERSO'];
   document.getElementById('statoSelector').innerHTML = stati.map(s => `
     <button class="stato-btn ${(l.Stato??'').toUpperCase() === s ? 'current' : ''}"
             onclick="setStato('${s}')">
@@ -497,15 +513,17 @@ function aggiornaSezioniVisibili(stato) {
   const s = (stato ?? '').toUpperCase();
 
   // Preventivi: da PREVENTIVO in poi (inclusi STANDBY e PERSO — il preventivo c'era)
-  const statiPrev = ['PREVENTIVO','ACCONTO','CONSEGNATO','PAGATO','STANDBY','PERSO'];
+  const statiPrev = ['PREVENTIVO','ACCONTO','IN_LAVORAZIONE','CONSEGNATO','PAGATO','STANDBY','PERSO'];
   document.getElementById('acc-preventivi').style.display = statiPrev.includes(s) ? '' : 'none';
 
-  // Lavorazione: da ACCONTO in poi
-  const statiLav = ['ACCONTO','CONSEGNATO','PAGATO'];
+  // Lavorazione: da ACCONTO in poi (incluso IN_LAVORAZIONE)
+  const statiLav = ['ACCONTO','IN_LAVORAZIONE','CONSEGNATO','PAGATO'];
   const showLav  = statiLav.includes(s);
   document.getElementById('acc-lavorazione').style.display = showLav ? '' : 'none';
   if (showLav) {
     document.getElementById('lavMobile').value = currentLead.Mobile ?? '';
+    // Le date lavoro sono già popolate in renderDetail; qui aggiorno solo l'avviso scadenza.
+    aggiornaAvvisoScadenza();
     lavWpPostId   = currentLead.wp_post_id   ?? null;
     lavWpPostLink = currentLead.wp_post_link ?? null;
     const linkEl  = document.getElementById('lavPostLink');
@@ -538,6 +556,22 @@ function aggiornaSezioniVisibili(stato) {
   ['acc-dati','acc-preventivi','acc-lavorazione','acc-reel'].forEach(id => {
     document.getElementById(id).classList.toggle('open', id === apri);
   });
+}
+
+// Avviso "scadenza vicina": evidenzia se la fine prevista è entro 4 giorni.
+function aggiornaAvvisoScadenza() {
+  const el   = document.getElementById('lavScadenzaHint');
+  const val  = document.getElementById('dFineLavoroPrevista')?.value || '';
+  if (!el) return;
+  if (!val) { el.style.display = 'none'; return; }
+  const oggi = new Date(); oggi.setHours(0,0,0,0);
+  const fine = new Date(val + 'T00:00:00');
+  const gg   = Math.round((fine - oggi) / 86400000);
+  el.style.display = '';
+  if (gg < 0)        { el.textContent = '⛔ Scaduto da ' + (-gg) + ' g'; el.className = 'lav-scadenza-hint urgente'; }
+  else if (gg === 0) { el.textContent = '🔴 Scade OGGI';                 el.className = 'lav-scadenza-hint urgente'; }
+  else if (gg <= 4)  { el.textContent = '🔴 URGENTE — fra ' + gg + ' g';  el.className = 'lav-scadenza-hint urgente'; }
+  else               { el.textContent = '🟢 fra ' + gg + ' g';            el.className = 'lav-scadenza-hint'; }
 }
 
 // ─── STATO ────────────────────────────────────────────────
@@ -575,6 +609,8 @@ async function saveLead() {
     zona:           document.getElementById('dZona').value.trim(),
     budget:         document.getElementById('dBudget').value.trim(),
     indirizzo:      document.getElementById('dIndirizzo').value.trim(),
+    inizio_lavoro:        document.getElementById('dInizioLavoro').value,
+    fine_lavoro_prevista: document.getElementById('dFineLavoroPrevista').value,
   };
 
   try {
@@ -604,6 +640,8 @@ async function saveLead() {
           Zona: payload.zona,
           Budget: payload.budget,
           Indirizzo: payload.indirizzo,
+          Inizio_lavoro: payload.inizio_lavoro,
+          Fine_lavoro_prevista: payload.fine_lavoro_prevista,
         });
         currentLead = allLeads[idx];
       }

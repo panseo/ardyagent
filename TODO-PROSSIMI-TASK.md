@@ -36,20 +36,25 @@ un riepilogo della giornata. Deve far emergere SUBITO ciò che è impellente. Tr
   (flag/data ultimo briefing per numero) — altrimenti lo ripeterebbe a ogni messaggio.
   In alternativa, Sole lo dà quando Michela lo chiede ("come va oggi?").
 
-### Parte B — Nuovo stato "In Lavorazione" + date lavoro
-Aggiungere uno stato cliente dedicato ai lavori effettivamente in corso (oggi si usa ACCONTO):
-- **Nuovo stato `IN_LAVORAZIONE`** (bottone in dashboard, accanto agli altri stati).
-- Quando un cliente passa a questo stato, comparire/compilare due campi nuovi:
-  - `inizio_lavoro` (data inizio lavoro)
-  - `fine_lavoro_prevista` (data fine prevista)
-- Tocca: colonne nuove in `clienti` (auto-create difensive), UI dashboard
-  (`ardy-michela-app.html/.css`), salvataggio (`ardy-save-lead.php`/`ardy-update-lead.php`),
-  e il riepilogo titolare (mostrare "in lavorazione: da X a Y prevista").
-- **Regola urgenza**: un lavoro è "urgente" se `fine_lavoro_prevista` cade entro **4 giorni**
-  da oggi → usata dal briefing (Parte A, blocco 3) per evidenziare le scadenze imminenti.
+### Parte B — Nuovo stato "In Lavorazione" + date lavoro ✅ FATTO
+- **Nuovo stato `IN_LAVORAZIONE`** (chip filtro + bottone stato in dashboard, tra ACCONTO e CONSEGNATO).
+- Due campi nuovi nella sezione Lavorazione: `inizio_lavoro` e `fine_lavoro_prevista` (DATE),
+  con **avviso "scadenza vicina"** (rosso se ≤4 giorni / oggi / scaduto).
+- Colonne `clienti` auto-create in `ardy-update-lead.php`; restituite da `ardy-crm-api.php`;
+  salvate da `saveLead()`. Whitelist stato aggiornata in `ardy-import-scheda-pdf.php` e `ardy-wa-crea-scheda.php`.
+- **Riepilogo titolare** (`ardy-wa-lookup.php`) ora ha i blocchi **IN LAVORAZIONE** (con fine prevista)
+  e **🔴 URGENTI (≤4 giorni)** → questa è già la parte "lavori" del briefing.
+- **Regola urgenza**: urgente se `fine_lavoro_prevista` ≤ oggi+4 giorni.
 
-Priorità: media. Parte B è prerequisito della Parte A: senza `fine_lavoro_prevista` non si
-possono calcolare né i "in lavorazione" con data, né gli "urgenti a 4 giorni".
+### Parte A — RESTA DA FARE: aggiungere il calendario al briefing
+La parte "lavori" del briefing è pronta (vedi Parte B). Mancano:
+1. **Impegni da Google Calendar** nel riepilogo titolare: leggere gli eventi di oggi (e domani)
+   da `ardy-gcal.php` e anteporli ai dati CRM, distinguendo **sopralluoghi / consulenze**.
+2. (Opzionale) **Trigger "prima risposta del giorno"**: salvare data ultimo briefing per numero
+   così il riepilogo lungo parte da solo solo al primo "buongiorno", non a ogni messaggio.
+   Senza, funziona comunque quando Michela chiede "come va oggi?".
+
+Priorità: media.
 
 ---
 

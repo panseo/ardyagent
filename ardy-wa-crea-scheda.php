@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Stati cliente ammessi (allineati al CRM / dashboard).
-$STATI_CLIENTE = ['LEAD', 'SOPRALLUOGO', 'PREVENTIVO', 'ACCONTO', 'STANDBY', 'PERSO'];
+$STATI_CLIENTE = ['LEAD', 'SOPRALLUOGO', 'PREVENTIVO', 'ACCONTO', 'IN_LAVORAZIONE', 'STANDBY', 'PERSO'];
 
 // Input: JSON nel body. Accetta sia il payload "piatto" sia {"dati":{...}}.
 $in = json_decode(file_get_contents('php://input'), true);

@@ -25,7 +25,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 define('PDF_OUTPUT_DIR', __DIR__ . '/preventivi_pdf/');
 
-$STATI_CLIENTE    = ['LEAD', 'SOPRALLUOGO', 'PREVENTIVO', 'ACCONTO', 'STANDBY', 'PERSO'];
+$STATI_CLIENTE    = ['LEAD', 'SOPRALLUOGO', 'PREVENTIVO', 'ACCONTO', 'IN_LAVORAZIONE', 'STANDBY', 'PERSO'];
 $STATI_PREVENTIVO = ['bozza', 'inviato', 'accettato', 'rifiutato'];
 
 $mode = $_GET['mode'] ?? '';
