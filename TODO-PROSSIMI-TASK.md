@@ -266,8 +266,12 @@ dimentica di salutare le notifiche di quel giorno si perdono.
 
 Template da far approvare su Meta (WhatsApp Manager → Modelli messaggi, categoria **Utility**),
 body con **una variabile `{{1}}`**, lingua `it`:
-- [ ] **`notifica_michela`** — notifiche a Michela (Task 1). Poi in `ardy-config.php`: `define('WA_TEMPLATE_NOTIFICA','notifica_michela');`
-- [ ] **`sollecito_pagamento`** — solleciti ai morosi fuori dalle 24h (Task 2). Poi: `define('WA_TEMPLATE_SOLLECITO','sollecito_pagamento');`
+- [x] **`notifica_michela`** ✅ APPROVATO + collegato (`WA_TEMPLATE_NOTIFICA` in config). Body:
+      "Promemoria da Sole 🌞 / {{1}} / — la tua assistente". Test diretto via endpoint = `success:true`
+      (conferma ricezione su WhatsApp di Michela ancora da fare). ⚠️ I parametri template non
+      ammettono a-capo/tab/4+ spazi (err 132018): risolto con `ardy_wa_template_param()`.
+- [x] **`sollecito_pagamento`** ✅ APPROVATO + collegato (`WA_TEMPLATE_SOLLECITO` in config). Stesso
+      fix anti-newline lato `ardy-solleciti.php` (`sollecito_wa_template_param`). Da provare con un caso vero.
 - [ ] **template fasi cliente** — aggiornamenti lavorazione ai clienti (Task 3, vedi sotto): es. "Ciao {{1}}, aggiornamento sul tuo {{2}}: completata la fase '{{3}}'. Guarda qui: {{4}}"
 
 Note: categoria Utility = approvazione rapida e costo minimo (~3-4 cent/msg, solo verso
