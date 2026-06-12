@@ -2,6 +2,42 @@
 
 ---
 
+## 🗑️ DA COSTRUIRE — Gestione archivio cliente (libera spazio / elimina / cestino)
+Contesto: server **200GB condiviso con 5 domini** → lo spazio conta. I file pesanti sono le
+**foto** (`ARDY_UPLOAD_DIR/<session>/`) e i **reel** (`reels/reel_<session>_*.mp4`). I PDF
+preventivo **incorporano le immagini in base64** → cancellare le foto originali NON rompe i
+documenti. Le foto pubblicate sul **sito** stanno nella Media Library di WordPress (separata) → si lasciano.
+
+Tre funzioni distinte (decisioni prese con Michela):
+
+**1. 🧹 "Libera spazio" (solo immagini)** — pensata per i clienti in stato **PAGATO**.
+   - Cancella SUBITO dal server: cartella `ARDY_UPLOAD_DIR/<session>/` + i reel `reel_<session>_*.mp4`.
+   - Tiene: scheda, dati, preventivi+PDF, fasi, storico WhatsApp, pagina sito.
+   - Immediata (lo scopo è liberare spazio). Conferma forte. Segna sulla scheda "foto archiviate il <data>"
+     (nuova colonna `foto_archiviate_at`), così la dashboard sa che le foto non ci sono più.
+
+**2. 🗑️ "Elimina tutto" → CESTINO 30 giorni.**
+   - Soft-delete: colonna `deleted_at` su `clienti` → sparisce dalla lista, va in vista **Cestino** con **Ripristina**.
+   - Dopo 30 giorni → purga definitiva: righe DB (`clienti`, `preventivi`, `fasi`, `wa_messaggi`,
+     `solleciti_pagamento` per quel session_id) + tutti i file (foto, reel, PDF in `preventivi_pdf/`).
+   - **NON tocca** la pagina WordPress né la Media Library (decisione presa: la si rimuove a mano se serve).
+   - Purga 30gg: sweep opportunistico (es. in `ardy-crm-api.php`, max N per load) — niente cron necessario;
+     in alternativa endpoint cleanup chiamabile da cron se disponibile.
+
+**3. Sicurezza/UX**: entrambe con modale di conferma (per "Elimina tutto" far scrivere il nome o
+   un "ELIMINA"). Endpoint protetti da Basic Auth (`.htaccess`), come gli altri della dashboard.
+   `session_id` sempre sanificato (no path traversal) prima di toccare i path file.
+
+**Da costruire**:
+   - *Backend*: `ardy-elimina-cliente.php` (azioni: `libera_spazio` | `cestina` | `ripristina` | `purga`).
+     Helper cancellazione file per session (riusa `ardy_clean_session`). Colonne `deleted_at`,
+     `foto_archiviate_at` auto-create.
+   - *API CRM*: `ardy-crm-api.php` esclude i `deleted_at` dalla lista normale; endpoint/param per il Cestino.
+   - *Dashboard*: pulsanti **🧹 Libera spazio** (visibile su PAGATO) e **🗑️ Elimina** sulla scheda;
+     vista **Cestino** con Ripristina; modali di conferma.
+
+---
+
 ## ⏳ DA PROVARE con Michela — "Sole crea scheda da WhatsApp"
 Codice già su `main`. Da fare appena Michela è disponibile:
 1. **Deploy sul server** (porta online l'endpoint + il nuovo prompt titolare):
