@@ -21,56 +21,55 @@ chiami l'endpoint e ripulisca il messaggio mostrato a Michela.
 Stato ∈ `LEAD | SOPRALLUOGO | PREVENTIVO | ACCONTO | STANDBY | PERSO` (default `LEAD`).
 Minimo richiesto: almeno uno tra `nome`, `cognome`, `telefono`.
 
-## Nodo Code (JavaScript) — da inserire DOPO il nodo AI, PRIMA dell'invio WhatsApp
+## Nodo Code — dove va il codice
 
-Si aspetta in input l'oggetto `{ reply: "<testo della AI>" }` (adatta `aiText` al nome
-reale del campo nel tuo flusso). Esegue la chiamata HTTP via `fetch` (n8n recente).
+⚠️ Nel n8n di Ardy il nodo **HTTP Request standard non funziona** (timeout): le chiamate
+HTTP si fanno dal **nodo Code** con `this.helpers.httpRequest`. Il flusso WhatsApp è già un
+unico nodo Code (`lookup → Claude → invio Cloud API`): questo blocco va inserito **subito dopo
+aver ottenuto la risposta di Claude** e **prima** di inviarla via Cloud API.
+
+Adatta `aiText` alla variabile che nel tuo nodo contiene il testo di Claude (es. `replyText`).
 
 ```javascript
 // === Action layer: [[CREA_SCHEDA]] → crea scheda nel CRM ===
-const SECRET   = 'INCOLLA_QUI_WA_LOOKUP_SECRET';
+const SECRET   = 'INCOLLA_QUI_WA_LOOKUP_SECRET'; // = WA_LOOKUP_SECRET di ardy-config.php
 const ENDPOINT = 'https://ardyagent.ardy-lab.it/ardy-wa-crea-scheda.php';
 
-let aiText = $json.reply ?? $json.text ?? '';
+// aiText = testo prodotto da Claude in questo nodo (rinomina se da te si chiama diversamente)
 const m = aiText.match(/\[\[CREA_SCHEDA\]\]\s*(\{[\s\S]*?\})/);
-
 if (m) {
   // 1) togli il marker dal testo che vedrà Michela
   aiText = aiText.replace(m[0], '').trim();
 
-  // 2) parse del JSON e chiamata all'endpoint
+  // 2) parse del JSON
   let dati = null;
   try { dati = JSON.parse(m[1]); } catch (e) { dati = null; }
 
+  // 3) chiama l'endpoint (httpRequest, NON il nodo HTTP Request)
   if (dati) {
     try {
-      const res = await fetch(ENDPOINT, {
+      const out = await this.helpers.httpRequest({
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Ardy-Secret': SECRET },
-        body: JSON.stringify(dati),
+        url: ENDPOINT,
+        headers: { 'X-Ardy-Secret': SECRET },
+        body: dati,
+        json: true,           // invia/riceve JSON
+        timeout: 20000,
       });
-      const out = await res.json();
       if (out && out.success) {
-        // opzionale: usa il riepilogo del server come testo di conferma
-        if (!aiText) aiText = out.riepilogo;
+        if (!aiText) aiText = out.riepilogo;   // fallback al riepilogo del server
       } else {
         aiText = (aiText ? aiText + '\n\n' : '') +
-          '⚠️ Non sono riuscita a salvare la scheda: ' + ((out && out.error) || 'errore') +
-          '. Provo di nuovo?';
+          '⚠️ Non sono riuscita a salvare la scheda: ' + ((out && out.error) || 'errore') + '. Riprovo?';
       }
     } catch (e) {
       aiText = (aiText ? aiText + '\n\n' : '') +
-        '⚠️ Errore di rete nel salvataggio della scheda. Riprovo?';
+        '⚠️ Errore nel salvataggio della scheda. Riprovo?';
     }
   }
 }
-
-return [{ json: { reply: aiText } }];
+// poi prosegui col tuo codice che invia `aiText` via Cloud API
 ```
-
-> Nota: se la tua versione di n8n non supporta `fetch`/`await` nel nodo Code, usa due nodi:
-> un **Code** che estrae il marker e produce `dati` + `replyPulito`, poi un nodo **HTTP Request**
-> (POST JSON all'endpoint, header `X-Ardy-Secret`), e infine ricomponi il messaggio.
 
 ## Comportamento
 - **Niente marker** → il testo passa invariato (Sole sta ancora raccogliendo/confermando).
