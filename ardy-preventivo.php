@@ -502,7 +502,13 @@ function dbConnect(): mysqli {
 }
 
 function sanitizeInput(array $data): array {
-    return array_map(fn($v) => htmlspecialchars(trim((string)$v), ENT_QUOTES, 'UTF-8'), $data);
+    // Idempotente: prima si decodificano eventuali entità già presenti (es. un
+    // valore riaperto dal DB dove l'apostrofo è già &#039;), poi si ri-codifica
+    // una sola volta. Così niente doppio-escape sul giro "salva → riapri bozza".
+    return array_map(fn($v) => htmlspecialchars(
+        html_entity_decode(trim((string)$v), ENT_QUOTES, 'UTF-8'),
+        ENT_QUOTES, 'UTF-8'
+    ), $data);
 }
 
 function generaNumero(): string {
