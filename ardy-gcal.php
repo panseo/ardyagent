@@ -199,6 +199,50 @@ function gcal_get_free_slots($daysAhead = 14, $startHour = 9, $endHour = 18, $fr
 }
 
 // -----------------------------------------------------------
+// Elenca gli eventi in un intervallo (per il briefing della titolare).
+// Ritorna array di ['summary','start','end','all_day','location'] ordinati per
+// inizio, oppure null se non è possibile leggere il calendario.
+// -----------------------------------------------------------
+function gcal_list_events(DateTime $fromDt, DateTime $toDt) {
+    global $GCAL_CALENDAR_ID;
+
+    $accessToken = gcal_get_access_token();
+    if (!$accessToken) return null;
+
+    $url = 'https://www.googleapis.com/calendar/v3/calendars/' . urlencode($GCAL_CALENDAR_ID) .
+           '/events?timeMin=' . urlencode($fromDt->format(DateTime::RFC3339)) .
+           '&timeMax=' . urlencode($toDt->format(DateTime::RFC3339)) .
+           '&singleEvents=true&orderBy=startTime';
+
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT,        20);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER,     ['Authorization: Bearer ' . $accessToken]);
+    $response = curl_exec($ch);
+    $err      = curl_error($ch);
+    curl_close($ch);
+    if ($err) { error_log('ARDY GCAL LIST ERROR: ' . $err); return null; }
+
+    $items = json_decode($response, true)['items'] ?? [];
+    $out = [];
+    foreach ($items as $ev) {
+        if (($ev['status'] ?? '') === 'cancelled') continue;
+        $s = $ev['start']['dateTime'] ?? ($ev['start']['date'] ?? null);
+        $e = $ev['end']['dateTime']   ?? ($ev['end']['date']   ?? null);
+        if (!$s) continue;
+        $out[] = [
+            'summary'  => trim((string)($ev['summary'] ?? '(senza titolo)')),
+            'start'    => strtotime($s),
+            'end'      => $e ? strtotime($e) : null,
+            'all_day'  => !isset($ev['start']['dateTime']), // evento "tutto il giorno"
+            'location' => trim((string)($ev['location'] ?? '')),
+        ];
+    }
+    return $out;
+}
+
+// -----------------------------------------------------------
 // Crea un appuntamento nel calendario di Michela
 // -----------------------------------------------------------
 function gcal_create_event($date, $startTime, $clientName, $clientPhone, $clientEmail, $address, $notes = '') {

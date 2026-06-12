@@ -48,13 +48,14 @@ un riepilogo della giornata. Deve far emergere SUBITO ciò che è impellente. Tr
   urgente se è entro 4 giorni **l'inizio** (sta per partire) **oppure** la **fine prevista**
   (sta per chiudere). L'avviso in dashboard e il blocco URGENTI del briefing mostrano entrambi.
 
-### Parte A — RESTA DA FARE: aggiungere il calendario al briefing
-La parte "lavori" del briefing è pronta (vedi Parte B). Mancano:
-1. **Impegni da Google Calendar** nel riepilogo titolare: leggere gli eventi di oggi (e domani)
-   da `ardy-gcal.php` e anteporli ai dati CRM, distinguendo **sopralluoghi / consulenze**.
-2. (Opzionale) **Trigger "prima risposta del giorno"**: salvare data ultimo briefing per numero
-   così il riepilogo lungo parte da solo solo al primo "buongiorno", non a ogni messaggio.
-   Senza, funziona comunque quando Michela chiede "come va oggi?".
+### Parte A — Calendario nel briefing ✅ FATTO (manca solo l'opzionale)
+- **Impegni da Google Calendar** nel riepilogo titolare: nuova `gcal_list_events()` in
+  `ardy-gcal.php`; `ardy-wa-lookup.php` la usa in cima al riepilogo (oggi+domani), distinguendo
+  🏠 sopralluoghi / 💬 consulenze dal titolo evento. Prompt titolare: il "buongiorno" apre con
+  IMPEGNI di oggi + URGENTI (≤4gg), poi il resto. Include gcal solo se le credenziali esistono.
+- ⏭️ (Opzionale, NON fatto) **Trigger "prima risposta del giorno"**: salvare data ultimo briefing
+  per numero così il riepilogo lungo parte da solo solo al primo "buongiorno", non a ogni messaggio.
+  Senza, funziona comunque quando Michela chiede "come va oggi?".
 
 ### Miglioria UX (ipotesi) — popup date all'attivazione dello stato
 Oggi le date (inizio / fine prevista) si inseriscono nella sezione "Lavorazione in corso",

@@ -15,6 +15,13 @@ date_default_timezone_set('Europe/Rome');
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
 
+// Calendar opzionale: incluso solo se le credenziali ci sono (altrimenti ardy-gcal.php
+// va in errore sulle costanti). Deve stare a livello GLOBALE: il file usa variabili
+// globali per le credenziali, che non si aggancerebbero se incluso dentro una funzione.
+if (defined('ARDY_GCAL_CLIENT_ID') && defined('ARDY_GCAL_CLIENT_SECRET')) {
+    require_once __DIR__ . '/ardy-gcal.php';
+}
+
 header('Content-Type: application/json');
 
 // Protezione opzionale via segreto condiviso (consigliata)
@@ -81,6 +88,34 @@ try {
 // Ogni blocco è difensivo: se una tabella/colonna manca, viene saltato senza errori.
 function ardy_riepilogo_settimana(PDO $db): string {
     $out = [];
+
+    // Impegni in CALENDARIO (oggi e domani) — in cima: è la cosa più impellente per Michela.
+    // Distingue sopralluoghi/consulenze dal titolo dell'evento.
+    try {
+        if (function_exists('gcal_list_events')) {
+            $tz   = new DateTimeZone('Europe/Rome');
+            $from = new DateTime('today', $tz);
+            $to   = new DateTime('today +2 days', $tz); // oggi + domani interi
+            $eventi = gcal_list_events($from, $to);
+            if (is_array($eventi) && $eventi) {
+                $oggiStr   = (new DateTime('today', $tz))->format('Y-m-d');
+                $domaniStr = (new DateTime('today +1 day', $tz))->format('Y-m-d');
+                $righe = [];
+                foreach ($eventi as $ev) {
+                    $gStr   = date('Y-m-d', $ev['start']);
+                    $quando = $gStr === $oggiStr ? 'OGGI' : ($gStr === $domaniStr ? 'domani' : date('d/m', $ev['start']));
+                    $ora    = $ev['all_day'] ? 'tutto il giorno' : date('H:i', $ev['start']);
+                    $low    = mb_strtolower($ev['summary']);
+                    $tipo   = strpos($low, 'sopralluogo') !== false ? '🏠 '
+                            : (strpos($low, 'consulenz') !== false ? '💬 ' : '📌 ');
+                    $loc    = $ev['location'] !== '' ? ' · ' . $ev['location'] : '';
+                    $righe[] = "- {$quando} {$ora} · {$tipo}{$ev['summary']}{$loc}";
+                }
+                $out[] = "📅 IMPEGNI IN CALENDARIO (oggi e domani): " . count($righe);
+                foreach (array_slice($righe, 0, 12) as $r) $out[] = $r;
+            }
+        }
+    } catch (Throwable $e) { error_log('ARDY WA RIEPILOGO GCAL: ' . $e->getMessage()); }
 
     // Nuovi contatti ultimi 7 giorni
     try {
@@ -231,7 +266,7 @@ function ardy_wa_prompt_titolare(string $riepilogo): string {
         . "- Comportati come la sua assistente personale/segretaria, NON come l'assistente commerciale dei clienti.\n"
         . "- NIENTE messaggio di benvenuto da lead, NIENTE domande di qualifica, NIENTE \"vuoi informazioni su restauri o sei un cliente\".\n"
         . "- Rivolgiti a lei per nome (Michela), dalle del tu, tono confidenziale ed efficiente. Messaggi brevi (è WhatsApp).\n"
-        . "- Quando ti chiede aggiornamenti (es. \"aggiornami sulla settimana\", \"come va\", \"situazione lead\", \"chi devo richiamare\"), rispondi USANDO I DATI OPERATIVI qui sotto: sintetici, concreti, azionabili. Metti in evidenza ciò che richiede attenzione (nuovi lead da richiamare, appuntamenti, morosi).\n"
+        . "- Quando ti chiede aggiornamenti (es. \"aggiornami sulla settimana\", \"come va oggi\", \"situazione lead\", \"chi devo richiamare\"), rispondi USANDO I DATI OPERATIVI qui sotto: sintetici, concreti, azionabili. Per il \"buongiorno\"/briefing del mattino apri SEMPRE con gli IMPEGNI IN CALENDARIO di oggi e con i lavori URGENTI (scadenza entro 4 giorni), poi il resto (nuovi lead da richiamare, lavori in corso, morosi).\n"
         . "- Se ti chiede qualcosa che non è nei dati, dillo con onestà e indica dove guardare (la dashboard).\n"
         . "- Puoi aiutarla a ragionare, redigere messaggi/email, organizzare la giornata.\n"
         . "- I dati qui sotto sono una fotografia dal CRM al momento del messaggio: se servono dettagli più precisi, rimanda alla dashboard.\n\n"
