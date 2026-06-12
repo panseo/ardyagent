@@ -2,6 +2,15 @@
 
 ---
 
+## ✅ FATTO RECENTE (giugno 2026) — in produzione
+- **📎 Allega PDF al preventivo**: nuovo `ardy-allega-preventivo.php` + pulsante "📎 Allega PDF" sulla
+  scheda → carichi un preventivo PDF già pronto (Word/Canva/altro) e lo allega allo Storico col ⬇ PDF,
+  senza rigenerarlo. Validato (solo PDF, max 15MB), salvato in `preventivi_pdf/`. Si affida al `.htaccess`
+  per l'auth (NON usare `ardyRequireAuth()` negli endpoint chiamati via fetch: su questo server l'header
+  Authorization non arriva a PHP in CGI/FPM e rifarebbe la login). Deployato e funzionante.
+
+---
+
 ## 🗑️ DA COSTRUIRE — Gestione archivio cliente (libera spazio / elimina / cestino)
 Contesto: server **200GB condiviso con 5 domini** → lo spazio conta. I file pesanti sono le
 **foto** (`ARDY_UPLOAD_DIR/<session>/`) e i **reel** (`reels/reel_<session>_*.mp4`). I PDF
