@@ -200,6 +200,7 @@
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
             <button class="btn-secondary" style="flex:1;" onclick="openPreventivoPanel()">+ PREVENTIVO PDF</button>
             <button class="btn-secondary" style="flex:1;" onclick="openProformaPanel()">📄 Proforma</button>
+            <button class="btn-secondary" style="flex:1;" onclick="openAllegaPanel()" title="Allega allo Storico un preventivo PDF già fatto (es. con Word), senza rigenerarlo">📎 Allega PDF</button>
           </div>
           <div id="storicoPrevList"></div>
         </div>
@@ -1657,6 +1658,7 @@ function showResult(id, msg, type) {
 // ══════════════════════════════════════════════════════════
 
 const PREVENTIVO_URL = BASE_URL + '/ardy-preventivo.php';
+const ALLEGA_URL     = BASE_URL + '/ardy-allega-preventivo.php';
 let pvOpzioni = [];
 let pvLibTarget = null;
 let pvOpzSeq = 1;
@@ -2098,6 +2100,58 @@ async function aggiornaStatoPrev(id, stato, sel) {
 
 function scaricaPrevDB(file) {
   window.open(PREV_API + '?mode=download&file=' + encodeURIComponent(file), '_blank');
+}
+
+// ── Allega un preventivo PDF già pronto allo Storico ──────────────
+function openAllegaPanel() {
+  if (!currentLead) { showToast('⚠ Seleziona prima un cliente', 'error'); return; }
+  const nome = ((currentLead.Nome ?? '') + ' ' + (currentLead.Cognome ?? '')).trim() || 'questo cliente';
+  document.getElementById('allega-cliente').textContent = nome;
+  document.getElementById('allega-file').value = '';
+  document.getElementById('allega-oggetto').value = '';
+  document.getElementById('allega-numero').value = '';
+  document.getElementById('allega-totale').value = '';
+  document.getElementById('allega-stato').value = 'inviato';
+  const r = document.getElementById('allega-result'); r.style.display = 'none'; r.textContent = '';
+  document.getElementById('allegaOverlay').classList.add('open');
+}
+function closeAllegaPanel() {
+  document.getElementById('allegaOverlay').classList.remove('open');
+}
+function allegaErrore(msg) {
+  const res = document.getElementById('allega-result');
+  res.style.display = 'block'; res.style.background = '#5a2a2a'; res.style.color = '#f0c8c8';
+  res.textContent = msg;
+}
+async function allegaPreventivo() {
+  if (!currentLead) { showToast('⚠ Seleziona prima un cliente', 'error'); return; }
+  const sid  = currentLead.Session_ID ?? '';
+  const file = document.getElementById('allega-file').files[0];
+  if (!sid)  { showToast('⚠ Cliente non valido', 'error'); return; }
+  if (!file) { allegaErrore('Scegli un file PDF.'); return; }
+
+  const fd = new FormData();
+  fd.append('session_id', sid);
+  fd.append('pdf', file);
+  fd.append('oggetto', document.getElementById('allega-oggetto').value);
+  fd.append('numero',  document.getElementById('allega-numero').value);
+  fd.append('totale',  document.getElementById('allega-totale').value);
+  fd.append('stato_preventivo', document.getElementById('allega-stato').value);
+
+  const btn = document.getElementById('allega-btn');
+  btn.disabled = true; btn.textContent = 'CARICAMENTO…';
+  try {
+    const r = await fetch(ALLEGA_URL, { method: 'POST', body: fd });
+    const data = await r.json();
+    if (!data.ok) { allegaErrore('⚠ ' + (data.error || 'Errore')); return; }
+    showToast('✓ Preventivo allegato allo Storico', 'success');
+    closeAllegaPanel();
+    caricaStoricoPrev(sid);
+  } catch (e) {
+    allegaErrore('⚠ Errore di rete');
+  } finally {
+    btn.disabled = false; btn.textContent = '📎 ALLEGA ALLO STORICO';
+  }
 }
 
 // Elimina una bozza (es. per ripulire eventuali doppioni). Solo bozze.
@@ -2628,6 +2682,45 @@ async function archiviaPersi() {
       <button class="btn-save" id="imp-btn-estrai" onclick="estraiSchedaPdf()">🔍 ESTRAI DATI</button>
       <button class="btn-save" id="imp-btn-crea" style="display:none;" onclick="creaSchedaDaPdf(false)">✦ CREA SCHEDA</button>
       <button class="btn-save" id="imp-btn-crea-prev" style="display:none;" onclick="creaSchedaDaPdf(true)">📄 + PREVENTIVO ARDY</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ALLEGA PDF -->
+<div class="modal-overlay" id="allegaOverlay" onclick="if(event.target===this)closeAllegaPanel()">
+  <div class="modal-lg" style="width:560px" onclick="event.stopPropagation()">
+    <div class="modal-lg-head">
+      <h3>📎 ALLEGA PREVENTIVO PDF</h3>
+      <button class="modal-lg-close" onclick="closeAllegaPanel()">✕</button>
+    </div>
+    <div class="modal-lg-body">
+      <p style="font-size:12px;color:#aaa;line-height:1.6;margin:0 0 12px;">
+        Allega allo Storico di <b id="allega-cliente">questo cliente</b> un preventivo PDF
+        <b>già pronto</b> (fatto con Word, Canva, un altro gestionale…). Non lo rigenera: lo
+        salva e basta, e lo ritrovi nello Storico col bottone ⬇ PDF.
+      </p>
+      <div class="dark-form-grid">
+        <div class="dark-field full">
+          <label>File PDF *</label>
+          <input type="file" id="allega-file" accept="application/pdf">
+        </div>
+        <div class="dark-field full"><label>Oggetto / descrizione</label><input type="text" id="allega-oggetto" placeholder="es. Restauro credenza anni '60"></div>
+        <div class="dark-field"><label>Numero (facolt.)</label><input type="text" id="allega-numero" placeholder="auto se vuoto"></div>
+        <div class="dark-field"><label>Totale € (facolt.)</label><input type="text" id="allega-totale" placeholder="es. 1.450,00"></div>
+        <div class="dark-field"><label>Stato</label>
+          <select id="allega-stato">
+            <option value="inviato">Inviato</option>
+            <option value="bozza">Bozza</option>
+            <option value="accettato">Accettato</option>
+            <option value="rifiutato">Rifiutato</option>
+          </select>
+        </div>
+      </div>
+      <div id="allega-result" style="display:none;margin-top:12px;padding:10px 14px;border-radius:4px;font-family:'DM Mono',monospace;font-size:11px;"></div>
+    </div>
+    <div class="modal-lg-actions">
+      <button class="btn-cancel" onclick="closeAllegaPanel()">ANNULLA</button>
+      <button class="btn-save" id="allega-btn" onclick="allegaPreventivo()">📎 ALLEGA ALLO STORICO</button>
     </div>
   </div>
 </div>
