@@ -22,12 +22,15 @@ gratuita). Idea: trasformare quel saluto in un **briefing operativo automatico**
 
 ### Parte A — Briefing del mattino (alla prima risposta del giorno)
 Quando Michela scrive il primo messaggio del giorno (modalità titolare), Sole risponde con
-un riepilogo della giornata, in due blocchi:
-1. **Impegni dal Google Calendar** — appuntamenti/sopralluoghi di oggi (e magari domani).
-   Riusare l'integrazione `ardy-gcal.php` (già legge il calendario di Michela).
-2. **Lavori in corso dalla dashboard** — i clienti in lavorazione e a che punto sono.
-   - Oggi il riepilogo titolare (`ardy_riepilogo_settimana` in `ardy-wa-lookup.php`) mostra
-     già "LAVORI IN CORSO (ACCONTO)". Da arricchire con lo stato/fasi (vedi Parte B).
+un riepilogo della giornata. Deve far emergere SUBITO ciò che è impellente. Tre blocchi:
+1. **Impegni impellenti dal Google Calendar** — appuntamenti di oggi (ed eventualmente domani),
+   distinguendo il tipo: **sopralluoghi**, **consulenze**, ecc. Riusare `ardy-gcal.php`
+   (già legge il calendario di Michela). Mettere in cima quelli più vicini nel tempo.
+2. **Lavori IN LAVORAZIONE** — l'elenco dei clienti con lavoro in corso (vedi stato in Parte B)
+   con la data di **fine prevista**.
+3. **Lavori URGENTI** — sottoinsieme dei "in lavorazione" la cui **fine prevista è entro 4 giorni**
+   (`fine_lavoro_prevista <= oggi + 4gg`). Da evidenziare per primi/in testa, è il dato che
+   serve di più a Michela ("cosa devo chiudere a giorni").
 - Nota fattibilità: il riepilogo CRM c'è già; l'aggiunta del calendario è la parte nuova.
   ⚠️ "Alla PRIMA risposta del giorno" richiede di sapere se è il primo messaggio di oggi
   (flag/data ultimo briefing per numero) — altrimenti lo ripeterebbe a ogni messaggio.
@@ -42,10 +45,11 @@ Aggiungere uno stato cliente dedicato ai lavori effettivamente in corso (oggi si
 - Tocca: colonne nuove in `clienti` (auto-create difensive), UI dashboard
   (`ardy-michela-app.html/.css`), salvataggio (`ardy-save-lead.php`/`ardy-update-lead.php`),
   e il riepilogo titolare (mostrare "in lavorazione: da X a Y prevista").
-- Così il briefing del mattino (Parte A) può dire "oggi consegna prevista per il mobile di
-  Mario Rossi" e simili.
+- **Regola urgenza**: un lavoro è "urgente" se `fine_lavoro_prevista` cade entro **4 giorni**
+  da oggi → usata dal briefing (Parte A, blocco 3) per evidenziare le scadenze imminenti.
 
-Priorità: media. Parte B è prerequisito utile per rendere ricco il briefing della Parte A.
+Priorità: media. Parte B è prerequisito della Parte A: senza `fine_lavoro_prevista` non si
+possono calcolare né i "in lavorazione" con data, né gli "urgenti a 4 giorni".
 
 ---
 
