@@ -187,6 +187,14 @@ ogni messaggio. Senza, funziona quando Michela chiede "come va oggi?".
 
 ---
 
+## ⏸️ IDEE RIMANDATE (non urgenti)
+- **Codice d'accesso su WhatsApp** (solo se capita spesso un cliente che scrive da un numero
+  NON registrato): oggi su WhatsApp il numero = identità, quindi il codice serve solo a chi
+  scrive da un altro numero — caso raro. Per supportarlo servirebbe un **marcatore** tipo
+  `[[CERCA:ARD-XXXX]]` intercettato da n8n (Claude su WhatsApp non ha tool), + lookup per
+  `codice_accesso` lato PHP. Per ora il prompt gestisce il caso con garbo (chiedi il numero di
+  registrazione / passa a Michela). Costruirlo solo se la frequenza lo giustifica.
+
 ## ❌ SCENARI WhatsApp VALUTATI E SCARTATI (non riproporre)
 - Foto/video su WhatsApp → attivano una fase di lavoro: **NO** (richiede pipeline media Meta assente).
 - WhatsApp come "telecomando" unico della webapp: **NO**.
