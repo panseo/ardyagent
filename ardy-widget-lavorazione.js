@@ -5,13 +5,17 @@
 (function () {
   'use strict';
 
-  var PROXY_URL  = 'https://ardyagent.ardy-lab.it/ardy-proxy-lavorazione.php';
-  var VERIFY_URL = 'https://ardyagent.ardy-lab.it/ardy-verify-client.php';
+  var PROXY_URL   = 'https://ardyagent.ardy-lab.it/ardy-proxy-lavorazione.php';
+  var GENERAL_URL = 'https://ardyagent.ardy-lab.it/ardy-proxy.php';
+  var VERIFY_URL  = 'https://ardyagent.ardy-lab.it/ardy-verify-client.php';
   var MAX_MSGS   = 20;
   var msgCount   = 0;
   var history    = [];
   var isOpen     = false;
   var isVerified = false;
+  var chatMode    = '';     // 'lavorazione' (cliente verificato) | 'generale' (visitatore)
+  var chatStarted = false;  // true quando una delle due chat è partita
+  var sessionId   = '';     // sessione per la chat generale (ramo non-cliente)
   var clientName = '';
   var clientTel  = '';
   var pageContext = '';
@@ -259,15 +263,24 @@
         '<button id="ardy-lav-close">×</button>' +
       '</div>' +
 
-      // Verify screen
-      '<div id="ardy-lav-verify">' +
+      // Choose screen (cliente vs visitatore)
+      '<div id="ardy-lav-choose" style="padding:24px 20px;text-align:center;">' +
+        '<div style="font-size:40px;margin-bottom:12px;">🪑</div>' +
+        '<div style="font-family:\'Crimson Pro\',serif;font-size:18px;font-weight:600;color:#333;margin-bottom:8px;">Come posso aiutarti?</div>' +
+        '<div style="font-size:13px;color:#888;margin-bottom:20px;line-height:1.5;">Sei il cliente di questa lavorazione, oppure hai una domanda sul nostro lavoro? Scegli pure.</div>' +
+        '<button id="ardy-lav-choose-client" style="width:100%;padding:12px;border:none;border-radius:8px;background:linear-gradient(135deg,#c8a96e,#a8864a);color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Sì, sono il cliente di questo lavoro</button>' +
+        '<button id="ardy-lav-choose-visitor" style="width:100%;margin-top:10px;padding:12px;border:1px solid #c8a96e;border-radius:8px;background:#fff;color:#8b7340;font-size:14px;font-weight:600;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Ho solo una domanda</button>' +
+      '</div>' +
+
+      // Verify screen (nascosta finché non si sceglie "sono il cliente")
+      '<div id="ardy-lav-verify" style="display:none;">' +
         '<div class="ardy-v-icon">🔐</div>' +
         '<div class="ardy-v-title">Verifica la tua identità</div>' +
-        '<div class="ardy-v-desc">Per accedere alla chat sulla tua lavorazione, inserisci il numero di telefono che hai fornito quando hai richiesto il servizio.</div>' +
-        '<input type="tel" id="ardy-lav-tel" placeholder="Es: 333 1234567" />' +
+        '<div class="ardy-v-desc">Inserisci il tuo <strong>codice personale</strong> (ARD-XXXX-XXXX) oppure il <strong>numero di telefono</strong> che hai fornito quando hai richiesto il servizio.</div>' +
+        '<input type="text" id="ardy-lav-tel" placeholder="Codice ARD-XXXX-XXXX o telefono" />' +
         '<button class="ardy-v-btn" id="ardy-lav-verify-btn">Verifica</button>' +
         '<div class="ardy-v-error" id="ardy-lav-verify-error"></div>' +
-        '<div class="ardy-v-hint">Lo trovi sul preventivo o nella email di conferma</div>' +
+        '<div class="ardy-v-hint">Il codice è nelle nostre email; il telefono è quello che hai dato richiedendo il servizio. · <a href="#" id="ardy-lav-back" style="color:#8b7340;">← indietro</a></div>' +
       '</div>' +
 
       // Chat area (hidden until verified)
@@ -284,6 +297,9 @@
 
     // Events
     document.getElementById('ardy-lav-close').onclick = closePanel;
+    document.getElementById('ardy-lav-choose-client').onclick = chooseClient;
+    document.getElementById('ardy-lav-choose-visitor').onclick = chooseVisitor;
+    document.getElementById('ardy-lav-back').onclick = function (e) { e.preventDefault(); backToChoose(); };
     document.getElementById('ardy-lav-verify-btn').onclick = verifyClient;
     document.getElementById('ardy-lav-tel').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') verifyClient();
@@ -301,9 +317,9 @@
       panel.classList.add('open');
       setTimeout(function () { panel.classList.add('visible'); }, 10);
       if (badge) badge.style.display = 'none';
-      if (isVerified) {
+      if (chatStarted) {
         document.getElementById('ardy-lav-input').focus();
-      } else {
+      } else if (document.getElementById('ardy-lav-verify').style.display !== 'none') {
         document.getElementById('ardy-lav-tel').focus();
       }
       isOpen = true;
@@ -319,17 +335,53 @@
     isOpen = false;
   }
 
-  // ── VERIFICA CLIENTE ──
+  // ── SCELTA CLIENTE / VISITATORE ──
+  function chooseClient() {
+    document.getElementById('ardy-lav-choose').style.display = 'none';
+    document.getElementById('ardy-lav-verify').style.display = 'block';
+    setTimeout(function () { document.getElementById('ardy-lav-tel').focus(); }, 100);
+  }
+
+  function backToChoose() {
+    document.getElementById('ardy-lav-verify').style.display = 'none';
+    document.getElementById('ardy-lav-choose').style.display = 'block';
+  }
+
+  function chooseVisitor() {
+    // Ramo non-cliente: chat generale di Sole, nessun dato personale richiesto.
+    chatMode    = 'generale';
+    chatStarted = true;
+    sessionId   = 'lavpage_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    document.getElementById('ardy-lav-choose').style.display = 'none';
+    document.getElementById('ardy-lav-verify').style.display = 'none';
+    document.getElementById('ardy-lav-chatarea').classList.add('active');
+    var sub = document.querySelector('#ardy-lav-header .ardy-h-text p');
+    if (sub) sub.textContent = 'Chiedimi un consiglio sul tuo restauro';
+    addMessage('Ciao! Sono Sole di Ardy Lab 🌿 Raccontami pure: che mobile hai in mente, o su cosa posso darti un consiglio?', 'agent');
+    initSuggestions([
+      'Quanto costa restaurare un mobile?',
+      'Come funziona un sopralluogo?',
+      'Dove siete?'
+    ]);
+    setTimeout(function () { document.getElementById('ardy-lav-input').focus(); }, 300);
+  }
+
+  // ── VERIFICA CLIENTE (codice o telefono) ──
   async function verifyClient() {
-    var tel = document.getElementById('ardy-lav-tel').value.trim();
+    var val = document.getElementById('ardy-lav-tel').value.trim();
     var errorEl = document.getElementById('ardy-lav-verify-error');
     var btn = document.getElementById('ardy-lav-verify-btn');
 
-    if (!tel || tel.length < 6) {
-      errorEl.textContent = 'Inserisci un numero di telefono valido';
+    if (!val || val.replace(/[\s\-]/g, '').length < 6) {
+      errorEl.textContent = 'Inserisci il tuo codice o un numero di telefono valido';
       errorEl.style.display = 'block';
       return;
     }
+    // Se contiene lettere → è il codice; altrimenti è un telefono
+    var isCode  = /[a-z]/i.test(val);
+    var payload = isCode
+      ? { codice: val, wp_post_id: wpPostId }
+      : { telefono: val, wp_post_id: wpPostId };
 
     btn.disabled = true;
     btn.textContent = 'Verifico...';
@@ -339,14 +391,16 @@
       var res = await fetch(VERIFY_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ telefono: tel, wp_post_id: wpPostId })
+        body: JSON.stringify(payload)
       });
       var data = await res.json();
 
       if (data.verified) {
-        isVerified = true;
-        clientName = data.nome || '';
-        clientTel  = tel;
+        isVerified  = true;
+        chatMode    = 'lavorazione';
+        chatStarted = true;
+        clientName  = data.nome || '';
+        clientTel   = isCode ? '' : val;
 
         // Nascondi verifica, mostra chat
         document.getElementById('ardy-lav-verify').style.display = 'none';
@@ -357,7 +411,11 @@
         addMessage('Ciao' + (welcomeName ? ' ' + welcomeName : '') + '! Sono Sole, sono qui per aiutarti con la tua lavorazione. Chiedimi pure!', 'agent');
 
         // Suggerimenti
-        initSuggestions();
+        initSuggestions([
+          'A che punto siamo?',
+          'Cosa significa questa fase?',
+          'Posso visitare il laboratorio?'
+        ]);
 
         setTimeout(function () {
           document.getElementById('ardy-lav-input').focus();
@@ -377,12 +435,8 @@
   }
 
   // ── SUGGERIMENTI ──
-  function initSuggestions() {
-    var suggestions = [
-      'A che punto siamo?',
-      'Cosa significa questa fase?',
-      'Posso visitare il laboratorio?'
-    ];
+  function initSuggestions(suggestions) {
+    suggestions = suggestions || ['A che punto siamo?', 'Cosa significa questa fase?', 'Posso visitare il laboratorio?'];
     var suggEl = document.getElementById('ardy-lav-suggestions');
     suggestions.forEach(function (text) {
       var btn = document.createElement('button');
@@ -442,11 +496,11 @@
     input.disabled = true;
     input.placeholder = 'Conversazione terminata';
     send.disabled = true;
-    addMessage('Hai raggiunto il limite di questa chat. Per altre domande scrivi a Michela al 351 967 7973 o su ardy-lab.it', 'agent');
+    addMessage('Per ora ci fermiamo qui con questa chat 🌿 Per continuare scrivici pure su ardy-lab.it: ti rispondiamo volentieri.', 'agent');
   }
 
   async function sendMessage() {
-    if (!isVerified) return;
+    if (!chatStarted) return;
     if (msgCount >= MAX_MSGS) { disableInput(); return; }
 
     var input = document.getElementById('ardy-lav-input');
@@ -464,17 +518,27 @@
     showTyping();
 
     try {
-      var res = await fetch(PROXY_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      var url, body;
+      if (chatMode === 'generale') {
+        // Chat generale di Sole (assistente commerciale), nessun dato cliente
+        url  = GENERAL_URL;
+        body = { message: text, history: history, images: [], sessionId: sessionId };
+      } else {
+        // Chat dedicata alla lavorazione del cliente verificato
+        url  = PROXY_URL;
+        body = {
           message: text,
           history: history,
           context: pageContext,
           titolo: pageTitle,
           nome: clientName,
           telefono: clientTel
-        })
+        };
+      }
+      var res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
       });
       var data = await res.json();
       hideTyping();

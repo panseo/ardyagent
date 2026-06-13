@@ -18,9 +18,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 $input = json_decode(file_get_contents('php://input'), true);
 $telefono = trim($input['telefono'] ?? '');
+$codiceIn = strtoupper(trim($input['codice'] ?? ''));
 $wpPostId = trim($input['wp_post_id'] ?? '');
 
-if (empty($telefono) || empty($wpPostId)) {
+if (($telefono === '' && $codiceIn === '') || empty($wpPostId)) {
     echo json_encode(['verified' => false, 'error' => 'Dati mancanti']);
     exit();
 }
@@ -51,6 +52,30 @@ $telShort = preg_replace('/^39/', '', $telNorm);
 
 try {
     $db = ardyDB();
+
+    // ── Ramo CODICE: il codice personale deve corrispondere a QUESTA lavorazione ──
+    if ($codiceIn !== '') {
+        $cod = preg_replace('/[^A-Z0-9]/', '', $codiceIn);
+        if (preg_match('/^ARD([A-Z0-9]{4})([A-Z0-9]{4})$/', $cod, $m)) {
+            $cod = 'ARD-' . $m[1] . '-' . $m[2];
+        }
+        try {
+            $stc = $db->prepare("SELECT nome, cognome FROM clienti WHERE codice_accesso = :c AND wp_post_id = :wid LIMIT 1");
+            $stc->execute([':c' => $cod, ':wid' => $wpPostId]);
+            $rc = $stc->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            // colonna codice_accesso non ancora presente su questa installazione
+            $rc = false;
+        }
+        if ($rc) {
+            echo json_encode(['verified' => true, 'nome' => trim(($rc['nome'] ?? '') . ' ' . ($rc['cognome'] ?? ''))]);
+        } else {
+            echo json_encode(['verified' => false, 'error' => 'Codice non valido per questa lavorazione']);
+        }
+        exit();
+    }
+
+    // ── Ramo TELEFONO ──
     $stmt = $db->prepare("SELECT nome, cognome, telefono FROM clienti WHERE wp_post_id = :wid");
     $stmt->execute([':wid' => $wpPostId]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
