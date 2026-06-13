@@ -29,7 +29,7 @@ base per la **centralizzazione** dei widget front-end (vedi sotto).
 
 | File | Nome WPCode | ID | Tipo | Posizione | Cosa fa | Centralizzabile? |
 |---|---|---|---|---|---|---|
-| `ardychat.js` | ardychat | 15170 | js | site_wide_footer | Chat generale del sito sulla pagina `/ardy-agent/` (→ `ardy-proxy.php`, elementi `ac-*`) | ✅ Sì (JS puro) |
+| `ardychat.js` | ardychat | 15170 | js | site_wide_footer | Chat generale del sito sulla pagina `/ardy-agent/` (→ `ardy-proxy.php`, elementi `ac-*`) | ✅ **Centralizzato** → `../ardy-chat-site.js` (vedi sotto) |
 | `chat-corsi.html` | Chat per i corsi | 15246 | html | site_wide_footer | `<script>` che adatta `/ardy-agent/?corso=` in "modalità corso" (intestazione, suggerimenti, primo messaggio) | ✅ Sì (è solo un `<script>`) |
 | `pulsante-flottante-ovunque.php` | Pulsante flottante ovunque | 15243 | php | everywhere | Bottone flottante "Chatta con Ardy" → `/ardy-agent/`; salta le pagine `/lavori-in-corso/`, `/project/` e categoria 102 | ⚠️ Parziale (la condizione è PHP server-side; markup/CSS sì) |
 | `pulsante-corsi.php` | Pulsante corsi | 15245 | php | everywhere | Filtro `the_content`: CTA "Info su questo corso" sulle 9 pagine corso → `/ardy-agent/?corso=` | ⚠️ Parziale (mappa slug + filtro PHP) |
@@ -43,6 +43,22 @@ base per la **centralizzazione** dei widget front-end (vedi sotto).
 >
 > **Mini-pendenza:** il testo del bottone in `pulsante-flottante-ovunque.php` dice ancora
 > "Chatta con **Ardy**" (l'`aria-label` è già "Sole"). Da uniformare a "Sole" quando si tocca.
+
+---
+
+## ✅ Widget già centralizzati (fonte attiva = file servito dal server)
+
+| Widget | File servito (root repo) | URL servito | Loader in WPCode |
+|---|---|---|---|
+| `ardychat` | `../ardy-chat-site.js` | `https://ardyagent.ardy-lab.it/ardy-chat-site.js` | snippet HTML (footer) con `<script src=...>` |
+
+**Loader da incollare in WPCode** (snippet "ardychat" → cambia tipo a **HTML**, posizione footer,
+sostituisci tutto il contenuto con):
+```html
+<script src="https://ardyagent.ardy-lab.it/ardy-chat-site.js" defer></script>
+```
+Da quel momento si modifica solo `ardy-chat-site.js` nella repo + deploy; WordPress non si tocca più.
+(Il file `ardychat.js` qui resta come backup dello stato pre-centralizzazione.)
 
 ---
 
