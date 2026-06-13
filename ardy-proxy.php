@@ -651,6 +651,12 @@ while ($iteration < $maxIterations) {
                                 $accessEmail = $emailLead;
                             }
                         }
+                        // Diagnostica: dice perché l'email è/non è stata accodata
+                        error_log('ARDY CODICE DIAG: sess=' . $cleanSession
+                            . ' codice=' . ($codice !== '' ? 'Y' : 'N')
+                            . ' giaInviata=' . ($giaInviata ? 'Y' : 'N')
+                            . ' email_input=' . (trim((string)($toolInput['email'] ?? '')) !== '' ? 'Y' : 'N')
+                            . ' accoda=' . ($accessCode ? ('Y:' . $accessEmail) : 'N'));
                     } catch (PDOException $e) {
                         error_log('ARDY CODICE ACCESSO ERROR: ' . $e->getMessage());
                         $codice = '';
