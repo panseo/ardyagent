@@ -25,19 +25,24 @@ base per la **centralizzazione** dei widget front-end (vedi sotto).
 
 ---
 
-## Mappa snippet (da screenshot 13/06 — da confermare con l'export)
+## Mappa snippet (export WPCode del 13/06/2026, 7 snippet)
 
-| File | Nome in WPCode | Tipo | Posizione | Centralizzabile? |
-|---|---|---|---|---|
-| `performance.php` | performance | php | — | No (PHP backup-only) |
-| `chat-corsi.html` | Chat per i corsi | html | footer | Sì (front-end) |
-| `pulsante-corsi.php` | Pulsante corsi | php | — | Da valutare |
-| `pulsante-flottante-ovunque.php` | Pulsante flottante ovunque | php | — | Da valutare (contiene anche il loader lavorazione!) |
-| `snippet-yoast.php` | Snippet yoast | php | — | No (SEO backup-only) |
-| `corsi-dato-strutturato.php` | Corsi dato strutturato | php | — | No (schema backup-only) |
-| `ardychat.js` | ardychat | js | footer | Sì — chat generale del sito (→ `ardy-proxy.php`, elementi `ac-*`) |
+| File | Nome WPCode | ID | Tipo | Posizione | Cosa fa | Centralizzabile? |
+|---|---|---|---|---|---|---|
+| `ardychat.js` | ardychat | 15170 | js | site_wide_footer | Chat generale del sito sulla pagina `/ardy-agent/` (→ `ardy-proxy.php`, elementi `ac-*`) | ✅ Sì (JS puro) |
+| `chat-corsi.html` | Chat per i corsi | 15246 | html | site_wide_footer | `<script>` che adatta `/ardy-agent/?corso=` in "modalità corso" (intestazione, suggerimenti, primo messaggio) | ✅ Sì (è solo un `<script>`) |
+| `pulsante-flottante-ovunque.php` | Pulsante flottante ovunque | 15243 | php | everywhere | Bottone flottante "Chatta con Ardy" → `/ardy-agent/`; salta le pagine `/lavori-in-corso/`, `/project/` e categoria 102 | ⚠️ Parziale (la condizione è PHP server-side; markup/CSS sì) |
+| `pulsante-corsi.php` | Pulsante corsi | 15245 | php | everywhere | Filtro `the_content`: CTA "Info su questo corso" sulle 9 pagine corso → `/ardy-agent/?corso=` | ⚠️ Parziale (mappa slug + filtro PHP) |
+| `corsi-dato-strutturato.php` | Corsi dato strutturato | 15240 | php | everywhere | Schema.org `Course` sui corsi (SEO, hook `wp_head`) | ❌ No (backup-only) |
+| `snippet-yoast.php` | Snippet yoast | 15241 | php | everywhere | Schema `LocalBusiness` via filtro `wpseo_schema_organization` (SEO) | ❌ No (backup-only) |
+| `performance.php` | performance | 15267 | php | everywhere | Ottimizzazioni performance (hook WP) | ❌ No (backup-only) |
 
-> I nomi file sono provvisori finché non arriva l'export ufficiale.
+> **Nota:** il *loader della pagina lavorazione* NON è in questi snippet (la vecchia nota nel
+> TODO era imprecisa): sta nelle **Integrazioni di Divi** ed è già nel repo come
+> `../wpcode-snippet-lavorazione.html`. Il "Pulsante flottante ovunque" è solo il bottone CTA.
+>
+> **Mini-pendenza:** il testo del bottone in `pulsante-flottante-ovunque.php` dice ancora
+> "Chatta con **Ardy**" (l'`aria-label` è già "Sole"). Da uniformare a "Sole" quando si tocca.
 
 ---
 
