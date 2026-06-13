@@ -540,7 +540,21 @@ while ($iteration < $maxIterations) {
                 }
 
             } elseif ($toolName === 'fissa_appuntamento_calendario') {
-                try {
+                // Guard anti-doppione: se la scheda ha GIÀ un appuntamento (in questo
+                // giro o sul CRM), non crearne un secondo. Reindirizza allo spostamento.
+                $existingEventId = $bookingEventId;
+                if (empty($existingEventId)) {
+                    try {
+                        $db = ardyDB();
+                        ardy_ensure_sopralluogo_cols($db);
+                        $qb = $db->prepare("SELECT gcal_event_id FROM clienti WHERE session_id = :sid LIMIT 1");
+                        $qb->execute([':sid' => $cleanSession]);
+                        $existingEventId = trim((string) $qb->fetchColumn());
+                    } catch (PDOException $e) { $existingEventId = ''; }
+                }
+                if (!empty($existingEventId)) {
+                    $toolResult = 'Questo cliente ha GIÀ un appuntamento fissato: NON crearne un altro (creeresti un doppione nel calendario). Se vuole cambiare data usa sposta_appuntamento; altrimenti conferma l\'appuntamento già esistente.';
+                } else try {
                     if (empty($toolInput['start'])) {
                         $toolResult = 'Errore: data/ora mancante. Chiedi al cliente di confermare giorno e ora.';
                     } else {
