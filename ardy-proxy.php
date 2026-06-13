@@ -419,6 +419,20 @@ while ($iteration < $maxIterations) {
         break;
     }
 
+    // Audit prompt caching: logga l'usage per verificare che gli hit arrivino davvero.
+    // Se cache_read resta a 0 c'è un invalidatore nascosto nel prefisso (system/tools).
+    if (isset($data['usage'])) {
+        $u = $data['usage'];
+        error_log(sprintf(
+            'ARDY USAGE iter=%d in=%d out=%d cache_read=%d cache_write=%d',
+            $iteration,
+            (int)($u['input_tokens'] ?? 0),
+            (int)($u['output_tokens'] ?? 0),
+            (int)($u['cache_read_input_tokens'] ?? 0),
+            (int)($u['cache_creation_input_tokens'] ?? 0)
+        ));
+    }
+
     $stopReason = $data['stop_reason'] ?? 'end_turn';
     $content    = $data['content']     ?? [];
     $messages[] = ['role' => 'assistant', 'content' => $content];

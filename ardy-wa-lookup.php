@@ -60,7 +60,13 @@ if ($ownerDigits !== '' && $last9 === substr($ownerDigits, -9)) {
         'success'       => true,
         'mode'          => 'titolare',
         'cliente'       => null,
+        // LEGACY: prompt completo e self-contained (com'è oggi su n8n). Non cacheabile.
         'system_prompt' => ardy_wa_prompt_titolare($riepilogo),
+        // PROMPT CACHING (migrazione n8n): usare questi due al posto di system_prompt.
+        //  - system_static  → blocco `system` con cache_control ephemeral (statico)
+        //  - crm_context    → in un MESSAGGIO separato (NON nel system), volatile
+        'system_static' => ardy_wa_prompt_titolare_static(),
+        'crm_context'   => "## DATI OPERATIVI ATTUALI (dal CRM)\n" . $riepilogo,
     ]);
     exit();
 }
@@ -259,17 +265,23 @@ function ardy_riepilogo_settimana(PDO $db): string {
 }
 
 // System prompt per la TITOLARE (Michela): assistente personale, non flusso lead.
-function ardy_wa_prompt_titolare(string $riepilogo): string {
-    $base = @file_get_contents(__DIR__ . '/ardy-system.txt') ?: '';
-    $istr  = "# MODALITÀ TITOLARE — STAI PARLANDO CON MICHELA (la tua titolare)\n"
+// Istruzioni operative per la modalità titolare (parte STATICA, identica ad ogni
+// messaggio → cacheabile). $datiSeparati=true quando il riepilogo CRM volatile NON
+// è incollato qui ma viaggia in un MESSAGGIO separato (per il prompt caching): in
+// quel caso le istruzioni rimandano "ai dati operativi forniti" invece che "qui sotto".
+function ardy_wa_titolare_istruzioni(bool $datiSeparati): string {
+    $dove = $datiSeparati
+        ? "che ti vengono forniti nei dati operativi di questa conversazione"
+        : "qui sotto";
+    return "# MODALITÀ TITOLARE — STAI PARLANDO CON MICHELA (la tua titolare)\n"
         . "Il numero che ti scrive è quello di Michela Panella, titolare di Ardy Lab. NON è un cliente: è chi comanda.\n"
         . "- Comportati come la sua assistente personale/segretaria, NON come l'assistente commerciale dei clienti.\n"
         . "- NIENTE messaggio di benvenuto da lead, NIENTE domande di qualifica, NIENTE \"vuoi informazioni su restauri o sei un cliente\".\n"
         . "- Rivolgiti a lei per nome (Michela), dalle del tu, tono confidenziale ed efficiente. Messaggi brevi (è WhatsApp).\n"
-        . "- Quando ti chiede aggiornamenti (es. \"aggiornami sulla settimana\", \"come va oggi\", \"situazione lead\", \"chi devo richiamare\"), rispondi USANDO I DATI OPERATIVI qui sotto: sintetici, concreti, azionabili. Per il \"buongiorno\"/briefing del mattino apri SEMPRE con gli IMPEGNI IN CALENDARIO di oggi e con i lavori URGENTI (scadenza entro 4 giorni), poi il resto (nuovi lead da richiamare, lavori in corso, morosi).\n"
+        . "- Quando ti chiede aggiornamenti (es. \"aggiornami sulla settimana\", \"come va oggi\", \"situazione lead\", \"chi devo richiamare\"), rispondi USANDO I DATI OPERATIVI {$dove}: sintetici, concreti, azionabili. Per il \"buongiorno\"/briefing del mattino apri SEMPRE con gli IMPEGNI IN CALENDARIO di oggi e con i lavori URGENTI (scadenza entro 4 giorni), poi il resto (nuovi lead da richiamare, lavori in corso, morosi).\n"
         . "- Se ti chiede qualcosa che non è nei dati, dillo con onestà e indica dove guardare (la dashboard).\n"
         . "- Puoi aiutarla a ragionare, redigere messaggi/email, organizzare la giornata.\n"
-        . "- I dati qui sotto sono una fotografia dal CRM al momento del messaggio: se servono dettagli più precisi, rimanda alla dashboard.\n\n"
+        . "- I dati operativi sono una fotografia dal CRM al momento del messaggio: se servono dettagli più precisi, rimanda alla dashboard.\n\n"
         . "## CREARE UNA SCHEDA CLIENTE (Michela ti detta un nuovo contatto)\n"
         . "Quando Michela ti dà i dati di un cliente nuovo da mettere a CRM (a voce o per iscritto, es.\n"
         . "\"segna Mario Rossi, 3331234567, vuole rilaccare una credenza, zona Prati\"), aiutala a creare la scheda:\n"
@@ -283,9 +295,29 @@ function ardy_wa_prompt_titolare(string $riepilogo): string {
         . "   Riempi solo i campi noti, lascia \"\" gli altri. JSON valido su UNA riga, niente code fence.\n"
         . "   Il marker viene intercettato dal sistema e rimosso prima di mostrare il messaggio: scrivi comunque una frase\n"
         . "   naturale di conferma per Michela (\"Fatto, scheda creata ✅\") PRIMA del marker.\n"
-        . "   NON usare il marker se Michela non ha ancora confermato, e non inventare dati che non ti ha dato.\n\n"
-        . "## DATI OPERATIVI ATTUALI (dal CRM)\n" . $riepilogo . "\n";
-    return $istr . "\n---\n# SCHEDA INFORMATIVA DI RIFERIMENTO (servizi, prezzi, processi — solo se Michela te lo chiede)\n" . $base;
+        . "   NON usare il marker se Michela non ha ancora confermato, e non inventare dati che non ti ha dato.\n";
+}
+
+// Documento di riferimento Ardy Lab (statico).
+function ardy_wa_doc_riferimento(): string {
+    $base = @file_get_contents(__DIR__ . '/ardy-system.txt') ?: '';
+    return "\n---\n# SCHEDA INFORMATIVA DI RIFERIMENTO (servizi, prezzi, processi — solo se Michela te lo chiede)\n" . $base;
+}
+
+// LEGACY (self-contained): istruzioni + riepilogo CRM incollato + documento.
+// Mantiene il comportamento attuale di n8n (campo `system_prompt`). Il riepilogo
+// in mezzo impedisce il prompt caching: per cacheare usare invece `system_static`
+// (statico) + `crm_context` (volatile, in un messaggio separato) — vedi sotto.
+function ardy_wa_prompt_titolare(string $riepilogo): string {
+    return ardy_wa_titolare_istruzioni(false)
+        . "\n## DATI OPERATIVI ATTUALI (dal CRM)\n" . $riepilogo . "\n"
+        . ardy_wa_doc_riferimento();
+}
+
+// STATICO (cacheabile): istruzioni + documento, SENZA il riepilogo volatile.
+// Va messo nel blocco `system` del nodo HTTP n8n con cache_control ephemeral.
+function ardy_wa_prompt_titolare_static(): string {
+    return ardy_wa_titolare_istruzioni(true) . ardy_wa_doc_riferimento();
 }
 
 // Costruisce il system prompt completo per n8n:

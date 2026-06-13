@@ -67,17 +67,20 @@ lettura cache ~0.1×, scrittura 1.25× a 5min / 2× a 1h; il caching è un **mat
 qualsiasi byte che cambia nel prefisso invalida tutto ciò che segue).
 
 - ✅ **`ardy-proxy.php` (chat web di Sole)**: GIÀ mette `cache_control: ephemeral` su system
-  (`ardy-system.txt`, statico) + ultimo tool (righe ~264/271). Il system è il file fisso → ottimo.
-  → **Da fare**: verificare che i hit arrivino davvero leggendo `usage.cache_read_input_tokens`
-  nella risposta (loggarlo). Se è 0, c'è un invalidatore nascosto.
-- ⚠️ **`ardy-proxy-lavorazione.php`**: passa `system` come **stringa semplice, SENZA cache_control**
-  (riga ~184). → trasformarlo in blocco `[['type'=>'text','text'=>$s,'cacheControl'=>['type'=>'ephemeral']]]`.
-- ⚠️ **Ramo WhatsApp (n8n) = il costo grosso**: il system grande + il **riepilogo CRM** rigenerato ad
-  ogni messaggio (`ardy-wa-lookup.php`). ATTENZIONE: se il riepilogo CRM (volatile) è concatenato
-  DENTRO il system, il prefisso cambia ogni volta → cache **inutile**. Va **SPLITTATO**: parte statica
-  (prompt fisso) col breakpoint cache, riepilogo CRM **DOPO** (in un messaggio separato, non nel system).
-  Il `cache_control` va impostato nel **nodo HTTP di n8n** (fuori repo) + ristrutturare `ardy-wa-lookup.php`
-  per restituire le due parti separate. Questo è il guadagno maggiore.
+  (`ardy-system.txt`, statico) + ultimo tool. Il system è il file fisso → ottimo.
+  ✅ **FATTO**: ora logga l'usage (`ARDY USAGE … cache_read=… cache_write=…`) ad ogni iterazione
+  → si verifica dai log se gli hit arrivano davvero. Se `cache_read` resta 0 c'è un invalidatore.
+- ✅ **FATTO — `ardy-proxy-lavorazione.php`**: il `system` era una stringa semplice senza
+  `cache_control`. Ora è splittato in **blocco statico** (identità/regole, riusabile fra pagine) +
+  **blocco dinamico** (contesto pagina, stabile dentro la conversazione), entrambi con
+  `cache_control: ephemeral`; aggiunto header beta e logging usage (`ARDY LAV USAGE …`).
+- 🟡 **PARZIALE — Ramo WhatsApp (n8n) = il costo grosso** (`ardy-wa-lookup.php`): il riepilogo CRM
+  volatile era incollato DENTRO il system → cache inutile. **FATTO lato repo (additivo, zero-rischio)**:
+  la risposta `mode:titolare` ora espone **`system_static`** (istruzioni + documento, cacheabile) e
+  **`crm_context`** (riepilogo volatile, da mettere in un messaggio separato), oltre al `system_prompt`
+  legacy invariato (nessuna regressione). ⏭️ **Resta da fare lato n8n** (fuori repo): aggiornare il
+  nodo HTTP per usare `system_static` (blocco system con `cache_control`) + `crm_context` (messaggio
+  user) → vedi **`ardy-wa-prompt-caching-n8n.md`** (snippet + verifica `cache_read` + rollback).
 - Quick-win collegato: **memoizzare in `static`** i system letti da disco (`file_get_contents`)
   in `ardy-proxy.php`/`ardy-wa-lookup.php` (già nel backlog perf sotto).
 
