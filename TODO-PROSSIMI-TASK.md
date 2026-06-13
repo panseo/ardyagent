@@ -105,20 +105,18 @@ Piano (lento, un passo alla volta):
 ⚠️ Ricorda: modificare un file nella cartella backup NON aggiorna WordPress (va ricopiato a mano),
 finché non si fa la centralizzazione vera (loader → file servito).
 
-**STATO (sessione 13/06 — in corso):**
+**STATO (sessione 13/06):**
 - ✅ Passo 1 infra: cartella `wordpress-snippets/` creata + README-mappa, esclusa da `deploy.sh`.
+- ✅ **Centralizzazione `ardychat` FATTA e funzionante in produzione.** `ardy-chat-site.js` (root,
+  servito dal server) + loader in WPCode. La chat del sito ora si modifica solo nel file + deploy.
+  ⚠️ **Lezione**: il loader `<script src>` va in uno snippet **HTML**, non JavaScript (uno snippet
+  JS avvolge già in `<script>` → incollarci un altro `<script>` = errore di sintassi, file non
+  caricato, `acUseSuggestion` undefined senza errori evidenti). Vedi `wordpress-snippets/README.md`.
 - ⏭️ Backup snippet ancora da fare: serve l'**export WPCode** (Tools → Export All → JSON) da splittare.
-  Per ora c'è solo il backup manuale di `ardychat.js` (lo snippet centralizzato).
-- 🐞 **Centralizzazione `ardychat` NON ancora funzionante (ROLLBACK fatto sul sito).** Creato
-  `ardy-chat-site.js` (root, servito) + loader `<script src=...>` in WPCode. Sintomo: cliccando
-  "Inizia conversazione" la chat **non si apre**. Diagnosi in console: nessun errore JS, gli
-  elementi `ac-start-btn`/`ac-messages`/`ac-input` **esistono** (true), ma `window.acUseSuggestion`
-  resta **`undefined`** → il corpo dello script non viene eseguito fino in fondo. Tentativi: (a)
-  early-return su elementi mancanti — scartato (gli elementi ci sono); (b) guardia `ready()` al posto
-  di `DOMContentLoaded` — **non ha risolto**. Ipotesi residue da verificare alla ripresa:
-  **tab Rete** → status/timing di `ardy-chat-site.js` (404? 401 Basic Auth del subdominio? caricato
-  ma dopo? **cache Cloudflare** che serve una versione vecchia?). Sul sito è stato **rimesso lo
-  snippet JS inline originale** per non lasciare la chat rotta. Codice servito attuale: commit `74b7f48`.
+  Per ora c'è solo il backup manuale di `ardychat.js`.
+- ⏭️ Prossimi widget front-end da centralizzare (stesso schema): `chat-corsi.html`, e valutare i
+  pulsanti CTA (`pulsante-corsi`, `pulsante-flottante-ovunque`). Gli snippet PHP (SEO/schema/hook)
+  restano backup-only.
 
 
 
