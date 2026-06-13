@@ -9,10 +9,18 @@
  *
  * Modificare QUI + deploy aggiorna il sito (niente più copia-incolla in WPCode).
  * Backup storico dello snippet: wordpress-snippets/ardychat.js
- * Codice identico allo snippet originale (solo servito esternamente).
+ * Codice identico allo snippet originale; unica differenza: guardia ready()
+ * al posto di DOMContentLoaded, perché uno script ESTERNO può caricarsi dopo
+ * che DOMContentLoaded è già scattato (altrimenti il callback non parte mai).
  */
 
-document.addEventListener('DOMContentLoaded', function () {
+(function () {
+    function ready(fn) {
+        if (document.readyState !== 'loading') fn();
+        else document.addEventListener('DOMContentLoaded', fn);
+    }
+
+    ready(function () {
 
     var PROXY_URL = 'https://ardyagent.ardy-lab.it/ardy-proxy.php';
     var MAX_MSGS  = 40; // limite messaggi utente per sessione (20 scambi)
@@ -241,4 +249,5 @@ document.addEventListener('DOMContentLoaded', function () {
     if (sendBtn)  sendBtn.onclick = sendMessage;
     if (inputEl)  inputEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') sendMessage(); });
 
-});
+    });
+})();
