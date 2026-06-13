@@ -264,7 +264,11 @@ if ($featuredImageId !== null) {
 // 10. NOTIFICHE AL CLIENTE (email + WhatsApp)
 // -----------------------------------------------------------
 if ($clienteEmail) {
-    inviaEmailCliente($clienteEmail, $clienteNome, $mobileTitolo, $faseNome, $testoGenerato, $postLink, $isComunicazione);
+    // Recupera (o genera) il codice personale del cliente, da includere nell'email.
+    $codiceCliente = '';
+    try { $codiceCliente = ardy_codice_per_sessione(ardyDB(), $sessionId); }
+    catch (Throwable $e) { error_log('ARDY CODICE LAVORAZIONE: ' . $e->getMessage()); }
+    inviaEmailCliente($clienteEmail, $clienteNome, $mobileTitolo, $faseNome, $testoGenerato, $postLink, $isComunicazione, $codiceCliente);
 }
 
 // WhatsApp al cliente: solo per le FASI normali (non le comunicazioni straordinarie) e solo
@@ -449,14 +453,63 @@ function inviaWhatsAppCliente(string $telefono, string $nome, string $mobile, st
     return true;
 }
 
-function inviaEmailCliente(string $email, string $nome, string $mobile, string $fase, string $testo, string $link, bool $isComunicazione = false): void {
-    // Oggetto, accento colore e intestazione cambiano per le comunicazioni straordinarie
+// Recupera il codice personale del cliente (ARD-XXXX-XXXX); se manca lo genera
+// e lo salva, così ogni cliente in lavorazione ne ha uno stabile da usare in chat.
+if (!function_exists('ardy_codice_per_sessione')) {
+function ardy_codice_per_sessione(PDO $db, string $sessionId): string {
+    $sessionId = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string) $sessionId);
+    if ($sessionId === '') return '';
+    try {
+        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'codice_accesso'")->fetch()) {
+            $db->exec("ALTER TABLE clienti ADD COLUMN codice_accesso VARCHAR(20) NULL");
+            try { $db->exec("CREATE INDEX idx_codice_accesso ON clienti (codice_accesso)"); }
+            catch (PDOException $e) { /* indice già presente */ }
+        }
+        $sel = $db->prepare("SELECT codice_accesso FROM clienti WHERE session_id = :sid LIMIT 1");
+        $sel->execute([':sid' => $sessionId]);
+        $codice = trim((string) $sel->fetchColumn());
+        if ($codice !== '') return $codice;
+        // genera un codice unico (alfabeto senza caratteri ambigui)
+        $alpha = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+        $n = strlen($alpha);
+        for ($t = 0; $t < 5; $t++) {
+            $out = '';
+            for ($i = 0; $i < 8; $i++) { $out .= $alpha[random_int(0, $n - 1)]; if ($i === 3) $out .= '-'; }
+            $cand = 'ARD-' . $out;
+            $chk = $db->prepare("SELECT 1 FROM clienti WHERE codice_accesso = :c LIMIT 1");
+            $chk->execute([':c' => $cand]);
+            if (!$chk->fetchColumn()) {
+                $db->prepare("UPDATE clienti SET codice_accesso = :c, updated_at = NOW() WHERE session_id = :sid")
+                   ->execute([':c' => $cand, ':sid' => $sessionId]);
+                return $cand;
+            }
+        }
+    } catch (PDOException $e) {
+        error_log('ARDY CODICE PER SESSIONE ERROR: ' . $e->getMessage());
+    }
+    return '';
+}
+}
+
+function inviaEmailCliente(string $email, string $nome, string $mobile, string $fase, string $testo, string $link, bool $isComunicazione = false, string $codice = ''): void {
+    // Oggetto con prefisso "Ardy Lab —"; accento colore e intestazione cambiano per le comunicazioni
     $subject   = $isComunicazione
-        ? '⚠ Aggiornamento importante sulla tua lavorazione — ' . $mobile
-        : '🪵 Aggiornamento lavorazione — ' . $mobile;
+        ? 'Ardy Lab — ⚠ Aggiornamento importante sulla tua lavorazione — ' . $mobile
+        : 'Ardy Lab — 🪵 Aggiornamento lavorazione — ' . $mobile;
     $accent    = $isComunicazione ? '#e08a3c' : '#c8a96e';
     $kicker    = $isComunicazione ? 'Comunicazione importante' : 'Aggiornamento lavorazione';
     $ctaLabel  = $isComunicazione ? 'Leggi sulla pagina della lavorazione →' : 'Vedi la lavorazione completa →';
+    $saluto    = trim($nome) !== '' ? 'Ciao ' . htmlspecialchars($nome) . ',' : 'Ciao,';
+    // Blocco "chat personale": solo se il cliente ha un codice
+    $bloccoChat = '';
+    if ($codice !== '') {
+        $bloccoChat = '
+  <div style="border-radius:8px;background:#fbf8f2;padding:16px 20px;margin:24px 0;font-size:14px;line-height:1.6;color:#555;">
+    💬 <strong>La tua chat personale.</strong> Per qualsiasi domanda o per sapere a che punto siamo, scrivi a Sole nella chat di Ardy Lab e indicale il tuo codice personale:
+    <div style="font-family:monospace;font-size:18px;letter-spacing:2px;color:#333;margin:10px 0;"><strong>' . htmlspecialchars($codice) . '</strong></div>
+    Con questo ti riconosce subito e ti aggiorna sul tuo mobile — senza ricominciare da capo. Lo trovi anche nell\'email di benvenuto.
+  </div>';
+    }
     try {
         $mail = new PHPMailer(true);
         $mail->isSMTP();
@@ -477,13 +530,16 @@ function inviaEmailCliente(string $email, string $nome, string $mobile, string $
   <p style="color:#999;font-size:13px;margin-bottom:24px;">' . htmlspecialchars($kicker) . '</p>
   <h3 style="font-size:18px;margin-bottom:8px;">' . htmlspecialchars($mobile) . '</h3>
   <p style="font-size:13px;color:#999;margin-bottom:20px;">' . ($isComunicazione ? '' : 'Fase: ') . htmlspecialchars($fase) . '</p>
+  <p style="font-size:15px;line-height:1.7;margin-bottom:16px;">' . $saluto . '</p>
   <div style="border-left:3px solid ' . $accent . ';padding:12px 20px;background:' . ($isComunicazione ? '#fff7ef' : '#fafaf8') . ';margin-bottom:28px;">
     ' . nl2br(htmlspecialchars($testo)) . '
   </div>
   <a href="' . htmlspecialchars($link) . '" style="background:' . $accent . ';color:#fff;padding:12px 24px;text-decoration:none;border-radius:4px;font-family:sans-serif;font-size:14px;">
     ' . htmlspecialchars($ctaLabel) . '
   </a>
-  <p style="margin-top:32px;font-size:12px;color:#bbb;">Ardy Lab — Restauro e laccatura mobili · Roma</p>
+  ' . $bloccoChat . '
+  <p style="font-size:14px;line-height:1.7;color:#555;margin-top:28px;">Grazie di cuore per la fiducia: ogni fase la curiamo come se il mobile fosse nostro. A presto 🌿</p>
+  <p style="margin-top:24px;font-size:12px;color:#bbb;">Ardy Lab — Restauro e laccatura mobili · Roma</p>
 </div>';
         $mail->send();
         error_log("ARDY MAIL OK: inviata a " . $email);
