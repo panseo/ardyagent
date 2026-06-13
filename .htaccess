@@ -20,6 +20,17 @@
 Options -Indexes
 
 # -----------------------------------------------------------
+# GZIP — comprime le risposte testuali (HTML/CSS/JS/JSON) per ridurre il
+# traffico e velocizzare il caricamento. NON tocca le immagini (jpeg/png/webp:
+# già compresse). Dentro <IfModule>: se mod_deflate non c'è, viene ignorato.
+# -----------------------------------------------------------
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css
+    AddOutputFilterByType DEFLATE text/javascript application/javascript application/x-javascript
+    AddOutputFilterByType DEFLATE application/json application/xml application/rss+xml image/svg+xml
+</IfModule>
+
+# -----------------------------------------------------------
 # LOGIN (Basic Auth) — protegge SOLO le pagine private.
 # Le pagine pubbliche (chatbot, widget, unsubscribe) restano aperte.
 # Il file con utente+password (.htpasswd) si crea con ardy-setup-login.php
