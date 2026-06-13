@@ -6,6 +6,30 @@
 
 ---
 
+## ✅ FATTO E IN PRODUZIONE — sessione 13/06/2026
+Tutto deployato su `main` e provato dal vivo (salvo le rifiniture nel blocco "DA VERIFICARE").
+- **Codice d'accesso `ARD-XXXX-XXXX`** capability per la chat web (anonima): generato al
+  `salva_lead_crm`, salvato su `clienti.codice_accesso`, tool `cerca_cliente` (anti-bruteforce
+  + data minimization). Inviato via **email di benvenuto** (logo, presentazione Sole, link
+  diretto `ardy-lab.it/ardy-agent`, canale WA clienti). Deliverability: il mancato arrivo era
+  la **blocklist Brevo** (non il codice). Invio email disaccoppiato dalla generazione + flag
+  `codice_email_inviato` anti-doppione.
+- **Chat web non "perde il filo"**: appuntamento fissato = definitivo (prompt) + **guard
+  anti-doppione** in `fissa_appuntamento_calendario` (se la scheda ha già `gcal_event_id`).
+- **Mini-delete cliente**: `ardy-elimina-cliente.php` + pulsante 🗑 in dashboard (hard-delete
+  scheda + preventivi/fasi/wa_messaggi/solleciti + foto/reel, conferma "ELIMINA").
+- **Email "aggiornamento lavorazione"** rinnovata: oggetto con "Ardy Lab —", codice + chat
+  dedicata + link diretto, tono artigiano; il codice viene recuperato/generato per session.
+- **Widget lavorazione**: schermata di scelta **cliente / non-cliente**. Cliente → verifica con
+  **codice o telefono** (`ardy-verify-client.php` accetta entrambi). Non-cliente → chat generale
+  di Sole nello stesso widget, senza dati personali. Alert pagina ampliato (in **Divi**, non WPCode).
+- **Bug WhatsApp** risolto: `ardy-system.txt` (condiviso col canale WhatsApp) conteneva le
+  istruzioni del tool `cerca_cliente` → Sole "recitava" `<function_calls>`. Spostato il blocco
+  in `ardy-proxy.php` (solo web) + regola WhatsApp (niente tool; codice = web-only; riconoscimento
+  per numero, con fallback per numero non registrato).
+
+---
+
 ## 🔧 NOTE OPERATIVE (servono sempre)
 
 **Deploy sul server** (da root):
@@ -37,17 +61,10 @@ in CGI/FPM e rifarebbe la login. Ci si affida al `.htaccess` (Basic Auth) come p
   ⏭️ Prova end-to-end dal numero di Michela: dettare un cliente nuovo → conferma → "Scheda creata ✅"
   + scheda in dashboard (stato LEAD). Se errore: guardare le **Executions** del nodo Code in n8n.
 - **Template `sollecito_pagamento`** — approvato e collegato. Da provare con un caso moroso vero.
-- **`cerca_cliente` sulla chat web (CRM read con codice di accesso)** — implementato in
-  `ardy-proxy.php` + `ardy-system.txt`. Sole sul web ora può dire al cliente lo stato del
-  lavoro **senza esporre PII di terzi**: niente ricerca per nome/telefono (canale pubblico/
-  anonimo), ma un **codice capability** `ARD-XXXX-XXXX` generato al `salva_lead_crm`, salvato
-  su `clienti.codice_accesso` e inviato al cliente con una **email di benvenuto** (logo,
-  presentazione di Sole/customer care, canale WhatsApp clienti +39 379 375 6437, **niente
-  numero di Michela**). Tool `cerca_cliente` con cap anti-bruteforce per sessione e data
-  minimization (solo stato/servizio/fase/link, mai email/telefono/indirizzo).
-  ⏭️ **Manca la prova end-to-end**: 1) lasciare i dati in chat web → arriva l'email col codice;
-  2) tornare sulla chat (nuova sessione) e dare il codice → Sole risponde con lo stato giusto;
-  3) verificare che colonna+indice `codice_accesso` si creino sul DB di produzione al 1° salvataggio.
+- **`cerca_cliente` + codice d'accesso** — ✅ in produzione (vedi recap 13/06 sotto). Resta solo
+  la **prova finale sul web**: dare il codice nella chat del sito → Sole risponde con lo stato.
+  E una pulizia: togliere il log diagnostico `ARDY CODICE DIAG` da `ardy-proxy.php` (handler
+  `salva_lead_crm`) quando non serve più.
 
 ---
 
@@ -65,6 +82,30 @@ in CGI/FPM e rifarebbe la login. Ci si affida al `.htaccess` (Basic Auth) come p
 ---
 
 ## 📋 TASK DA SVILUPPARE
+
+### ⭐ PROSSIMO — Backup & centralizzazione dei widget WordPress
+Obiettivo: portare sotto git i sorgenti che oggi vivono solo in WordPress, e dove possibile
+**centralizzarli** in file serviti dal nostro server (una sola fonte versionata).
+Contesto raccolto il 13/06:
+- Gli snippet stanno in **WPCode** (7 snippet) + il loader della pagina lavorazione sta nelle
+  **integrazioni di Divi** (NON WPCode → già nel repo come `wpcode-snippet-lavorazione.html`).
+- I 7 snippet WPCode (da screenshot): `performance` (php), `Chat per i corsi` (html, footer),
+  `Pulsante corsi` (php), `Pulsante flottante ovunque` (php — contiene anche il loader lavorazione!),
+  `Snippet yoast` (php), `Corsi dato strutturato` (php), `ardychat` (js, footer — è la **chat
+  generale del sito**, punta a `ardy-proxy.php`, usa elementi `ac-*`).
+- File **serviti dal nostro server** (restano in root, si deployano): es. `ardy-widget-lavorazione.js`.
+
+Piano (lento, un passo alla volta):
+1. **Backup**: creare cartella `wordpress-snippets/` (esclusa dal deploy in `deploy.sh`, e già
+   fuori dal `.cpanel.yml` che copia solo i file root). Modo comodo per ottenerli: **WPCode →
+   Strumenti → Esporta tutti** → un JSON → l'utente lo incolla → si splitta in file con i nomi
+   giusti + README-mappa (ID/posizione/tipo).
+2. **Centralizzare SOLO i widget front-end** (chat/pulsanti js/html) in file serviti dal server,
+   lasciando in WordPress una riga-loader. Gli snippet **PHP** (hook/SEO/schema) restano
+   backup-only, non si spostano.
+⚠️ Ricorda: modificare un file nella cartella backup NON aggiorna WordPress (va ricopiato a mano),
+finché non si fa la centralizzazione vera (loader → file servito).
+
 
 ### ⚡ Risparmio risorse — Item B: compressione dati / disco
 Server 200GB condiviso con 5 domini → lo spazio e il peso DB contano. (Item A "prompt caching"
