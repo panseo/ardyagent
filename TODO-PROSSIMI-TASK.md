@@ -63,8 +63,7 @@ in CGI/FPM e rifarebbe la login. Ci si affida al `.htaccess` (Basic Auth) come p
 - **Template `sollecito_pagamento`** — approvato e collegato. Da provare con un caso moroso vero.
 - **`cerca_cliente` + codice d'accesso** — ✅ in produzione (vedi recap 13/06 sotto). Resta solo
   la **prova finale sul web**: dare il codice nella chat del sito → Sole risponde con lo stato.
-  E una pulizia: togliere il log diagnostico `ARDY CODICE DIAG` da `ardy-proxy.php` (handler
-  `salva_lead_crm`) quando non serve più.
+  (Log diagnostico `ARDY CODICE DIAG` in `ardy-proxy.php` ✅ rimosso.)
 
 ---
 
