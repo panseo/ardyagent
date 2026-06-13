@@ -85,6 +85,11 @@ fatto: vedi sezione "Da verificare".)
   `maxSide` solo per la copertina nella chiamata a `ardyCompressImage`.
 
 ### 🗑️ Gestione archivio cliente (versione completa)
+> ✅ **Già fatto — hard-delete minimo** (per ripulire i lead di test): `ardy-elimina-cliente.php`
+> (DELETE per `session_id` su clienti+preventivi+fasi+wa_messaggi+solleciti + foto e reel,
+> conferma "ELIMINA", Basic Auth `.htaccess`) + pulsante 🗑 Elimina sulla scheda in dashboard.
+> ⏭️ Resta da costruire la versione completa qui sotto (Libera spazio / Cestino 30gg / purga).
+
 Contesto: i file pesanti sono **foto** (`ARDY_UPLOAD_DIR/<session>/`) e **reel**
 (`reels/reel_<session>_*.mp4`). I PDF preventivo **incorporano le immagini in base64** →
 cancellare le foto originali NON rompe i documenti. (Versione "leggera" PERSI già in produzione:

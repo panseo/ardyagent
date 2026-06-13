@@ -91,6 +91,8 @@
           <div class="detail-sub" id="dSub">—</div>
         </div>
         <div class="stato-selector" id="statoSelector"></div>
+        <button id="btnEliminaCliente" onclick="eliminaCliente()" title="Elimina definitivamente questo cliente"
+          style="margin-left:8px;align-self:flex-start;background:transparent;border:1px solid #d9534f;color:#d9534f;border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;white-space:nowrap;">🗑 Elimina</button>
       </div>
 
       <!-- ═══ 1. DATI E CONTATTO ═══ -->
@@ -346,6 +348,7 @@
 const BASE_URL        = 'https://ardyagent.ardy-lab.it';
 const CRM_API_URL     = BASE_URL + '/ardy-crm-api.php';
 const UPDATE_URL      = BASE_URL + '/ardy-update-lead.php';
+const ELIMINA_URL     = BASE_URL + '/ardy-elimina-cliente.php';
 const AI_URL          = BASE_URL + '/ardy-proxy.php';
 const LAVORAZIONE_URL = BASE_URL + '/ardy-pubblica-lavorazione.php';
 const SOCIAL_URL      = BASE_URL + '/ardy-pubblica-social.php';
@@ -678,6 +681,44 @@ async function saveLead() {
 
   btn.disabled = false;
   btn.textContent = 'SALVA MODIFICHE';
+}
+
+// ─── ELIMINA CLIENTE (hard-delete, per ripulire i test) ───
+async function eliminaCliente() {
+  if (!currentLead) return;
+  const sid = currentLead.Session_ID;
+  if (!sid) { showToast('⚠ Scheda senza sessione: impossibile eliminare', 'error'); return; }
+  const nome = `${currentLead.Nome ?? ''} ${currentLead.Cognome ?? ''}`.trim() || 'questo cliente';
+  const c = prompt(
+    `Eliminare DEFINITIVAMENTE «${nome}»?\n\n` +
+    `Cancella scheda, preventivi, fasi, storico WhatsApp, foto e reel. Operazione IRREVERSIBILE.\n\n` +
+    `Scrivi ELIMINA per confermare:`);
+  if (c !== 'ELIMINA') { if (c !== null) showToast('Eliminazione annullata', ''); return; }
+
+  const btn = document.getElementById('btnEliminaCliente');
+  if (btn) { btn.disabled = true; btn.textContent = 'Elimino…'; }
+  try {
+    const res  = await fetch(ELIMINA_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sid, conferma: 'ELIMINA' })
+    });
+    const data = await res.json();
+    if (data && data.success) {
+      allLeads = allLeads.filter(l => l.Session_ID !== sid);
+      currentLead = null;
+      renderList();
+      document.getElementById('dNome').textContent = '—';
+      document.getElementById('dSub').textContent  = '—';
+      if (typeof closeMobileDetail === 'function') closeMobileDetail();
+      showToast('Cliente eliminato', '');
+    } else {
+      showToast('⚠ ' + ((data && data.error) || 'Errore eliminazione'), 'error');
+    }
+  } catch(e) {
+    showToast('⚠ Errore di rete', 'error');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '🗑 Elimina'; }
 }
 
 // ─── MODAL AI ─────────────────────────────────────────────
