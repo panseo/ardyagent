@@ -165,6 +165,12 @@ foreach ($images as $img) {
     $finfo    = new finfo(FILEINFO_MIME_TYPE);
     $realMime = $finfo->buffer($decoded);
     if (in_array($realMime, $allowedMimes)) {
+        // Comprimi una volta sola: alleggerisce il disco, abbassa il costo API e
+        // tiene le immagini sotto il limite di 10MB di Claude (riusa i byte compressi).
+        $compressed = ardyCompressImage($decoded, $realMime);
+        if ($compressed !== $decoded) {
+            $img['data'] = base64_encode($compressed);
+        }
         $img['type'] = $realMime;
         $validImages[] = $img;
     }

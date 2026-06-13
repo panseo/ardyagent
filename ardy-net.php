@@ -172,6 +172,64 @@ HT;
 }
 
 /**
+ * Comprime una foto in upload: ridimensiona se il lato lungo supera $maxSide e
+ * ricomprime nello stesso formato, per risparmiare spazio su disco (server condiviso
+ * 200GB) e peso quando l'immagine viene rimandata a Claude. Ritorna i byte compressi,
+ * oppure i byte ORIGINALI se la compressione non conviene o non è possibile (GD assente,
+ * GIF — spesso animate, immagine non decodificabile, risultato non più piccolo).
+ *
+ * @param string $raw  byte grezzi dell'immagine (già base64-decodificati)
+ * @param string $mime tipo MIME reale (image/jpeg|png|webp|gif)
+ */
+function ardyCompressImage(string $raw, string $mime, int $maxSide = 2000, int $quality = 82): string {
+    if (!function_exists('imagecreatefromstring')) return $raw; // GD non disponibile
+    if ($mime === 'image/gif') return $raw;                      // GIF: non toccare (animazioni)
+
+    $img = @imagecreatefromstring($raw);
+    if ($img === false) return $raw;
+    $w = imagesx($img);
+    $h = imagesy($img);
+    if ($w < 1 || $h < 1) { imagedestroy($img); return $raw; }
+
+    // Ridimensiona se serve, preservando le proporzioni
+    $scale = min(1.0, $maxSide / max($w, $h));
+    if ($scale < 1.0) {
+        $nw  = max(1, (int)round($w * $scale));
+        $nh  = max(1, (int)round($h * $scale));
+        $dst = imagecreatetruecolor($nw, $nh);
+        if ($mime === 'image/png' || $mime === 'image/webp') {
+            imagealphablending($dst, false);
+            imagesavealpha($dst, true);
+            $tr = imagecolorallocatealpha($dst, 0, 0, 0, 127);
+            imagefilledrectangle($dst, 0, 0, $nw, $nh, $tr);
+        }
+        imagecopyresampled($dst, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
+        imagedestroy($img);
+        $img = $dst;
+    }
+
+    // Ricodifica nello stesso formato
+    ob_start();
+    $ok = false;
+    switch ($mime) {
+        case 'image/png':
+            imagesavealpha($img, true);
+            $ok = imagepng($img, null, 7);          // livello compressione 0-9
+            break;
+        case 'image/webp':
+            if (function_exists('imagewebp')) $ok = imagewebp($img, null, $quality);
+            break;
+        default: // image/jpeg
+            $ok = imagejpeg($img, null, $quality);
+    }
+    $out = ob_get_clean();
+    imagedestroy($img);
+
+    if (!$ok || !is_string($out) || $out === '') return $raw;
+    return (strlen($out) < strlen($raw)) ? $out : $raw; // tieni il più piccolo
+}
+
+/**
  * GET HTTP sicuro: valida l'URL iniziale e ogni redirect, limita protocolli e
  * dimensione, verifica il TLS. Ritorna ['body'=>string,'code'=>int] o null.
  */

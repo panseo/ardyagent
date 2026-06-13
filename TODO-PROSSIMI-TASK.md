@@ -58,8 +58,12 @@ in CGI/FPM e rifarebbe la login. Ci si affida al `.htaccess` (Basic Auth) come p
 ### ⚡ Risparmio risorse — Item B: compressione dati / disco
 Server 200GB condiviso con 5 domini → lo spazio e il peso DB contano. (Item A "prompt caching"
 fatto: vedi sezione "Da verificare".)
-- **Foto all'upload**: ridimensionare/comprimere le immagini scheda quando entrano
-  (`ardy-lead-foto.php` / `ardy-upload-video.php`) → meno peso su disco da subito.
+- ✅ **FATTO — Foto all'upload**: nuovo helper `ardyCompressImage()` in `ardy-net.php`
+  (ridimensiona a max 2000px lato lungo + ricomprime jpeg q82 / webp / png; salta le GIF
+  animate; tiene l'originale se non conviene). Usato in `ardy-lead-foto.php` (disco) e
+  `ardy-proxy.php` (compressione una-tantum nel ciclo validazione → alleggerisce disco,
+  abbassa il costo API e tiene le foto sotto il limite 10MB di Claude). Testato: ~78% in meno
+  su una foto da telefono. ⏭️ `ardy-upload-video.php` è video (no GD) → fuori da questo intervento.
 - **gzip** sulle risposte JSON/HTML degli endpoint (se non già attivo a livello server/.htaccess).
 - **Preventivi base64 in DB** (`preventivi.voci_json` LONGTEXT): pesano molto. Valutare se
   tenerli tutti o rigenerare il PDF on-demand / spostare le immagini fuori dal DB.
@@ -87,6 +91,22 @@ Da costruire:
   `foto_archiviate_at` auto-create.
 - *API CRM* `ardy-crm-api.php`: escludere i `deleted_at` dalla lista normale; endpoint/param Cestino.
 - *Dashboard*: pulsanti 🧹 (su PAGATO) e 🗑️ sulla scheda; vista Cestino; modali conferma.
+
+### 💡 Idee da Sole (vagliate sul codice — solo queste 2 sono gap reali)
+> Sole, interrogata, ha proposto varie migliorie: la maggior parte **è già implementata**
+> (riconoscimento cliente per telefono + storico su WhatsApp via `ardy-wa-lookup.php`/
+> `ardy-wa-memoria.php`; stato lavori in mode `cliente_lavorazione`; analisi foto sulla chat
+> web). Altre sono **già scartate** (ricezione foto WhatsApp = pipeline media Meta assente;
+> invio preventivi automatici senza Michela = no, li controlla lei). Restano 2 idee valide:
+- **⭐ Catalogo prezzi su Google Sheet** (alto valore, basso rischio): oggi i prezzi sono
+  hardcoded in `ardy-system.txt` → cambiare = editare file + deploy. Un foglio Google letto da
+  Sole (sa già leggere Calendar/Drive) farebbe aggiornare i prezzi a Michela da sola, senza
+  toccare il codice. Le variazioni si rifletterebbero subito. Da progettare: foglio modello +
+  endpoint/funzione che lo legge e lo inietta nel prompt (con cache breve per non rileggerlo ogni msg).
+- **CRM read nella chat WEB** (valore medio): sul web Sole ha solo tool di scrittura/calendario,
+  nessun "cerca cliente". La chat web è anonima (no telefono finché il cliente non si presenta),
+  quindi utile solo se il cliente si identifica → nuovo tool `cerca_cliente` (per nome/telefono)
+  che legge dal CRM e personalizza la risposta. Valutare privacy.
 
 ### 💡 Briefing del mattino — opzionale rimasto
 Parte "lavori" e "calendario" già in produzione (riepilogo titolare con IN LAVORAZIONE, URGENTI ≤4gg,

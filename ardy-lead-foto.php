@@ -98,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($raw === false || strlen($raw) > $maxImgByte || strlen($raw) < 12) continue;
         $mime = (new finfo(FILEINFO_MIME_TYPE))->buffer($raw); // tipo reale, non dichiarato
         if (!in_array($mime, $allowedMimes, true)) continue;
+        $raw = ardyCompressImage($raw, $mime); // ridimensiona/ricomprime per risparmiare disco
         switch ($mime) {
             case 'image/png':  $ext = 'png';  break;
             case 'image/gif':  $ext = 'gif';  break;
