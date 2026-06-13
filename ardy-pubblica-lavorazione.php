@@ -505,7 +505,7 @@ function inviaEmailCliente(string $email, string $nome, string $mobile, string $
     if ($codice !== '') {
         $bloccoChat = '
   <div style="border-radius:8px;background:#fbf8f2;padding:16px 20px;margin:24px 0;font-size:14px;line-height:1.6;color:#555;">
-    💬 <strong>La tua chat personale.</strong> Per qualsiasi domanda o per sapere a che punto siamo, scrivi a Sole nella chat di Ardy Lab e indicale il tuo codice personale:
+    💬 <strong>La tua chat personale.</strong> Per qualsiasi domanda o per sapere a che punto siamo, scrivi a Sole nella <a href="https://ardy-lab.it/ardy-agent/" style="color:#c8a96e;">chat di Ardy Lab</a> e indicale il tuo codice personale:
     <div style="font-family:monospace;font-size:18px;letter-spacing:2px;color:#333;margin:10px 0;"><strong>' . htmlspecialchars($codice) . '</strong></div>
     Con questo ti riconosce subito e ti aggiorna sul tuo mobile — senza ricominciare da capo. Lo trovi anche nell\'email di benvenuto.
   </div>';
