@@ -52,11 +52,26 @@ base per la **centralizzazione** dei widget front-end (vedi sotto).
 |---|---|---|---|
 | `ardychat` | `../ardy-chat-site.js` | `https://ardyagent.ardy-lab.it/ardy-chat-site.js` | snippet HTML (footer) con `<script src=...>` |
 
-**Loader da incollare in WPCode** (snippet "ardychat" → cambia tipo a **HTML**, posizione footer,
-sostituisci tutto il contenuto con):
+**Loader da incollare in WPCode** (snippet "ardychat"):
+1. Cambia il **tipo** dello snippet da *JavaScript* a **HTML Snippet**.
+2. Posizione: **Site Wide Footer**.
+3. Sostituisci tutto il contenuto con questa sola riga:
 ```html
 <script src="https://ardyagent.ardy-lab.it/ardy-chat-site.js"></script>
 ```
+
+> ⚠️ **TRAPPOLA (già presa il 13/06):** il tag `<script src>` va messo in uno snippet di tipo
+> **HTML**, MAI in uno di tipo *JavaScript*. Uno snippet JavaScript avvolge già il contenuto in
+> `<script>…</script>`: incollarci dentro un altro `<script>` produce JS non valido
+> (`<script><script src></script></script>`) → **errore di sintassi**, il file esterno non si
+> carica e in console `window.acUseSuggestion` resta `undefined` senza errori evidenti.
+>
+> In alternativa, se proprio si vuole restare su uno snippet **JavaScript**, il contenuto deve
+> essere JS puro (niente tag `<script>`), un mini-loader:
+> ```javascript
+> (function(){var s=document.createElement('script');s.src='https://ardyagent.ardy-lab.it/ardy-chat-site.js';document.body.appendChild(s);})();
+> ```
+
 Da quel momento si modifica solo `ardy-chat-site.js` nella repo + deploy; WordPress non si tocca più.
 (Il file `ardychat.js` qui resta come backup dello stato pre-centralizzazione.)
 
