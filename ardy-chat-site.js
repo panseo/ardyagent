@@ -5,20 +5,14 @@
  *   https://ardyagent.ardy-lab.it/ardy-chat-site.js
  * e caricato da WordPress con un solo loader nello snippet WPCode "ardychat"
  * (tipo HTML, footer):
- *   <script src="https://ardyagent.ardy-lab.it/ardy-chat-site.js" defer></script>
+ *   <script src="https://ardyagent.ardy-lab.it/ardy-chat-site.js"></script>
  *
  * Modificare QUI + deploy aggiorna il sito (niente più copia-incolla in WPCode).
  * Backup storico dello snippet: wordpress-snippets/ardychat.js
- * Dipende dagli elementi `ac-*` presenti nella pagina /ardy-agent/.
+ * Codice identico allo snippet originale (solo servito esternamente).
  */
 
-(function () {
-    function ready(fn) {
-        if (document.readyState !== 'loading') fn();
-        else document.addEventListener('DOMContentLoaded', fn);
-    }
-
-    ready(function () {
+document.addEventListener('DOMContentLoaded', function () {
 
     var PROXY_URL = 'https://ardyagent.ardy-lab.it/ardy-proxy.php';
     var MAX_MSGS  = 40; // limite messaggi utente per sessione (20 scambi)
@@ -40,8 +34,7 @@
     var previewEl  = document.getElementById('ac-preview');
     var suggestEl  = document.getElementById('ac-suggestions');
 
-    // La pagina chat non è presente → non fare nulla (lo script è site-wide)
-    if (!messagesEl || !inputEl) return;
+    console.log('ARDY FULL CHAT LOADED');
 
     // Transizione welcome → chat
     if (startBtn) {
@@ -248,5 +241,4 @@
     if (sendBtn)  sendBtn.onclick = sendMessage;
     if (inputEl)  inputEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') sendMessage(); });
 
-    });
-})();
+});

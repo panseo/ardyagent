@@ -55,7 +55,7 @@ base per la **centralizzazione** dei widget front-end (vedi sotto).
 **Loader da incollare in WPCode** (snippet "ardychat" → cambia tipo a **HTML**, posizione footer,
 sostituisci tutto il contenuto con):
 ```html
-<script src="https://ardyagent.ardy-lab.it/ardy-chat-site.js" defer></script>
+<script src="https://ardyagent.ardy-lab.it/ardy-chat-site.js"></script>
 ```
 Da quel momento si modifica solo `ardy-chat-site.js` nella repo + deploy; WordPress non si tocca più.
 (Il file `ardychat.js` qui resta come backup dello stato pre-centralizzazione.)
