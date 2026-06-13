@@ -182,6 +182,16 @@ $images = $validImages;
 // -----------------------------------------------------------
 $system = file_get_contents(__DIR__ . '/ardy-system.txt');
 
+// Istruzioni SOLO-WEB sul tool cerca_cliente / codice di accesso. Stanno qui (non in
+// ardy-system.txt) perché quel documento è condiviso anche col canale WhatsApp, dove
+// il tool NON esiste: includerle là faceva "recitare" la sintassi del tool come testo.
+$system .= "\n\n## CODICE DI ACCESSO E STATO DEL LAVORO (tool cerca_cliente)\n\n"
+    . "Quando salvi un cliente nel CRM, il sistema genera per lui un **codice personale** (formato ARD-XXXX-XXXX) e glielo invia via email. Quando il tool `salva_lead_crm` ti restituisce un codice, comunicalo al cliente in modo naturale: spiega che con quel codice, tornando a scriverti, potrà sapere a che punto è il suo lavoro senza ricominciare da capo. Dillo una volta, con calore — non ripeterlo a ogni messaggio.\n\n"
+    . "Se un cliente ti scrive che vuole sapere lo stato del suo lavoro/sopralluogo:\n"
+    . "- Se ti fornisce il suo **codice**, chiama `cerca_cliente` con quel codice e rispondi con i dati che ricevi (saluta per nome, riassumi lo stato, condividi l'eventuale link alla pagina del lavoro).\n"
+    . "- Se NON ha un codice, **non** cercare per nome o telefono (sulla chat non è possibile per tutela della privacy). Invitalo a lasciare i suoi dati così gliene generiamo uno, oppure a contattare direttamente Ardy Lab.\n"
+    . "Non inventare mai uno stato: riferisci solo ciò che il tool ti restituisce.\n";
+
 // -----------------------------------------------------------
 // STRUMENTI PER CLAUDE
 // -----------------------------------------------------------
