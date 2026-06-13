@@ -1,574 +1,132 @@
-# Task da sviluppare — Ardy Lab
+# Ardy Lab — Task aperti & note utili
+
+> TODO ripulito (giugno 2026): tenuti solo i task ancora aperti + le note operative
+> che servono sempre. Tutto ciò che era già fatto **e testato in produzione** è stato
+> rimosso (lo storico resta nei commit git).
 
 ---
 
-## ✅ FATTO RECENTE (giugno 2026) — in produzione
-- **📎 Allega PDF al preventivo**: nuovo `ardy-allega-preventivo.php` + pulsante "📎 Allega PDF" sulla
-  scheda → carichi un preventivo PDF già pronto (Word/Canva/altro) e lo allega allo Storico col ⬇ PDF,
-  senza rigenerarlo. Validato (solo PDF, max 15MB), salvato in `preventivi_pdf/`. Si affida al `.htaccess`
-  per l'auth (NON usare `ardyRequireAuth()` negli endpoint chiamati via fetch: su questo server l'header
-  Authorization non arriva a PHP in CGI/FPM e rifarebbe la login). Deployato e funzionante.
+## 🔧 NOTE OPERATIVE (servono sempre)
+
+**Deploy sul server** (da root):
+```
+runuser -u micoperibg -- bash -c 'cd ~/repositories/ardyagent && git pull origin main && ./deploy.sh'
+```
+
+**Log degli errori/eventi PHP** (utile per debug e per verificare il prompt caching):
+```
+/home/micoperibg/logs/ardyagent_ardy-lab_it.php.error.log
+# es: grep "ARDY USAGE" <file> | tail -8   → righe in/out/cache_read/cache_write
+```
+
+**Auth degli endpoint chiamati via fetch**: NON usare `ardyRequireAuth()` negli endpoint
+chiamati in fetch dal browser → su questo server l'header `Authorization` non arriva a PHP
+in CGI/FPM e rifarebbe la login. Ci si affida al `.htaccess` (Basic Auth) come per gli altri.
+
+**`session_id`**: sempre sanificato (no path traversal) prima di toccare i path file.
 
 ---
 
-## 🗑️ DA COSTRUIRE — Gestione archivio cliente (libera spazio / elimina / cestino)
-Contesto: server **200GB condiviso con 5 domini** → lo spazio conta. I file pesanti sono le
-**foto** (`ARDY_UPLOAD_DIR/<session>/`) e i **reel** (`reels/reel_<session>_*.mp4`). I PDF
-preventivo **incorporano le immagini in base64** → cancellare le foto originali NON rompe i
-documenti. Le foto pubblicate sul **sito** stanno nella Media Library di WordPress (separata) → si lasciano.
+## ⏳ DA VERIFICARE (codice pronto, manca la prova)
 
-### ✅ FATTO e IN PRODUZIONE (giugno 2026) — versione "leggera": Libera spazio per i PERSI
-Costruito un primo pezzo, semplice e a basso rischio (su `main`, **deployato e funzionante**):
-- **`ardy-archivia-persi.php`** (POST): trova i clienti in stato **PERSO** e **SPOSTA** (non cancella)
-  le loro cartelle foto in `ARDY_UPLOAD_DIR/_da_liberare/<session>/` e i reel in `reels/_da_liberare/`.
-  Idempotente; non tocca DB/sito/preventivi; `session_id` sanificato; quarantena hardenizzata (no-PHP).
-- **Dashboard**: pulsante **🧹 LIBERA SPAZIO (PERSI)** in sidebar → conferma → riepilogo (spazio raccolto +
-  i due percorsi da svuotare a mano sul server via File Manager/FTP).
-- Filosofia: il codice **sposta**, Michela **cancella a mano** quando vuole → zero rischio di perdite.
-- ✅ Deployato e testato in produzione: il pulsante 🧹 funziona.
-
-### ⏭️ Resta da fare (versione completa, opzionale) — decisioni già prese con Michela
-
-
-**1. 🧹 "Libera spazio" (solo immagini)** — pensata per i clienti in stato **PAGATO**.
-   - Cancella SUBITO dal server: cartella `ARDY_UPLOAD_DIR/<session>/` + i reel `reel_<session>_*.mp4`.
-   - Tiene: scheda, dati, preventivi+PDF, fasi, storico WhatsApp, pagina sito.
-   - Immediata (lo scopo è liberare spazio). Conferma forte. Segna sulla scheda "foto archiviate il <data>"
-     (nuova colonna `foto_archiviate_at`), così la dashboard sa che le foto non ci sono più.
-
-**2. 🗑️ "Elimina tutto" → CESTINO 30 giorni.**
-   - Soft-delete: colonna `deleted_at` su `clienti` → sparisce dalla lista, va in vista **Cestino** con **Ripristina**.
-   - Dopo 30 giorni → purga definitiva: righe DB (`clienti`, `preventivi`, `fasi`, `wa_messaggi`,
-     `solleciti_pagamento` per quel session_id) + tutti i file (foto, reel, PDF in `preventivi_pdf/`).
-   - **NON tocca** la pagina WordPress né la Media Library (decisione presa: la si rimuove a mano se serve).
-   - Purga 30gg: sweep opportunistico (es. in `ardy-crm-api.php`, max N per load) — niente cron necessario;
-     in alternativa endpoint cleanup chiamabile da cron se disponibile.
-
-**3. Sicurezza/UX**: entrambe con modale di conferma (per "Elimina tutto" far scrivere il nome o
-   un "ELIMINA"). Endpoint protetti da Basic Auth (`.htaccess`), come gli altri della dashboard.
-   `session_id` sempre sanificato (no path traversal) prima di toccare i path file.
-
-**Da costruire**:
-   - *Backend*: `ardy-elimina-cliente.php` (azioni: `libera_spazio` | `cestina` | `ripristina` | `purga`).
-     Helper cancellazione file per session (riusa `ardy_clean_session`). Colonne `deleted_at`,
-     `foto_archiviate_at` auto-create.
-   - *API CRM*: `ardy-crm-api.php` esclude i `deleted_at` dalla lista normale; endpoint/param per il Cestino.
-   - *Dashboard*: pulsanti **🧹 Libera spazio** (visibile su PAGATO) e **🗑️ Elimina** sulla scheda;
-     vista **Cestino** con Ripristina; modali di conferma.
+- **Prompt caching ramo titolare (WhatsApp)** — nodo n8n aggiornato per usare `system_static`
+  + `crm_context` (vedi `ardy-wa-prompt-caching-n8n.md`). ✅ Canale clienti verificato.
+  ⏭️ **Manca**: prova dal numero VERO di Michela ("come va oggi? lead e urgenti") → Sole deve
+  rispondere con dati reali del CRM. Se sì → A3 chiuso.
+- **"Sole crea scheda da WhatsApp"** (marker `[[CREA_SCHEDA]]`) — codice + nodo n8n pronti.
+  ⏭️ Prova end-to-end dal numero di Michela: dettare un cliente nuovo → conferma → "Scheda creata ✅"
+  + scheda in dashboard (stato LEAD). Se errore: guardare le **Executions** del nodo Code in n8n.
+- **Template `sollecito_pagamento`** — approvato e collegato. Da provare con un caso moroso vero.
 
 ---
 
-## ⚡ PROSSIMA SESSIONE — Risparmio risorse: prompt caching + compressione dati
-Obiettivo: tagliare il **costo dominante (API Claude per messaggio)** e alleggerire DB/disco.
+## 🚧 BLOCCHI ESTERNI (azioni di Michela su Meta, non codice)
 
-### A) Prompt caching — audit & completamento (stato REALE già verificato)
-Fatti utili (modello attuale `claude-sonnet-4-6` → prefisso minimo cacheabile **2048 token**;
-lettura cache ~0.1×, scrittura 1.25× a 5min / 2× a 1h; il caching è un **match di prefisso**:
-qualsiasi byte che cambia nel prefisso invalida tutto ciò che segue).
+- **Carta di credito su Meta** → serve per sbloccare i messaggi **business→cliente/Michela
+  fuori dalle 24h** (i **template**: `notifica_michela`, `sollecito_pagamento`, fasi). Senza,
+  le **notifiche proattive a Michela non partono**. NB: Michela che scrive a Sole (lei inizia)
+  resta GRATIS e non richiede la carta. Da fare in WhatsApp Manager / Meta Business → Fatturazione.
+- **Template `aggiornamento_fase`** (notifiche fasi ai clienti) — **codice già pronto**
+  (`inviaWhatsAppCliente()` in `ardy-pubblica-lavorazione.php`, 4 var: {{1}}nome {{2}}mobile
+  {{3}}fase {{4}}link). Manca: creare+approvare il template su Meta, poi in `ardy-config.php`:
+  `define('WA_TEMPLATE_FASI','aggiornamento_fase');`
 
-- ✅ **`ardy-proxy.php` (chat web di Sole)**: GIÀ mette `cache_control: ephemeral` su system
-  (`ardy-system.txt`, statico) + ultimo tool. Il system è il file fisso → ottimo.
-  ✅ **FATTO**: ora logga l'usage (`ARDY USAGE … cache_read=… cache_write=…`) ad ogni iterazione
-  → si verifica dai log se gli hit arrivano davvero. Se `cache_read` resta 0 c'è un invalidatore.
-- ✅ **FATTO — `ardy-proxy-lavorazione.php`**: il `system` era una stringa semplice senza
-  `cache_control`. Ora è splittato in **blocco statico** (identità/regole, riusabile fra pagine) +
-  **blocco dinamico** (contesto pagina, stabile dentro la conversazione), entrambi con
-  `cache_control: ephemeral`; aggiunto header beta e logging usage (`ARDY LAV USAGE …`).
-- 🟡 **PARZIALE — Ramo WhatsApp (n8n) = il costo grosso** (`ardy-wa-lookup.php`): il riepilogo CRM
-  volatile era incollato DENTRO il system → cache inutile. **FATTO lato repo (additivo, zero-rischio)**:
-  la risposta `mode:titolare` ora espone **`system_static`** (istruzioni + documento, cacheabile) e
-  **`crm_context`** (riepilogo volatile, da mettere in un messaggio separato), oltre al `system_prompt`
-  legacy invariato (nessuna regressione). ⏭️ **Resta da fare lato n8n** (fuori repo): aggiornare il
-  nodo HTTP per usare `system_static` (blocco system con `cache_control`) + `crm_context` (messaggio
-  user) → vedi **`ardy-wa-prompt-caching-n8n.md`** (snippet + verifica `cache_read` + rollback).
-- Quick-win collegato: **memoizzare in `static`** i system letti da disco (`file_get_contents`)
-  in `ardy-proxy.php`/`ardy-wa-lookup.php` (già nel backlog perf sotto).
+---
 
-### B) Compressione dati / disco (server 200GB condiviso)
+## 📋 TASK DA SVILUPPARE
+
+### ⚡ Risparmio risorse — Item B: compressione dati / disco
+Server 200GB condiviso con 5 domini → lo spazio e il peso DB contano. (Item A "prompt caching"
+fatto: vedi sezione "Da verificare".)
 - **Foto all'upload**: ridimensionare/comprimere le immagini scheda quando entrano
-  (`ardy-lead-foto.php`/`ardy-upload-video.php`) → meno peso su disco fin da subito.
+  (`ardy-lead-foto.php` / `ardy-upload-video.php`) → meno peso su disco da subito.
 - **gzip** sulle risposte JSON/HTML degli endpoint (se non già attivo a livello server/.htaccess).
-- **Preventivi base64 in DB** (`preventivi.voci_json` LONGTEXT): pesano molto nel DB. Valutare se
+- **Preventivi base64 in DB** (`preventivi.voci_json` LONGTEXT): pesano molto. Valutare se
   tenerli tutti o rigenerare il PDF on-demand / spostare le immagini fuori dal DB.
-- Quick-win perf già listati nel backlog in fondo (DDL ad ogni request, `SELECT *` senza LIMIT,
-  `finfo`, indice telefono normalizzato): buon momento per chiuderli insieme.
+
+### 🗑️ Gestione archivio cliente (versione completa)
+Contesto: i file pesanti sono **foto** (`ARDY_UPLOAD_DIR/<session>/`) e **reel**
+(`reels/reel_<session>_*.mp4`). I PDF preventivo **incorporano le immagini in base64** →
+cancellare le foto originali NON rompe i documenti. (Versione "leggera" PERSI già in produzione:
+`ardy-archivia-persi.php` + pulsante 🧹 LIBERA SPAZIO PERSI; sposta in quarantena, Michela cancella a mano.)
+
+Decisioni già prese con Michela:
+1. **🧹 "Libera spazio" (solo immagini)** per i clienti **PAGATO**: cancella subito cartella foto +
+   reel; tiene scheda/dati/preventivi+PDF/fasi/storico WA/pagina sito. Conferma forte; segna
+   `foto_archiviate_at` sulla scheda.
+2. **🗑️ "Elimina tutto" → CESTINO 30 giorni**: soft-delete `deleted_at` su `clienti` → vista
+   Cestino con Ripristina; dopo 30gg purga DB (clienti/preventivi/fasi/wa_messaggi/solleciti) +
+   tutti i file (foto, reel, PDF). NON tocca pagina WordPress né Media Library. Purga = sweep
+   opportunistico (es. in `ardy-crm-api.php`, max N per load), niente cron necessario.
+3. **Sicurezza/UX**: modale di conferma (per "Elimina tutto" far scrivere "ELIMINA"); endpoint
+   Basic Auth; `session_id` sanificato.
+
+Da costruire:
+- *Backend* `ardy-elimina-cliente.php` (azioni `libera_spazio | cestina | ripristina | purga`),
+  helper cancellazione file per session (riusa `ardy_clean_session`), colonne `deleted_at` /
+  `foto_archiviate_at` auto-create.
+- *API CRM* `ardy-crm-api.php`: escludere i `deleted_at` dalla lista normale; endpoint/param Cestino.
+- *Dashboard*: pulsanti 🧹 (su PAGATO) e 🗑️ sulla scheda; vista Cestino; modali conferma.
+
+### 💡 Briefing del mattino — opzionale rimasto
+Parte "lavori" e "calendario" già in produzione (riepilogo titolare con IN LAVORAZIONE, URGENTI ≤4gg,
+impegni Google Calendar). ⏭️ Rimasto (opzionale): **trigger "prima risposta del giorno"** — salvare
+data ultimo briefing per numero così il riepilogo lungo parte da solo al primo "buongiorno" e non a
+ogni messaggio. Senza, funziona quando Michela chiede "come va oggi?".
+
+### Migliorie minori UX (bassa priorità)
+- **Popup date all'attivazione stato IN_LAVORAZIONE**: al click del bottone stato, aprire un
+  modale che chiede subito `inizio_lavoro` / `fine_lavoro_prevista` (riusa campi/salvataggio
+  esistenti). Tocca solo `ardy-michela-app.html/.css`.
+- **Filtro sidebar di default su ACCONTO** (o IN_LAVORAZIONE) invece di TUTTI, se Michela lavora
+  quasi sempre sui lavori in corso. Da decidere in base al suo uso reale.
 
 ---
 
-## ⏳ DA PROVARE con Michela — "Sole crea scheda da WhatsApp"
-Codice già su `main`. Da fare appena Michela è disponibile:
-1. **Deploy sul server** (porta online l'endpoint + il nuovo prompt titolare):
-   `runuser -u micoperibg -- bash -c 'cd ~/repositories/ardyagent && git pull origin main && ./deploy.sh'`
-   ⚠️ Senza deploy l'endpoint `ardy-wa-crea-scheda.php` non esiste ancora sul server.
-2. **Nodo n8n**: già aggiornato col blocco "3b" (intercetta `[[CREA_SCHEDA]]`).
-3. **Prova end-to-end** dal numero di Michela: scrivere a Sole
-   «segnami un cliente nuovo: Mario Rossi, 333 1234567, vuole rilaccare una credenza, zona Prati, mettilo come lead»
-   → Sole rilegge → "sì, salva" → attesa "Scheda creata ✅" + scheda in dashboard (stato LEAD).
-4. Se errore: guardare **Executions** del nodo Code in n8n e leggere l'output.
+## 🔒 BACKLOG SICUREZZA (rimasti — priorità bassa)
+> A monte c'è già difesa infrastrutturale (OVH Anti-DDoS, Fail2ban, ModSecurity WAF, mod_hulk):
+> brute-force/DoS/flood sono contenuti a livello server; i rate-limit applicativi restano come
+> difesa in profondità e per il **controllo costi** dell'API a pagamento.
+- **OAuth Google senza `state`** (`ardy-gcal-auth.php`): aggiungere parametro `state` casuale verificato.
+- **`get_stats` SQL** (`ardy-outreach-api.php`): unica query con interpolazione (oggi da array
+  interno, non sfruttabile). Parametrizzare per pulizia.
+- **`mode=download` preventivo**: serve qualsiasi PDF della cartella a chi è dietro Basic Auth
+  (no ownership). Basso rischio (utente unico); legare alla sessione se servisse.
 
 ---
 
-## 💡 IDEA DA SVILUPPARE — "Buongiorno di Sole": briefing del mattino + stato In Lavorazione
-
-Contesto: Michela ogni mattina saluta Sole su WhatsApp (serve già a riaprire la finestra 24h
-gratuita). Idea: trasformare quel saluto in un **briefing operativo automatico**.
-
-### Parte A — Briefing del mattino (alla prima risposta del giorno)
-Quando Michela scrive il primo messaggio del giorno (modalità titolare), Sole risponde con
-un riepilogo della giornata. Deve far emergere SUBITO ciò che è impellente. Tre blocchi:
-1. **Impegni impellenti dal Google Calendar** — appuntamenti di oggi (ed eventualmente domani),
-   distinguendo il tipo: **sopralluoghi**, **consulenze**, ecc. Riusare `ardy-gcal.php`
-   (già legge il calendario di Michela). Mettere in cima quelli più vicini nel tempo.
-2. **Lavori IN LAVORAZIONE** — l'elenco dei clienti con lavoro in corso (vedi stato in Parte B)
-   con la data di **fine prevista**.
-3. **Lavori URGENTI** — sottoinsieme dei "in lavorazione" la cui **fine prevista è entro 4 giorni**
-   (`fine_lavoro_prevista <= oggi + 4gg`). Da evidenziare per primi/in testa, è il dato che
-   serve di più a Michela ("cosa devo chiudere a giorni").
-- Nota fattibilità: il riepilogo CRM c'è già; l'aggiunta del calendario è la parte nuova.
-  ⚠️ "Alla PRIMA risposta del giorno" richiede di sapere se è il primo messaggio di oggi
-  (flag/data ultimo briefing per numero) — altrimenti lo ripeterebbe a ogni messaggio.
-  In alternativa, Sole lo dà quando Michela lo chiede ("come va oggi?").
-
-### Parte B — Nuovo stato "In Lavorazione" + date lavoro ✅ FATTO
-- **Nuovo stato `IN_LAVORAZIONE`** (chip filtro + bottone stato in dashboard, tra ACCONTO e CONSEGNATO).
-- Due campi nuovi nella sezione Lavorazione: `inizio_lavoro` e `fine_lavoro_prevista` (DATE),
-  con **avviso "scadenza vicina"** (rosso se ≤4 giorni / oggi / scaduto).
-- Colonne `clienti` auto-create in `ardy-update-lead.php`; restituite da `ardy-crm-api.php`;
-  salvate da `saveLead()`. Whitelist stato aggiornata in `ardy-import-scheda-pdf.php` e `ardy-wa-crea-scheda.php`.
-- **Riepilogo titolare** (`ardy-wa-lookup.php`) ora ha i blocchi **IN LAVORAZIONE** (con fine prevista)
-  e **🔴 URGENTI (≤4 giorni)** → questa è già la parte "lavori" del briefing.
-- **Regola urgenza**: l'inizio lavoro è una **data X** (non per forza oggi). Un lavoro è
-  urgente se è entro 4 giorni **l'inizio** (sta per partire) **oppure** la **fine prevista**
-  (sta per chiudere). L'avviso in dashboard e il blocco URGENTI del briefing mostrano entrambi.
-
-### Parte A — Calendario nel briefing ✅ FATTO (manca solo l'opzionale)
-- **Impegni da Google Calendar** nel riepilogo titolare: nuova `gcal_list_events()` in
-  `ardy-gcal.php`; `ardy-wa-lookup.php` la usa in cima al riepilogo (oggi+domani), distinguendo
-  🏠 sopralluoghi / 💬 consulenze dal titolo evento. Prompt titolare: il "buongiorno" apre con
-  IMPEGNI di oggi + URGENTI (≤4gg), poi il resto. Include gcal solo se le credenziali esistono.
-- ⏭️ (Opzionale, NON fatto) **Trigger "prima risposta del giorno"**: salvare data ultimo briefing
-  per numero così il riepilogo lungo parte da solo solo al primo "buongiorno", non a ogni messaggio.
-  Senza, funziona comunque quando Michela chiede "come va oggi?".
-
-### Miglioria UX (ipotesi) — popup date all'attivazione dello stato
-Oggi le date (inizio / fine prevista) si inseriscono nella sezione "Lavorazione in corso",
-visibile solo dopo aver messo lo stato IN_LAVORAZIONE. Idea: quando si **clicca il bottone
-stato IN_LAVORAZIONE**, aprire **in automatico un piccolo popup/modale** che chiede subito le
-due date, così non serve scrollare a cercarle. Conferma → salva e chiude; Annulla → lascia lo
-stato con date vuote (compilabili dopo nella sezione).
-- Tocca solo la dashboard (`ardy-michela-app.html/.css`): nuovo modale + hook su `setStato`
-  quando il nuovo stato è IN_LAVORAZIONE. Riusa i campi/salvataggio già esistenti.
-- Priorità: bassa (comodità, non blocca nulla).
-
-Priorità: media.
-
----
-
-## 🟢 Sessione 10 (Giugno 2026) — Preventivo PDF avanzato + import scheda + sicurezza
-
-Tutto **deployato su `main`**. Riepilogo di ciò che è stato fatto in questa sessione:
-
-### Sicurezza (hardening)
-- ✅ **Anti-spoofing rate-limit** (`ardy-proxy.php`): `ardyClientIp()` in `ardy-net.php`
-  si fida di `CF-Connecting-IP`/`X-Forwarded-For` solo se `REMOTE_ADDR` è un edge
-  Cloudflare noto (CIDR match v4/v6), altrimenti usa `REMOTE_ADDR`. Protegge i costi API.
-- ✅ **Rate-limit `ardy-save-lead.php`** (15/ora, 50/giorno per IP); le chiamate interne
-  del proxy sono esenti via `ARDY_INTERNAL_SECRET` (header `X-Ardy-Internal`).
-- ✅ **Upload dir no-PHP**: `ardyHardenUploadDir()` mette un `.htaccess` che blocca gli
-  script in `ARDY_UPLOAD_DIR`, `reels/`, `preventivi_pdf/` (pdf/mp4/foto restano serviti).
-- ✅ **Meno PII nel log WhatsApp**: `ardy-whatsapp-webhook.php` logga solo metadati
-  (numero mascherato, tipo, lunghezza), retention 100→50.
-
-### Importa scheda da PDF (Scenario 1 — lato dashboard)
-- ✅ `ardy-template-scheda-cliente.html` (modello etichettato, con **Mobile/Pezzo lista**,
-  **Manodopera**, **Materiali** voce-per-voce, **Trasporti**, totale auto).
-- ✅ `ardy-import-scheda-pdf.php` (estrazione AI da PDF: `mode=extract`/`mode=save`).
-- ✅ Dashboard: pulsante **📥 PDF** → estrai → correggi → "Crea scheda" o "+ Preventivo Ardy".
-
-### Generatore preventivi — redesign completo
-- ✅ **Opzioni a pacchetto**: più alternative per lo stesso lavoro, ognuna con le sue voci
-  e il suo totale; il cliente sceglie. Una sola opzione = preventivo singolo come prima.
-- ✅ **Copertina full-bleed**: immagine unica a tutta pagina (campo dedicato; `background-size:cover`).
-- ✅ **Prima/Dopo per opzione**: ogni opzione ha la sua coppia (caricata nella card) e la
-  sua pagina nel PDF (prima/dopo in testa + costi). Impaginazione rifatta mPDF-friendly
-  (niente `object-fit`/flex).
-- ✅ **Analisi degli interventi con AI**: campo + box prompt → `mode=ai` (Claude) scrive il
-  testo descrittivo (pagina "Dettaglio Tecnico"), modificabile.
-- ✅ **Bozza modificabile, poi bloccata**: bozza riapribile dallo Storico (✏️ Modifica,
-  payload completo salvato in `voci_json` LONGTEXT); diventa definitiva (🔒) passando a
-  Inviato/Accettato (il server rifiuta la sovrascrittura). Cestino 🗑 per le bozze.
-- ✅ **Fix doppioni**: la modifica fa UPDATE della stessa riga (via `prev_id`), non più un
-  nuovo INSERT ad ogni rigenerazione (la tabella non ha UNIQUE su `numero`).
-
-### ⚠️ Lato server da verificare/configurare
-- ✅ **FATTO** — `ARDY_INTERNAL_SECRET` e `WA_LOOKUP_SECRET` impostati in `ardy-config.php`.
-- Alla 1ª generazione preventivo dopo il deploy parte l'ALTER automatico di `voci_json`
-  → LONGTEXT (serve permesso ALTER all'utente DB; se manca, lanciare a mano in phpMyAdmin:
-  `ALTER TABLE preventivi MODIFY voci_json LONGTEXT;`).
-- (Opzionale) **UNIQUE su `preventivi.numero`** dopo aver ripulito i doppioni: renderebbe
-  l'upsert robusto anche senza `prev_id`.
-
-### 🔭 Possibili rifiniture preventivo (da valutare con l'uso)
-- Interruzione di pagina per opzione se le voci sono tante.
-- Copertina via `<img>` a piena pagina se `background-size:cover` desse problemi su mPDF.
-- Altezze/crop immagini prima/dopo.
-- "Modifica/Duplica" preventivo come base per uno nuovo.
-
----
-
-## 🟡 STORICO — Migrazione preventivi storici + Sole crea scheda (branch `claude/busy-cray-3ek3lu`)
-
-> ✅ **Deployato.** L'import (CSV e PDF singolo) è in produzione su `main`.
-
-### ✅ Fatto (in produzione)
-- **`ardy-import-preventivi.php`** — strumento *una-tantum* per migrare i preventivi
-  già fatti (senza CRM) nel database. Una riga CSV per preventivo → upsert in
-  `clienti` (session_id deterministico) + insert in `preventivi`. Caratteristiche:
-  - CSV-modello scaricabile (`?mode=template`), colonne: nome, cognome, telefono,
-    email, indirizzo, servizio, zona, mobile, budget, stato_cliente, numero,
-    oggetto, totale, stato_preventivo, data, scadenza, file_pdf, note.
-  - **Anteprima dry-run** (non scrive) → conferma → scrittura con rollback se errori.
-  - **Idempotente**: clienti raggruppati per telefono/nome, preventivi per `numero`.
-  - **Upload PDF**: si caricano i PDF originali insieme al CSV; la colonna `file_pdf`
-    li collega, vengono salvati in `preventivi_pdf/` (validati MIME, prefisso
-    `import_`) e compaiono nello "Storico" della scheda (bottone ⬇ PDF).
-  - Protetto da Basic Auth (aggiunto a `.htaccess`) + guard `ardyRequireAuth()`.
-  - Disattivabile a fine migrazione: `define('ARDY_IMPORT_DISABILITATO', true)`.
-- **`.gitignore`**: esclude `import-preventivi*.csv` (contengono PII clienti).
-- README aggiornato con la nuova riga file.
-
-### ⏭️ Da riprendere in ordine
-
-**1. ✅ DEPLOY fatto.** Tutto su `main` e in produzione.
-
-**2. ⏳ Raccolta + import dei preventivi storici.** Michela li mette in una **cartella
-   Google Drive**.
-   - Claude **può leggere da Drive** (tool Google Drive disponibili): dato il link/nome
-     della cartella, estrarre i dati e generare il **CSV già compilato** (con `file_pdf`
-     valorizzato). In alternativa Michela invia i PDF in chat.
-   - Esempio già prodotto: 2 preventivi (Alessandra Masu, Laura) → CSV inviato a Michela.
-     Per preventivi a opzioni (es. Laura: €350/€700) lasciare `totale` vuoto, importi in `note`.
-   - Dati mancanti nei PDF (telefono/email, stato accettato): farseli dare a parte.
-
-**✅ FATTO — Importa scheda da PDF dalla dashboard (parte 1 dello Scenario 1).**
-   - **`ardy-template-scheda-cliente.html`**: modello "Scheda Cliente" con etichette fisse
-     (`Nome:, Cognome:, Telefono:, Email:, Indirizzo:, Zona:, Servizio:, Mobile/Pezzo:,
-     Oggetto:, Totale:, Stato:, Note:`), fillable → "Salva come PDF" (testo digitale).
-   - **`ardy-import-scheda-pdf.php`**: endpoint Basic Auth con due modi — `?mode=extract`
-     (manda il PDF a Claude come *documento* e ritorna i campi in JSON) e `?mode=save`
-     (upsert cliente con `session_id` deterministico per telefono/nome + eventuale
-     preventivo con PDF allegato in `preventivi_pdf/`).
-   - **Dashboard**: pulsante **📥 PDF** in sidebar → modale: carica PDF → 🔍 Estrai →
-     campi precompilati e correggibili → ✦ Crea scheda → lista aggiornata.
-   - Riusa `ARDY_API_KEY`/modello del proxy. Stesso backend riutilizzabile per il ramo
-     WhatsApp. ⚠️ Il PDF deve avere testo digitale (no scansioni/foto).
-   - **Voci preventivo nel modello**: il template ha ora **Manodopera**, **Materiali**
-     (lista voce-per-voce: descrizione + importo, NON forfettario) e **Trasporti**, con
-     **Totale auto-calcolato**. L'estrazione AI restituisce `materiali[]` separati.
-   - **Rigenera in stile Ardy**: dall'import, oltre a "✦ Crea scheda" (allega il PDF
-     originale), c'è "📄 + Preventivo Ardy" che crea la scheda e apre il **generatore
-     preventivi precompilato** (manodopera + materiali + trasporti come voci) per produrre
-     il PDF col template grafico Ardy.
-
-**3. ✅ FATTO — Feature "Sole crea scheda da WhatsApp" — SCENARIO 1 (l'unico approvato).**
-   Michela detta/invia a Sole i dati di un cliente nuovo e Sole popola la scheda CRM.
-   - **Implementato (testo/vocale, solo scheda cliente)**: nuovo endpoint `ardy-wa-crea-scheda.php`
-     (server-to-server, protetto da `WA_LOOKUP_SECRET`); upsert in `clienti` con `session_id`
-     deterministico `wa-…` (niente doppioni). Prompt titolare aggiornato (`ardy-wa-lookup.php`):
-     raccolta campi → conferma esplicita → marker `[[CREA_SCHEDA]]{...json...}`. Snippet n8n pronto
-     in `ardy-wa-crea-scheda-n8n.md`. Campi: nome, cognome, telefono, email, indirizzo, zona,
-     servizio, mobile, stato (default LEAD), note. **Decisione**: solo scheda, NO preventivo (si fa da dashboard).
-   - ⚠️ **Lato n8n (da fare a mano)**: incollare il nodo Code di `ardy-wa-crea-scheda-n8n.md` nel
-     ramo WhatsApp e impostare `WA_LOOKUP_SECRET`. ⏭️ **Possibile estensione futura**: ramo PDF-template
-     (riusa `ardy-import-scheda-pdf.php?mode=extract`) e scheda+preventivo da voce.
-   - **Input previsto**: testo/vocale **oppure** un **PDF su template FISSO ed etichettato**
-     (campi `Cliente: / Telefono: / Email: / Indirizzo: / Oggetto: / Totale: / Stato: / Note:`).
-     Il template lo definiamo noi, allineato 1:1 ai campi della scheda. Con etichette
-     costanti l'estrazione è affidabile (la fa Claude, già nel flusso). Sole **ripete i
-     dati per conferma** prima di salvare.
-   - ⚠️ **Requisito**: il PDF deve avere **livello di testo digitale** (generato da
-     Word/Doc/Canva/nostro generatore), **NON una scansione/foto** (servirebbe OCR, fragile).
-   - **Stato attuale**: la modalità **titolare** (`ardy-wa-lookup.php`) è **read-only** —
-     Sole riepiloga il CRM ma **non ha tool di scrittura**, quindi oggi NON può creare schede.
-   - **Da costruire**:
-     - *Lato repo*: nuovo endpoint `ardy-wa-crea-scheda.php` (genera session_id + crea la
-       scheda, riusa logica `ardy-save-lead.php`); prompt titolare aggiornato (raccoglie i
-       dati → conferma → salva); notifica di conferma.
-     - *Lato n8n (fuori repo)*: il ramo WhatsApp è **solo testo**, senza azioni. Serve un
-       "action layer": Sole emette un marker `[[CREA_SCHEDA]]{...json...}` che il nodo Code
-       intercetta e inoltra all'endpoint. → preparare snippet n8n pronto da incollare.
-     - *Primo micro-task consigliato*: disegnare il **template standard** (lista esatta
-       campi + ordine) per Michela.
-
-### ❌ Scenari WhatsApp VALUTATI e SCARTATI (non riproporre)
-Michela aveva ipotizzato WhatsApp come "telecomando" della webapp. Decisione presa:
-- **Foto/video su WhatsApp → attivano una fase di lavoro**: NO. (Richiederebbe pipeline
-  media: webhook che passa il media ID + n8n che scarica da Meta, oggi assenti.)
-- **WhatsApp come canale unico di gestione ("telecomando")**: NO.
-Si tiene **solo lo Scenario 1** (creazione scheda da dati/PDF-template).
-
-### 💶 Nota costi WhatsApp (per riferimento)
-- **Michela ↔ Sole**: è lei a iniziare → conversazione *user-initiated* → messaggi di
-  **servizio gratis** col modello Meta attuale. Gestire il CRM parlando con Sole costa ~0 lato Meta.
-- I costi Meta scattano solo per messaggi **business→cliente fuori dalle 24h** → **template
-  a pagamento** (Utility pochi cent, Marketing più caro). Riguarda le notifiche ai clienti
-  (fasi/solleciti), non Michela. ⚠️ Tariffe variano per paese/tempo: verificare rate card Meta.
-- **Costo dominante reale = API Claude per messaggio** (system prompt grosso: include
-  `ardy-system.txt` + riepilogo CRM ad ogni messaggio). Ottimizzabile con prompt caching.
-- Altre voci: storage media (WP Media Library), eSIM/n8n (già pagati). Media Meta **scadono**
-  → vanno scaricati subito col media ID.
-
----
-
-## TASK 1 — Michela come "capo": notifiche WhatsApp dalla AI ✅ FATTO (sessione 8)
-
-**Implementato:** nuovo `ardy-notifica-michela.php` (libreria + endpoint protetto da `WA_LOOKUP_SECRET` per n8n). In `ardy-proxy.php`: notifica automatica consolidata a lead salvato e/o sopralluogo fissato, + nuovo tool `avvisa_michela` che Sole chiama per reclami/pagamenti/modifiche/richieste fuori standard (prompt aggiornato in `ardy-system.txt`). Dedupe persistente su file per non ripetere la stessa notifica. ⚠️ Restano da fare lato server: impostare `WA_TOKEN`/`WA_PHONE_NUMBER_ID`/`WA_MICHELA_NUMBER` in `ardy-config.php` e — per uscire dalla finestra 24h — far approvare un template Meta (`WA_TEMPLATE_NOTIFICA`). Il ramo WhatsApp (n8n) può chiamare l'endpoint per avvisare Michela riusando lo stesso codice.
-
-**Cosa fa:**
-Dopo ogni evento rilevante nelle chat (lead salvato, appuntamento fissato, cliente con dubbi/reclami/richieste strane), la AI manda automaticamente un messaggio WhatsApp a Michela (351 967 7973) come farebbe una segretaria efficiente.
-
-**Tono:** breve, diretto, azionabile. Esempio:
-> "Ciao Michela, ti aggiorno: Mario Rossi (Roma Prati) vuole un preventivo per rilaccatura divano. Ho fissato sopralluogo martedì 17/6 alle 10. Nessuna nota particolare."
-
-**Dove si interviene:**
-- `ardy-proxy.php` — aggiungere chiamata a funzione di notifica dopo `salva_lead_crm` e `fissa_appuntamento_calendario`
-- `ardy-whatsapp-webhook.php` — aggiungere logica di inoltro verso numero Michela
-- Nuova funzione `ardy-notifica-michela.php` (o integrata nel proxy) che chiama l'API WhatsApp Business con il messaggio di riepilogo
-
-**Trigger da notificare:**
-- Lead salvato nel CRM
-- Appuntamento/sopralluogo fissato
-- Cliente menziona un reclamo o insoddisfazione
-- Cliente menziona un problema di pagamento
-- Cliente chiede modifiche al lavoro già concordato
-- Richiesta fuori standard (es. tempi urgenti, lavori particolari)
-
-**Note tecniche:**
-- Usare stesso sistema WhatsApp già presente (ardy-whatsapp-webhook.php + API Business)
-- Il messaggio va da un numero "Ardy AI" a Michela — non da Michela a se stessa
-- Mantenere log dei messaggi inviati per evitare duplicati nella stessa sessione
-
----
-
-## 📌 TEMPLATE WHATSAPP META (da non dimenticare)
-
-Stato attuale: le notifiche WhatsApp partono in **testo libero**, quindi funzionano solo
-entro la **finestra 24h** dall'ultimo messaggio del destinatario. Per ora si sfrutta il
-"saluto del mattino" di Michela a Sole (gratis, nessun template). Funziona, ma se lei
-dimentica di salutare le notifiche di quel giorno si perdono.
-
-Template da far approvare su Meta (WhatsApp Manager → Modelli messaggi, categoria **Utility**),
-body con **una variabile `{{1}}`**, lingua `it`:
-- [x] **`notifica_michela`** ✅ APPROVATO + collegato (`WA_TEMPLATE_NOTIFICA` in config). Body:
-      "Promemoria da Sole 🌞 / {{1}} / — la tua assistente". Test diretto via endpoint = `success:true`
-      (conferma ricezione su WhatsApp di Michela ancora da fare). ⚠️ I parametri template non
-      ammettono a-capo/tab/4+ spazi (err 132018): risolto con `ardy_wa_template_param()`.
-- [x] **`sollecito_pagamento`** ✅ APPROVATO + collegato (`WA_TEMPLATE_SOLLECITO` in config). Stesso
-      fix anti-newline lato `ardy-solleciti.php` (`sollecito_wa_template_param`). Da provare con un caso vero.
-- [ ] **`aggiornamento_fase`** — aggiornamenti lavorazione ai clienti (Task 3). **Codice già pronto**
-      (`inviaWhatsAppCliente()` in `ardy-pubblica-lavorazione.php`, 4 variabili {{1}}nome {{2}}mobile
-      {{3}}fase {{4}}link). Manca solo: creare+approvare il template su Meta e poi in `ardy-config.php`:
-      `define('WA_TEMPLATE_FASI','aggiornamento_fase');`
-
-Note: categoria Utility = approvazione rapida e costo minimo (~3-4 cent/msg, solo verso
-i clienti; le notifiche a Michela sono pochissime → costo trascurabile). Codice già
-predisposto: basta impostare la costante quando il template è approvato.
-
----
-
-## TASK 2 — Segretaria antipatica: modulo WhatsApp per clienti morosi ✅ FATTO
-
-**Implementato:** `ardy-solleciti.php` (API: lista/crea/aggiorna/elimina/verifica/genera/invia + tabella `solleciti_pagamento` auto-creata + invio WhatsApp/email), `ardy-solleciti-system.txt` (prompt 4 livelli con riferimenti normativi), sezione dashboard (pulsante **💸 MOROSI** → modale con lista casi, form nuovo caso, verifica preventivo, generazione AI del testo modificabile, scelta canali e invio). Endpoint protetto da Basic Auth (`.htaccess`). Livelli 1-3 inviano via WA/email; livello 4 = bozza diffida da inviare a mano (stato → DIFFIDA). ⚠️ Lato server: per inviare WhatsApp ai morosi fuori dalle 24h serve un template Meta approvato (`WA_TEMPLATE_SOLLECITO`).
-
-**Cosa fa:**
-Modulo WhatsApp dedicato alla gestione dei clienti che non pagano o che trovano scuse. Tono progressivo, formale, con riferimenti normativi. Tutela Ardy senza essere volgare, ma senza fare sconti.
-
-**Flusso in 4 livelli di escalation:**
-
-| Livello | Quando | Tono | Azione |
-|---------|--------|------|--------|
-| 1 | Primo sollecito | Cordiale, ricorda la scadenza | Messaggio WA automatico |
-| 2 | Dopo 7 giorni senza risposta | Fermo, cita il preventivo firmato | Messaggio WA + email |
-| 3 | Dopo altri 7 giorni | Formale, cita normativa | WA + email con allegato PDF |
-| 4 | Oltre 21 giorni | Diffida formale | Bozza lettera da inviare manualmente |
-
-**Riferimenti normativi da usare:**
-- Art. 1453 C.C. — risoluzione del contratto per inadempimento
-- Art. 1454 C.C. — diffida ad adempiere (termine perentorio)
-- D.Lgs. 231/2002 — interessi di mora (8% oltre tasso BCE per contratti commerciali)
-- Art. 2 D.Lgs. 206/2005 (Codice del Consumo) — trasparenza e correttezza anche a tutela di Ardy come operatore professionale
-- Eventuale richiamo al preventivo firmato come contratto vincolante (proposta + accettazione = art. 1326 C.C.)
-
-**Storico solleciti (nuovo DB o tabella):**
-```
-tabella: solleciti_pagamento
-- id
-- session_id / telefono
-- nome_cliente
-- importo_dovuto
-- data_scadenza
-- numero_sollecito (1-4)
-- data_ultimo_sollecito
-- risposta_cliente (testo o null)
-- stato: APERTO / PAGATO / DIFFIDA / ARCHIVIATO
-- preventivo_ref (link o testo del preventivo approvato)
-- note_interne
-```
-
-**Verifica preventivo:**
-Prima di ogni sollecito, il modulo verifica che nel preventivo approvato ci siano:
-- Importo totale chiaro
-- Modalità di pagamento
-- Acconto versato (e importo residuo)
-- Firma/accettazione del cliente
-- Data di accettazione
-
-Se manca qualcosa, avvisa Michela PRIMA di procedere con il sollecito.
-
-**File da creare:**
-- `ardy-solleciti.php` — API per gestire solleciti (crea, aggiorna stato, genera messaggio)
-- `ardy-solleciti-system.txt` — system prompt "segretaria antipatica" per Claude
-- Sezione nella dashboard Michela per visualizzare e gestire i morosi
-
-**Note:**
-- Solo via WhatsApp (non chatbot pubblico)
-- Michela decide quando avviare il flusso (non automatico) — inserisce numero, nome, importo, preventivo
-- La AI genera il messaggio del livello corretto, Michela approva prima dell'invio
-- Mantenere tono professionale anche al livello 4: Ardy deve risultare sempre dalla parte della ragione
-
----
-
-## TASK 3 — Notifiche WhatsApp ai clienti nelle fasi di lavorazione
-
-**Stato attuale:** quando si pubblica una fase (`ardy-pubblica-lavorazione.php`), il cliente riceve SOLO un'email (`inviaEmailCliente`, riga ~237). WhatsApp è usato solo in entrata (webhook → n8n), non c'è invio verso i clienti dal PHP.
-
-**Cosa serve:** una funzione `inviaWhatsAppCliente()` accanto a `inviaEmailCliente()` che chiama la Graph API di Meta (`/{phone_number_id}/messages`).
-
-**⚠ MURO DA SAPERE — regola delle 24 ore:**
-Con WhatsApp Business API puoi mandare un messaggio libero a un cliente SOLO se lui ti ha scritto nelle ultime 24 ore. Una notifica "fase completata" arriva quasi sempre fuori da quella finestra → **obbligatorio usare un TEMPLATE pre-approvato da Meta.**
-
-Template da far approvare (esempio):
-> "Ciao {{1}}, aggiornamento sul tuo {{2}}: abbiamo completato la fase '{{3}}'. Guarda qui: {{4}}"
-
-**Requisiti:**
-1. Template approvato da Meta (collo di bottiglia: da poche ore a qualche giorno)
-2. Token WhatsApp + phone_number_id nel config PHP (probabilmente già su n8n, va portato lato server)
-3. Telefono cliente — già presente nel CRM (`clienti.telefono`)
-
-**Stima:** ~mezza giornata, una volta che il template è approvato.
-
----
-
-## TASK 4 — Comunicazioni straordinarie al cliente (non una fase normale) ✅ FATTO
-
-**Implementato:** stesso endpoint `ardy-pubblica-lavorazione.php` con parametro `tipo` ('fase' | 'comunicazione'). Per le comunicazioni: blocco sul sito con bordo arancione + icona ⚠ + intestazione "Comunicazione importante"; email con oggetto/tono dedicati ("Aggiornamento importante…"); colonna `fasi.fase_tipo` (migrazione idempotente); testo generato da Claude con prompt apposito (spiega l'imprevisto, chiede approvazione se serve, niente social). Reel aggiornato per escludere le comunicazioni. Dashboard: secondo bottone **⚠ COMUNICAZIONE STRAORDINARIA** accanto a "Pubblica fase" (con conferma).
-
----
-
-## TASK 4 (originale) — Comunicazioni straordinarie al cliente (non una fase normale)
-
-**Caso d'uso reale:** durante un restauro emerge un imprevisto (es. restauro precedente pasticciato, strutturalmente solido ma esteticamente da rifare → serve ricostruire la parte mancante con stampo da stampa 3D). Va comunicato al cliente PRIMA di procedere. Non è un avanzamento, è una comunicazione importante.
-
-**Soluzione (no sistema separato):** aggiungere un secondo bottone nella sezione Lavorazione, accanto a "Pubblica fase" → "Comunicazione straordinaria". Stesso flusso di `ardy-pubblica-lavorazione.php` ma:
-- **Sul sito cliente:** blocco visivamente diverso (bordo arancione invece che oro, icona ⚠, intestazione "Comunicazione importante")
-- **Email:** oggetto diverso ("Aggiornamento importante sulla tua lavorazione") e tono che spiega senza allarmare
-- **DB:** colonna/campo `fase_tipo = 'comunicazione'` invece di `'fase'`, così nello storico si distingue
-- Il testo lo genera Claude dalle note brevi di Michela, come per le fasi normali
-
-**Stima:** ~mezza giornata.
-
----
-
-## PROBABILI / DA VALUTARE PIÙ AVANTI
-
-- **Filtro sidebar di default su ACCONTO** invece di TUTTI: se Michela lavora quasi sempre su lavori in corso, all'apertura la lista a sinistra mostrerebbe subito solo quelli. Da decidere in base al suo modo di lavorare reale.
-
----
-
-## Note generali
-
-- Entrambi i task sono indipendenti, possono essere sviluppati separatamente
-- Task 1 è più veloce (~2-3 ore di sviluppo)
-- Task 2 richiede nuovo DB + UI dashboard + logica normativa (~1 giornata)
-
----
-
-# BACKLOG SICUREZZA & PERFORMANCE (checkup giugno 2026)
-
-Già FATTI e in produzione (`main`): hardening `ardy-setup-login.php` (403 dopo setup),
-anti-CSRF cambio stato preventivo (POST + header), difesa in profondità auth su
-outreach/solleciti (`ardy-auth.php`), firma HMAC obbligatoria webhook WhatsApp,
-fix stored XSS in `ardy-outreach.html`, rimozione information disclosure (errori
-generici al client), anti-SSRF su email-finder/crea-reel (`ardy-net.php`),
-informativa privacy GDPR + firma nel preventivo PDF.
-
-## Protezioni a livello infrastruttura (server VPS)
-
-Il server fornisce già, **a monte dell'applicazione**, diversi livelli di difesa.
-Vanno tenuti presenti perché mitigano (anche se non eliminano) alcuni dei punti
-applicativi qui sotto:
-- **OVH Edge Network Firewall + Anti-DDoS** — filtraggio L3/L4 e mitigazione DDoS
-  volumetrici all'ingresso della rete OVH.
-- **Fail2ban** — ban automatico degli IP dopo tentativi ripetuti/falliti
-  (brute-force su login, abusi).
-- **ModSecurity (WAF)** — regole applicative contro pattern di SQLi/XSS/LFI ecc.
-- **mod_hulk / HULK (cPanel)** — protezione anti brute-force sui login HTTP.
-
-Effetto sui punti sotto: **brute-force, DoS e flood** sono già contenuti a livello
-server; i rate-limit applicativi restano utili come difesa in profondità e — nel
-caso del proxy — soprattutto per il **controllo costi** dell'API a pagamento, non
-come unica barriera anti-abuso. La protezione applicativa va comunque mantenuta
-(il WAF non conosce la logica di business né l'autorizzazione per-endpoint).
-
-## Sicurezza — rimasti
-
-### Priorità ALTA (da fare per primo)
-- ✅ **FATTO — `ardy-proxy.php` — rate-limit basato su header falsificabili.** Nuovo
-  helper `ardyClientIp()` in `ardy-net.php`: `CF-Connecting-IP`/`X-Forwarded-For` sono
-  fidati **solo** se `REMOTE_ADDR` è in un range Cloudflare noto (CIDR match v4/v6 con
-  `ardyIpInCidr`/`ardyIsCloudflareIp`), altrimenti si usa `REMOTE_ADDR` non falsificabile.
-  Chi colpisce l'origin direttamente non può più ruotare l'IP per azzerare il rate-limit
-  e far costare richieste all'API Anthropic.
-
-### Priorità MEDIA
-- ✅ **FATTO — `ardy-save-lead.php` — rate-limit per IP.** Endpoint pubblico: ora max
-  15/ora e 50/giorno per IP reale (`ardyClientIp()`). Le chiamate interne del proxy
-  portano l'header `X-Ardy-Internal` col secret `ARDY_INTERNAL_SECRET` e sono esenti,
-  così il flusso legittimo non viene strozzato. ⚠️ Lato server: definire
-  `ARDY_INTERNAL_SECRET` in `ardy-config.php` (stringa casuale) per attivare l'esenzione.
-- ✅ **FATTO — Upload dir eseguibili.** Nuovo helper `ardyHardenUploadDir()` in
-  `ardy-net.php` che scrive un `.htaccess` no-PHP (RemoveHandler + Deny sugli script,
-  ma pdf/mp4/immagini restano serviti). Chiamato su `ARDY_UPLOAD_DIR`, `reels/`,
-  `preventivi_pdf/` (proxy, lead-foto, upload-video, pubblica-lavorazione, crea-reel,
-  preventivo). Idempotente.
-- ✅ **FATTO — PII in `ardy-wa-log.json`.** Il webhook non salva più il payload intero:
-  ora logga solo metadati (timestamp, numero mascherato `***1234`, tipo, lunghezza testo,
-  msg_id), niente nome né testo in chiaro; retention scesa da 100 a 50. Le conversazioni
-  restano nel DB `wa_messaggi`.
-
-### Priorità BASSA
-- **OAuth Google senza `state`** (`ardy-gcal-auth.php`): aggiungere parametro `state`
-  casuale verificato (CSRF su OAuth).
-- **`get_stats` SQL** (`ardy-outreach-api.php`): unica query con interpolazione
-  (`WHERE categoria='$cat'`, oggi da array interno → non sfruttabile). Parametrizzare.
-- **`mode=download` preventivo**: serve qualsiasi PDF della cartella a chi è dietro Basic
-  Auth (no ownership). Basso rischio (utente unico), ma da legare alla sessione se servisse.
-
-## Performance — rimasti (da audit dedicato)
+## ⚡ BACKLOG PERFORMANCE (rimasti)
 
 ### Alto impatto / basso sforzo
-- **Ricerca telefono full-scan** (`ardy-wa-lookup.php`, `ardy-proxy.php`):
-  `REPLACE(...) LIKE '%...'` impedisce l'uso di indici sul percorso WhatsApp.
-  Fix: colonna `telefono_last9` normalizzata + indice, match esatto.
-- **DDL su ogni request** (`SHOW COLUMNS`/`ALTER`/`CREATE TABLE IF NOT EXISTS` in
-  `ardy-proxy.php`, `ardy-stats.php`, `ardy-pubblica-lavorazione.php`,
-  `ardy-libreria-api.php`, `ardy-reel-template-api.php`): spostare in una migrazione
-  one-shot, togliere dal path di richiesta.
-- **`ardy-crm-api.php`**: `SELECT *` su `clienti` senza `LIMIT`. Selezionare solo le
-  colonne usate + paginazione + indice su `updated_at`.
-- **Quick-win** (1-2 righe): `finfo::file()` invece di `buffer(file_get_contents())` in
-  `ardy-lead-foto.php`; memoizzare in `static` i system-prompt riletti da disco
-  (`ardy-wa-lookup.php`, `ardy-proxy.php`).
+- **Ricerca telefono full-scan** (`ardy-wa-lookup.php`, `ardy-proxy.php`): `REPLACE(...) LIKE '%...'`
+  impedisce gli indici. Fix: colonna `telefono_last9` normalizzata + indice, match esatto.
+- **DDL su ogni request** (`SHOW COLUMNS`/`ALTER`/`CREATE TABLE IF NOT EXISTS` in `ardy-proxy.php`,
+  `ardy-stats.php`, `ardy-pubblica-lavorazione.php`, `ardy-libreria-api.php`,
+  `ardy-reel-template-api.php`): spostare in una migrazione one-shot, togliere dal path di richiesta.
+- **`ardy-crm-api.php`**: `SELECT *` su `clienti` senza `LIMIT`. Selezionare solo le colonne usate +
+  paginazione + indice su `updated_at`.
+- **Quick-win**: `finfo::file()` invece di `buffer(file_get_contents())` in `ardy-lead-foto.php`;
+  memoizzare in `static` i system-prompt riletti da disco (`ardy-wa-lookup.php`, `ardy-proxy.php`).
 
 ### Da pianificare
 - Cache PDF preventivo per content-hash + memoizzazione logo base64 (`ardy-preventivo.php`).
@@ -576,7 +134,29 @@ come unica barriera anti-abuso. La protezione applicativa va comunque mantenuta
 - Rate-limit su APCu/Redis invece che su file (`ardy-proxy.php`).
 - Unificare `dbConnect()` (mysqli) di `ardy-preventivo.php` sul PDO di `ardyDB()`.
 
-## Termini & Condizioni / Privacy
-- Aggiornare la pagina **termini e condizioni su WordPress** (ardy-lab.it), coerente con
-  l'informativa GDPR ora presente nel preventivo PDF. (Testo da preparare e incollare;
-  fuori da questo repo.)
+---
+
+## 📄 FUORI REPO / OPERATIVO
+- **Termini & Condizioni su WordPress** (ardy-lab.it): aggiornarli coerenti con l'informativa
+  GDPR già presente nel preventivo PDF. (Testo da preparare e incollare.)
+- **Import preventivi storici**: strumento pronto (`ardy-import-preventivi.php`, CSV + PDF).
+  Operativo con Michela: lei mette i PDF in una cartella Google Drive → si genera il CSV
+  precompilato (Claude può leggere da Drive) e si importa. Dati mancanti (telefono/email/stato)
+  da farsi dare a parte.
+
+---
+
+## ❌ SCENARI WhatsApp VALUTATI E SCARTATI (non riproporre)
+- Foto/video su WhatsApp → attivano una fase di lavoro: **NO** (richiede pipeline media Meta assente).
+- WhatsApp come "telecomando" unico della webapp: **NO**.
+- Si tiene solo lo **Scenario 1** (creazione scheda da dati/PDF-template), già implementato.
+
+---
+
+## 💶 Nota costi (riferimento)
+- **Costo dominante = API Claude per messaggio** (system grosso + riepilogo CRM). → mitigato col
+  **prompt caching** (item A): chat web ✅ verificata (cache_read ~7500 token, ~0,1× di costo);
+  lavorazione ✅ deployata; WhatsApp ✅ deployato, titolare da verificare.
+- **Meta**: Michela↔Sole user-initiated = gratis; costi solo su template business→cliente fuori 24h
+  (Utility ~3-4 cent/msg). Vedi blocco "carta di credito" sopra.
+- Media Meta **scadono** → vanno scaricati subito col media ID.
