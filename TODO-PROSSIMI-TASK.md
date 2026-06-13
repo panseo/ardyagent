@@ -64,9 +64,14 @@ fatto: vedi sezione "Da verificare".)
   `ardy-proxy.php` (compressione una-tantum nel ciclo validazione → alleggerisce disco,
   abbassa il costo API e tiene le foto sotto il limite 10MB di Claude). Testato: ~78% in meno
   su una foto da telefono. ⏭️ `ardy-upload-video.php` è video (no GD) → fuori da questo intervento.
-- **gzip** sulle risposte JSON/HTML degli endpoint (se non già attivo a livello server/.htaccess).
-- **Preventivi base64 in DB** (`preventivi.voci_json` LONGTEXT): pesano molto. Valutare se
-  tenerli tutti o rigenerare il PDF on-demand / spostare le immagini fuori dal DB.
+- ✅ **FATTO — gzip**: blocco `mod_deflate` nel `.htaccess` (dentro `<IfModule>`) che comprime
+  HTML/CSS/JS/JSON/XML/SVG. NON tocca le immagini (già compresse). Attivo al deploy.
+- ✅ **FATTO — Preventivi base64 in DB**: invece del refactor rischioso (immagini su file), la
+  compressione è agganciata in `parseImgDataUris()` (`ardy-preventivo.php`), punto unico da cui
+  passano copertina + prima/dopo + immagine analisi → le immagini entrano in `voci_json` (e nel
+  PDF) già ridotte/ricompresse (~80% in meno su foto reali). ⚠️ Nota: la **copertina** full-page
+  è limitata a 2000px lato lungo (~170dpi su A4): se in stampa risultasse poco nitida, alzare
+  `maxSide` solo per la copertina nella chiamata a `ardyCompressImage`.
 
 ### 🗑️ Gestione archivio cliente (versione completa)
 Contesto: i file pesanti sono **foto** (`ARDY_UPLOAD_DIR/<session>/`) e **reel**

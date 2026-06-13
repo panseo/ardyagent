@@ -555,8 +555,15 @@ function parseImgDataUris($arr, int $max = 8): array {
     $out = [];
     foreach ($arr as $d) {
         if (!is_string($d)) continue;
-        if (!preg_match('#^data:image/(jpeg|jpg|png|webp);base64,[A-Za-z0-9+/=\s]+$#i', $d)) continue;
+        if (!preg_match('#^data:image/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=\s]+)$#i', $d, $m)) continue;
         if (strlen($d) > 4000000) continue; // ~3 MB per immagine, già ridotte dal client
+        // Ridimensiona/ricomprime per alleggerire voci_json (DB) e il PDF generato.
+        $raw = base64_decode(preg_replace('/\s+/', '', $m[2]), true);
+        if ($raw !== false && strlen($raw) > 12) {
+            $mime  = 'image/' . (strtolower($m[1]) === 'jpg' ? 'jpeg' : strtolower($m[1]));
+            $small = ardyCompressImage($raw, $mime);
+            if ($small !== $raw) $d = 'data:' . $mime . ';base64,' . base64_encode($small);
+        }
         $out[] = $d;
         if (count($out) >= $max) break;
     }
