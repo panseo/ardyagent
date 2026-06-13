@@ -256,6 +256,17 @@ $tools = [
             ],
             'required' => ['messaggio']
         ]
+    ],
+    [
+        'name'        => 'cerca_cliente',
+        'description' => 'Recupera lo stato del lavoro di un cliente che possiede un CODICE DI ACCESSO Ardy Lab (formato ARD-XXXX-XXXX), ricevuto via email quando ha lasciato i suoi dati. Usalo SOLO quando il cliente ti comunica spontaneamente il suo codice e vuole sapere a che punto è il suo lavoro o il suo sopralluogo. NON cercare MAI per nome, telefono o email: serve esclusivamente il codice. Se il cliente non ha un codice, invitalo a lasciare i suoi dati (così gliene generiamo uno) oppure a contattare Ardy Lab.',
+        'input_schema' => [
+            'type'       => 'object',
+            'properties' => [
+                'codice' => ['type' => 'string', 'description' => 'Il codice di accesso comunicato dal cliente, es. ARD-7F3K-9Q2P']
+            ],
+            'required' => ['codice']
+        ]
     ]
 ];
 
@@ -332,6 +343,53 @@ function ardy_ensure_sopralluogo_cols(PDO $db): void {
 }
 
 // -----------------------------------------------------------
+// Codice di accesso cliente — capability per la chat web PUBBLICA/anonima.
+//   `codice_accesso` è un codice corto ad alta entropia dato al cliente:
+//   con quello, tornando sulla chat, può chiedere lo stato del suo lavoro.
+//   NON è il session_id (timestamp → enumerabile): è casuale, stabile e
+//   legato a UNA scheda → niente ricerca per nome/telefono, niente PII di terzi.
+// -----------------------------------------------------------
+function ardy_ensure_codice_col(PDO $db): void {
+    static $done = false;
+    if ($done) return;
+    try {
+        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'codice_accesso'")->fetch()) {
+            $db->exec("ALTER TABLE clienti ADD COLUMN codice_accesso VARCHAR(20) NULL");
+            // il lookup matcha esattamente su questa colonna → indice
+            try { $db->exec("CREATE INDEX idx_codice_accesso ON clienti (codice_accesso)"); }
+            catch (PDOException $e) { /* indice già presente: ignora */ }
+        }
+    } catch (PDOException $e) {
+        error_log('ARDY ENSURE CODICE COL ERROR: ' . $e->getMessage());
+    }
+    $done = true;
+}
+
+// Genera un codice ARD-XXXX-XXXX (alfabeto senza caratteri ambigui 0/O/1/I/L):
+// 8 simboli su 31 → ~40 bit, non indovinabile ma dettabile a voce.
+function ardy_genera_codice_accesso(): string {
+    $alpha = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    $n = strlen($alpha);
+    $out = '';
+    for ($i = 0; $i < 8; $i++) {
+        $out .= $alpha[random_int(0, $n - 1)];
+        if ($i === 3) $out .= '-';
+    }
+    return 'ARD-' . $out; // es. ARD-7F3K-9Q2P
+}
+
+// Normalizza un codice digitato dal cliente per il confronto (maiuscolo,
+// via separatori; tollera trattini mancanti). Restituisce il formato canonico
+// ARD-XXXX-XXXX se possibile, altrimenti la stringa ripulita (non matcherà).
+function ardy_normalizza_codice(string $raw): string {
+    $s = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $raw));
+    if (preg_match('/^ARD([A-Z0-9]{4})([A-Z0-9]{4})$/', $s, $m)) {
+        return 'ARD-' . $m[1] . '-' . $m[2];
+    }
+    return $s;
+}
+
+// -----------------------------------------------------------
 // SALVATAGGIO IMMAGINI
 // -----------------------------------------------------------
 $savedImages = [];
@@ -404,6 +462,8 @@ $bookingEventId = null;   // id evento Google Calendar appena creato
 $leadSaved     = false;   // diventa true quando il lead è salvato nel CRM
 $leadData      = [];      // ultimi dati lead salvati (per il riepilogo a Michela)
 $rescheduleNote = null;   // riepilogo per Michela se un appuntamento viene spostato
+$accessCode    = null;    // codice di accesso appena generato (da emailare al cliente)
+$accessEmail   = null;    // email a cui inviare il codice
 
 while ($iteration < $maxIterations) {
     $iteration++;
@@ -532,8 +592,49 @@ while ($iteration < $maxIterations) {
                 if (isset($r['success'])) {
                     $leadSaved = true;
                     $leadData  = $toolInput;   // per il riepilogo WhatsApp a Michela
+
+                    // Codice di accesso: generato UNA volta sola per scheda. Con questo
+                    // il cliente potrà poi chiedere lo stato del lavoro (tool cerca_cliente).
+                    $codice = '';
+                    try {
+                        $db = ardyDB();
+                        ardy_ensure_codice_col($db);
+                        $sel = $db->prepare("SELECT codice_accesso FROM clienti WHERE session_id = :sid LIMIT 1");
+                        $sel->execute([':sid' => $cleanSession]);
+                        $codice = trim((string) $sel->fetchColumn());
+                        if ($codice === '') {
+                            // genera un codice unico (riprova in caso di collisione rarissima)
+                            for ($t = 0; $t < 5; $t++) {
+                                $cand = ardy_genera_codice_accesso();
+                                $chk  = $db->prepare("SELECT 1 FROM clienti WHERE codice_accesso = :c LIMIT 1");
+                                $chk->execute([':c' => $cand]);
+                                if (!$chk->fetchColumn()) { $codice = $cand; break; }
+                            }
+                            if ($codice !== '') {
+                                $db->prepare("UPDATE clienti SET codice_accesso = :c, updated_at = NOW() WHERE session_id = :sid")
+                                   ->execute([':c' => $codice, ':sid' => $cleanSession]);
+                                // email del codice al cliente: solo alla prima generazione e se l'email è valida
+                                $emailLead = trim((string) ($toolInput['email'] ?? ''));
+                                if ($emailLead !== '' && filter_var($emailLead, FILTER_VALIDATE_EMAIL)) {
+                                    $accessCode  = $codice;
+                                    $accessEmail = $emailLead;
+                                }
+                            }
+                        }
+                    } catch (PDOException $e) {
+                        error_log('ARDY CODICE ACCESSO ERROR: ' . $e->getMessage());
+                        $codice = '';
+                    }
+
+                    $toolResult = 'Cliente salvato nel CRM.';
+                    if ($codice !== '') {
+                        $toolResult .= ' Codice di accesso del cliente: ' . $codice
+                            . '. Comunicaglielo: con questo codice, se tornerà a scriverti, potrà sapere a che punto è il suo lavoro. '
+                            . ($accessCode ? 'Glielo abbiamo inviato anche via email.' : 'Invitalo a segnarselo.');
+                    }
+                } else {
+                    $toolResult = 'Errore CRM: ' . json_encode($r);
                 }
-                $toolResult = isset($r['success']) ? 'Cliente salvato nel CRM.' : 'Errore CRM: ' . json_encode($r);
 
             } elseif ($toolName === 'sposta_appuntamento') {
                 $tel   = preg_replace('/\D+/', '', (string)($toolInput['telefono'] ?? ''));
@@ -601,6 +702,57 @@ while ($iteration < $maxIterations) {
                     $toolResult = $ok
                         ? 'Michela è stata avvisata su WhatsApp.'
                         : 'Avviso registrato (eventuale invio WhatsApp gestito a parte).';
+                }
+
+            } elseif ($toolName === 'cerca_cliente') {
+                $codice = ardy_normalizza_codice((string) ($toolInput['codice'] ?? ''));
+                // Anti-bruteforce: cap sui tentativi per sessione (validi o no) nell'ultima ora.
+                $attemptsFile = ARDY_RATE_LIMIT_DIR . 'cerca_' . $cleanSession . '.json';
+                $nowTs = time();
+                $att   = file_exists($attemptsFile) ? (json_decode(file_get_contents($attemptsFile), true) ?: []) : [];
+                $att   = array_values(array_filter($att, fn($t) => ($nowTs - $t) < 3600));
+                if (count($att) >= 8) {
+                    $toolResult = 'Troppi tentativi con il codice in questa sessione. Di\' al cliente di riprovare più tardi o di contattare Ardy Lab al 351 967 7973.';
+                } elseif (!preg_match('/^ARD-[A-Z0-9]{4}-[A-Z0-9]{4}$/', $codice)) {
+                    $att[] = $nowTs; @file_put_contents($attemptsFile, json_encode($att));
+                    $toolResult = 'Codice non valido: il formato è ARD-XXXX-XXXX. Chiedi al cliente di ricontrollarlo nell\'email che gli abbiamo inviato.';
+                } else {
+                    $att[] = $nowTs; @file_put_contents($attemptsFile, json_encode($att));
+                    try {
+                        $db = ardyDB();
+                        ardy_ensure_codice_col($db);
+                        ardy_ensure_sopralluogo_cols($db);
+                        $q = $db->prepare("SELECT session_id, nome, stato, servizio, mobile, sopralluogo_at, wp_post_link FROM clienti WHERE codice_accesso = :c LIMIT 1");
+                        $q->execute([':c' => $codice]);
+                        $cli = $q->fetch(PDO::FETCH_ASSOC);
+                        if (!$cli) {
+                            $toolResult = 'Nessun cliente trovato con questo codice. Chiedi di ricontrollarlo nell\'email, oppure di lasciare i dati per generarne uno nuovo.';
+                        } else {
+                            // Data minimization: SOLO stato/avanzamento. Niente email/telefono/indirizzo.
+                            $info = ['nome' => $cli['nome'] ?: '', 'stato' => $cli['stato'] ?: 'LEAD'];
+                            if (!empty($cli['servizio'])) $info['servizio'] = $cli['servizio'];
+                            if (!empty($cli['mobile']))   $info['mobile']   = $cli['mobile'];
+                            if (!empty($cli['sopralluogo_at'])) {
+                                try {
+                                    $sdt = new DateTime($cli['sopralluogo_at']);
+                                    $info['sopralluogo'] = ardy_data_ita($sdt);
+                                    $info['sopralluogo_passato'] = ($sdt < new DateTime('now'));
+                                } catch (Exception $e) { /* data illeggibile: la salto */ }
+                            }
+                            // ultima fase di lavorazione pubblicata (se presente)
+                            try {
+                                $qf = $db->prepare("SELECT fase_nome FROM fasi WHERE session_id = :sid AND (fase_tipo IS NULL OR fase_tipo <> 'comunicazione') ORDER BY created_at DESC LIMIT 1");
+                                $qf->execute([':sid' => $cli['session_id']]);
+                                $fase = $qf->fetchColumn();
+                                if ($fase) $info['ultima_fase'] = $fase;
+                            } catch (PDOException $e) { /* tabella fasi assente: ignora */ }
+                            if (!empty($cli['wp_post_link'])) $info['pagina_lavoro'] = $cli['wp_post_link'];
+                            $toolResult = 'Cliente trovato. Rispondi con tono caldo e personalizzato: saluta per nome, riassumi lo stato del lavoro e, se c\'è una pagina lavoro, condividi il link. Dati: ' . json_encode($info, JSON_UNESCAPED_UNICODE);
+                        }
+                    } catch (PDOException $e) {
+                        error_log('ARDY CERCA CLIENTE ERROR: ' . $e->getMessage());
+                        $toolResult = 'Errore tecnico nel recupero dei dati. Chiedi al cliente di riprovare tra poco.';
+                    }
                 }
             }
 
@@ -714,6 +866,45 @@ if ($bookingMade && $bookingWhen instanceof DateTime && $userEmail && filter_var
         error_log('ARDY CONFERMA CLIENTE OK: ' . $userEmail);
     } catch (Exception $e) {
         error_log('ARDY CONFERMA CLIENTE ERROR: ' . $mailC->ErrorInfo);
+    }
+}
+
+// -----------------------------------------------------------
+// EMAIL DEL CODICE DI ACCESSO AL CLIENTE (solo alla prima generazione)
+// Il cliente lo ritrova in posta: con questo codice, tornando sulla chat,
+// può chiedere a Sole lo stato del suo lavoro. È una capability, non PII di terzi.
+// -----------------------------------------------------------
+if ($accessCode && $accessEmail && filter_var($accessEmail, FILTER_VALIDATE_EMAIL)) {
+    try {
+        $mailK = new PHPMailer(true);
+        $mailK->isSMTP();
+        $mailK->Host       = 'smtp-relay.brevo.com';
+        $mailK->SMTPAuth   = true;
+        $mailK->Username   = ARDY_SMTP_USER;
+        $mailK->Password   = ARDY_SMTP_PASSWORD;
+        $mailK->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mailK->Port       = 587;
+        $mailK->CharSet    = 'UTF-8';
+        $mailK->setFrom('noreply@ardy-lab.it', 'Ardy Lab');
+        $mailK->addAddress($accessEmail);
+        $mailK->Subject = '🔑 Il tuo codice Ardy Lab — ' . $accessCode;
+        $mailK->isHTML(true);
+        $mailK->Body = '
+<div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:32px;color:#333;">
+  <h2 style="font-family:sans-serif;color:#c8a96e;font-size:20px;margin-bottom:4px;">Ardy Lab</h2>
+  <p style="color:#999;font-size:13px;margin-bottom:24px;">Il tuo codice personale</p>
+  <p style="font-size:15px;line-height:1.7;">Ciao,<br>grazie per averci scritto. Questo è il tuo codice personale Ardy Lab:</p>
+  <div style="border-left:3px solid #c8a96e;padding:16px 24px;background:#fafaf8;margin:20px 0;font-size:24px;letter-spacing:2px;font-family:monospace;">
+    <strong>' . htmlspecialchars($accessCode) . '</strong>
+  </div>
+  <p style="font-size:15px;line-height:1.7;">Conservalo: quando vuoi sapere a che punto è il tuo lavoro, torna sulla nostra chat e comunicalo a Sole — ti dirà subito lo stato, senza dover ricominciare da capo.</p>
+  <p style="font-size:15px;line-height:1.7;">Per qualsiasi domanda puoi rispondere a questa email oppure chiamarci al <strong>351 967 7973</strong>. A presto!</p>
+  <p style="margin-top:32px;font-size:12px;color:#bbb;">Ardy Lab — Restauro e laccatura mobili · Roma</p>
+</div>';
+        $mailK->send();
+        error_log('ARDY CODICE EMAIL OK: ' . $accessEmail);
+    } catch (Exception $e) {
+        error_log('ARDY CODICE EMAIL ERROR: ' . $mailK->ErrorInfo);
     }
 }
 
