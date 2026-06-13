@@ -887,7 +887,7 @@ if ($accessCode && $accessEmail && filter_var($accessEmail, FILTER_VALIDATE_EMAI
         $mailK->CharSet    = 'UTF-8';
         $mailK->setFrom('noreply@ardy-lab.it', 'Ardy Lab');
         $mailK->addAddress($accessEmail);
-        $mailK->Subject = '🔑 Il tuo codice Ardy Lab — ' . $accessCode;
+        $mailK->Subject = 'Benvenuto in Ardy Lab 🌿 — e il tuo codice personale';
         $mailK->isHTML(true);
         // Logo incorporato via CID: i client di posta lo mostrano senza hotlink esterni
         $logoTag = '';
@@ -900,17 +900,19 @@ if ($accessCode && $accessEmail && filter_var($accessEmail, FILTER_VALIDATE_EMAI
         $mailK->Body = '
 <div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:32px;color:#333;">
   ' . $logoTag . '
-  <p style="color:#999;font-size:13px;margin-bottom:24px;">Il tuo codice personale</p>
-  <p style="font-size:15px;line-height:1.7;">Ciao,<br>grazie per averci scritto. Da oggi hai un codice personale Ardy Lab, da usare ogni volta che vuoi sapere a che punto è il tuo lavoro:</p>
+  <p style="color:#999;font-size:13px;margin-bottom:24px;">Benvenuto</p>
+  <p style="font-size:15px;line-height:1.7;">Ciao, e benvenuto in Ardy Lab! 🌿</p>
+  <p style="font-size:15px;line-height:1.7;">In chat hai appena conosciuto <strong>Sole</strong>, la nostra assistente: sì, è proprio lei che ti ha risposto. Perché da noi non ci limitiamo a restaurare i tuoi mobili — ti seguiamo con un customer care di nuova generazione, sempre a portata di mano: crediamo di essere tra i primi in Italia a offrirlo così.</p>
+  <p style="font-size:15px;line-height:1.7;">E per renderti tutto semplice, da oggi hai un <strong>codice personale</strong> Ardy Lab:</p>
   <div style="border-left:3px solid #c8a96e;padding:16px 24px;background:#fafaf8;margin:20px 0;font-size:24px;letter-spacing:2px;font-family:monospace;">
     <strong>' . htmlspecialchars($accessCode) . '</strong>
   </div>
-  <p style="font-size:15px;line-height:1.7;"><strong>A cosa serve.</strong> Quando vuoi un aggiornamento, torna sulla nostra chat e comunica questo codice a Sole, la nostra assistente: ti dirà subito lo stato del lavoro, la data del sopralluogo e i prossimi passi — senza dover rispiegare nulla da capo.</p>
+  <p style="font-size:15px;line-height:1.7;"><strong>A cosa serve.</strong> Quando vuoi un aggiornamento, torna sulla nostra chat e comunica questo codice a Sole: ti dirà subito a che punto è il tuo lavoro, la data del sopralluogo e i prossimi passi — senza dover rispiegare nulla da capo.</p>
   <div style="border-radius:8px;background:#fbf8f2;padding:16px 20px;margin:20px 0;font-size:14px;line-height:1.6;color:#555;">
     🔒 <strong>È la tua chiave personale.</strong> Protegge i tuoi dati: solo chi possiede il codice può consultare lo stato della tua pratica.<br>
     Per questo non lo pubblichiamo e non lo condividiamo con nessuno — tienilo per te, come faresti con un PIN.
   </div>
-  <p style="font-size:15px;line-height:1.7;">Conservalo pure in questa email: lo ritrovi quando vuoi. Per qualsiasi domanda puoi rispondere qui oppure chiamarci al <strong>351 967 7973</strong>. A presto!</p>
+  <p style="font-size:15px;line-height:1.7;">Conservalo pure in questa email: lo ritrovi quando vuoi. E per qualsiasi cosa ti basta rispondere qui — ti leggiamo sempre. A presto! 🌿</p>
   <p style="margin-top:32px;font-size:12px;color:#bbb;">Ardy Lab — Restauro e laccatura mobili · Roma</p>
 </div>';
         $mailK->send();
