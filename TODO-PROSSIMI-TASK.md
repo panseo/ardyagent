@@ -37,6 +37,17 @@ in CGI/FPM e rifarebbe la login. Ci si affida al `.htaccess` (Basic Auth) come p
   ⏭️ Prova end-to-end dal numero di Michela: dettare un cliente nuovo → conferma → "Scheda creata ✅"
   + scheda in dashboard (stato LEAD). Se errore: guardare le **Executions** del nodo Code in n8n.
 - **Template `sollecito_pagamento`** — approvato e collegato. Da provare con un caso moroso vero.
+- **`cerca_cliente` sulla chat web (CRM read con codice di accesso)** — implementato in
+  `ardy-proxy.php` + `ardy-system.txt`. Sole sul web ora può dire al cliente lo stato del
+  lavoro **senza esporre PII di terzi**: niente ricerca per nome/telefono (canale pubblico/
+  anonimo), ma un **codice capability** `ARD-XXXX-XXXX` generato al `salva_lead_crm`, salvato
+  su `clienti.codice_accesso` e inviato al cliente con una **email di benvenuto** (logo,
+  presentazione di Sole/customer care, canale WhatsApp clienti +39 379 375 6437, **niente
+  numero di Michela**). Tool `cerca_cliente` con cap anti-bruteforce per sessione e data
+  minimization (solo stato/servizio/fase/link, mai email/telefono/indirizzo).
+  ⏭️ **Manca la prova end-to-end**: 1) lasciare i dati in chat web → arriva l'email col codice;
+  2) tornare sulla chat (nuova sessione) e dare il codice → Sole risponde con lo stato giusto;
+  3) verificare che colonna+indice `codice_accesso` si creino sul DB di produzione al 1° salvataggio.
 
 ---
 
@@ -97,21 +108,18 @@ Da costruire:
 - *API CRM* `ardy-crm-api.php`: escludere i `deleted_at` dalla lista normale; endpoint/param Cestino.
 - *Dashboard*: pulsanti 🧹 (su PAGATO) e 🗑️ sulla scheda; vista Cestino; modali conferma.
 
-### 💡 Idee da Sole (vagliate sul codice — solo queste 2 sono gap reali)
+### 💡 Idee da Sole (vagliate sul codice — gap reale rimasto)
 > Sole, interrogata, ha proposto varie migliorie: la maggior parte **è già implementata**
 > (riconoscimento cliente per telefono + storico su WhatsApp via `ardy-wa-lookup.php`/
 > `ardy-wa-memoria.php`; stato lavori in mode `cliente_lavorazione`; analisi foto sulla chat
 > web). Altre sono **già scartate** (ricezione foto WhatsApp = pipeline media Meta assente;
-> invio preventivi automatici senza Michela = no, li controlla lei). Restano 2 idee valide:
+> invio preventivi automatici senza Michela = no, li controlla lei). Resta 1 idea valida:
+> (la "CRM read nella chat WEB" è stata realizzata → vedi "DA VERIFICARE: `cerca_cliente`".)
 - **⭐ Catalogo prezzi su Google Sheet** (alto valore, basso rischio): oggi i prezzi sono
   hardcoded in `ardy-system.txt` → cambiare = editare file + deploy. Un foglio Google letto da
   Sole (sa già leggere Calendar/Drive) farebbe aggiornare i prezzi a Michela da sola, senza
   toccare il codice. Le variazioni si rifletterebbero subito. Da progettare: foglio modello +
   endpoint/funzione che lo legge e lo inietta nel prompt (con cache breve per non rileggerlo ogni msg).
-- **CRM read nella chat WEB** (valore medio): sul web Sole ha solo tool di scrittura/calendario,
-  nessun "cerca cliente". La chat web è anonima (no telefono finché il cliente non si presenta),
-  quindi utile solo se il cliente si identifica → nuovo tool `cerca_cliente` (per nome/telefono)
-  che legge dal CRM e personalizza la risposta. Valutare privacy.
 
 ### 💡 Briefing del mattino — opzionale rimasto
 Parte "lavori" e "calendario" già in produzione (riepilogo titolare con IN LAVORAZIONE, URGENTI ≤4gg,
