@@ -32,6 +32,7 @@ rsync -av \
   --exclude='vendor/' \
   --exclude='ardy-rate-limit/' \
   --exclude='ardy-wa-log.json' \
+  --exclude='wordpress-snippets/' \
   "$SRC" "$DEPLOYPATH"
 
 echo "Deploy completato."
