@@ -150,8 +150,11 @@ ogni messaggio. Senza, funziona quando Michela chiede "come va oggi?".
   `ardy-reel-template-api.php`): spostare in una migrazione one-shot, togliere dal path di richiesta.
 - **`ardy-crm-api.php`**: `SELECT *` su `clienti` senza `LIMIT`. Selezionare solo le colonne usate +
   paginazione + indice su `updated_at`.
-- **Quick-win**: `finfo::file()` invece di `buffer(file_get_contents())` in `ardy-lead-foto.php`;
-  memoizzare in `static` i system-prompt riletti da disco (`ardy-wa-lookup.php`, `ardy-proxy.php`).
+- ✅ **FATTO — Quick-win** `finfo::file()` in `ardy-lead-foto.php` (serve foto + elenco): legge
+  solo l'header invece di caricare l'intera immagine in memoria (`buffer(file_get_contents())`).
+  Win di memoria reale sull'elenco foto (con 30 foto da 3MB evitava ~90MB caricati per richiesta).
+  ⏭️ Memoize `static` dei system-prompt da disco: valutato e **saltato** — in PHP lo `static` non
+  persiste fra richieste e i prompt si leggono già una sola volta per richiesta → beneficio ~nullo.
 
 ### Da pianificare
 - Cache PDF preventivo per content-hash + memoizzazione logo base64 (`ardy-preventivo.php`).

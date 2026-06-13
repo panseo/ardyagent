@@ -36,7 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $file = basename($_GET['file']); // niente traversal
         $path = $dir . $file;
         if (!is_file($path)) { http_response_code(404); exit(); }
-        $mime = (new finfo(FILEINFO_MIME_TYPE))->buffer(file_get_contents($path));
+        // finfo::file legge solo l'header: non carica l'intera immagine in memoria.
+        $mime = (new finfo(FILEINFO_MIME_TYPE))->file($path);
         if (!in_array($mime, $allowedMimes, true)) { http_response_code(403); exit(); }
         header('Content-Type: ' . $mime);
         header('Content-Length: ' . filesize($path));
@@ -51,7 +52,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if (is_dir($dir)) {
         foreach (glob($dir . '*') as $p) {
             if (!is_file($p)) continue;
-            $mime = (new finfo(FILEINFO_MIME_TYPE))->buffer(file_get_contents($p));
+            // finfo::file legge solo l'header (niente caricamento dell'intero file).
+            $mime = (new finfo(FILEINFO_MIME_TYPE))->file($p);
             if (!in_array($mime, $allowedMimes, true)) continue;
             $files[] = ['file' => basename($p), 'mtime' => filemtime($p)];
         }
