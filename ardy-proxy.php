@@ -359,6 +359,10 @@ function ardy_ensure_codice_col(PDO $db): void {
             try { $db->exec("CREATE INDEX idx_codice_accesso ON clienti (codice_accesso)"); }
             catch (PDOException $e) { /* indice già presente: ignora */ }
         }
+        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'codice_email_inviato'")->fetch()) {
+            // quando il codice è stato inviato al cliente via email (anti doppio invio)
+            $db->exec("ALTER TABLE clienti ADD COLUMN codice_email_inviato DATETIME NULL");
+        }
     } catch (PDOException $e) {
         error_log('ARDY ENSURE CODICE COL ERROR: ' . $e->getMessage());
     }
@@ -595,13 +599,16 @@ while ($iteration < $maxIterations) {
 
                     // Codice di accesso: generato UNA volta sola per scheda. Con questo
                     // il cliente potrà poi chiedere lo stato del lavoro (tool cerca_cliente).
-                    $codice = '';
+                    $codice    = '';
+                    $giaInviata = false;
                     try {
                         $db = ardyDB();
                         ardy_ensure_codice_col($db);
-                        $sel = $db->prepare("SELECT codice_accesso FROM clienti WHERE session_id = :sid LIMIT 1");
+                        $sel = $db->prepare("SELECT codice_accesso, codice_email_inviato FROM clienti WHERE session_id = :sid LIMIT 1");
                         $sel->execute([':sid' => $cleanSession]);
-                        $codice = trim((string) $sel->fetchColumn());
+                        $row = $sel->fetch(PDO::FETCH_ASSOC) ?: [];
+                        $codice     = trim((string) ($row['codice_accesso'] ?? ''));
+                        $giaInviata = !empty($row['codice_email_inviato']);
                         if ($codice === '') {
                             // genera un codice unico (riprova in caso di collisione rarissima)
                             for ($t = 0; $t < 5; $t++) {
@@ -613,12 +620,21 @@ while ($iteration < $maxIterations) {
                             if ($codice !== '') {
                                 $db->prepare("UPDATE clienti SET codice_accesso = :c, updated_at = NOW() WHERE session_id = :sid")
                                    ->execute([':c' => $codice, ':sid' => $cleanSession]);
-                                // email del codice al cliente: solo alla prima generazione e se l'email è valida
-                                $emailLead = trim((string) ($toolInput['email'] ?? ''));
-                                if ($emailLead !== '' && filter_var($emailLead, FILTER_VALIDATE_EMAIL)) {
-                                    $accessCode  = $codice;
-                                    $accessEmail = $emailLead;
-                                }
+                            }
+                        }
+                        // Invio email: appena abbiamo codice + email valida e NON ancora inviata,
+                        // a prescindere da quale salvataggio porta l'email (Sole salva a step).
+                        if ($codice !== '' && !$giaInviata) {
+                            $emailLead = trim((string) ($toolInput['email'] ?? ''));
+                            if ($emailLead === '') {
+                                // l'email può non essere in QUESTO input: ripescala dal CRM
+                                $qe = $db->prepare("SELECT email FROM clienti WHERE session_id = :sid LIMIT 1");
+                                $qe->execute([':sid' => $cleanSession]);
+                                $emailLead = trim((string) $qe->fetchColumn());
+                            }
+                            if ($emailLead !== '' && filter_var($emailLead, FILTER_VALIDATE_EMAIL)) {
+                                $accessCode  = $codice;
+                                $accessEmail = $emailLead;
                             }
                         }
                     } catch (PDOException $e) {
@@ -628,9 +644,14 @@ while ($iteration < $maxIterations) {
 
                     $toolResult = 'Cliente salvato nel CRM.';
                     if ($codice !== '') {
-                        $toolResult .= ' Codice di accesso del cliente: ' . $codice
-                            . '. Comunicaglielo: con questo codice, se tornerà a scriverti, potrà sapere a che punto è il suo lavoro. '
-                            . ($accessCode ? 'Glielo abbiamo inviato anche via email.' : 'Invitalo a segnarselo.');
+                        $toolResult .= ' Codice di accesso del cliente: ' . $codice . '.';
+                        if ($accessCode) {
+                            $toolResult .= ' Glielo stiamo inviando via email; comunicaglielo anche a voce.';
+                        } elseif ($giaInviata) {
+                            $toolResult .= ' Già inviato via email; puoi ricordarglielo.';
+                        } else {
+                            $toolResult .= ' Comunicaglielo a voce: con questo codice potrà chiederti lo stato del lavoro. Se ti lascia un\'email te lo inviamo anche scritto.';
+                        }
                     }
                 } else {
                     $toolResult = 'Errore CRM: ' . json_encode($r);
@@ -919,6 +940,14 @@ if ($accessCode && $accessEmail && filter_var($accessEmail, FILTER_VALIDATE_EMAI
 </div>';
         $mailK->send();
         error_log('ARDY CODICE EMAIL OK: ' . $accessEmail);
+        // segna l'invio così non si ripete ai salvataggi successivi della stessa scheda
+        try {
+            $db = ardyDB();
+            $db->prepare("UPDATE clienti SET codice_email_inviato = NOW() WHERE session_id = :sid")
+               ->execute([':sid' => $cleanSession]);
+        } catch (PDOException $e) {
+            error_log('ARDY CODICE EMAIL FLAG ERROR: ' . $e->getMessage());
+        }
     } catch (Exception $e) {
         error_log('ARDY CODICE EMAIL ERROR: ' . $mailK->ErrorInfo);
     }
