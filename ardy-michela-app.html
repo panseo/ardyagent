@@ -31,7 +31,7 @@
       <div style="margin-bottom:12px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
           <div class="sidebar-title" style="margin-bottom:0;">Clienti / Lead <span class="count-badge" id="count">—</span></div>
-          <button id="btnArchivio" onclick="apriArchivio()" title="Lavori conclusi (CONSEGNATO + PAGATO)" style="display:none;background:none;border:1px solid #555;color:#999;padding:3px 7px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;white-space:nowrap;">📦 Archivio <span id="archCount">0</span></button>
+          <button id="btnArchivio" onclick="apriArchivio()" title="Lavori conclusi (CONSEGNATO)" style="display:none;background:none;border:1px solid #555;color:#999;padding:3px 7px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;white-space:nowrap;">📦 Archivio <span id="archCount">0</span></button>
         </div>
         <div style="display:flex;gap:5px;">
           <button class="btn-nuovo-cliente" onclick="openNuovoCliente()" style="flex:1;text-align:center;background:none;border:1px solid #8b6f3e;color:#c8a96e;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">+ NUOVO</button>
@@ -63,12 +63,11 @@
       <button class="filter-chip" data-stato="ACCONTO" onclick="setFilter(this)">ACCONTO</button>
       <button class="filter-chip" data-stato="IN_LAVORAZIONE" onclick="setFilter(this)">IN LAVORAZIONE</button>
       <button class="filter-chip" data-stato="CONSEGNATO" onclick="setFilter(this)">CONSEGNATO</button>
-      <button class="filter-chip" data-stato="PAGATO" onclick="setFilter(this)">PAGATO</button>
       <button class="filter-chip" data-stato="STANDBY" onclick="setFilter(this)">STANDBY</button>
       <button class="filter-chip" data-stato="PERSO" onclick="setFilter(this)">PERSO</button>
-      <button class="filter-chip" data-stato="ARCHIVIO" onclick="setFilter(this)" title="Lavori conclusi (CONSEGNATO + PAGATO): non compaiono nella lista normale">📦 ARCHIVIO</button>
+      <button class="filter-chip" data-stato="ARCHIVIO" onclick="setFilter(this)" title="Lavori conclusi (CONSEGNATO): non compaiono nella lista normale">📦 ARCHIVIO</button>
       <div style="width:100%;margin-top:8px;font-size:10px;color:#888;line-height:1.7;">
-        <span style="color:#888;">📦 ARCHIVIO</span> = lavori conclusi (CONSEGNATO + PAGATO), fuori dalla lista normale<br>
+        <span style="color:#888;">📦 ARCHIVIO</span> = lavori conclusi (CONSEGNATO), fuori dalla lista normale<br>
         <span style="color:#e08a3c;">●</span> Sta per iniziare &nbsp;
         <span style="color:#4caf72;">●</span> Nei tempi &nbsp;
         <span style="color:#e05c5c;">●</span> Fine lavoro / ritardo &nbsp;
@@ -407,6 +406,8 @@ let allLeads       = [];
 let currentLead    = null;
 let currentFilter  = 'TUTTI';
 // Stati "archivio": lavori conclusi. Esclusi dalla vista TUTTI, richiamabili col chip ARCHIVIO.
+// CONSEGNATO è lo stato attuale; 'PAGATO' è un alias legacy (clienti marcati prima della
+// rimozione di quello stato) tenuto qui solo per non farli ricomparire nella lista normale.
 const ARCHIVE_STATES = ['CONSEGNATO','PAGATO'];
 let isDirty        = false;
 let currentAction  = null;
@@ -551,7 +552,7 @@ function setFilter(el) {
 
 function filterLeads() { renderList(); }
 
-// Apre/chiude la vista Archivio (CONSEGNATO + PAGATO) dal pulsante sempre visibile.
+// Apre/chiude la vista Archivio (lavori CONSEGNATO) dal pulsante sempre visibile.
 function apriArchivio() {
   const tornaTutti = currentFilter === 'ARCHIVIO';
   currentFilter = tornaTutti ? 'TUTTI' : 'ARCHIVIO';
@@ -618,7 +619,7 @@ function renderDetail() {
   // Visibilità sezioni accordion basata su stato
   aggiornaSezioniVisibili(l.Stato ?? '');
 
-  // "Libera spazio" solo per lavori conclusi (archivio: CONSEGNATO/PAGATO)
+  // "Libera spazio" solo per lavori conclusi (archivio: CONSEGNATO, + legacy PAGATO)
   const btnLib = document.getElementById('btnLiberaSpazio');
   if (btnLib) {
     const archiviato = ARCHIVE_STATES.includes((l.Stato ?? '').toUpperCase());
@@ -631,7 +632,10 @@ function renderDetail() {
   }
 
   // Stato buttons
-  const stati = ['LEAD','SOPRALLUOGO','PREVENTIVO','ACCONTO','IN_LAVORAZIONE','CONSEGNATO','PAGATO','STANDBY','PERSO'];
+  // Nota: 'PAGATO' è stato rimosso dagli stati cliente (coincideva con CONSEGNATO; il
+  // "saldato/non moroso" è gestito dal modulo MOROSI). Resta riconosciuto come alias
+  // legacy nei raggruppamenti d'archivio per i clienti già marcati così.
+  const stati = ['LEAD','SOPRALLUOGO','PREVENTIVO','ACCONTO','IN_LAVORAZIONE','CONSEGNATO','STANDBY','PERSO'];
   document.getElementById('statoSelector').innerHTML = stati.map(s => `
     <button class="stato-btn ${(l.Stato??'').toUpperCase() === s ? 'current' : ''}"
             onclick="setStato('${s}')">

@@ -229,8 +229,17 @@ ogni messaggio. Senza, funziona quando Michela chiede "come va oggi?".
 > ✅ **FATTO (14/06, sessione corrente)** — scelto l'**archivio implicito per stato** (no nuovo
 > flag, coerente col futuro Cestino che userà `deleted_at`, concetto separato). Solo lato dashboard
 > (`ardy-michela-app.html`), nessuna modifica backend:
-> - `ARCHIVE_STATES = ['CONSEGNATO','PAGATO']`: questi stati **escono dalla vista TUTTI** (lista
->   "attivi"), così premere CONSEGNATO/PAGATO archivia il cliente senza intasare la lista.
+> - `ARCHIVE_STATES`: lo stato conclusivo **CONSEGNATO esce dalla vista TUTTI** (lista "attivi"),
+>   così premerlo archivia il cliente senza intasare la lista. ('PAGATO' resta nell'array solo come
+>   alias legacy — vedi nota sotto.)
+>
+> **Rimosso lo stato cliente `PAGATO`** (14/06): coincideva con CONSEGNATO ed era trattato in modo
+> identico ovunque; il "saldato / non moroso" è già gestito dal modulo **💸 MOROSI**
+> (`solleciti_pagamento.stato`, asse separato — da NON toccare). Tolto da selettore stato, chip
+> filtro e guida; lasciato riconosciuto come alias legacy nei raggruppamenti d'archivio così le
+> eventuali schede già marcate PAGATO non diventano orfane (riaprendole si ri-taggano a CONSEGNATO).
+> ⏭️ Se in DB ci sono schede PAGATO da convertire in blocco, serve un piccolo `UPDATE clienti SET
+> stato='CONSEGNATO' WHERE stato='PAGATO'` (non fatto: probabilmente zero record).
 > - Pulsante **📦 Archivio (N)** sempre visibile in cima alla lista (compare solo se N>0) +
 >   chip **📦 ARCHIVIO** nella Ricerca avanzata → mostrano solo i conclusi. Ripremendo si torna a TUTTI.
 > - Toast "📦 Salvato e spostato in Archivio" quando si salva uno stato d'archivio.

@@ -377,13 +377,13 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
 ### Funzionalità
 - Lista clienti/lead con **semaforo lavorazione** (pallino + testo, regola 4gg: 🟠 sta per
   iniziare · 🔴 fine lavoro/ritardo · 🟢 nei tempi · 🟡 date da pianificare) e **filtri di stato in
-  toggle "🔍 Ricerca avanzata"** con legenda colori + ricerca testo. Gli stati conclusi
-  **CONSEGNATO/PAGATO** sono trattati come **archivio implicito**: escono dalla lista normale e si
-  richiamano col pulsante **📦 Archivio** (in cima alla lista) o dal chip ARCHIVIO
+  toggle "🔍 Ricerca avanzata"** con legenda colori + ricerca testo. Lo stato conclusivo
+  **CONSEGNATO** è trattato come **archivio implicito**: esce dalla lista normale e si
+  richiama col pulsante **📦 Archivio** (in cima alla lista) o dal chip ARCHIVIO
 - Dettaglio cliente con **tutti i campi modificabili** (nome, cognome, telefono, email, servizio, zona, mobile, budget, indirizzo, note, follow-up)
 - Cambio stato cliente sotto toggle **"🔄 Aggiorna stato"** (mostra lo stato attuale)
 - Azioni rapide: contenuto AI, post social, **proforma**, email, WhatsApp, note interne
-- **🧹 Libera spazio** (solo su clienti archiviati CONSEGNATO/PAGATO): a lavoro concluso cancella
+- **🧹 Libera spazio** (solo su clienti archiviati CONSEGNATO): a lavoro concluso cancella
   dal server **foto + reel** del cliente per recuperare spazio, tenendo scheda/preventivi+PDF/fasi/
   pagina sito; segna `foto_archiviate_at` e il bottone diventa "Spazio liberato"
 - **Generatore preventivi PDF** con form completo
@@ -403,7 +403,11 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
 - Aggiunta manuale clienti
 
 ### Stati cliente
-`LEAD` → `SOPRALLUOGO` → `PREVENTIVO` → `ACCONTO` → `STANDBY` → `PERSO`
+`LEAD` → `SOPRALLUOGO` → `PREVENTIVO` → `ACCONTO` → `IN_LAVORAZIONE` → `CONSEGNATO` (concluso → 📦 Archivio)
++ stati laterali `STANDBY` (in pausa) e `PERSO`.
+> Lo stato **PAGATO** è stato rimosso (coincideva con CONSEGNATO): il "saldato / non moroso" si
+> gestisce dal modulo **💸 MOROSI** (`solleciti_pagamento.stato`, asse separato). 'PAGATO' resta
+> riconosciuto solo come alias legacy d'archivio per eventuali schede già marcate così.
 
 ---
 
