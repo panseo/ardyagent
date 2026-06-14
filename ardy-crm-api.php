@@ -38,6 +38,7 @@ try {
             'wp_post_id'    => $r['wp_post_id']     ?? '',
             'wp_post_link'  => $r['wp_post_link']   ?? '',
             'foto_archiviate_at' => $r['foto_archiviate_at'] ?? '',
+            'faq_pubblicata_at'  => $r['faq_pubblicata_at']  ?? '',
             'created_at'    => $r['created_at']     ?? '',
             'updated_at'    => $r['updated_at']     ?? '',
         ];

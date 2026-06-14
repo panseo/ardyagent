@@ -363,6 +363,7 @@
         <div class="acc-body">
           <div id="faqPanel">
             <p style="font-size:12px;color:var(--text-dim);margin:0 0 14px;">Genera con l'AI le domande frequenti su questo lavoro e pubblicale sull'articolo (con dati strutturati per la SEO).</p>
+            <div id="faqStato" style="display:none;font-size:12px;color:var(--text-dim);margin:0 0 12px;padding:10px 12px;border:1px solid var(--border,#333);border-radius:8px;background:rgba(200,169,110,.06);"></div>
             <button class="btn-pubblica" id="btnFaq" style="width:100%;" onclick="creaFaq()">❓ CREA FAQ DI QUESTA LAVORAZIONE</button>
             <div class="lav-result" id="faqResult"></div>
           </div>
@@ -772,7 +773,7 @@ function aggiornaSezioniVisibili(stato) {
   // FAQ: solo a lavoro concluso (CONSEGNATO; PAGATO è alias legacy)
   const showFaq = ['CONSEGNATO','PAGATO'].includes(s);
   document.getElementById('acc-faq').style.display = showFaq ? '' : 'none';
-  if (showFaq) document.getElementById('faqResult').classList.remove('visible');
+  if (showFaq) { document.getElementById('faqResult').classList.remove('visible'); aggiornaStatoFaq(); }
 
   // Apre automaticamente la sezione più utile per lo stato corrente,
   // così non serve scrollare ogni volta. Le altre restano barre chiuse.
@@ -1630,6 +1631,28 @@ async function creaReel() {
 // Le FAQ generate restano in memoria per essere ritoccate prima della pubblicazione.
 let faqCorrente = [];
 
+// Riflette nel pannello se le FAQ sono GIÀ state pubblicate (faq_pubblicata_at):
+// mostra la nota + cambia il bottone in "rigenera/aggiorna" (la pubblicazione è
+// idempotente: una nuova versione sostituisce quella sull'articolo).
+function aggiornaStatoFaq() {
+  const stato = document.getElementById('faqStato');
+  const btn   = document.getElementById('btnFaq');
+  if (!stato || !btn) return;
+  const pubAt = currentLead && currentLead.faq_pubblicata_at;
+  if (pubAt) {
+    const d = String(pubAt).slice(0,10).split('-').reverse().join('/');
+    const link = (currentLead && currentLead.wp_post_link)
+      ? ` · <a href="${safeUrl(currentLead.wp_post_link)}" target="_blank" style="color:var(--accent);">vedi sull'articolo</a>` : '';
+    stato.innerHTML = `✓ FAQ già pubblicate il <strong>${escHtml(d)}</strong>${link}.<br>Puoi rigenerarle: la nuova versione <strong>sostituisce</strong> quella già sull'articolo.`;
+    stato.style.display = '';
+    btn.textContent = '🔄 RIGENERA / AGGIORNA FAQ';
+  } else {
+    stato.style.display = 'none';
+    stato.innerHTML = '';
+    btn.textContent = '❓ CREA FAQ DI QUESTA LAVORAZIONE';
+  }
+}
+
 async function creaFaq() {
   if (!currentLead) return;
   const btn = document.getElementById('btnFaq');
@@ -1660,7 +1683,7 @@ async function creaFaq() {
   }
 
   btn.disabled = false;
-  btn.textContent = '❓ CREA FAQ DI QUESTA LAVORAZIONE';
+  aggiornaStatoFaq();
 }
 
 // Anteprima MODIFICABILE: ogni FAQ è una coppia domanda/risposta editabile.
@@ -1721,6 +1744,13 @@ async function pubblicaFaq() {
     });
     const data = await res.json();
     if (data.success) {
+      // Aggiorna lo stato in sessione così il pannello mostra subito "già pubblicate".
+      if (currentLead) {
+        const now = new Date();
+        currentLead.faq_pubblicata_at = now.toISOString().slice(0,10);
+        if (data.post_link) currentLead.wp_post_link = data.post_link;
+      }
+      aggiornaStatoFaq();
       document.getElementById('faqResult').innerHTML =
         `<strong>✓ ${data.count} FAQ pubblicate</strong><br><br>`
         + `<a href="${safeUrl(data.post_link)}" target="_blank" style="color:var(--accent);">→ Vedi l'articolo aggiornato</a>`;
