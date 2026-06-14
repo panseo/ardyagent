@@ -393,13 +393,51 @@ const MUSICA_URL      = BASE_URL + '/ardy-lista-musica.php';
 const ARCHIVIA_URL    = BASE_URL + '/ardy-archivia-persi.php';
 
 // Icone destinazioni social (SVG dei brand: emoji per FB/IG non esistono).
-// Google Business: in attesa di attivazione (vedi README), mostrato in grigio.
-const SOCIAL_ICONS_HTML =
-  '<span style="display:inline-flex;align-items:center;gap:8px;">' +
-    '<svg width="18" height="18" viewBox="0 0 24 24" title="Facebook" fill="#1877F2"><path d="M24 12c0-6.6-5.4-12-12-12S0 5.4 0 12c0 6 4.4 11 10.1 11.9v-8.4H7.1V12h3V9.4c0-3 1.8-4.6 4.5-4.6 1.3 0 2.6.2 2.6.2v2.9h-1.5c-1.5 0-1.9.9-1.9 1.8V12h3.3l-.5 3.5h-2.8v8.4C19.6 23 24 18 24 12z"/></svg>' +
-    '<svg width="18" height="18" viewBox="0 0 24 24" title="Instagram" fill="#E1306C"><path d="M12 2.2c3.2 0 3.6 0 4.9.07 1.2.06 1.8.26 2.2.43.6.2 1 .5 1.4.9.4.4.7.8.9 1.4.17.4.37 1 .43 2.2.06 1.3.07 1.7.07 4.9s0 3.6-.07 4.9c-.06 1.2-.26 1.8-.43 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.17-1 .37-2.2.43-1.3.06-1.7.07-4.9.07s-3.6 0-4.9-.07c-1.2-.06-1.8-.26-2.2-.43-.6-.2-1-.5-1.4-.9-.4-.4-.7-.8-.9-1.4-.17-.4-.37-1-.43-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.07-4.9c.06-1.2.26-1.8.43-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.17 1-.37 2.2-.43C8.4 2.2 8.8 2.2 12 2.2zm0 3.2A6.6 6.6 0 1018.6 12 6.6 6.6 0 0012 5.4zm0 10.9A4.3 4.3 0 1116.3 12 4.3 4.3 0 0112 16.3zm6.8-11.1a1.5 1.5 0 11-1.5-1.5 1.5 1.5 0 011.5 1.5z"/></svg>' +
-    '<svg width="18" height="18" viewBox="0 0 48 48" title="Google Business (in attesa)" style="opacity:.45;"><path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-2.8-.4-4H24v7.3h12.1c-.2 1.8-1.6 4.6-4.6 6.5l6.7 5.2c4.3-3.9 6.9-9.7 6.9-15z"/><path fill="#34A853" d="M24 46c6.1 0 11.2-2 14.9-5.5l-7.1-5.5c-1.9 1.3-4.5 2.3-7.8 2.3-6 0-11-4-12.8-9.5l-7.3 5.6C7.5 41 15.1 46 24 46z"/><path fill="#FBBC05" d="M11.2 27.8c-.5-1.4-.7-2.9-.7-4.4s.3-3 .7-4.4l-7.3-5.6C2.6 16.3 2 19.6 2 23.4s.6 7.1 1.9 10z"/><path fill="#EA4335" d="M24 9.5c4.3 0 7.1 1.8 8.8 3.4l6.4-6.2C35.2 3 30.1 1 24 1 15.1 1 7.5 6 3.9 13.4l7.3 5.6C13 13.5 18 9.5 24 9.5z"/></svg>' +
-  '</span>';
+const FB_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12c0-6.6-5.4-12-12-12S0 5.4 0 12c0 6 4.4 11 10.1 11.9v-8.4H7.1V12h3V9.4c0-3 1.8-4.6 4.5-4.6 1.3 0 2.6.2 2.6.2v2.9h-1.5c-1.5 0-1.9.9-1.9 1.8V12h3.3l-.5 3.5h-2.8v8.4C19.6 23 24 18 24 12z"/></svg>';
+const IG_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="#E1306C"><path d="M12 2.2c3.2 0 3.6 0 4.9.07 1.2.06 1.8.26 2.2.43.6.2 1 .5 1.4.9.4.4.7.8.9 1.4.17.4.37 1 .43 2.2.06 1.3.07 1.7.07 4.9s0 3.6-.07 4.9c-.06 1.2-.26 1.8-.43 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.17-1 .37-2.2.43-1.3.06-1.7.07-4.9.07s-3.6 0-4.9-.07c-1.2-.06-1.8-.26-2.2-.43-.6-.2-1-.5-1.4-.9-.4-.4-.7-.8-.9-1.4-.17-.4-.37-1-.43-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.07-4.9c.06-1.2.26-1.8.43-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.17 1-.37 2.2-.43C8.4 2.2 8.8 2.2 12 2.2zm0 3.2A6.6 6.6 0 1018.6 12 6.6 6.6 0 0012 5.4zm0 10.9A4.3 4.3 0 1116.3 12 4.3 4.3 0 0112 16.3zm6.8-11.1a1.5 1.5 0 11-1.5-1.5 1.5 1.5 0 011.5 1.5z"/></svg>';
+const GOOGLE_SVG = '<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-2.8-.4-4H24v7.3h12.1c-.2 1.8-1.6 4.6-4.6 6.5l6.7 5.2c4.3-3.9 6.9-9.7 6.9-15z"/><path fill="#34A853" d="M24 46c6.1 0 11.2-2 14.9-5.5l-7.1-5.5c-1.9 1.3-4.5 2.3-7.8 2.3-6 0-11-4-12.8-9.5l-7.3 5.6C7.5 41 15.1 46 24 46z"/><path fill="#FBBC05" d="M11.2 27.8c-.5-1.4-.7-2.9-.7-4.4s.3-3 .7-4.4l-7.3-5.6C2.6 16.3 2 19.6 2 23.4s.6 7.1 1.9 10z"/><path fill="#EA4335" d="M24 9.5c4.3 0 7.1 1.8 8.8 3.4l6.4-6.2C35.2 3 30.1 1 24 1 15.1 1 7.5 6 3.9 13.4l7.3 5.6C13 13.5 18 9.5 24 9.5z"/></svg>';
+
+// Selettore destinazioni: ogni social è un toggle. Si può pubblicare anche su uno solo.
+// Google Business è disattivato (in attesa di attivazione, vedi README).
+function socialDestHtml(prefix, sel) {
+  const selArr = (Array.isArray(sel) && sel.length) ? sel : ['facebook','instagram'];
+  const tog = (plat, label, svg, disabled) => {
+    const on = !disabled && selArr.includes(plat);
+    return `<button type="button" class="social-toggle${on ? ' sel' : ''}" data-prefix="${prefix}" data-plat="${plat}"`
+      + (disabled ? ' disabled title="In attesa di attivazione"' : ` title="Pubblica su ${label}" onclick="toggleSocialDest(this)"`)
+      + `>${svg}<span>${label}</span></button>`;
+  };
+  return `<div class="social-dest" id="dest_${prefix}">`
+    + tog('facebook','Facebook',FB_SVG,false)
+    + tog('instagram','Instagram',IG_SVG,false)
+    + tog('google','Google',GOOGLE_SVG,true)
+    + `</div>`;
+}
+
+// Click su un toggle: attiva/disattiva, ma non lasciare zero social selezionati.
+function toggleSocialDest(btn) {
+  if (btn.disabled) return;
+  const wrap = btn.parentElement;
+  const wouldDeselect = btn.classList.contains('sel');
+  const restanti = wrap.querySelectorAll('.social-toggle.sel').length - (wouldDeselect ? 1 : 0);
+  if (wouldDeselect && restanti < 1) { showToast('Scegli almeno un social', 'error'); return; }
+  btn.classList.toggle('sel');
+}
+
+// Legge le piattaforme selezionate per un dato prefisso (default: entrambi).
+function getSelectedPlatforms(prefix) {
+  const wrap = document.getElementById('dest_' + prefix);
+  if (!wrap) return ['facebook','instagram'];
+  const sel = [...wrap.querySelectorAll('.social-toggle.sel')].map(b => b.dataset.plat);
+  return sel.length ? sel : ['facebook','instagram'];
+}
+
+// Etichetta leggibile delle piattaforme per i toast.
+function platLabel(arr) {
+  const m = { facebook:'Facebook', instagram:'Instagram' };
+  const names = (arr || []).map(p => m[p] || p);
+  return names.length === 2 ? 'Facebook e Instagram' : (names[0] || 'social');
+}
 
 // ─── STATE ────────────────────────────────────────────────
 let allLeads       = [];
@@ -1500,12 +1538,13 @@ function mostraPannelloSocial(data) {
     mobile:       data.mobile || '',
     post_link:    data.post_link || '',
     cliente:      data.cliente || '',
+    piattaforme:  (Array.isArray(data.piattaforme) && data.piattaforme.length) ? data.piattaforme : ['facebook','instagram'],
   };
   document.getElementById('socialText').value = pendingSocial.testo_social;
   document.getElementById('socialThumbs').innerHTML =
     pendingSocial.immagini.map(u => `<img src="${safeUrl(u)}">`).join('');
   const iconsEl = document.getElementById('socialPanelIcons');
-  if (iconsEl) iconsEl.innerHTML = SOCIAL_ICONS_HTML;
+  if (iconsEl) iconsEl.innerHTML = socialDestHtml('panel', pendingSocial.piattaforme);
   document.getElementById('socialPanel').style.display = 'block';
 }
 
@@ -1522,12 +1561,13 @@ async function pubblicaSocialOra() {
   if (!pendingSocial) return;
   const testo = document.getElementById('socialText').value.trim();
   if (!testo) { showToast('⚠ Il testo è vuoto', 'error'); return; }
+  const piattaforme = getSelectedPlatforms('panel');
   try {
-    const data = await inviaSocial({ ...pendingSocial, testo_social: testo });
+    const data = await inviaSocial({ ...pendingSocial, testo_social: testo, piattaforme });
     if (data.success) {
       document.getElementById('socialPanel').style.display = 'none';
       pendingSocial = null;
-      showToast('✓ Pubblicato su Facebook e Instagram', 'success');
+      showToast('✓ Pubblicato su ' + platLabel(data.piattaforme || piattaforme), 'success');
     } else {
       showToast('⚠ ' + (data.error || 'Errore social'), 'error');
     }
@@ -1537,8 +1577,9 @@ async function pubblicaSocialOra() {
 function salvaSocialDopo() {
   if (!pendingSocial) return;
   const testo = document.getElementById('socialText').value.trim();
+  const piattaforme = getSelectedPlatforms('panel');
   const list = caricaSocialPending();
-  list.push({ ...pendingSocial, testo_social: testo, id: 'sp_' + Date.now(), data: new Date().toLocaleString('it-IT') });
+  list.push({ ...pendingSocial, testo_social: testo, piattaforme, id: 'sp_' + Date.now(), data: new Date().toLocaleString('it-IT') });
   salvaSocialPendingList(list);
   document.getElementById('socialPanel').style.display = 'none';
   pendingSocial = null;
@@ -1576,8 +1617,8 @@ function renderSocialPending() {
       <div style="margin-bottom:10px;">
         <div style="font-size:16px;line-height:1;margin-bottom:6px;">📲</div>
         <div style="font-size:13px;font-weight:600;margin-bottom:6px;">${escHtml(titolo)}</div>
-        <div class="social-dest" style="margin-bottom:6px;">${SOCIAL_ICONS_HTML}</div>
-        <div style="font-size:11px;color:var(--text-dim);">${escHtml(p.data || '')}</div>
+        ${socialDestHtml(p.id, p.piattaforme)}
+        <div style="font-size:11px;color:var(--text-dim);margin-top:6px;">${escHtml(p.data || '')}</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
         <button class="btn-secondary" style="flex:1 1 90px;" onclick="togglePendingEdit('${escHtml(p.id)}')">✏ Modifica</button>
@@ -1613,12 +1654,13 @@ async function pubblicaPending(id) {
   const ta = document.getElementById('pendText_' + id);
   const testo = (ta ? ta.value : item.testo_social).trim();
   if (!testo) { showToast('⚠ Il testo è vuoto', 'error'); return; }
+  const piattaforme = getSelectedPlatforms(id);
   try {
-    const data = await inviaSocial({ ...item, testo_social: testo });
+    const data = await inviaSocial({ ...item, testo_social: testo, piattaforme });
     if (data.success) {
       salvaSocialPendingList(caricaSocialPending().filter(p => p.id !== id));
       renderSocialPending();
-      showToast('✓ Pubblicato su Facebook e Instagram', 'success');
+      showToast('✓ Pubblicato su ' + platLabel(data.piattaforme || piattaforme), 'success');
     } else {
       showToast('⚠ ' + (data.error || 'Errore social'), 'error');
     }

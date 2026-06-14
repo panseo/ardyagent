@@ -23,6 +23,17 @@ $immagini    = $input['immagini']  ?? [];
 $cliente     = $input['cliente']   ?? '';
 $testo       = $input['testo']     ?? $testoSocial;
 
+// Piattaforme di destinazione: si può pubblicare anche su un solo social.
+// Whitelist + default a entrambi se non specificato (retro-compatibilità).
+$VALIDE      = ['facebook', 'instagram'];
+$piattaforme = $input['piattaforme'] ?? [];
+if (!is_array($piattaforme)) $piattaforme = [];
+$piattaforme = array_values(array_intersect(
+    array_map('strtolower', array_map('strval', $piattaforme)),
+    $VALIDE
+));
+if (!$piattaforme) $piattaforme = $VALIDE; // nessuna indicazione valida => entrambi
+
 if ($testoSocial === '') {
     echo json_encode(['success' => false, 'error' => 'Testo del post mancante']);
     exit();
@@ -37,6 +48,9 @@ $webhookData = [
     'immagini'     => is_array($immagini) ? $immagini : [],
     'cliente'      => $cliente,
     'testo_social' => $testoSocial,
+    'piattaforme'  => $piattaforme,            // es. ["facebook"] | ["instagram"] | entrambi
+    'facebook'     => in_array('facebook',  $piattaforme, true),
+    'instagram'    => in_array('instagram', $piattaforme, true),
 ];
 
 $ch = curl_init($webhookUrl);
@@ -56,4 +70,4 @@ if ($err || $httpCode >= 400) {
     exit();
 }
 
-echo json_encode(['success' => true]);
+echo json_encode(['success' => true, 'piattaforme' => $piattaforme]);

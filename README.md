@@ -396,7 +396,9 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
   **🔨 Crea e pubblica nuova fase**; la prima foto diventa l'**immagine in evidenza** del post
 - **Pubblicazione social manuale**: dopo la fase, pannello per rivedere/modificare il post (*pubblica
   ora / salva per dopo / non pubblicare*); coda **"post in attesa"** (localStorage) in lista compatta
-  con toggle ✏ Modifica e icone brand FB/IG/Google
+  con toggle ✏ Modifica. **Selezione per singolo social**: le icone FB/IG sono toggle (default
+  entrambi, deselezionabili fino a uno solo; Google disattivo) → il campo `piattaforme` viaggia al
+  webhook n8n. Il nodo n8n va aggiornato per rispettarlo (vedi `ardy-pubblica-social-n8n.md`)
 - **Reel finale**: a lavoro concluso monta un video 9:16 dalle fasi (titolo + didascalie + Prima/Dopo), con scelta **template di stile**, musica, caption automatica modificabile e pubblicazione sui social
 - **Libreria template reel** (DB): preset di stile (durate, slide attive, musica) creabili/modificabili dal pannello "⚙ Template"
 - Pulsante **❓ Guida** che apre la guida d'uso
