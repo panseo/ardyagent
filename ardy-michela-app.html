@@ -242,6 +242,8 @@
             </div>
 
             <div class="lav-form">
+              <button class="btn-secondary" id="btnToggleNuovaFase" onclick="toggleNuovaFase()" style="width:100%;">➕ Crea e pubblica nuova fase</button>
+              <div id="nuovaFaseBody" style="display:none;margin-top:12px;">
               <div class="lav-row">
                 <input class="lav-input" id="lavFase" placeholder="Nome fase (es. Sverniciatura)">
                 <input class="lav-input" id="lavMobile" placeholder="Mobile (es. Credenza anni 60)">
@@ -279,6 +281,7 @@
               </button>
               <p style="font-size:11px;color:var(--text-dim);margin:6px 2px 0;">Usa la comunicazione straordinaria per un imprevisto da segnalare al cliente prima di procedere (non è un avanzamento, non va sui social).</p>
               <div class="lav-result" id="lavResult"></div>
+              </div><!-- /nuovaFaseBody -->
 
               <div id="socialPanel" style="display:none;margin-top:18px;border-top:1px dashed var(--border);padding-top:16px;">
                 <div class="lav-title" style="margin-bottom:4px;">📲 Vuoi pubblicare sui social?</div>
@@ -557,6 +560,8 @@ function aggiornaSezioniVisibili(stato) {
     pendingSocial = null;
     renderSocialPending();
     caricaFasiPubblicate(currentLead.Session_ID ?? '');
+    const nfBody = document.getElementById('nuovaFaseBody');
+    if (nfBody) nfBody.style.display = 'none';
   }
 
   // Reel: solo CONSEGNATO e PAGATO
@@ -1407,6 +1412,13 @@ function renderSocialPending() {
 // se chiusa, così "Pubblica" funziona senza dover prima aprire "Modifica").
 function togglePendingEdit(id) {
   const el = document.getElementById('pendEdit_' + id);
+  if (!el) return;
+  el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+}
+
+// Apre/chiude il form "Crea e pubblica nuova fase"
+function toggleNuovaFase() {
+  const el = document.getElementById('nuovaFaseBody');
   if (!el) return;
   el.style.display = (el.style.display === 'block') ? 'none' : 'block';
 }
