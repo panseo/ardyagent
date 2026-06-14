@@ -33,68 +33,94 @@ condizioni regolano il rapporto tra Ardy Lab e il cliente per la richiesta e
 l'esecuzione di tali servizi, nonché l'uso del sito e dei canali di contatto
 (modulo online, chatbot, WhatsApp, email).
 
-## 3. Preventivi e conclusione del contratto
-3.1 Le informazioni sul sito e i preventivi indicativi non costituiscono offerta
+## 3. Assistente virtuale "Sole" e codice personale
+3.1 Il sito e i canali di Ardy Lab mettono a disposizione un **assistente virtuale
+basato su intelligenza artificiale** denominato "Sole", accessibile tramite chatbot
+del sito, widget delle pagine di lavorazione e WhatsApp. Sole fornisce informazioni,
+raccoglie le richieste, propone appuntamenti e dà indicazioni di massima sui servizi.
+3.2 Le risposte di Sole hanno carattere **informativo e di assistenza** e **non
+costituiscono** un preventivo vincolante, una consulenza professionale né un impegno
+contrattuale. **Prezzi, tempi di consegna, modifiche e accordi sono sempre confermati
+da una persona** (il Titolare): **nessuna decisione con effetti giuridici è presa
+unicamente con mezzi automatizzati** (art. 22 GDPR). Pur con la massima cura, le
+risposte generate dall'AI possono contenere imprecisioni: fanno fede il preventivo
+scritto e quanto confermato dal Titolare.
+3.3 L'utente si impegna a usare l'assistente in modo lecito e corretto: a fornire
+informazioni veritiere, a non inviare contenuti illeciti, offensivi o dati di terzi
+senza titolo, e a non tentare di alterarne il funzionamento o di farne un uso improprio
+(es. abuso automatizzato del servizio).
+3.4 Per generare le risposte, i messaggi sono elaborati anche tramite fornitori di
+servizi di intelligenza artificiale e di messaggistica; le conversazioni possono essere
+conservate e trattate come descritto nell'Informativa Privacy.
+3.5 **Codice personale.** Ai clienti con una lavorazione in corso può essere assegnato
+un **codice personale** (formato "ARD-XXXX-XXXX") che consente, in chat o via WhatsApp,
+di consultare lo stato del proprio lavoro. Il codice è **personale e riservato**:
+l'utente è tenuto a custodirlo e a non condividerlo, ed è responsabile dell'uso fatto
+da chi ne venga in possesso per suo tramite. In caso di smarrimento o uso non
+autorizzato è possibile scrivere a ardy.documenti@gmail.com per ottenerne uno nuovo.
+
+## 4. Preventivi e conclusione del contratto
+4.1 Le informazioni sul sito e i preventivi indicativi non costituiscono offerta
 vincolante. Ogni intervento è preceduto da un **preventivo scritto** personalizzato.
-3.2 Il contratto si intende concluso al momento dell'**accettazione del preventivo**
+4.2 Il contratto si intende concluso al momento dell'**accettazione del preventivo**
 da parte del cliente (firma o conferma scritta, anche via email/WhatsApp), ai sensi
 dell'art. 1326 c.c. (proposta + accettazione).
-3.3 Il preventivo ha validità di **30 giorni** dalla data di emissione, salvo
+4.3 Il preventivo ha validità di **30 giorni** dalla data di emissione, salvo
 diversa indicazione.
 
-## 4. Prezzi e pagamenti
-4.1 I prezzi sono espressi in Euro. In regime forfettario **non si applica l'IVA**
+## 5. Prezzi e pagamenti
+5.1 I prezzi sono espressi in Euro. In regime forfettario **non si applica l'IVA**
 (operazione non soggetta ai sensi dell'art. 1, c. 58, L. 190/2014); ove dovuta, è
 applicata l'**imposta di bollo** sulle fatture di importo superiore a € 77,47.
-4.2 Salvo diverso accordo nel preventivo: **acconto** alla conferma (di norma il 30%
+5.2 Salvo diverso accordo nel preventivo: **acconto** alla conferma (di norma il 30%
 su manodopera + costo materiali) e **saldo alla consegna**. È disponibile, ove
 indicato, il **pagamento dilazionato tramite PayPal**.
-4.3 Ogni intervento è accompagnato da regolare fattura.
+5.3 Ogni intervento è accompagnato da regolare fattura.
 
-## 5. Tempi di esecuzione e consegna
+## 6. Tempi di esecuzione e consegna
 I tempi indicati nel preventivo (es. "20 giorni lavorativi") decorrono dalla
 ricezione dell'acconto e/o dei beni da lavorare e hanno natura indicativa; eventuali
 ritardi dovuti a cause non imputabili ad Ardy Lab (reperibilità materiali, forza
 maggiore, modifiche richieste dal cliente) non danno luogo a responsabilità.
 
-## 6. Obblighi del cliente
+## 7. Obblighi del cliente
 Il cliente garantisce la veridicità dei dati forniti, di avere titolo sui beni
 affidati per la lavorazione e si impegna a fornire le informazioni necessarie
 all'esecuzione del servizio e a corrispondere quanto pattuito nei termini concordati.
 
-## 7. Garanzia e difetti
+## 8. Garanzia e difetti
 Ai beni e ai servizi si applicano le garanzie di legge. Eventuali contestazioni su
 vizi o difformità vanno comunicate per iscritto entro i termini di legge dalla
 scoperta. Trattandosi spesso di beni unici e di interventi di restauro su materiali
 preesistenti, alcune caratteristiche (patine, variazioni cromatiche, segni del tempo)
 possono essere conservate per scelta conservativa e non costituiscono difetto.
 
-## 8. Diritto di recesso (clienti consumatori)
-8.1 Se il cliente è un **consumatore** e il contratto è concluso a distanza o fuori
+## 9. Diritto di recesso (clienti consumatori)
+9.1 Se il cliente è un **consumatore** e il contratto è concluso a distanza o fuori
 dai locali commerciali, ha diritto di recedere entro **14 giorni** senza motivazione
 (artt. 52 ss. Codice del Consumo, D.lgs. 206/2005), scrivendo a ardy.documenti@gmail.com.
-8.2 **Eccezione:** il diritto di recesso **non si applica** ai beni confezionati su
+9.2 **Eccezione:** il diritto di recesso **non si applica** ai beni confezionati su
 misura o chiaramente personalizzati e ai servizi di restauro/lavorazione già iniziati
 con l'accordo del cliente (art. 59 Cod. Consumo). Per i servizi richiesti con
 esecuzione immediata, il cliente prende atto che, una volta completata la prestazione,
 perde il diritto di recesso.
 
-## 9. Limitazione di responsabilità
+## 10. Limitazione di responsabilità
 Ardy Lab risponde dei danni a essa direttamente imputabili nei limiti di legge. È
 esclusa la responsabilità per danni derivanti da uso improprio dei beni dopo la
 consegna, da informazioni inesatte fornite dal cliente o da cause di forza maggiore.
 
-## 10. Reclami e risoluzione delle controversie
+## 11. Reclami e risoluzione delle controversie
 I reclami possono essere inviati a ardy.documenti@gmail.com. Per i consumatori è
 disponibile la piattaforma europea di risoluzione online delle controversie (ODR):
 https://ec.europa.eu/consumers/odr.
 
-## 11. Legge applicabile e foro
+## 12. Legge applicabile e foro
 Il rapporto è regolato dalla **legge italiana**. Per le controversie con i
 consumatori è competente il foro del luogo di residenza/domicilio del consumatore;
 negli altri casi il foro di **[[Roma]]**.
 
-## 12. Modifiche
+## 13. Modifiche
 Ardy Lab può aggiornare i presenti termini; la versione vigente è quella pubblicata
 su questa pagina con la relativa data di aggiornamento.
 
@@ -115,6 +141,9 @@ questo indirizzo.
 - **Dati di fatturazione**: P.IVA/C.F., indirizzo, necessari per emettere fattura.
 - **Contenuto delle conversazioni**: messaggi scambiati con il nostro assistente
   online ("Sole") e via WhatsApp, finalizzati a gestire la richiesta.
+- **Codice personale**: un codice riservato (formato "ARD-XXXX-XXXX") assegnato ai
+  clienti con una lavorazione in corso, che funge da credenziale per consultare lo
+  stato del proprio lavoro in chat/WhatsApp.
 - **Immagini dei beni**: foto dei mobili/oggetti che ci invii per il preventivo o
   che realizziamo durante la lavorazione.
 - **Dati di navigazione**: dati tecnici raccolti automaticamente dal sito (indirizzo
