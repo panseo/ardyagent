@@ -177,7 +177,8 @@ in CGI/FPM e rifarebbe la login. Ci si affida al `.htaccess` (Basic Auth) come p
 1. **`GRAZIE_GOOGLE_REVIEW_URL`** = link recensione Google Maps di Ardy Lab (senza, il bottone è nascosto).
 2. (opz.) confermare/aggiornare `GRAZIE_IG_URL` / `GRAZIE_FB_URL` (default: ardy.lab / pagina "Ardy").
 3. Creare+approvare il **template Meta** `aggiornamento`/`grazie_consegna` e settare `WA_TEMPLATE_GRAZIE`.
-⏭️ (opz.) bottone in dashboard per **reinviare** il ringraziamento manualmente.
+✅ **FATTO** — bottone **📧 Reinvia ringraziamento** nella scheda (visibile solo per CONSEGNATO):
+   reinvia con `force:true` (email + WhatsApp se configurato) senza terminale.
 ⏭️ **Logo in alto nell'email**: oggi l'header è testuale ("ARDY LAB"). Mettere il logo immagine
    (`assets/logo.png`) in cima — idealmente in TUTTE le email (grazie, fasi, benvenuto, outreach)
    per coerenza. Nota: nelle email il logo va come URL assoluto (`https://ardy-lab.it/.../logo.png`)

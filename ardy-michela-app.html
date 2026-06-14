@@ -103,6 +103,8 @@
           <div class="detail-sub" id="dSub">—</div>
         </div>
         <div style="display:flex;gap:6px;margin-left:8px;align-self:flex-start;flex-wrap:wrap;justify-content:flex-end;">
+          <button id="btnReinviaGrazie" onclick="reinviaGrazie()" title="Reinvia al cliente l'email (e WhatsApp se configurato) di ringraziamento alla consegna: recensione Google, social, newsletter."
+            style="display:none;background:transparent;border:1px solid #8b6f3e;color:#c8a96e;border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;white-space:nowrap;">📧 Reinvia ringraziamento</button>
           <button id="btnLiberaSpazio" onclick="liberaSpazioCliente()" title="Lavoro concluso: cancella foto e reel dal server per liberare spazio. Tiene scheda, preventivi (con PDF), fasi e pagina sito."
             style="display:none;background:transparent;border:1px solid #6f8b6f;color:#9bd99b;border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;white-space:nowrap;">🧹 Libera spazio</button>
           <button id="btnEliminaCliente" onclick="eliminaCliente()" title="Elimina definitivamente questo cliente"
@@ -383,6 +385,7 @@ const BASE_URL        = 'https://ardyagent.ardy-lab.it';
 const CRM_API_URL     = BASE_URL + '/ardy-crm-api.php';
 const UPDATE_URL      = BASE_URL + '/ardy-update-lead.php';
 const ELIMINA_URL     = BASE_URL + '/ardy-elimina-cliente.php';
+const GRAZIE_URL      = BASE_URL + '/ardy-grazie-consegna.php';
 const AI_URL          = BASE_URL + '/ardy-proxy.php';
 const LAVORAZIONE_URL = BASE_URL + '/ardy-pubblica-lavorazione.php';
 const SOCIAL_URL      = BASE_URL + '/ardy-pubblica-social.php';
@@ -656,6 +659,10 @@ function renderDetail() {
 
   // Visibilità sezioni accordion basata su stato
   aggiornaSezioniVisibili(l.Stato ?? '');
+
+  // "Reinvia ringraziamento" solo per i clienti CONSEGNATO
+  const btnGr = document.getElementById('btnReinviaGrazie');
+  if (btnGr) btnGr.style.display = (l.Stato ?? '').toUpperCase() === 'CONSEGNATO' ? 'inline-block' : 'none';
 
   // "Libera spazio" solo per lavori conclusi (archivio: CONSEGNATO, + legacy PAGATO)
   const btnLib = document.getElementById('btnLiberaSpazio');
@@ -952,6 +959,36 @@ async function liberaSpazioCliente() {
     showToast('⚠ Errore di rete', 'error');
     if (btn) { btn.disabled = false; btn.textContent = '🧹 Libera spazio'; }
   }
+}
+
+// Reinvia il ringraziamento alla consegna (email + WhatsApp se configurato).
+async function reinviaGrazie() {
+  if (!currentLead) return;
+  const sid = currentLead.Session_ID;
+  if (!sid) { showToast('⚠ Scheda senza sessione', 'error'); return; }
+  if (!confirm('Reinviare al cliente il messaggio di ringraziamento alla consegna?')) return;
+
+  const btn = document.getElementById('btnReinviaGrazie');
+  if (btn) { btn.disabled = true; btn.textContent = 'Invio…'; }
+  try {
+    const res  = await fetch(GRAZIE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sid, force: true })
+    });
+    const data = await res.json();
+    if (data && data.success) {
+      const canali = [data.email ? 'email' : null, data.whatsapp ? 'WhatsApp' : null].filter(Boolean);
+      showToast(canali.length ? '✓ Ringraziamento inviato (' + canali.join(' + ') + ')'
+                              : '⚠ Inviato a nessun canale (controlla email/template)',
+                canali.length ? 'success' : 'error');
+    } else {
+      showToast('⚠ ' + ((data && data.error) || 'Errore invio'), 'error');
+    }
+  } catch(e) {
+    showToast('⚠ Errore di rete', 'error');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '📧 Reinvia ringraziamento'; }
 }
 
 // ─── MODAL AI ─────────────────────────────────────────────
