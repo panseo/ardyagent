@@ -58,9 +58,40 @@ Tutto deployato su `main`. Lato dashboard sono migliorie UI testate dal vivo da 
 
 ---
 
+## ✅ FATTO E IN PRODUZIONE — sessione 14/06 (pomeriggio)
+Branch `claude/sharp-einstein-pmuqq3`, mergeato su `main`. Da deployare/verificare.
+- **Archivio implicito CONSEGNATI**: lo stato conclusivo CONSEGNATO esce dalla lista TUTTI;
+  pulsante **📦 Archivio (N)** sempre visibile + chip ARCHIVIO. (Dettagli in "Archivio clienti
+  CONSEGNATI" sotto.)
+- **🧹 Libera spazio**: azione `libera_spazio` in `ardy-elimina-cliente.php` (conferma "LIBERA"):
+  cancella solo foto+reel del cliente concluso, tiene scheda/preventivi+PDF/fasi/sito; segna
+  `foto_archiviate_at`. Bottone sulla scheda solo da archiviato.
+- **Rimosso lo stato cliente `PAGATO`** (coincideva con CONSEGNATO; il "saldato/non moroso" è il
+  modulo MOROSI). Alias legacy mantenuto solo per non orfanare eventuali schede già marcate.
+- **Pubblicazione social per singolo social**: toggle FB/IG (default entrambi, deselezionabili
+  fino a uno). Campo `piattaforme` al webhook. ⏭️ **Manca il lato n8n**: aggiornare il nodo Code
+  per rispettare `piattaforme`/`facebook`/`instagram` (vedi `ardy-pubblica-social-n8n.md`).
+
+---
+
+## 🐞 BUG APERTI (segnalati da Michela 14/06 — da investigare)
+1. **Email fasi col mittente sbagliato**: l'email che arriva al cliente sugli aggiornamenti di
+   lavorazione NON usa l'indirizzo impostato altrove (probabile `From`/`Reply-To` hardcoded in
+   `ardy-pubblica-lavorazione.php` invece di leggere la config mittente usata dagli altri invii).
+   → Trovare la fonte di verità del mittente (Brevo/PHPMailer in `ardy-net.php`?) e uniformare.
+2. **Immagini non pubblicate su WordPress**: nelle fasi le foto non finiscono nel post. Regola
+   decisa in una sessione passata: **prima foto = immagine in evidenza**, le **altre dentro
+   l'articolo**. Verificare `ardy-pubblica-lavorazione.php` (upload media WP + featured image +
+   inserimento `<img>`/gallery nel body) — capire se è regressione o config (permessi/endpoint WP).
+
+---
+
 ## ▶️ PROSSIMA SESSIONE — da dove ripartire
-Branch di lavoro: `claude/lucid-bohr-sngzn5` (allineato a `main`). Dopo ogni push, deploy con il
+Branch di lavoro: `claude/sharp-einstein-pmuqq3` (allineato a `main`). Dopo ogni push, deploy con il
 comando nelle NOTE OPERATIVE qui sotto.
+
+0. **Chiudere i 2 BUG sopra** (email mittente fasi + immagini su WordPress) — priorità alta.
+0b. **Lato n8n** per il singolo social (vedi `ardy-pubblica-social-n8n.md`).
 
 1. **Verifiche sul vivo** di quanto fatto il 14/06 (Michela deve solo guardare):
    - Sidebar: i pallini semaforo e il toggle "Ricerca avanzata" si comportano come atteso?
@@ -129,7 +160,56 @@ in CGI/FPM e rifarebbe la login. Ci si affida al `.htaccess` (Basic Auth) come p
 
 ## 📋 TASK DA SVILUPPARE
 
-### ⭐ PROSSIMO — Backup & centralizzazione dei widget WordPress
+### 🆕 Dossier cliente in Markdown (contesto completo per Sole)
+Obiettivo: per ogni cliente un **file MD** (o blob generato al volo) che raccoglie **tutto**:
+anagrafica/servizio, **preventivo(i)**, **registrazioni chat** (web + WhatsApp), **fasi di
+lavorazione**, note, stato. Serve a dare a **Sole** un quadro completo e immediato, **sia da chat
+web (`ardy-proxy.php`) che da WhatsApp (`ardy-wa-lookup.php`)**.
+- Dati già tutti nel DB: `clienti`, `preventivi.voci_json`, `fasi`, `wa_messaggi`, + chat web
+  (sessioni). Da valutare: **generare il dossier on-the-fly** (no file da mantenere) vs **file MD
+  persistito** (es. `dossier/<session>.md`, rigenerato a ogni cambiamento) — il primo è più
+  semplice e sempre aggiornato; il secondo è leggibile/condivisibile e cacheabile.
+- Endpoint tipo `ardy-dossier.php?session_id=…` → restituisce l'MD; iniettato nel system prompt
+  di Sole (con prompt caching, come già si fa per `crm_context`). Attenzione alla **lunghezza**
+  (token): troncare chat lunghe / riassumere.
+- ⚠️ **Privacy/accesso**: il dossier contiene dati personali → su web solo dopo `cerca_cliente`
+  (codice d'accesso); su WhatsApp solo per numero registrato. Niente dati di altri clienti.
+
+### 🆕 "Crea FAQ di questa lavorazione" (su stato CONSEGNATO)
+Quando la lavorazione passa a **CONSEGNATO**, nella scheda compare — accanto al **Reel** — un
+nuovo bottone **"Crea FAQ di questa lavorazione"**:
+- Genera con Claude un set di **FAQ** pertinenti al lavoro svolto (dalle fasi/servizio/mobile).
+- **Pubblica in automatico** come **aggiornamento dell'articolo WordPress** della lavorazione
+  (riusa `ardy-pubblica-lavorazione.php` / API WP) + **dati strutturati FAQ** (`schema.org/FAQPage`,
+  JSON-LD nel post) per la SEO.
+- Da costruire: endpoint `ardy-crea-faq.php` (genera FAQ + aggiorna post WP + inietta JSON-LD),
+  bottone in `acc-reel`/sezione lavorazione visibile solo per CONSEGNATO, anteprima modificabile
+  prima della pubblicazione (come per la caption del reel).
+- Sinergia col **Dossier**: le stesse FAQ possono arricchire il contesto di Sole.
+
+### 🆕 (DA VALUTARE — grande) Sole esperta di legno & restauro + datazione fotografica guidata
+Visione: dare a Sole **conoscenza profonda** di legno, restauro del mobile, riconoscimento dello
+**stile** e **datazione/epoca** quasi certa, tramite un **rilievo fotografico guidato** del mobile
+(la chat chiede e analizza dettagli diagnostici: incastri a **coda di rondine** — fatti a mano o a
+macchina? **fondello del cassetto in massello** o compensato? **segni di lavorazione industriale**?
+tipo di legno, ferramenta, patina, ecc.).
+- **Pipeline knowledge**: cercare in rete **fonti autorevoli** (legno, tecniche di lavorazione per
+  epoca, storia del mobile, restauro) e costruire un **archivio organizzato** (knowledge base) da
+  conservare e usare (es. schede per stile/epoca + criteri diagnostici). Da progettare: formato
+  (MD/JSON per epoca-stile), storage (file nel repo o tabella DB), e **retrieval** (iniettare nel
+  prompt solo le schede pertinenti; valutare un mini-RAG per non gonfiare i token).
+- **Flusso diagnostico guidato**: Sole conduce passo-passo (richieste di foto mirate dei punti
+  diagnostici) → ipotesi di stile/epoca con livello di confidenza + motivazione sui dettagli.
+  Riusa l'analisi foto già presente nella chat web.
+- ⚠️ **Accesso riservato**: NON per tutti. Solo per **clienti** o **registrati alla community**.
+  La community va **popolata dal modulo Outreach** (`ardy-outreach.html`/`ardy-outreach-api.php`) →
+  serve un registro "membri community" (riuso/estensione delle tabelle outreach) e un **gate** di
+  accesso a questa feature (in chat web: verifica codice cliente o iscrizione; su WhatsApp: numero
+  registrato). Definire prima il modello di membership, poi la knowledge base, poi il flusso guidato.
+- Note realismo: la datazione "quasi certa" da sole foto è ambiziosa → impostare come **stima
+  motivata** con confidenza, non verdetto; utile anche come lead-magnet per la community.
+
+### ⭐ Backup & centralizzazione dei widget WordPress
 Obiettivo: portare sotto git i sorgenti che oggi vivono solo in WordPress, e dove possibile
 **centralizzarli** in file serviti dal nostro server (una sola fonte versionata).
 ✅ **Già fatto**: infra `wordpress-snippets/` (esclusa dal deploy) + `ardychat` centralizzato in
