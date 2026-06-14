@@ -202,7 +202,11 @@ lungo parte da solo al primo "buongiorno". Senza, funziona quando Michela chiede
 ---
 
 ## 📄 FUORI REPO / OPERATIVO
-- **Termini & Condizioni su WordPress**: aggiornarli coerenti con l'informativa GDPR del preventivo PDF.
+- ✅ **Termini & Condizioni + Privacy su WordPress** (14/06): rifatti su misura
+  (`termini-privacy-wordpress.md`) al posto dei testi generici da plugin — aggiunta sez.
+  assistente AI + codice personale, fornitori reali (Anthropic/Meta/Brevo/Google), hosting
+  Aruba (UE), trasferimenti USA su Data Privacy Framework/SCC. **Pubblicati sul sito + inviati
+  ad avvocato per revisione.** Creata anche `GUIDA-UTENTE.md` (guida cliente per il sito).
 - **Import preventivi storici**: strumento pronto (`ardy-import-preventivi.php`, CSV + PDF). Michela
   mette i PDF in Google Drive → si genera il CSV precompilato e si importa.
 
