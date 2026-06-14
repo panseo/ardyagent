@@ -138,8 +138,13 @@ foreach ($immagini as $idx => $imgData) {
     if (!is_wp_error($attachId)) {
         $savedImageUrls[] = wp_get_attachment_url($attachId);
         $savedImageIds[]  = $attachId;
+    } else {
+        // Prima questi errori erano silenziosi: ora li logghiamo per diagnosi.
+        error_log('ARDY PUBBLICA SIDELOAD ERROR (img ' . $idx . ', mime ' . $mime . '): ' . $attachId->get_error_message());
     }
 }
+error_log('ARDY PUBBLICA IMG: ricevute=' . (is_array($immagini) ? count($immagini) : 0)
+    . ' salvate_su_wp=' . count($savedImageIds));
 
 // -----------------------------------------------------------
 // 7. GENERA TESTO CON CLAUDE
@@ -212,6 +217,13 @@ if ($isComunicazione) {
 // -----------------------------------------------------------
 $categoria = 102;
 
+// Questo endpoint gira senza utente WordPress loggato: di default WP applica
+// kses al contenuto e rimuove <video>/<source>, gli attributi style e può
+// alterare gli <img>. Il contenuto qui è generato dal nostro sistema (testo
+// Claude + URL immagini/video nostri), quindi disattiviamo il filtro attorno
+// all'inserimento per non perdere foto, video e impaginazione.
+kses_remove_filters();
+
 if ($wpPostId) {
     $postAttuale      = get_post($wpPostId);
     $contenutoAttuale = $postAttuale ? $postAttuale->post_content : '';
@@ -249,6 +261,9 @@ if ($wpPostId) {
     $wpPostId = $result;
     $postLink = get_permalink($wpPostId);
 }
+
+// Riattiva i filtri kses per il resto della richiesta.
+kses_init_filters();
 
 if (!$wpPostId) {
     echo json_encode(['success' => false, 'error' => 'Errore pubblicazione WordPress']);
