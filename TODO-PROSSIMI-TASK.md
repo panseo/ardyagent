@@ -74,15 +74,18 @@ Branch `claude/sharp-einstein-pmuqq3`, mergeato su `main`. Da deployare/verifica
 
 ---
 
-## 🐞 BUG APERTI (segnalati da Michela 14/06 — da investigare)
-1. **Email fasi col mittente sbagliato**: l'email che arriva al cliente sugli aggiornamenti di
-   lavorazione NON usa l'indirizzo impostato altrove (probabile `From`/`Reply-To` hardcoded in
-   `ardy-pubblica-lavorazione.php` invece di leggere la config mittente usata dagli altri invii).
-   → Trovare la fonte di verità del mittente (Brevo/PHPMailer in `ardy-net.php`?) e uniformare.
-2. **Immagini non pubblicate su WordPress**: nelle fasi le foto non finiscono nel post. Regola
-   decisa in una sessione passata: **prima foto = immagine in evidenza**, le **altre dentro
-   l'articolo**. Verificare `ardy-pubblica-lavorazione.php` (upload media WP + featured image +
-   inserimento `<img>`/gallery nel body) — capire se è regressione o config (permessi/endpoint WP).
+## 🐞 BUG (segnalati da Michela 14/06)
+1. ✅ **Email fasi — mittente**: tutto il sistema invia da `noreply@ardy-lab.it` (dominio
+   autenticato Brevo/DKIM). Scelta con Michela: **tenere From=noreply** (consegna) e aggiungere
+   **Reply-To = `ardy.documenti@gmail.com`** così le risposte del cliente arrivano alla casella
+   reale. Fatto in `ardy-pubblica-lavorazione.php` (`addReplyTo`). ⏭️ Se serve, replicare il
+   Reply-To anche su proxy/solleciti/outreach (oggi solo From).
+2. ⏳ **Immagini non pubblicate su WordPress** — fix probabile applicato, **da verificare sul vivo**:
+   l'endpoint gira senza utente WP loggato → **kses** rimuoveva `<video>`/`style` e poteva alterare
+   gli `<img>`. Aggiunto `kses_remove_filters()`/`kses_init_filters()` attorno a insert/update +
+   **logging** (`ARDY PUBBLICA IMG: ricevute=… salvate_su_wp=…` e `SIDELOAD ERROR`). Regola attesa:
+   **1ª foto = in evidenza**, le altre nel corpo. ⏭️ Michela: pubblica una fase di test con foto →
+   se ancora non si vedono, leggere il log per capire se è l'upload (`media_handle_sideload`) o WP.
 
 ---
 

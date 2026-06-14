@@ -536,6 +536,9 @@ function inviaEmailCliente(string $email, string $nome, string $mobile, string $
         $mail->Port       = 587;
         $mail->CharSet    = 'UTF-8';
         $mail->setFrom('noreply@ardy-lab.it', 'Ardy Lab');
+        // From su dominio autenticato (Brevo/DKIM) per la consegna; le risposte
+        // del cliente arrivano alla casella reale di Michela.
+        $mail->addReplyTo('ardy.documenti@gmail.com', 'Ardy Lab — Michela');
         $mail->addAddress($email, $nome);
         $mail->Subject = $subject;
         $mail->isHTML(true);
