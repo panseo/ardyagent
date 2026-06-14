@@ -23,7 +23,8 @@ Branch `claude/sharp-einstein-pmuqq3`, tutto su `main` e deployato. Testato dal 
   `ardy.documenti@gmail.com` così le risposte del cliente arrivano a Michela.
 - **Ringraziamento alla consegna** (`ardy-grazie-consegna.php`): alla transizione → CONSEGNATO parte
   l'email (recensione Google + social + newsletter/disiscrizione), una sola volta (`consegnato_grazie_at`).
-  Bottone **📧 Reinvia ringraziamento** sulla scheda. ✅ email testata. ⏭️ WhatsApp = serve template Meta.
+  Bottone **📧 Reinvia ringraziamento** sulla scheda. ✅ email + ✅ **WhatsApp testati dal vivo** (template
+  Meta `ringraziamento_consegna` approvato + `WA_TEMPLATE_GRAZIE` in config).
 - **Dossier cliente** (`ardy-dossier.php` + `ardy-web-memoria.php`): MD completo (anagrafica +
   preventivi + fasi + chat WA + chat web). Bottone **📄 Dossier** in dashboard. Chat web ora persistita
   (`web_messaggi`, scritta da `ardy-proxy.php`). Wiring in Sole **client-safe + compatto**: web dopo
@@ -33,7 +34,7 @@ Branch `claude/sharp-einstein-pmuqq3`, tutto su `main` e deployato. Testato dal 
 - `define('GRAZIE_GOOGLE_REVIEW_URL', 'https://g.page/r/CRnhYaazgbV2EAE/review');` → mostra il bottone
   recensione nell'email di ringraziamento. (Link già fornito da Michela; verificare che sia in config.)
 - (opz.) `GRAZIE_IG_URL` / `GRAZIE_FB_URL` (default: ardy.lab / pagina "Ardy").
-- (quando pronto) template Meta + `define('WA_TEMPLATE_GRAZIE', '...')` per il WhatsApp di ringraziamento.
+- ✅ `define('WA_TEMPLATE_GRAZIE', 'ringraziamento_consegna');` → WhatsApp di ringraziamento attivo e testato.
 
 ---
 
@@ -89,7 +90,7 @@ WhatsApp è già **prompt-caching ready** (`system_static` con `cache_control`).
   proattive non partono. Michela che scrive a Sole resta gratis. WhatsApp Manager → Fatturazione.
 - **Template Meta da creare/approvare**, poi settare in `ardy-config.php`:
   - `aggiornamento_fase` (4 var) → `WA_TEMPLATE_FASI`
-  - ringraziamento consegna (1 var nome) → `WA_TEMPLATE_GRAZIE`
+  - ✅ ~~ringraziamento consegna (1 var nome) → `WA_TEMPLATE_GRAZIE`~~ — fatto: `ringraziamento_consegna` approvato e in config.
 
 ---
 
