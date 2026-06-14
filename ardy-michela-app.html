@@ -50,7 +50,11 @@
       </div>
     </div>
 
-    <div class="filters" id="filters">
+    <div style="padding:0 14px;">
+      <button id="btnFiltri" onclick="toggleFiltri()" style="width:100%;text-align:left;background:none;border:1px solid #444;color:#aaa;padding:6px 10px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">🔍 RICERCA AVANZATA ▾</button>
+    </div>
+
+    <div class="filters" id="filters" style="display:none;">
       <button class="filter-chip active" data-stato="TUTTI" onclick="setFilter(this)">TUTTI</button>
       <button class="filter-chip" data-stato="LEAD" onclick="setFilter(this)">LEAD</button>
       <button class="filter-chip" data-stato="SOPRALLUOGO" onclick="setFilter(this)">SOPRALLUOGO</button>
@@ -61,6 +65,12 @@
       <button class="filter-chip" data-stato="PAGATO" onclick="setFilter(this)">PAGATO</button>
       <button class="filter-chip" data-stato="STANDBY" onclick="setFilter(this)">STANDBY</button>
       <button class="filter-chip" data-stato="PERSO" onclick="setFilter(this)">PERSO</button>
+      <div style="width:100%;margin-top:8px;font-size:10px;color:#888;line-height:1.7;">
+        <span style="color:#e08a3c;">●</span> Sta per iniziare &nbsp;
+        <span style="color:#4caf72;">●</span> Nei tempi &nbsp;
+        <span style="color:#e05c5c;">●</span> Consegna / ritardo &nbsp;
+        <span style="color:#d8b23c;">●</span> Date da pianificare
+      </div>
     </div>
 
     <div class="lead-list" id="leadList">
@@ -435,6 +445,40 @@ async function loadLeads() {
 }
 
 // ─── RENDER LIST ──────────────────────────────────────────
+// Semaforo lavorazione: pallino + testo in base alle date (regola dei 4 gg).
+// Solo per stati operativi; gli altri non hanno segnale.
+const SEG_COLORI = { red:'#e05c5c', orange:'#e08a3c', green:'#4caf72', yellow:'#d8b23c' };
+function faseSegnale(l) {
+  const stato = (l.Stato || '').toUpperCase();
+  const ini = l.Inizio_lavoro || '';
+  const fin = l.Fine_lavoro_prevista || '';
+  if (!['ACCONTO','IN_LAVORAZIONE','CONSEGNATO'].includes(stato)) return null;
+  const oggi = new Date(); oggi.setHours(0,0,0,0);
+  const gg = v => Math.round((new Date(v + 'T00:00:00') - oggi) / 86400000);
+  // 1) Fine prevista: consegna imminente o ritardo (priorità)
+  if (fin) {
+    const g = gg(fin);
+    if (g < 0)  return { color:'red', label:'In ritardo ' + (-g) + 'g' };
+    if (g === 0) return { color:'red', label:'Consegna oggi' };
+    if (g <= 4) return { color:'red', label:'Consegna fra ' + g + 'g' };
+  }
+  // 2) Inizio imminente
+  if (ini) {
+    const g = gg(ini);
+    if (g === 0)        return { color:'orange', label:'Inizia oggi' };
+    if (g > 0 && g <= 4) return { color:'orange', label:'Inizia fra ' + g + 'g' };
+  }
+  // 3) In lavorazione nei tempi (già iniziato, fine con margine)
+  if (ini && fin && gg(ini) <= 0 && gg(fin) > 4) {
+    return { color:'green', label:'Nei tempi' };
+  }
+  // 4) Stato operativo senza date pianificate
+  if (['ACCONTO','IN_LAVORAZIONE'].includes(stato)) {
+    return { color:'yellow', label:'Date da pianificare' };
+  }
+  return null;
+}
+
 function renderList() {
   const search = document.getElementById('search').value.toLowerCase();
   let filtered = allLeads.filter(l => {
@@ -455,16 +499,21 @@ function renderList() {
     return;
   }
 
-  document.getElementById('leadList').innerHTML = filtered.map((l, i) => `
+  document.getElementById('leadList').innerHTML = filtered.map((l, i) => {
+    const seg = faseSegnale(l);
+    const dot = seg ? `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${SEG_COLORI[seg.color]};margin-right:7px;flex:0 0 auto;"></span>` : '';
+    const segLabel = seg ? `<span class="lead-seg" style="color:${SEG_COLORI[seg.color]};font-size:10px;">${escHtml(seg.label)}</span>` : '';
+    return `
     <div class="lead-item ${currentLead && currentLead.Session_ID === l.Session_ID ? 'active' : ''}"
          onclick="selectLead(${allLeads.indexOf(l)})">
-      <div class="lead-nome">${escHtml(l.Nome)} ${escHtml(l.Cognome)}</div>
+      <div class="lead-nome" style="display:flex;align-items:center;">${dot}<span>${escHtml(l.Nome)} ${escHtml(l.Cognome)}</span></div>
       <div class="lead-meta">
         <span class="stato-badge stato-${(l.Stato??'LEAD').toUpperCase().replace(/[^A-Z]/g,'')}">${escHtml(l.Stato ?? 'LEAD')}</span>
         <span class="lead-zona">${escHtml(l.Zona)}</span>
+        ${segLabel}
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 // ─── FILTER ───────────────────────────────────────────────
@@ -476,6 +525,16 @@ function setFilter(el) {
 }
 
 function filterLeads() { renderList(); }
+
+// Mostra/nasconde i filtri di stato (ricerca avanzata)
+function toggleFiltri() {
+  const f = document.getElementById('filters');
+  const b = document.getElementById('btnFiltri');
+  if (!f) return;
+  const aperto = f.style.display !== 'none';
+  f.style.display = aperto ? 'none' : 'flex';
+  if (b) b.innerHTML = '🔍 RICERCA AVANZATA ' + (aperto ? '▾' : '▴');
+}
 
 // ─── SELECT LEAD ──────────────────────────────────────────
 function selectLead(idx) {
