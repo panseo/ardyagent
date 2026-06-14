@@ -1405,7 +1405,7 @@ function renderSocialPending() {
     return `
     <div style="border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:8px;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-        <span style="font-size:13px;">📲 ${escHtml(titolo)}</span>
+        <span style="font-size:13px;display:inline-flex;align-items:center;gap:8px;">📲 ${escHtml(titolo)} <span class="social-dest">${SOCIAL_ICONS_HTML}</span></span>
         <span style="font-size:11px;color:var(--text-dim);white-space:nowrap;">${escHtml(p.data || '')}</span>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
@@ -1414,7 +1414,6 @@ function renderSocialPending() {
         <button class="btn-secondary" style="flex:0 1 60px;" onclick="eliminaPending('${escHtml(p.id)}')">🗑</button>
       </div>
       <div id="pendEdit_${escHtml(p.id)}" style="display:none;margin-top:8px;">
-        <div class="social-dest" style="margin-bottom:6px;">${SOCIAL_ICONS_HTML}</div>
         <textarea class="lav-textarea" id="pendText_${escHtml(p.id)}" style="min-height:120px;">${escHtml(p.testo_social || '')}</textarea>
         ${thumbs}
       </div>
