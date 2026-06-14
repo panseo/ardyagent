@@ -100,9 +100,13 @@
           <div class="detail-nome" id="dNome">—</div>
           <div class="detail-sub" id="dSub">—</div>
         </div>
-        <div class="stato-selector" id="statoSelector"></div>
         <button id="btnEliminaCliente" onclick="eliminaCliente()" title="Elimina definitivamente questo cliente"
           style="margin-left:8px;align-self:flex-start;background:transparent;border:1px solid #d9534f;color:#d9534f;border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;white-space:nowrap;">🗑 Elimina</button>
+      </div>
+
+      <div style="margin:10px 0 4px;">
+        <button id="btnToggleStato" onclick="toggleStato()" style="width:100%;text-align:left;background:none;border:1px solid #8b6f3e;color:#c8a96e;padding:8px 12px;border-radius:6px;font-family:monospace;font-size:12px;cursor:pointer;">🔄 Aggiorna stato — attuale: <strong id="statoCorrente">—</strong> ▾</button>
+        <div class="stato-selector" id="statoSelector" style="display:none;margin-top:8px;"></div>
       </div>
 
       <!-- ═══ 1. DATI E CONTATTO ═══ -->
@@ -590,6 +594,20 @@ function renderDetail() {
       ${s}
     </button>
   `).join('');
+  const scEl = document.getElementById('statoCorrente');
+  if (scEl) scEl.textContent = (l.Stato ?? 'LEAD');
+  // alla riapertura della scheda il selettore parte chiuso
+  const ssEl = document.getElementById('statoSelector');
+  if (ssEl) ssEl.style.display = 'none';
+}
+
+// Mostra/nasconde i bottoni di cambio stato nella scheda cliente
+function toggleStato() {
+  const ss = document.getElementById('statoSelector');
+  const b  = document.getElementById('btnToggleStato');
+  if (!ss) return;
+  const aperto = ss.style.display !== 'none';
+  ss.style.display = aperto ? 'none' : 'flex';
 }
 
 // ─── ACCORDION ────────────────────────────────────────────
@@ -689,6 +707,8 @@ function setStato(s) {
   document.querySelectorAll('.stato-btn').forEach(b => {
     b.classList.toggle('current', b.textContent.trim() === s);
   });
+  const scEl = document.getElementById('statoCorrente');
+  if (scEl) scEl.textContent = s;
 }
 
 // ─── DIRTY ────────────────────────────────────────────────
