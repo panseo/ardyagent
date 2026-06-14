@@ -69,8 +69,8 @@ comando nelle NOTE OPERATIVE qui sotto.
 2. **"Altre cose" sulla sidebar/scheda** che Michela aveva in mente (le dirà lei) — continuare le
    rifiniture UI.
 3. **Feature da costruire** (decise ma non fatte):
-   - **Archivio clienti CONSEGNATI** (sezione "Archivio clienti CONSEGNATI" più sotto): premere
-     CONSEGNATO → esce dalla lista normale, richiamabile dai filtri.
+   - ✅ **Archivio clienti CONSEGNATI** — FATTO (vedi sezione omonima più sotto): archivio implicito
+     per stato CONSEGNATO/PAGATO + pulsante/chip 📦 Archivio nella sidebar.
    - **Centralizzazione widget WP**: backup export WPCode + `Chat per i corsi` → file servito.
    - **Catalogo prezzi su Google Sheet**, **Gestione archivio cliente completa** (Cestino 30gg).
 4. **Da verificare/pulire** ancora aperti: vedi blocco "DA VERIFICARE" qui sotto.
@@ -220,16 +220,16 @@ data ultimo briefing per numero così il riepilogo lungo parte da solo al primo 
 ogni messaggio. Senza, funziona quando Michela chiede "come va oggi?".
 
 ### Archivio clienti CONSEGNATI (dalla sidebar)
-> Contesto (14/06): nella lista clienti c'è ora il **semaforo lavorazione** (pallino+testo per
-> ACCONTO/IN_LAVORAZIONE in base alle date, regola 4gg). La **fine lavoro ≠ consegna** (si può
-> consegnare anche un mese dopo) → la data di consegna non si traccia.
-- **Flusso "consegnato → archivio"**: quando Michela/io premiamo **CONSEGNATO** (o un nuovo
-  "ARCHIVIA"), il cliente esce dalla vista normale della sidebar e finisce in un **archivio**,
-  richiamabile dai **filtri** (chip "ARCHIVIATI"/"CONSEGNATI"). Serve per non avere la lista
-  intasata di lavori finiti, tenendoli comunque consultabili. Da decidere: usare lo stato
-  `CONSEGNATO` (e `PAGATO`) come "archivio" implicito + escluderli dalla lista di default, oppure
-  un flag dedicato (`archiviato_at`). NB: tenere coerenza con il futuro Cestino 30gg (sezione
-  "Gestione archivio cliente").
+> ✅ **FATTO (14/06, sessione corrente)** — scelto l'**archivio implicito per stato** (no nuovo
+> flag, coerente col futuro Cestino che userà `deleted_at`, concetto separato). Solo lato dashboard
+> (`ardy-michela-app.html`), nessuna modifica backend:
+> - `ARCHIVE_STATES = ['CONSEGNATO','PAGATO']`: questi stati **escono dalla vista TUTTI** (lista
+>   "attivi"), così premere CONSEGNATO/PAGATO archivia il cliente senza intasare la lista.
+> - Pulsante **📦 Archivio (N)** sempre visibile in cima alla lista (compare solo se N>0) +
+>   chip **📦 ARCHIVIO** nella Ricerca avanzata → mostrano solo i conclusi. Ripremendo si torna a TUTTI.
+> - Toast "📦 Salvato e spostato in Archivio" quando si salva uno stato d'archivio.
+> - Guida (`ardy-guida-michela.html`) aggiornata.
+> ⏭️ Eventuale evoluzione: contatore separato CONSEGNATO vs PAGATO; coerenza col Cestino 30gg.
 
 ### Migliorie minori UX (bassa priorità)
 - **Popup date all'attivazione stato IN_LAVORAZIONE**: al click del bottone stato, aprire un

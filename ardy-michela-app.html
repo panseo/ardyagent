@@ -31,6 +31,7 @@
       <div style="margin-bottom:12px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
           <div class="sidebar-title" style="margin-bottom:0;">Clienti / Lead <span class="count-badge" id="count">—</span></div>
+          <button id="btnArchivio" onclick="apriArchivio()" title="Lavori conclusi (CONSEGNATO + PAGATO)" style="display:none;background:none;border:1px solid #555;color:#999;padding:3px 7px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;white-space:nowrap;">📦 Archivio <span id="archCount">0</span></button>
         </div>
         <div style="display:flex;gap:5px;">
           <button class="btn-nuovo-cliente" onclick="openNuovoCliente()" style="flex:1;text-align:center;background:none;border:1px solid #8b6f3e;color:#c8a96e;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">+ NUOVO</button>
@@ -65,7 +66,9 @@
       <button class="filter-chip" data-stato="PAGATO" onclick="setFilter(this)">PAGATO</button>
       <button class="filter-chip" data-stato="STANDBY" onclick="setFilter(this)">STANDBY</button>
       <button class="filter-chip" data-stato="PERSO" onclick="setFilter(this)">PERSO</button>
+      <button class="filter-chip" data-stato="ARCHIVIO" onclick="setFilter(this)" title="Lavori conclusi (CONSEGNATO + PAGATO): non compaiono nella lista normale">📦 ARCHIVIO</button>
       <div style="width:100%;margin-top:8px;font-size:10px;color:#888;line-height:1.7;">
+        <span style="color:#888;">📦 ARCHIVIO</span> = lavori conclusi (CONSEGNATO + PAGATO), fuori dalla lista normale<br>
         <span style="color:#e08a3c;">●</span> Sta per iniziare &nbsp;
         <span style="color:#4caf72;">●</span> Nei tempi &nbsp;
         <span style="color:#e05c5c;">●</span> Fine lavoro / ritardo &nbsp;
@@ -399,6 +402,8 @@ const SOCIAL_ICONS_HTML =
 let allLeads       = [];
 let currentLead    = null;
 let currentFilter  = 'TUTTI';
+// Stati "archivio": lavori conclusi. Esclusi dalla vista TUTTI, richiamabili col chip ARCHIVIO.
+const ARCHIVE_STATES = ['CONSEGNATO','PAGATO'];
 let isDirty        = false;
 let currentAction  = null;
 
@@ -484,7 +489,11 @@ function faseSegnale(l) {
 function renderList() {
   const search = document.getElementById('search').value.toLowerCase();
   let filtered = allLeads.filter(l => {
-    const matchFilter = currentFilter === 'TUTTI' || (l.Stato ?? '').toUpperCase() === currentFilter;
+    const stato = (l.Stato ?? '').toUpperCase();
+    let matchFilter;
+    if (currentFilter === 'TUTTI')         matchFilter = !ARCHIVE_STATES.includes(stato);
+    else if (currentFilter === 'ARCHIVIO') matchFilter = ARCHIVE_STATES.includes(stato);
+    else                                   matchFilter = stato === currentFilter;
     const matchSearch = !search ||
       (l.Nome   ?? '').toLowerCase().includes(search) ||
       (l.Cognome?? '').toLowerCase().includes(search) ||
@@ -494,6 +503,16 @@ function renderList() {
   });
 
   document.getElementById('count').textContent = filtered.length;
+
+  // Contatore archivio (sempre visibile se ci sono lavori conclusi)
+  const nArch = allLeads.filter(l => ARCHIVE_STATES.includes((l.Stato ?? '').toUpperCase())).length;
+  const btnArch = document.getElementById('btnArchivio');
+  if (btnArch) {
+    document.getElementById('archCount').textContent = nArch;
+    btnArch.style.display = nArch ? 'inline-block' : 'none';
+    btnArch.style.borderColor = currentFilter === 'ARCHIVIO' ? '#c8a96e' : '#555';
+    btnArch.style.color       = currentFilter === 'ARCHIVIO' ? '#c8a96e' : '#999';
+  }
 
   if (!filtered.length) {
     document.getElementById('leadList').innerHTML =
@@ -527,6 +546,15 @@ function setFilter(el) {
 }
 
 function filterLeads() { renderList(); }
+
+// Apre/chiude la vista Archivio (CONSEGNATO + PAGATO) dal pulsante sempre visibile.
+function apriArchivio() {
+  const tornaTutti = currentFilter === 'ARCHIVIO';
+  currentFilter = tornaTutti ? 'TUTTI' : 'ARCHIVIO';
+  document.querySelectorAll('.filter-chip').forEach(c =>
+    c.classList.toggle('active', c.dataset.stato === currentFilter));
+  renderList();
+}
 
 // Mostra/nasconde i filtri di stato (ricerca avanzata)
 function toggleFiltri() {
@@ -751,7 +779,11 @@ async function saveLead() {
     if (data.success) {
       isDirty = false;
       document.getElementById('saveBar').classList.remove('visible');
-      showToast('✓ Salvato correttamente', 'success');
+      showToast(
+        ARCHIVE_STATES.includes((currentLead.Stato ?? '').toUpperCase())
+          ? '📦 Salvato e spostato in Archivio'
+          : '✓ Salvato correttamente',
+        'success');
       // Aggiorna lead in memoria
       const idx = allLeads.findIndex(l => l.Session_ID === currentLead.Session_ID);
       if (idx >= 0) {

@@ -377,7 +377,9 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
 ### Funzionalità
 - Lista clienti/lead con **semaforo lavorazione** (pallino + testo, regola 4gg: 🟠 sta per
   iniziare · 🔴 fine lavoro/ritardo · 🟢 nei tempi · 🟡 date da pianificare) e **filtri di stato in
-  toggle "🔍 Ricerca avanzata"** con legenda colori + ricerca testo
+  toggle "🔍 Ricerca avanzata"** con legenda colori + ricerca testo. Gli stati conclusi
+  **CONSEGNATO/PAGATO** sono trattati come **archivio implicito**: escono dalla lista normale e si
+  richiamano col pulsante **📦 Archivio** (in cima alla lista) o dal chip ARCHIVIO
 - Dettaglio cliente con **tutti i campi modificabili** (nome, cognome, telefono, email, servizio, zona, mobile, budget, indirizzo, note, follow-up)
 - Cambio stato cliente sotto toggle **"🔄 Aggiorna stato"** (mostra lo stato attuale)
 - Azioni rapide: contenuto AI, post social, **proforma**, email, WhatsApp, note interne
