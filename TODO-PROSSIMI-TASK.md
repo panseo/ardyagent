@@ -178,6 +178,10 @@ in CGI/FPM e rifarebbe la login. Ci si affida al `.htaccess` (Basic Auth) come p
 2. (opz.) confermare/aggiornare `GRAZIE_IG_URL` / `GRAZIE_FB_URL` (default: ardy.lab / pagina "Ardy").
 3. Creare+approvare il **template Meta** `aggiornamento`/`grazie_consegna` e settare `WA_TEMPLATE_GRAZIE`.
 ⏭️ (opz.) bottone in dashboard per **reinviare** il ringraziamento manualmente.
+⏭️ **Logo in alto nell'email**: oggi l'header è testuale ("ARDY LAB"). Mettere il logo immagine
+   (`assets/logo.png`) in cima — idealmente in TUTTE le email (grazie, fasi, benvenuto, outreach)
+   per coerenza. Nota: nelle email il logo va come URL assoluto (`https://ardy-lab.it/.../logo.png`)
+   o inline base64 (no allegati cid se via Brevo API). Valutare un piccolo helper header email condiviso.
 
 ### 🆕 Dossier cliente in Markdown (contesto completo per Sole)
 Obiettivo: per ogni cliente un **MD** che raccoglie **tutto**: anagrafica/servizio, **preventivo(i)**,
