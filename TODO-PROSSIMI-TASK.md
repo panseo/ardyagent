@@ -44,8 +44,8 @@ comando nelle NOTE OPERATIVE. Ordine consigliato:
 1. **Verifiche dal vivo** del blocco 14/06 sera: dossier in Sole (web: dare il codice in chat →
    risposta con contesto; WhatsApp: scrivere da numero registrato), ringraziamento con bottone
    recensione, archivio/libera-spazio su mobile.
-2. **Task nuovi pronti da costruire** (vedi sotto): **FAQ su CONSEGNATO**, **Catalogo prezzi Google
-   Sheet**, **Cestino 30gg**, **Backup widget WP**, **Logo nelle email**.
+2. **Task nuovi pronti da costruire** (vedi sotto): ~~FAQ su CONSEGNATO~~ (✅ fatto), **Cestino 30gg**,
+   **Backup widget WP**, **Logo nelle email**. (Catalogo prezzi Google Sheet → ❄️ congelato, vedi sotto.)
 3. **Task grande da valutare**: **Sole esperta legno/restauro + community** (richiede progettazione).
 
 ---
@@ -134,10 +134,12 @@ corsi` → `ardy-chat-corsi.js` + loader HTML; poi i pulsanti CTA). Gli snippet 
    auto-create; riusa `ardy_elimina_file_sessione`). *API CRM*: escludere `deleted_at` dalla lista.
    *Dashboard*: vista Cestino + Ripristina + modali conferma.
 
-### ⭐ Catalogo prezzi su Google Sheet (alto valore, basso rischio)
-Oggi i prezzi sono hardcoded in `ardy-system.txt` → cambiarli = editare + deploy. Un foglio Google
+### ❄️ Catalogo prezzi su Google Sheet — CONGELATO (14/06)
+**Congelato**: niente permessi alla vendita di prodotti (WooCommerce disattivato dal sito). La parte
+vendita verrà gestita da un **agente dedicato a parte**, non da Sole. Da riprendere solo in quel contesto.
+~~Oggi i prezzi sono hardcoded in `ardy-system.txt` → cambiarli = editare + deploy. Un foglio Google
 letto da Sole (sa già leggere Calendar/Drive) farebbe aggiornare i prezzi a Michela da sola. Da
-progettare: foglio modello + endpoint/funzione che lo legge e lo inietta nel prompt (cache breve).
+progettare: foglio modello + endpoint/funzione che lo legge e lo inietta nel prompt (cache breve).~~
 
 ### Logo nelle email
 Header email oggi testuale ("ARDY LAB"). Mettere il logo immagine (`assets/logo.png`) in cima a TUTTE
