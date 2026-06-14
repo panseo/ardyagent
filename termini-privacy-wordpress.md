@@ -5,14 +5,14 @@
 > NON un parere legale: fallo validare da un consulente/avvocato prima di pubblicarlo.
 > Sostituisce i documenti generici da plugin attualmente online.
 >
-> **Resta da compilare prima di pubblicare** (punti tra `[[ ... ]]`):
-> - **Nome del provider di hosting** reale (par. 4 privacy) — NON è AWS come dice il
->   testo online: indica l'hosting effettivo (cPanel/host del dominio).
-> - **Cookie Policy** separata + banner SE il sito usa cookie/analytics/social plugin
->   (es. Google Analytics, pixel Meta): in tal caso vanno dichiarati lì.
-> - Eventuale **telefono/PEC** da pubblicare nei contatti.
-> - Le **date di "ultimo aggiornamento"** sono impostate a oggi: aggiornale alla data
->   effettiva di pubblicazione.
+> **Resta da fare prima di pubblicare:**
+> - **Revisione di un legale** (consigliata per qualunque testo legale).
+> - Aggiorna le **date di "ultimo aggiornamento"** alla data effettiva di pubblicazione
+>   (ora impostate a 14/06/2026).
+> - Eventuale **telefono/PEC** da pubblicare nei contatti (facoltativo).
+>
+> Risolti: hosting = **Aruba** (server UE); **Cookie Policy** già gestita dal plugin
+> dedicato; fornitori AI/messaggistica confermati (Anthropic, Meta/WhatsApp, Brevo, Google).
 
 Suggerimento: crea **due pagine separate** su WordPress — "Termini e Condizioni"
 e "Privacy Policy" — e linkale nel footer. Sotto trovi entrambe.
@@ -151,7 +151,8 @@ questo indirizzo.
 - **Immagini dei beni**: foto dei mobili/oggetti che ci invii per il preventivo o
   che realizziamo durante la lavorazione.
 - **Dati di navigazione**: dati tecnici raccolti automaticamente dal sito (indirizzo
-  IP, log) per sicurezza e funzionamento. Per i cookie vedi la [[Cookie Policy]].
+  IP, log) per sicurezza e funzionamento. Per i cookie consulta la **Cookie Policy**
+  del sito, gestita e aggiornata tramite apposito plugin.
 
 ## 3. Finalità e basi giuridiche
 | Finalità | Base giuridica |
@@ -171,7 +172,8 @@ del trattamento** o titolari autonomi:
 - **WhatsApp Business** (Meta Platforms) per la messaggistica.
 - **Brevo (ex Sendinblue)** per l'invio delle email.
 - **Google** (Calendar) per la gestione degli appuntamenti.
-- **[[Provider di hosting]]** per l'infrastruttura del sito.
+- **Aruba** (Aruba S.p.A.) per l'hosting e l'infrastruttura del sito; i server sono
+  situati nell'Unione Europea.
 Nessuna **decisione automatizzata** con effetti giuridici viene presa solo dall'AI:
 le valutazioni e gli impegni contrattuali sono sempre confermati da una persona.
 
