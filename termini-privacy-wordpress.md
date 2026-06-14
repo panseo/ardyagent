@@ -1,14 +1,18 @@
 # Testo per WordPress — Ardy Lab
 
-> **Bozza da rivedere prima della pubblicazione.** Questo testo è una base
-> tecnica completa, NON un parere legale: fallo validare da un consulente/avvocato
-> prima di pubblicarlo. I punti tra `[[ ... ]]` vanno verificati/compilati.
+> **Versione su misura per Ardy Lab — pronta da pubblicare dopo revisione legale.**
+> Questo testo è una base tecnica completa e aggiornata (GDPR, niente "Privacy Shield"),
+> NON un parere legale: fallo validare da un consulente/avvocato prima di pubblicarlo.
+> Sostituisce i documenti generici da plugin attualmente online.
 >
-> **Da verificare subito:**
-> - **Responsabili esterni** (par. privacy): conferma quali usi davvero
->   (Brevo, Meta/WhatsApp, Google, Anthropic, n8n, hosting).
-> - Serve una **Cookie Policy** separata se il sito usa cookie/analytics.
-> - Numero di telefono/PEC da inserire se vuoi pubblicarli.
+> **Resta da compilare prima di pubblicare** (punti tra `[[ ... ]]`):
+> - **Nome del provider di hosting** reale (par. 4 privacy) — NON è AWS come dice il
+>   testo online: indica l'hosting effettivo (cPanel/host del dominio).
+> - **Cookie Policy** separata + banner SE il sito usa cookie/analytics/social plugin
+>   (es. Google Analytics, pixel Meta): in tal caso vanno dichiarati lì.
+> - Eventuale **telefono/PEC** da pubblicare nei contatti.
+> - Le **date di "ultimo aggiornamento"** sono impostate a oggi: aggiornale alla data
+>   effettiva di pubblicazione.
 
 Suggerimento: crea **due pagine separate** su WordPress — "Termini e Condizioni"
 e "Privacy Policy" — e linkale nel footer. Sotto trovi entrambe.
@@ -17,7 +21,7 @@ e "Privacy Policy" — e linkale nel footer. Sotto trovi entrambe.
 
 # PAGINA 1 — TERMINI E CONDIZIONI
 
-**Ultimo aggiornamento: [[gg/mm/aaaa]]**
+**Ultimo aggiornamento: 14/06/2026**
 
 ## 1. Titolare e dati identificativi
 Il presente sito e i servizi offerti sono gestiti da **Ardy di Michela Panella**
@@ -118,7 +122,7 @@ https://ec.europa.eu/consumers/odr.
 ## 12. Legge applicabile e foro
 Il rapporto è regolato dalla **legge italiana**. Per le controversie con i
 consumatori è competente il foro del luogo di residenza/domicilio del consumatore;
-negli altri casi il foro di **[[Roma]]**.
+negli altri casi il foro di **Roma**.
 
 ## 13. Modifiche
 Ardy Lab può aggiornare i presenti termini; la versione vigente è quella pubblicata
@@ -128,7 +132,7 @@ su questa pagina con la relativa data di aggiornamento.
 
 # PAGINA 2 — INFORMATIVA PRIVACY (artt. 13-14 Reg. UE 2016/679 — GDPR)
 
-**Ultimo aggiornamento: [[gg/mm/aaaa]]**
+**Ultimo aggiornamento: 14/06/2026**
 
 ## 1. Titolare del trattamento
 **Ardy di Michela Panella** — Via James Joyce 4, 00143 Roma (RM) — P.IVA 17633931005 —
@@ -161,7 +165,7 @@ questo indirizzo.
 ## 4. Come trattiamo i dati e strumenti utilizzati
 Il trattamento avviene con strumenti informatici e misure di sicurezza adeguate.
 Per erogare il servizio ci avvaliamo di fornitori che agiscono come **responsabili
-del trattamento** o titolari autonomi, tra cui [[verifica quali usi]]:
+del trattamento** o titolari autonomi:
 - **Assistente virtuale (AI)**: il chatbot "Sole" elabora i messaggi tramite il
   servizio di intelligenza artificiale di **Anthropic** per generare le risposte.
 - **WhatsApp Business** (Meta Platforms) per la messaggistica.
