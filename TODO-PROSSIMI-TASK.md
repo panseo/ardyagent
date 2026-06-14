@@ -68,9 +68,9 @@ Branch `claude/sharp-einstein-pmuqq3`, mergeato su `main`. Da deployare/verifica
   `foto_archiviate_at`. Bottone sulla scheda solo da archiviato.
 - **Rimosso lo stato cliente `PAGATO`** (coincideva con CONSEGNATO; il "saldato/non moroso" è il
   modulo MOROSI). Alias legacy mantenuto solo per non orfanare eventuali schede già marcate.
-- **Pubblicazione social per singolo social**: toggle FB/IG (default entrambi, deselezionabili
-  fino a uno). Campo `piattaforme` al webhook. ⏭️ **Manca il lato n8n**: aggiornare il nodo Code
-  per rispettare `piattaforme`/`facebook`/`instagram` (vedi `ardy-pubblica-social-n8n.md`).
+- **Pubblicazione social per singolo social** ✅ **COMPLETO** (dashboard + n8n): toggle FB/IG
+  (default entrambi, deselezionabili fino a uno). Campo `piattaforme` al webhook; nodo Code n8n
+  "Meta" (ramo post-foto) aggiornato col gate `wantFB`/`wantIG`. Vedi `ardy-pubblica-social-n8n.md`.
 
 ---
 
@@ -91,7 +91,6 @@ Branch di lavoro: `claude/sharp-einstein-pmuqq3` (allineato a `main`). Dopo ogni
 comando nelle NOTE OPERATIVE qui sotto.
 
 0. **Chiudere i 2 BUG sopra** (email mittente fasi + immagini su WordPress) — priorità alta.
-0b. **Lato n8n** per il singolo social (vedi `ardy-pubblica-social-n8n.md`).
 
 1. **Verifiche sul vivo** di quanto fatto il 14/06 (Michela deve solo guardare):
    - Sidebar: i pallini semaforo e il toggle "Ricerca avanzata" si comportano come atteso?

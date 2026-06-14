@@ -1,5 +1,10 @@
 # Pubblicazione social — selezione per singolo social (nodo n8n)
 
+> ✅ **APPLICATO (14/06)**: nel workflow n8n **"Meta"**, ramo **post-foto** (`Webhook` → nodo
+> **Code in JavaScript**, webhook `7d01db65-…`) è stato inserito il gate `wantFB`/`wantIG`. Il ramo
+> **Reels** in alto (`Webhook1 → HTTP Request → Wait → HTTP Request1`) NON è toccato.
+> Riferimenti reali del nodo: Graph API `v25.0`, Pagina FB `376551605541671`, IG `17841404189479259`.
+
 Contesto: `ardy-pubblica-social.php` invia al webhook n8n
 (`/webhook/7d01db65-…`) il post da pubblicare. Ora il payload include **quali
 social** vanno usati, così si può pubblicare anche su **uno solo** (Facebook *o*
