@@ -303,8 +303,8 @@ try {
     if (!$hasTipo) {
         $db->exec("ALTER TABLE fasi ADD COLUMN fase_tipo VARCHAR(20) NOT NULL DEFAULT 'fase' AFTER fase_nome");
     }
-    $stmtFase = $db->prepare("INSERT INTO fasi (session_id, fase_nome, fase_tipo, testo_breve, testo_generato, foto_urls, video_urls) VALUES (:sid, :fase, :tipo, :breve, :generato, :foto, :video)");
-    $okFase = $stmtFase->execute([
+    $db->prepare("INSERT INTO fasi (session_id, fase_nome, fase_tipo, testo_breve, testo_generato, foto_urls, video_urls) VALUES (:sid, :fase, :tipo, :breve, :generato, :foto, :video)")
+       ->execute([
            ':sid'      => $sessionId,
            ':fase'     => $faseNome,
            ':tipo'     => $tipo,
@@ -313,13 +313,6 @@ try {
            ':foto'     => json_encode($savedImageUrls),
            ':video'    => json_encode($videoUrlsClean),
        ]);
-    // DIAG temporaneo (bug "fase sparisce dalla dash"): session_id tra parentesi
-    // per smascherare spazi/caratteri rimossi dalla sanificazione di ardy-get-fasi.php.
-    error_log('ARDY FASE DIAG: ok=' . ($okFase ? '1' : '0')
-        . ' rows=' . $stmtFase->rowCount()
-        . ' len=' . strlen((string)$sessionId)
-        . ' sid=[' . $sessionId . ']'
-        . ' tipo=' . $tipo);
 } catch (PDOException $e) {
     error_log('ARDY SALVA FASE ERROR: ' . $e->getMessage());
 }

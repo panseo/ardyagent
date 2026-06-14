@@ -30,6 +30,53 @@ Tutto deployato su `main` e provato dal vivo (salvo le rifiniture nel blocco "DA
 
 ---
 
+## ✅ FATTO E IN PRODUZIONE — sessione 14/06/2026
+Tutto deployato su `main`. Lato dashboard sono migliorie UI testate dal vivo da Michela.
+- **Centralizzazione chat sito (`ardychat`)**: estratta in `ardy-chat-site.js` servito dal nostro
+  server; in WPCode resta solo un loader `<script src=...>` in uno snippet **HTML** (NON JavaScript
+  — vedi trappola in `wordpress-snippets/README.md`). Da ora la chat del sito si modifica nel file
+  + deploy, niente più copia-incolla in WordPress.
+- **Fotocamera nella chat web**: bottone 📷 dedicato (input `capture=environment`) accanto
+  all'allega, in `ardy-chat-site.js`.
+- **Dashboard — sezione lavorazione riordinata**:
+  - **📋 Fasi pubblicate** (sola lettura: titolo + data + n.foto + link al sito), via
+    `ardy-get-fasi.php` (prima orfano). Risolve la fase che "spariva" dalla dash (era solo
+    mancanza di un elenco; il dato era già salvato).
+  - **🔨 Crea e pubblica nuova fase**: form collassabile, bottone primario in cima.
+  - **📲 Post social in attesa**: lista compatta (mobile: info impilate 📲/titolo/icone/data) con
+    toggle ✏ Modifica; icone brand FB/IG/Google (Google in grigio = non ancora attivo).
+  - **📅 Periodo del lavoro**: date inizio/fine etichettate come "intero lavoro" (erano già
+    salvate sul cliente, non sulla fase).
+- **Dashboard — sidebar clienti**:
+  - **Semaforo lavorazione** (pallino + testo, regola 4gg, solo ACCONTO/IN_LAVORAZIONE):
+    🟠 sta per iniziare · 🔴 fine lavoro/ritardo · 🟢 nei tempi · 🟡 date da pianificare.
+    NB: rosso = **fine lavoro**, non consegna (la consegna può avvenire molto dopo, non si traccia).
+  - **Filtri di stato** spostati in toggle **🔍 Ricerca avanzata** + legenda colori.
+- **Scheda cliente**: cambio stato sotto toggle **🔄 Aggiorna stato — attuale: X**.
+- **Pulizia log**: rimossi i diagnostici temporanei `ARDY CODICE DIAG` (proxy) e `ARDY FASE DIAG`
+  (pubblica-lavorazione).
+
+---
+
+## ▶️ PROSSIMA SESSIONE — da dove ripartire
+Branch di lavoro: `claude/lucid-bohr-sngzn5` (allineato a `main`). Dopo ogni push, deploy con il
+comando nelle NOTE OPERATIVE qui sotto.
+
+1. **Verifiche sul vivo** di quanto fatto il 14/06 (Michela deve solo guardare):
+   - Sidebar: i pallini semaforo e il toggle "Ricerca avanzata" si comportano come atteso?
+   - Scheda cliente: toggle "Aggiorna stato"; sezione lavorazione (fasi pubblicate, form fase
+     collassabile, social compatti) ok da mobile e desktop?
+2. **"Altre cose" sulla sidebar/scheda** che Michela aveva in mente (le dirà lei) — continuare le
+   rifiniture UI.
+3. **Feature da costruire** (decise ma non fatte):
+   - **Archivio clienti CONSEGNATI** (sezione "Archivio clienti CONSEGNATI" più sotto): premere
+     CONSEGNATO → esce dalla lista normale, richiamabile dai filtri.
+   - **Centralizzazione widget WP**: backup export WPCode + `Chat per i corsi` → file servito.
+   - **Catalogo prezzi su Google Sheet**, **Gestione archivio cliente completa** (Cestino 30gg).
+4. **Da verificare/pulire** ancora aperti: vedi blocco "DA VERIFICARE" qui sotto.
+
+---
+
 ## 🔧 NOTE OPERATIVE (servono sempre)
 
 **Deploy sul server** (da root):
@@ -85,38 +132,24 @@ in CGI/FPM e rifarebbe la login. Ci si affida al `.htaccess` (Basic Auth) come p
 ### ⭐ PROSSIMO — Backup & centralizzazione dei widget WordPress
 Obiettivo: portare sotto git i sorgenti che oggi vivono solo in WordPress, e dove possibile
 **centralizzarli** in file serviti dal nostro server (una sola fonte versionata).
-Contesto raccolto il 13/06:
-- Gli snippet stanno in **WPCode** (7 snippet) + il loader della pagina lavorazione sta nelle
-  **integrazioni di Divi** (NON WPCode → già nel repo come `wpcode-snippet-lavorazione.html`).
-- I 7 snippet WPCode (da screenshot): `performance` (php), `Chat per i corsi` (html, footer),
-  `Pulsante corsi` (php), `Pulsante flottante ovunque` (php — contiene anche il loader lavorazione!),
-  `Snippet yoast` (php), `Corsi dato strutturato` (php), `ardychat` (js, footer — è la **chat
-  generale del sito**, punta a `ardy-proxy.php`, usa elementi `ac-*`).
-- File **serviti dal nostro server** (restano in root, si deployano): es. `ardy-widget-lavorazione.js`.
+✅ **Già fatto**: infra `wordpress-snippets/` (esclusa dal deploy) + `ardychat` centralizzato in
+`ardy-chat-site.js` (vedi recap 14/06 e `wordpress-snippets/README.md`).
 
-Piano (lento, un passo alla volta):
-1. **Backup**: creare cartella `wordpress-snippets/` (esclusa dal deploy in `deploy.sh`, e già
-   fuori dal `.cpanel.yml` che copia solo i file root). Modo comodo per ottenerli: **WPCode →
-   Strumenti → Esporta tutti** → un JSON → l'utente lo incolla → si splitta in file con i nomi
-   giusti + README-mappa (ID/posizione/tipo).
-2. **Centralizzare SOLO i widget front-end** (chat/pulsanti js/html) in file serviti dal server,
-   lasciando in WordPress una riga-loader. Gli snippet **PHP** (hook/SEO/schema) restano
-   backup-only, non si spostano.
-⚠️ Ricorda: modificare un file nella cartella backup NON aggiorna WordPress (va ricopiato a mano),
-finché non si fa la centralizzazione vera (loader → file servito).
+Contesto: gli snippet stanno in **WPCode** (7) + il loader pagina lavorazione è nelle **integrazioni
+di Divi** (già nel repo come `wpcode-snippet-lavorazione.html`). I 7 snippet WPCode: `performance`
+(php), `Chat per i corsi` (html), `Pulsante corsi` (php), `Pulsante flottante ovunque` (php — contiene
+anche il loader lavorazione!), `Snippet yoast` (php), `Corsi dato strutturato` (php), `ardychat`
+(js → **centralizzato ✅**).
 
-**STATO (sessione 13/06):**
-- ✅ Passo 1 infra: cartella `wordpress-snippets/` creata + README-mappa, esclusa da `deploy.sh`.
-- ✅ **Centralizzazione `ardychat` FATTA e funzionante in produzione.** `ardy-chat-site.js` (root,
-  servito dal server) + loader in WPCode. La chat del sito ora si modifica solo nel file + deploy.
-  ⚠️ **Lezione**: il loader `<script src>` va in uno snippet **HTML**, non JavaScript (uno snippet
-  JS avvolge già in `<script>` → incollarci un altro `<script>` = errore di sintassi, file non
-  caricato, `acUseSuggestion` undefined senza errori evidenti). Vedi `wordpress-snippets/README.md`.
-- ⏭️ Backup snippet ancora da fare: serve l'**export WPCode** (Tools → Export All → JSON) da splittare.
-  Per ora c'è solo il backup manuale di `ardychat.js`.
-- ⏭️ Prossimi widget front-end da centralizzare (stesso schema): `chat-corsi.html`, e valutare i
-  pulsanti CTA (`pulsante-corsi`, `pulsante-flottante-ovunque`). Gli snippet PHP (SEO/schema/hook)
-  restano backup-only.
+⏭️ **Da fare (prossimi passi, uno alla volta):**
+1. **Backup completo via export WPCode**: WPCode → Tools → Export All → JSON → splittarlo in
+   `wordpress-snippets/` (un file per snippet, nomi/estensioni giusti) + aggiornare la mappa nel
+   README. (Oggi c'è solo il backup manuale di `ardychat.js`.)
+2. **Centralizzare gli altri widget front-end** (stesso schema di `ardychat`): `Chat per i corsi`
+   → `ardy-chat-corsi.js` + loader **HTML**; poi valutare i pulsanti CTA (`Pulsante corsi`,
+   `Pulsante flottante ovunque`). Gli snippet **PHP** (SEO/schema/hook) restano **backup-only**.
+⚠️ Promemoria trappola: il loader `<script src>` va in uno snippet WPCode di tipo **HTML**, MAI
+JavaScript (altrimenti errore di sintassi e il file non si carica). Vedi README.
 
 
 

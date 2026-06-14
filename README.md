@@ -26,6 +26,7 @@ ardyagent.ardy-lab.it/
 ├── ardy-preventivo.php        # Generatore preventivi PDF (mPDF)
 ├── ardy-proxy.php             # Proxy API Claude per chatbot pubblico
 ├── ardy-proxy-lavorazione.php # Proxy API Claude per widget lavorazione (con calendario)
+├── ardy-chat-site.js          # Chat generale del sito /ardy-agent/ (servita dal server; in WPCode solo loader)
 ├── ardy-widget-lavorazione.js # Widget chat contestuale per pagine lavorazione
 ├── ardy-verify-client.php     # Verifica identità cliente (telefono + wp_post_id)
 ├── ardy-whatsapp-webhook.php  # Webhook WhatsApp Cloud API
@@ -60,6 +61,7 @@ ardyagent.ardy-lab.it/
 ├── ardy-unsubscribe.php       # Gestione unsubscribe email
 ├── ardy-rate-limit/           # ⚠️ NON in repo — rate limiting
 ├── ardy-system.txt            # Prompt sistema agente AI (chatbot pubblico)
+├── wordpress-snippets/        # Backup degli snippet WPCode/Divi (NON deployata) — vedi README interno
 ├── assets/
 │   ├── logo.png               # Logo Ardy Lab
 │   └── reel-music/            # Tracce royalty-free per i reel (caricate sul server)
@@ -373,16 +375,23 @@ Senza template, l'invio WA libero funziona solo se il cliente ha scritto nelle u
 Single-file HTML con CSS esterno (`ardy-michela-app.css`).
 
 ### Funzionalità
-- Lista clienti/lead con filtri per stato e ricerca
+- Lista clienti/lead con **semaforo lavorazione** (pallino + testo, regola 4gg: 🟠 sta per
+  iniziare · 🔴 fine lavoro/ritardo · 🟢 nei tempi · 🟡 date da pianificare) e **filtri di stato in
+  toggle "🔍 Ricerca avanzata"** con legenda colori + ricerca testo
 - Dettaglio cliente con **tutti i campi modificabili** (nome, cognome, telefono, email, servizio, zona, mobile, budget, indirizzo, note, follow-up)
-- Cambio stato cliente (Lead → Sopralluogo → Preventivo → Acconto → Standby → Perso)
+- Cambio stato cliente sotto toggle **"🔄 Aggiorna stato"** (mostra lo stato attuale)
 - Azioni rapide: contenuto AI, post social, **proforma**, email, WhatsApp, note interne
 - **Generatore preventivi PDF** con form completo
 - **Generatore proforma** con 3 scenari
 - **Storico preventivi** per cliente (dal DB)
 - **Libreria fasi lavorative** (DB, **condivisa tra dispositivi**) con 12 fasi predefinite
-- **Pubblicazione fasi** con foto (scatta dal telefono o galleria); la prima foto diventa l'**immagine in evidenza** del post
-- **Pubblicazione social manuale**: dopo la fase, pannello per rivedere/modificare il post e scegliere *pubblica ora / salva per dopo / non pubblicare*; coda "post in attesa" (localStorage)
+- **Periodo del lavoro** (date inizio/fine, riferite all'intero lavoro) + elenco **📋 Fasi
+  pubblicate** (sola lettura: titolo + data) caricato da `ardy-get-fasi.php`
+- **Pubblicazione fasi** con foto (scatta dal telefono o galleria) sotto il bottone collassabile
+  **🔨 Crea e pubblica nuova fase**; la prima foto diventa l'**immagine in evidenza** del post
+- **Pubblicazione social manuale**: dopo la fase, pannello per rivedere/modificare il post (*pubblica
+  ora / salva per dopo / non pubblicare*); coda **"post in attesa"** (localStorage) in lista compatta
+  con toggle ✏ Modifica e icone brand FB/IG/Google
 - **Reel finale**: a lavoro concluso monta un video 9:16 dalle fasi (titolo + didascalie + Prima/Dopo), con scelta **template di stile**, musica, caption automatica modificabile e pubblicazione sui social
 - **Libreria template reel** (DB): preset di stile (durate, slide attive, musica) creabili/modificabili dal pannello "⚙ Template"
 - Pulsante **❓ Guida** che apre la guida d'uso

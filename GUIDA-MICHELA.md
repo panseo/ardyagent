@@ -33,14 +33,27 @@ Per aprire un cliente, **cliccaci sopra** nella lista a sinistra. La sua scheda 
 - **+ NUOVO**: aggiungi un cliente a mano (vedi punto 10)
 - **LIBRERIA**: gestisci le frasi pronte per le lavorazioni (vedi punto 9)
 - **❓ GUIDA**: riapre questa guida in qualsiasi momento
-- **I filtri** (TUTTI, LEAD, SOPRALLUOGO, ...): mostrano solo i clienti in quello stato
+- **🔍 RICERCA AVANZATA**: cliccalo per aprire **i filtri** (TUTTI, LEAD, SOPRALLUOGO, ...) che
+  mostrano solo i clienti in quello stato, con la **legenda dei colori** (vedi sotto)
+
+### 🚦 I pallini colorati accanto ai clienti
+Accanto ai lavori **in corso** (stati Acconto / In lavorazione) vedi un pallino e una scritta che
+ti dice "a colpo d'occhio" come sta il lavoro, in base alle **date** che hai messo:
+- 🟠 **Arancio — "sta per iniziare"**: l'inizio lavoro è entro 4 giorni (o oggi)
+- 🔴 **Rosso — "fine lavoro / in ritardo"**: la fine lavoro prevista è entro 4 giorni, oggi, o già passata
+- 🟢 **Verde — "nei tempi"**: il lavoro è iniziato e c'è ancora margine alla fine prevista
+- 🟡 **Giallo — "date da pianificare"**: il lavoro è in corso ma **non hai ancora messo le date** —
+  apri la scheda e compilale (servono per i promemoria!)
+
+> Nota: "fine lavoro" è quando finisci di lavorarci, **non** la consegna (puoi consegnare anche dopo).
 
 ---
 
 ## 🏷️ 3. Gli stati del cliente
 
 Ogni cliente ha uno **stato**, che racconta a che punto è la trattativa.
-Lo cambi con i bottoni in alto nella sua scheda:
+In alto nella scheda c'è il bottone **"🔄 Aggiorna stato — attuale: …"**: ti mostra subito lo stato
+di adesso; **cliccalo** per aprire i bottoni e sceglierne un altro (poi ricordati di **Salvare**).
 
 | Stato | Significa |
 |---|---|
@@ -147,7 +160,14 @@ il **🗑** e **⬇ PDF** per riscaricarli.
 Questa è la parte che aggiorna il cliente **e** pubblica sui social.
 👉 Compare nella scheda **solo quando il cliente è in stato ACCONTO** (cioè il lavoro è partito).
 
-**Come si fa:**
+All'apertura vedi, nell'ordine:
+- **📅 Periodo del lavoro**: le date di **inizio** e **fine** lavoro (valgono per *tutto* il lavoro,
+  non per la singola fase). Compilale: servono ai pallini colorati nella lista.
+- **🔨 Crea e pubblica nuova fase**: il bottone (in evidenza). **Cliccalo per aprire il modulo.**
+- **📋 Fasi pubblicate**: l'elenco delle fasi che hai già pubblicato (solo titolo e data), così
+  vedi sempre a che punto sei. Per rivederle per intero c'è il link "→ Vedi tutte sul sito".
+
+**Come si pubblica una fase** (dopo aver aperto **🔨 Crea e pubblica nuova fase**):
 1. Scrivi il **nome della fase** (es. "Sverniciatura") e il **mobile**
 2. Scrivi **2-3 righe** su cosa hai fatto — l'AI le trasforma in un testo professionale
 3. Aggiungi le **foto**:
@@ -173,8 +193,10 @@ quello che vuoi, poi premi Pubblica.
 
 ### Post social in attesa
 Se hai scelto "Salva per dopo", i post messi da parte compaiono nel riquadro
-**"🕒 Post social in attesa"** (in fondo alla sezione lavorazione). Lì puoi
-**modificarli ancora, pubblicarli** quando preferisci, o **eliminarli**.
+**"🕒 Post social in attesa"** (in fondo alla sezione lavorazione), come **elenco compatto**:
+per ognuno vedi 📲, il titolo, le **icone dei social** (Facebook, Instagram; Google grigio = non
+ancora attivo) e la data. Premi **✏ Modifica** per aprire il testo e cambiarlo, **📲 Pubblica**
+per mandarlo, o **🗑** per eliminarlo.
 
 ⚠️ *Nota: i post "in attesa" sono salvati nel browser che stai usando. Se ne
 salvi uno dal telefono, lo ritrovi sul telefono; se lo salvi dal computer, sul
