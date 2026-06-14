@@ -31,6 +31,38 @@ Options -Indexes
 </IfModule>
 
 # -----------------------------------------------------------
+# CACHE DEGLI ASSET STATICI
+# - Immagini/font: cambiano di rado → cache lunga (30 giorni).
+# - CSS/JS: in sviluppo attivo → cache breve + revalidation (ETag/Last-Modified
+#   sono già emessi da Apache): dopo la scadenza il browser fa una richiesta
+#   condizionale e riceve 304 se il file non è cambiato, il file nuovo se lo è.
+#   Niente cache-busting manuale (`?v=`) → nessun rischio di servire CSS vecchio.
+# -----------------------------------------------------------
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/png  "access plus 30 days"
+    ExpiresByType image/jpeg "access plus 30 days"
+    ExpiresByType image/webp "access plus 30 days"
+    ExpiresByType image/svg+xml "access plus 30 days"
+    ExpiresByType image/x-icon  "access plus 30 days"
+    ExpiresByType font/woff2 "access plus 30 days"
+    ExpiresByType font/woff  "access plus 30 days"
+    ExpiresByType text/css               "access plus 1 hour"
+    ExpiresByType application/javascript "access plus 1 hour"
+    ExpiresByType text/javascript        "access plus 1 hour"
+</IfModule>
+<IfModule mod_headers.c>
+    # CSS/JS: pubblici ma da rivalidare alla scadenza (no stale silenzioso).
+    <FilesMatch "\.(css|js)$">
+        Header set Cache-Control "public, max-age=3600, must-revalidate"
+    </FilesMatch>
+    # Immagini/font: cache lunga.
+    <FilesMatch "\.(png|jpe?g|webp|svg|ico|woff2?)$">
+        Header set Cache-Control "public, max-age=2592000"
+    </FilesMatch>
+</IfModule>
+
+# -----------------------------------------------------------
 # LOGIN (Basic Auth) — protegge SOLO le pagine private.
 # Le pagine pubbliche (chatbot, widget, unsubscribe) restano aperte.
 # Il file con utente+password (.htpasswd) si crea con ardy-setup-login.php

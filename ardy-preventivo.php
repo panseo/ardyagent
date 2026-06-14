@@ -18,6 +18,9 @@ require_once __DIR__ . '/ardy-net.php';
 define('MPDF_VENDOR', __DIR__ . '/vendor/autoload.php');
 define('PDF_OUTPUT_DIR', __DIR__ . '/preventivi_pdf/');
 define('LOGO_PATH',      __DIR__ . '/assets/logo.png');
+// Versione della cache PDF: da bumpare se cambia il layout/CSS del PDF, così le
+// cache content-hash esistenti vengono invalidate al primo render successivo.
+define('PDF_CACHE_VER', '2026-06-14');
 
 if (!is_dir(PDF_OUTPUT_DIR) && !mkdir(PDF_OUTPUT_DIR, 0755, true) && !is_dir(PDF_OUTPUT_DIR)) {
     http_response_code(500);
@@ -344,34 +347,48 @@ if ($mode === 'save') {
     }
 }
 
-try {
-    $mpdf = new \Mpdf\Mpdf([
-        'mode'              => 'utf-8',
-        'format'            => 'A4',
-        'margin_top'        => 0,
-        'margin_bottom'     => 0,
-        'margin_left'       => 0,
-        'margin_right'      => 0,
-        'tempDir'           => sys_get_temp_dir(),
-    ]);
+// ─── Cache per content-hash ──────────────────────────────────────────────────
+// Il rendering mPDF è la parte costosa. Se il contenuto che determina il PDF non
+// è cambiato (e il file esiste già), si riusa il PDF su disco senza rigenerarlo.
+// L'hash copre TUTTO ciò che entra nel PDF (dati, opzioni, bollo, spedizione,
+// copertina) più la versione di layout, così un cambio di template invalida.
+$contentHash = hash('sha256', PDF_CACHE_VER . '|' .
+    json_encode([$dati, $opzioni, $bollo, $sped_val, $copertina], JSON_UNESCAPED_UNICODE));
+$hashFile  = $pdfPath . '.sha';
+$pdfCached = is_file($pdfPath) && is_file($hashFile)
+    && hash_equals($contentHash, trim((string) @file_get_contents($hashFile)));
 
-    // CSS comune a tutte le pagine
-    $css = buildCss();
-    $mpdf->WriteHTML($css, \Mpdf\HTMLParserMode::HEADER_CSS);
+if (!$pdfCached) {
+    try {
+        $mpdf = new \Mpdf\Mpdf([
+            'mode'              => 'utf-8',
+            'format'            => 'A4',
+            'margin_top'        => 0,
+            'margin_bottom'     => 0,
+            'margin_left'       => 0,
+            'margin_right'      => 0,
+            'tempDir'           => sys_get_temp_dir(),
+        ]);
 
-    // Pagine separate
-    $pagine = buildPagine($dati, $opzioni, $bollo, $sped_val, $copertina);
-    foreach ($pagine as $i => $pageHtml) {
-        if ($i > 0) $mpdf->AddPage();
-        $mpdf->WriteHTML($pageHtml, \Mpdf\HTMLParserMode::HTML_BODY);
+        // CSS comune a tutte le pagine
+        $css = buildCss();
+        $mpdf->WriteHTML($css, \Mpdf\HTMLParserMode::HEADER_CSS);
+
+        // Pagine separate
+        $pagine = buildPagine($dati, $opzioni, $bollo, $sped_val, $copertina);
+        foreach ($pagine as $i => $pageHtml) {
+            if ($i > 0) $mpdf->AddPage();
+            $mpdf->WriteHTML($pageHtml, \Mpdf\HTMLParserMode::HTML_BODY);
+        }
+
+        $mpdf->Output($pdfPath, 'F');
+        @file_put_contents($hashFile, $contentHash);
+    } catch (\Exception $e) {
+        error_log('ARDY PREVENTIVO MPDF ERROR: ' . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => 'Errore nella generazione del PDF']);
+        exit;
     }
-
-    $mpdf->Output($pdfPath, 'F');
-} catch (\Exception $e) {
-    error_log('ARDY PREVENTIVO MPDF ERROR: ' . $e->getMessage());
-    http_response_code(500);
-    echo json_encode(['error' => 'Errore nella generazione del PDF']);
-    exit;
 }
 
 // ─── Salva nel DB ─────────────────────────────────────────────────────────────
@@ -517,11 +534,6 @@ function generaNumero(): string {
 
 function fmtEuro(float $v): string {
     return '€' . number_format($v, 2, ',', '.');
-}
-
-function logoBase64(): string {
-    if (!file_exists(LOGO_PATH)) return '';
-    return 'data:' . mime_content_type(LOGO_PATH) . ';base64,' . base64_encode(file_get_contents(LOGO_PATH));
 }
 
 /** Genera testo con Claude. Ritorna ['ok'=>bool,'text'=>..,'error'=>..]. */
