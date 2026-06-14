@@ -163,19 +163,25 @@ in CGI/FPM e rifarebbe la login. Ci si affida al `.htaccess` (Basic Auth) come p
 ## 📋 TASK DA SVILUPPARE
 
 ### 🆕 Dossier cliente in Markdown (contesto completo per Sole)
-Obiettivo: per ogni cliente un **file MD** (o blob generato al volo) che raccoglie **tutto**:
-anagrafica/servizio, **preventivo(i)**, **registrazioni chat** (web + WhatsApp), **fasi di
-lavorazione**, note, stato. Serve a dare a **Sole** un quadro completo e immediato, **sia da chat
-web (`ardy-proxy.php`) che da WhatsApp (`ardy-wa-lookup.php`)**.
-- Dati già tutti nel DB: `clienti`, `preventivi.voci_json`, `fasi`, `wa_messaggi`, + chat web
-  (sessioni). Da valutare: **generare il dossier on-the-fly** (no file da mantenere) vs **file MD
-  persistito** (es. `dossier/<session>.md`, rigenerato a ogni cambiamento) — il primo è più
-  semplice e sempre aggiornato; il secondo è leggibile/condivisibile e cacheabile.
-- Endpoint tipo `ardy-dossier.php?session_id=…` → restituisce l'MD; iniettato nel system prompt
-  di Sole (con prompt caching, come già si fa per `crm_context`). Attenzione alla **lunghezza**
-  (token): troncare chat lunghe / riassumere.
-- ⚠️ **Privacy/accesso**: il dossier contiene dati personali → su web solo dopo `cerca_cliente`
-  (codice d'accesso); su WhatsApp solo per numero registrato. Niente dati di altri clienti.
+Obiettivo: per ogni cliente un **MD** che raccoglie **tutto**: anagrafica/servizio, **preventivo(i)**,
+**registrazioni chat**, **fasi**, note, stato → quadro completo e immediato per **Sole** (web + WhatsApp).
+
+✅ **FATTO — generatore** (`ardy-dossier.php`): funzione `ardy_genera_dossier($db,$session)` +
+endpoint HTTP. Legge `clienti` + `preventivi` (con voci da `voci_json`) + `fasi` + chat
+**WhatsApp** (`wa_messaggi`, match per ultime 9 cifre del telefono). On-the-fly (sempre fresco),
+con troncamento dei testi lunghi per il budget token. `?format=md|json`, `?save=1` → scrive
+`dossier/<session>.md`. Protetto da Basic Auth (`.htaccess`) **+** header `X-Ardy-Internal`
+(`ARDY_INTERNAL_SECRET`) per le chiamate server-to-server (Sole). Read-only.
+
+⏭️ **Da fare (prossimi passi):**
+1. **Persistere la chat WEB**: oggi il proxy web è **stateless** → la chat web NON è salvata, quindi
+   nel dossier manca. Aggiungere una tabella (es. `web_messaggi` per `session_id`) e farla scrivere
+   da `ardy-proxy.php` (come `wa-memoria` per WhatsApp). Poi includerla nel dossier.
+2. **Wiring nel prompt di Sole**: iniettare il dossier nel system (con **prompt caching**, come
+   `crm_context`) — su **web** solo dopo `cerca_cliente` (identità verificata col codice) per non
+   esporre dati in chat anonima; su **WhatsApp** per numero registrato. Attenzione ai token.
+3. **Dashboard**: bottone **📄 Dossier** sulla scheda (apre/scarica l'MD) — comodo per Michela.
+⚠️ **Privacy/accesso**: dati personali → niente dossier in chat anonima e mai dati di altri clienti.
 
 ### 🆕 "Crea FAQ di questa lavorazione" (su stato CONSEGNATO)
 Quando la lavorazione passa a **CONSEGNATO**, nella scheda compare — accanto al **Reel** — un

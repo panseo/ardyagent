@@ -35,6 +35,7 @@ ardyagent.ardy-lab.it/
 ├── ardy-db.php                # Connessione DB condivisa
 ├── ardy-config.php            # ⚠️ NON in repo — credenziali DB
 ├── ardy-crm-api.php           # API CRM interna
+├── ardy-dossier.php           # Dossier cliente in Markdown (clienti+preventivi+fasi+chat WA) per Sole/Michela
 ├── ardy-import-preventivi.php # Import temporaneo preventivi storici da CSV (migrazione una-tantum)
 ├── ardy-import-scheda-pdf.php # Importa una scheda cliente da un PDF (estrazione AI) → dashboard
 ├── ardy-template-scheda-cliente.html # Modello PDF "Scheda Cliente" (etichette fisse, fillable)
