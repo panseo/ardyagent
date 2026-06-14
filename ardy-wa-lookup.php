@@ -373,17 +373,16 @@ $clienteOut = [
     'ultima_fase'  => $ultimaFase,
 ];
 
-$systemPrompt = ardy_wa_system_prompt($mode, $clienteOut);
-
-// Dossier client-safe (niente note interne): dà a Sole il quadro completo del
-// cliente riconosciuto per numero. Aggiunto al system_prompt (legacy n8n) e
-// anche esposto a parte per una futura migrazione a prompt caching.
-$dossierCliente = '';
+// Dossier client-safe + compatto (niente note interne, niente chat: la conversazione
+// live ce l'ha già). È STABILE per la durata della conversazione col cliente, quindi
+// lo mettiamo nel blocco `system_static` → il nodo n8n lo manda con cache_control e
+// dal 2° messaggio in poi si rilegge dalla cache (~0,1x del costo).
+$systemStatic = ardy_wa_system_prompt($mode, $clienteOut);
 try {
     require_once __DIR__ . '/ardy-dossier.php';
     $dossierCliente = (string) ardy_genera_dossier($db, (string) $row['session_id'], true, true);
     if ($dossierCliente !== '') {
-        $systemPrompt .= "\n\n## SCHEDA COMPLETA DEL CLIENTE (riservata a te, Sole: usala come contesto, NON elencarla; rispondi solo a ciò che chiede)\n" . $dossierCliente;
+        $systemStatic .= "\n\n## SCHEDA COMPLETA DEL CLIENTE (riservata a te, Sole: usala come contesto, NON elencarla; rispondi solo a ciò che chiede)\n" . $dossierCliente;
     }
 } catch (Throwable $e) { error_log('ARDY WA LOOKUP dossier: ' . $e->getMessage()); }
 
@@ -391,7 +390,9 @@ echo json_encode([
     'success'       => true,
     'mode'          => $mode,
     'cliente'       => $clienteOut,
-    'system_prompt' => $systemPrompt,
-    // Per futura migrazione a prompt caching su n8n: il dossier come crm_context separato.
-    'crm_context'   => $dossierCliente !== '' ? ("## SCHEDA CLIENTE\n" . $dossierCliente) : '',
+    // legacy/fallback (self-contained) + il nodo n8n preferisce system_static (cacheato).
+    'system_prompt' => $systemStatic,
+    'system_static' => $systemStatic,
+    // Il dossier è già dentro system_static (cacheato): niente da attaccare al messaggio (no doppione).
+    'crm_context'   => '',
 ]);

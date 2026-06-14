@@ -210,8 +210,11 @@ con troncamento dei testi lunghi per il budget token. `?format=md|json`, `?save=
    ✅ **Ottimizzazione token**: il dossier iniettato nei contesti live (web/WhatsApp) è **compatto**
    (`$senzaChat=true`) → NIENTE sezioni chat, che nella conversazione live ci sono già (evita di
    mandare la cronologia due volte). Il dossier completo con le chat resta solo nel bottone 📄 dashboard.
-   ⏭️ Ulteriore risparmio su WhatsApp: prompt caching del dossier (`crm_context` separato, già esposto
-   da `ardy-wa-lookup.php`) quando si aggiorna il nodo n8n del client mode.
+   ✅ **Prompt caching WhatsApp client mode**: il nodo n8n WhatsApp era già caching-ready
+   (`system_static || system_prompt` con `cache_control: ephemeral`). Sistemato lato server in
+   `ardy-wa-lookup.php`: il dossier (client-safe, compatto, stabile per la conversazione) va in
+   **`system_static`** → cacheato; `crm_context` lasciato vuoto per non mandarlo due volte. Dal 2°
+   messaggio in poi il system+dossier si rilegge dalla cache (~0,1x). Nessuna modifica n8n necessaria.
 3. ✅ **FATTO — Dashboard**: bottone **📄 Dossier** sulla scheda → overlay con il Markdown
    (Copia / Scarica .md). Legge `ardy-dossier.php?format=json`. (Web chat non ancora inclusa.)
 ⚠️ **Privacy/accesso**: dati personali → niente dossier in chat anonima e mai dati di altri clienti.
