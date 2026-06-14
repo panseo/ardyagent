@@ -182,11 +182,22 @@ lungo parte da solo al primo "buongiorno". Senza, funziona quando Michela chiede
   spostare in una migrazione one-shot, togliere dal path di richiesta.
 - **`ardy-crm-api.php`**: `SELECT *` su `clienti` senza `LIMIT` → solo colonne usate + paginazione + indice.
 
+### ✅ Fatto e deployato (14/06)
+- **Cache PDF preventivo per content-hash** (`ardy-preventivo.php`): salta il rendering mPDF se il
+  contenuto (dati/opzioni/bollo/spedizione/copertina + `PDF_CACHE_VER`) non è cambiato. Sidecar `.sha`.
+  ⚠️ bumpare `PDF_CACHE_VER` se cambia il layout del PDF. (`logoBase64()` era morta → rimossa; il
+  "memoize logo" era moot.)
+- **Cache header asset statici** (`.htaccess`): immagini/font 30gg; CSS/JS 1h + `must-revalidate`
+  (revalidation via ETag/Last-Modified). Scelta revalidation invece di `?v=` busting → niente
+  manutenzione né rischio "CSS vecchio servito a lungo" su dashboard in sviluppo.
+
 ### Da pianificare
-- Cache PDF preventivo per content-hash + memoizzazione logo base64 (`ardy-preventivo.php`).
-- Estrarre JS/CSS dalle HTML monolitiche + header cache/cache-busting.
-- Rate-limit su APCu/Redis invece che su file (`ardy-proxy.php`).
-- Unificare `dbConnect()` (mysqli) di `ardy-preventivo.php` sul PDO di `ardyDB()`.
+- **Estrarre JS inline (~3.400 righe) dalla dashboard** in `ardy-michela-app.js` (il CSS è già esterno).
+  Win di caching ma refactor delicato su HTML live → task a sé, da testare a fondo.
+- ❌ ~~Rate-limit su APCu/Redis~~ — **scartato per ora**: dipende dal supporto server (cPanel ea-php83),
+  guadagno piccolo, rischio medio. Redis assente sullo shared hosting.
+- ❌ ~~Unificare `dbConnect()` (mysqli) → PDO `ardyDB()`~~ — **scartato per ora**: solo coerenza codice,
+  zero performance, e tocca il flusso preventivi-clienti (business-critical). Rischio medio / beneficio nullo.
 
 ---
 
