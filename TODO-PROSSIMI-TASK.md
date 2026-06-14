@@ -175,7 +175,13 @@ fatto: vedi sezione "Da verificare".)
 > ✅ **Già fatto — hard-delete minimo** (per ripulire i lead di test): `ardy-elimina-cliente.php`
 > (DELETE per `session_id` su clienti+preventivi+fasi+wa_messaggi+solleciti + foto e reel,
 > conferma "ELIMINA", Basic Auth `.htaccess`) + pulsante 🗑 Elimina sulla scheda in dashboard.
-> ⏭️ Resta da costruire la versione completa qui sotto (Libera spazio / Cestino 30gg / purga).
+> ✅ **Già fatto — 🧹 "Libera spazio" (punto 1 sotto)** (sessione 14/06): nuova azione
+> `libera_spazio` in `ardy-elimina-cliente.php` (conferma "LIBERA") che cancella **solo** foto +
+> reel della sessione, **tiene** scheda/preventivi+PDF/fasi/storico WA/pagina sito, e segna
+> `foto_archiviate_at` (colonna auto-creata). Pulsante **🧹 Libera spazio** sulla scheda, visibile
+> solo per i clienti **archiviati (CONSEGNATO/PAGATO)**; diventa "🧹 Spazio liberato" (disabilitato)
+> una volta fatto. `ardy-crm-api.php` espone `foto_archiviate_at`.
+> ⏭️ Resta da costruire: **Cestino 30gg / purga** (punti 2-3 sotto).
 
 Contesto: i file pesanti sono **foto** (`ARDY_UPLOAD_DIR/<session>/`) e **reel**
 (`reels/reel_<session>_*.mp4`). I PDF preventivo **incorporano le immagini in base64** →
@@ -183,9 +189,10 @@ cancellare le foto originali NON rompe i documenti. (Versione "leggera" PERSI gi
 `ardy-archivia-persi.php` + pulsante 🧹 LIBERA SPAZIO PERSI; sposta in quarantena, Michela cancella a mano.)
 
 Decisioni già prese con Michela:
-1. **🧹 "Libera spazio" (solo immagini)** per i clienti **PAGATO**: cancella subito cartella foto +
-   reel; tiene scheda/dati/preventivi+PDF/fasi/storico WA/pagina sito. Conferma forte; segna
-   `foto_archiviate_at` sulla scheda.
+1. ✅ **FATTO — 🧹 "Libera spazio" (solo immagini)** per i clienti conclusi (CONSEGNATO/PAGATO):
+   cancella subito cartella foto + reel; tiene scheda/dati/preventivi+PDF/fasi/storico WA/pagina
+   sito. Conferma forte ("LIBERA"); segna `foto_archiviate_at` sulla scheda. (Esteso a CONSEGNATO
+   oltre a PAGATO perché è l'utente a premere il bottone a lavoro consegnato.)
 2. **🗑️ "Elimina tutto" → CESTINO 30 giorni**: soft-delete `deleted_at` su `clienti` → vista
    Cestino con Ripristina; dopo 30gg purga DB (clienti/preventivi/fasi/wa_messaggi/solleciti) +
    tutti i file (foto, reel, PDF). NON tocca pagina WordPress né Media Library. Purga = sweep
@@ -193,12 +200,11 @@ Decisioni già prese con Michela:
 3. **Sicurezza/UX**: modale di conferma (per "Elimina tutto" far scrivere "ELIMINA"); endpoint
    Basic Auth; `session_id` sanificato.
 
-Da costruire:
-- *Backend* `ardy-elimina-cliente.php` (azioni `libera_spazio | cestina | ripristina | purga`),
-  helper cancellazione file per session (riusa `ardy_clean_session`), colonne `deleted_at` /
-  `foto_archiviate_at` auto-create.
+Da costruire (resta il Cestino):
+- *Backend* `ardy-elimina-cliente.php` — azioni ✅ `libera_spazio` fatta · ⏭️ `cestina | ripristina
+  | purga` da fare (colonna `deleted_at` auto-create; helper file già pronto `ardy_elimina_file_sessione`).
 - *API CRM* `ardy-crm-api.php`: escludere i `deleted_at` dalla lista normale; endpoint/param Cestino.
-- *Dashboard*: pulsanti 🧹 (su PAGATO) e 🗑️ sulla scheda; vista Cestino; modali conferma.
+- *Dashboard*: ✅ pulsante 🧹 fatto · ⏭️ vista Cestino + Ripristina; modali conferma.
 
 ### 💡 Idee da Sole (vagliate sul codice — gap reale rimasto)
 > Sole, interrogata, ha proposto varie migliorie: la maggior parte **è già implementata**

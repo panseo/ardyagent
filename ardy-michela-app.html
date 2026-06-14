@@ -103,8 +103,12 @@
           <div class="detail-nome" id="dNome">—</div>
           <div class="detail-sub" id="dSub">—</div>
         </div>
-        <button id="btnEliminaCliente" onclick="eliminaCliente()" title="Elimina definitivamente questo cliente"
-          style="margin-left:8px;align-self:flex-start;background:transparent;border:1px solid #d9534f;color:#d9534f;border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;white-space:nowrap;">🗑 Elimina</button>
+        <div style="display:flex;gap:6px;margin-left:8px;align-self:flex-start;flex-wrap:wrap;justify-content:flex-end;">
+          <button id="btnLiberaSpazio" onclick="liberaSpazioCliente()" title="Lavoro concluso: cancella foto e reel dal server per liberare spazio. Tiene scheda, preventivi (con PDF), fasi e pagina sito."
+            style="display:none;background:transparent;border:1px solid #6f8b6f;color:#9bd99b;border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;white-space:nowrap;">🧹 Libera spazio</button>
+          <button id="btnEliminaCliente" onclick="eliminaCliente()" title="Elimina definitivamente questo cliente"
+            style="background:transparent;border:1px solid #d9534f;color:#d9534f;border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;white-space:nowrap;">🗑 Elimina</button>
+        </div>
       </div>
 
       <div style="margin:10px 0 4px;">
@@ -614,6 +618,18 @@ function renderDetail() {
   // Visibilità sezioni accordion basata su stato
   aggiornaSezioniVisibili(l.Stato ?? '');
 
+  // "Libera spazio" solo per lavori conclusi (archivio: CONSEGNATO/PAGATO)
+  const btnLib = document.getElementById('btnLiberaSpazio');
+  if (btnLib) {
+    const archiviato = ARCHIVE_STATES.includes((l.Stato ?? '').toUpperCase());
+    const giaLiberato = !!(l.foto_archiviate_at && String(l.foto_archiviate_at).trim());
+    btnLib.style.display = archiviato ? 'inline-block' : 'none';
+    btnLib.disabled = giaLiberato;
+    btnLib.textContent = giaLiberato ? '🧹 Spazio liberato' : '🧹 Libera spazio';
+    btnLib.style.opacity = giaLiberato ? '0.55' : '1';
+    btnLib.style.cursor  = giaLiberato ? 'default' : 'pointer';
+  }
+
   // Stato buttons
   const stati = ['LEAD','SOPRALLUOGO','PREVENTIVO','ACCONTO','IN_LAVORAZIONE','CONSEGNATO','PAGATO','STANDBY','PERSO'];
   document.getElementById('statoSelector').innerHTML = stati.map(s => `
@@ -854,6 +870,46 @@ async function eliminaCliente() {
     showToast('⚠ Errore di rete', 'error');
   }
   if (btn) { btn.disabled = false; btn.textContent = '🗑 Elimina'; }
+}
+
+// Libera spazio: cancella SOLO foto + reel del cliente concluso, tiene tutto il resto.
+async function liberaSpazioCliente() {
+  if (!currentLead) return;
+  const sid = currentLead.Session_ID;
+  if (!sid) { showToast('⚠ Scheda senza sessione', 'error'); return; }
+  const nome = `${currentLead.Nome ?? ''} ${currentLead.Cognome ?? ''}`.trim() || 'questo cliente';
+  const c = prompt(
+    `Liberare spazio per «${nome}»?\n\n` +
+    `Cancella dal server le FOTO e i REEL di questo lavoro per recuperare spazio.\n` +
+    `RESTANO: scheda, dati, preventivi (con PDF), fasi e pagina sul sito.\n` +
+    `Operazione non reversibile sulle foto.\n\n` +
+    `Scrivi LIBERA per confermare:`);
+  if (c !== 'LIBERA') { if (c !== null) showToast('Operazione annullata', ''); return; }
+
+  const btn = document.getElementById('btnLiberaSpazio');
+  if (btn) { btn.disabled = true; btn.textContent = 'Libero…'; }
+  try {
+    const res  = await fetch(ELIMINA_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sid, azione: 'libera_spazio', conferma: 'LIBERA' })
+    });
+    const data = await res.json();
+    if (data && data.success) {
+      const idx = allLeads.findIndex(l => l.Session_ID === sid);
+      if (idx >= 0) allLeads[idx].foto_archiviate_at = new Date().toISOString();
+      currentLead.foto_archiviate_at = new Date().toISOString();
+      if (typeof caricaFotoScheda === 'function') caricaFotoScheda(sid);
+      renderDetail();
+      showToast(`🧹 Spazio liberato${data.spazio ? ' · ' + data.spazio : ''}`, 'success');
+    } else {
+      showToast('⚠ ' + ((data && data.error) || 'Errore'), 'error');
+      if (btn) { btn.disabled = false; btn.textContent = '🧹 Libera spazio'; }
+    }
+  } catch(e) {
+    showToast('⚠ Errore di rete', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '🧹 Libera spazio'; }
+  }
 }
 
 // ─── MODAL AI ─────────────────────────────────────────────

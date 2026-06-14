@@ -383,6 +383,9 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
 - Dettaglio cliente con **tutti i campi modificabili** (nome, cognome, telefono, email, servizio, zona, mobile, budget, indirizzo, note, follow-up)
 - Cambio stato cliente sotto toggle **"🔄 Aggiorna stato"** (mostra lo stato attuale)
 - Azioni rapide: contenuto AI, post social, **proforma**, email, WhatsApp, note interne
+- **🧹 Libera spazio** (solo su clienti archiviati CONSEGNATO/PAGATO): a lavoro concluso cancella
+  dal server **foto + reel** del cliente per recuperare spazio, tenendo scheda/preventivi+PDF/fasi/
+  pagina sito; segna `foto_archiviate_at` e il bottone diventa "Spazio liberato"
 - **Generatore preventivi PDF** con form completo
 - **Generatore proforma** con 3 scenari
 - **Storico preventivi** per cliente (dal DB)
