@@ -141,10 +141,19 @@ vendita verrà gestita da un **agente dedicato a parte**, non da Sole. Da ripren
 letto da Sole (sa già leggere Calendar/Drive) farebbe aggiornare i prezzi a Michela da sola. Da
 progettare: foglio modello + endpoint/funzione che lo legge e lo inietta nel prompt (cache breve).~~
 
-### Logo nelle email
-Header email oggi testuale ("ARDY LAB"). Mettere il logo immagine (`assets/logo.png`) in cima a TUTTE
-le email (grazie, fasi, benvenuto, outreach). URL assoluto (`https://ardy-lab.it/.../logo.png`) o
-base64 inline (Brevo API = no cid). Valutare un piccolo helper "header email" condiviso.
+### ✅ Logo nelle email — FATTO E TESTATO DAL VIVO (14/06)
+Helper condiviso `ardy-email.php`: logo via **CID** (PHPMailer) o **URL assoluto** (Brevo HTTP), con
+fallback testuale. Applicato a: benvenuto + conferma sopralluogo (`ardy-proxy`), aggiornamento fase/
+comunicazione (`ardy-pubblica-lavorazione`), ringraziamento consegna (`ardy-grazie-consegna`),
+outreach (`ardy-outreach-api`). I **solleciti** restano plain-text di proposito (promemoria/diffide).
+
+### 🐢 BIMI — logo come avatar del mittente in Gmail (bassissima priorità, "quando non c'è altro")
+L'avatar tondo del mittente NON si imposta dall'HTML: serve **BIMI**. Catena richiesta: SPF+DKIM (✅) →
+**DMARC in enforcement** (`p=quarantine`/`reject`, oggi presumibilmente `p=none`) → TXT `default._bimi.
+ardy-lab.it` → logo **SVG Tiny P/S** quadrato in HTTPS → **VMC** (certificato a pagamento ~1.000+ €/anno
++ marchio registrato). ⚠️ Gmail mostra il logo **solo col VMC**; Yahoo/Apple bastano i primi 4 punti.
+Decisione commerciale (non determinante). Se ripreso: prima `p=quarantine` (utile comunque per
+deliverability) + SVG BIMI + record DNS; il VMC resta a parte.
 
 ### Briefing del mattino — opzionale rimasto
 ⏭️ trigger "prima risposta del giorno": salvare data ultimo briefing per numero così il riepilogo
