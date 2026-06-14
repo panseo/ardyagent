@@ -14,6 +14,7 @@ define('ARDY_WP_LOAD', '/home/micoperibg/public_html/archivio/wp-load.php');
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-net.php';
+require_once __DIR__ . '/ardy-email.php';
 
 // -----------------------------------------------------------
 // 2. CORS E PREFLIGHT (deve rispondere PRIMA di caricare WP)
@@ -544,7 +545,7 @@ function inviaEmailCliente(string $email, string $nome, string $mobile, string $
         $mail->isHTML(true);
         $mail->Body = '
 <div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:32px;color:#333;">
-  <h2 style="font-family:sans-serif;color:' . $accent . ';font-size:20px;margin-bottom:4px;">Ardy Lab</h2>
+  ' . ardy_email_logo_cid($mail) . '
   <p style="color:#999;font-size:13px;margin-bottom:24px;">' . htmlspecialchars($kicker) . '</p>
   <h3 style="font-size:18px;margin-bottom:8px;">' . htmlspecialchars($mobile) . '</h3>
   <p style="font-size:13px;color:#999;margin-bottom:20px;">' . ($isComunicazione ? '' : 'Fase: ') . htmlspecialchars($fase) . '</p>

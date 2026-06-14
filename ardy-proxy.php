@@ -27,6 +27,7 @@ require_once __DIR__ . '/ardy-gcal.php';
 require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-net.php';
 require_once __DIR__ . '/ardy-notifica-michela.php';
+require_once __DIR__ . '/ardy-email.php';
 require_once __DIR__ . '/phpmailer/src/PHPMailer.php';
 require_once __DIR__ . '/phpmailer/src/SMTP.php';
 require_once __DIR__ . '/phpmailer/src/Exception.php';
@@ -907,7 +908,7 @@ if ($bookingMade && $bookingWhen instanceof DateTime && $userEmail && filter_var
         $mailC->isHTML(true);
         $mailC->Body = '
 <div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:32px;color:#333;">
-  <h2 style="font-family:sans-serif;color:#c8a96e;font-size:20px;margin-bottom:4px;">Ardy Lab</h2>
+  ' . ardy_email_logo_cid($mailC) . '
   <p style="color:#999;font-size:13px;margin-bottom:24px;">Conferma sopralluogo</p>
   <p style="font-size:15px;line-height:1.7;">Ciao,<br>abbiamo fissato il tuo sopralluogo. Ecco il riepilogo:</p>
   <div style="border-left:3px solid #c8a96e;padding:12px 20px;background:#fafaf8;margin:20px 0;font-size:16px;">
@@ -944,13 +945,7 @@ if ($accessCode && $accessEmail && filter_var($accessEmail, FILTER_VALIDATE_EMAI
         $mailK->Subject = 'Benvenuto in Ardy Lab 🌿 — e il tuo codice personale';
         $mailK->isHTML(true);
         // Logo incorporato via CID: i client di posta lo mostrano senza hotlink esterni
-        $logoTag = '';
-        $logoFile = __DIR__ . '/assets/logo.png';
-        if (file_exists($logoFile) && $mailK->addEmbeddedImage($logoFile, 'ardylogo')) {
-            $logoTag = '<img src="cid:ardylogo" alt="Ardy Lab" style="height:48px;margin-bottom:8px;">';
-        } else {
-            $logoTag = '<h2 style="font-family:sans-serif;color:#c8a96e;font-size:20px;margin:0 0 4px;">Ardy Lab</h2>';
-        }
+        $logoTag = ardy_email_logo_cid($mailK);
         $mailK->Body = '
 <div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:32px;color:#333;">
   ' . $logoTag . '

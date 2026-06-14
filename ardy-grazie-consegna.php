@@ -24,6 +24,7 @@
 
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
+require_once __DIR__ . '/ardy-email.php';
 
 date_default_timezone_set('Europe/Rome');
 
@@ -73,7 +74,7 @@ function ardy_grazie_email($cli) {
     $htmlEmail = '<!DOCTYPE html><html><body style="font-family:Georgia,serif;background:#f5f5f5;margin:0;padding:20px;">
 <div style="max-width:600px;margin:0 auto;background:#fff;padding:40px;border-radius:4px;">
   <div style="border-bottom:2px solid #c8a96e;padding-bottom:20px;margin-bottom:30px;">
-    <h2 style="font-family:sans-serif;color:#c8a96e;margin:0;font-size:18px;letter-spacing:2px;">ARDY LAB</h2>
+    ' . ardy_email_logo_url(44) . '
     <p style="color:#999;font-size:12px;margin:4px 0 0;font-family:sans-serif;">Restauro · Laccatura · Stampa 3D · Roma EUR</p>
   </div>
   ' . $bodyHtml . '
