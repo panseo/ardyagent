@@ -95,16 +95,15 @@ WhatsApp è già **prompt-caching ready** (`system_static` con `cache_control`).
 
 ## 📋 TASK DA SVILUPPARE
 
-### ✅ "Crea FAQ di questa lavorazione" (su stato CONSEGNATO) — FATTO, ⏭️ da provare dal vivo
+### ✅ "Crea FAQ di questa lavorazione" (su stato CONSEGNATO) — FATTO E TESTATO DAL VIVO (14/06)
 Implementato: `ardy-crea-faq.php` (azioni `genera` | `pubblica`) + sezione **❓ FAQ della lavorazione**
-in dashboard (visibile solo per CONSEGNATO, accanto al Reel).
+in dashboard (visibile solo per CONSEGNATO, accanto al Reel). Generazione + pubblicazione provate ✅.
 - `genera`: Claude scrive 5-7 FAQ da mobile/servizio/fasi → anteprima **modificabile** (domanda/risposta
   editabili, rimozione singola).
 - `pubblica`: accoda un blocco FAQ all'articolo WP della lavorazione (`<details>` accordion) +
   **JSON-LD `schema.org/FAQPage`** per la SEO. **Idempotente**: il blocco è delimitato da marcatori
   `ARDY_FAQ_START/END` → ripubblicando si sostituisce, non si duplica. Segna `faq_pubblicata_at` sul CRM.
-- ⏭️ **Prova dal vivo**: scheda CONSEGNATA con almeno una fase pubblicata → Crea FAQ → modifica →
-  Pubblica → verifica accordion + rich result (Google Rich Results Test sull'URL dell'articolo).
+- ⏭️ Resta solo da confermare il **rich result** col Google Rich Results Test sull'URL dell'articolo.
 
 ### 🆕 (DA VALUTARE — grande) Sole esperta di legno & restauro + datazione fotografica guidata
 Conoscenza profonda di legno/restauro/stile + **datazione/epoca** via **rilievo fotografico guidato**
