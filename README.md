@@ -389,6 +389,11 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
 - **🧹 Libera spazio** (solo su clienti archiviati CONSEGNATO): a lavoro concluso cancella
   dal server **foto + reel** del cliente per recuperare spazio, tenendo scheda/preventivi+PDF/fasi/
   pagina sito; segna `foto_archiviate_at` e il bottone diventa "Spazio liberato"
+- **📄 Dossier**: apre il quadro completo del cliente in Markdown (anagrafica, preventivi, fasi,
+  chat WhatsApp + web) da `ardy-dossier.php` — copia/scarica. Lo stesso dossier (client-safe, senza
+  note interne) alimenta il contesto di Sole su web e WhatsApp
+- **🤝 Ringraziamento alla consegna**: al passaggio a CONSEGNATO parte in automatico l'email al
+  cliente (recensione Google + social + newsletter); bottone **📧 Reinvia ringraziamento**
 - **Generatore preventivi PDF** con form completo
 - **Generatore proforma** con 3 scenari
 - **Storico preventivi** per cliente (dal DB)
@@ -602,6 +607,13 @@ permette il deploy push-button da cPanel (richiede Jailed Shell).
 ---
 
 ## 📝 Note sessioni
+
+**Giugno 2026 — Sessione 14/06 sera (archivio, dossier, ringraziamento, single-social, fix WP)**
+- **Archivio implicito CONSEGNATI** + **🧹 Libera spazio** (`ardy-elimina-cliente.php` azione `libera_spazio`) + **rimozione stato `PAGATO`** (ridondante con CONSEGNATO; il "saldato" è il modulo MOROSI).
+- **Pubblicazione per singolo social**: toggle FB/IG in dashboard + nodo n8n "Meta" col gate `wantFB`/`wantIG` (vedi `ardy-pubblica-social-n8n.md`).
+- **Fix immagini su WordPress**: `kses_remove_filters/init_filters` attorno a insert/update in `ardy-pubblica-lavorazione.php` (senza utente WP loggato kses rimuoveva img/video/style) + logging. **Reply-To** `ardy.documenti@gmail.com` sulle email fasi.
+- **Ringraziamento alla consegna** (`ardy-grazie-consegna.php`): email automatica → CONSEGNATO (recensione Google + social + newsletter/disiscrizione), guard `consegnato_grazie_at`, bottone **📧 Reinvia**. WhatsApp pronto (serve `WA_TEMPLATE_GRAZIE`).
+- **Dossier cliente** (`ardy-dossier.php`): MD completo (anagrafica + preventivi + fasi + chat WA + **chat web** ora persistita via `ardy-web-memoria.php`/`web_messaggi`). Bottone **📄 Dossier**. Iniettato in Sole **client-safe + compatto**: web dopo `cerca_cliente`, WhatsApp per numero (dossier in `system_static` → **cacheato**, nessuna modifica n8n).
 
 **Giugno 2026 — Sessione 11 (Sole crea scheda da WhatsApp — Scenario 1)**
 - **`ardy-wa-crea-scheda.php`**: nuovo endpoint server-to-server (stesso `WA_LOOKUP_SECRET` del lookup). In modalità titolare, Michela detta a Sole un cliente nuovo → Sole raccoglie i campi, li ripete, e **dopo conferma** emette un marker `[[CREA_SCHEDA]]{...json...}`. n8n intercetta il marker e POSTa il JSON all'endpoint, che fa l'**upsert** in `clienti` (`session_id` deterministico `wa-…` per telefono/nome → niente doppioni) e ritorna un riepilogo. Solo scheda cliente (no preventivo). Campi: nome, cognome, telefono, email, indirizzo, zona, servizio, mobile, stato, note.
