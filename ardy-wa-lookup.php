@@ -325,13 +325,17 @@ function ardy_wa_prompt_titolare_static(): string {
 function ardy_wa_system_prompt(string $mode, ?array $cliente): string {
     $wrap = @file_get_contents(__DIR__ . '/ardy-whatsapp-system.txt') ?: '';
     $base = @file_get_contents(__DIR__ . '/ardy-system.txt') ?: '';
+    // Conoscenza di bottega (legno/restauro/cura): solo lato cliente (qui), NON nel
+    // prompt della titolare. Va in system_static → cacheato col resto.
+    $conoscenza = @file_get_contents(__DIR__ . '/ardy-conoscenza-restauro.txt') ?: '';
     $ctx  = "\n\n## CONTESTO DI QUESTA CONVERSAZIONE\nmode: {$mode}\n";
     if ($cliente) {
         $ctx .= "cliente:\n" . json_encode($cliente, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
     } else {
         $ctx .= "cliente: (nessuno — nuovo contatto)\n";
     }
-    return $wrap . $ctx . "\n" . $base;
+    $doc = $base . ($conoscenza !== '' ? "\n\n---\n" . $conoscenza : '');
+    return $wrap . $ctx . "\n" . $doc;
 }
 
 // Nessun match → nuovo contatto

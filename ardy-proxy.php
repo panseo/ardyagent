@@ -193,6 +193,14 @@ $system .= "\n\n## CODICE DI ACCESSO E STATO DEL LAVORO (tool cerca_cliente)\n\n
     . "- Se NON ha un codice, **non** cercare per nome o telefono (sulla chat non è possibile per tutela della privacy). Invitalo a lasciare i suoi dati così gliene generiamo uno, oppure a contattare direttamente Ardy Lab.\n"
     . "Non inventare mai uno stato: riferisci solo ciò che il tool ti restituisce.\n";
 
+// Conoscenza di bottega (legno/restauro/cura): arricchisce il linguaggio e la competenza
+// di Sole. Sta in un file a sé (sapere ≠ regole) e resta DENTRO il blocco system cacheato
+// → costo token trascurabile dal 2° messaggio in poi.
+$conoscenza = @file_get_contents(__DIR__ . '/ardy-conoscenza-restauro.txt');
+if ($conoscenza !== false && $conoscenza !== '') {
+    $system .= "\n\n---\n" . $conoscenza;
+}
+
 // -----------------------------------------------------------
 // STRUMENTI PER CLAUDE
 // -----------------------------------------------------------

@@ -106,17 +106,22 @@ in dashboard (visibile solo per CONSEGNATO, accanto al Reel). Generazione + pubb
   `ARDY_FAQ_START/END` → ripubblicando si sostituisce, non si duplica. Segna `faq_pubblicata_at` sul CRM.
 - ⏭️ Resta solo da confermare il **rich result** col Google Rich Results Test sull'URL dell'articolo.
 
-### 🆕 (DA VALUTARE — grande) Sole esperta di legno & restauro + datazione fotografica guidata
-Conoscenza profonda di legno/restauro/stile + **datazione/epoca** via **rilievo fotografico guidato**
-(coda di rondine fatta a mano o a macchina? fondello cassetto in massello? segni industriali? ecc.).
-- **Knowledge base**: cercare in rete **fonti autorevoli** (legno, tecniche per epoca, storia del
-  mobile, restauro) → archivio organizzato (schede per stile/epoca + criteri diagnostici). Progettare
-  formato (MD/JSON), storage (file/DB), retrieval (mini-RAG per non gonfiare i token).
-- **Flusso diagnostico guidato**: Sole conduce passo-passo (foto mirate) → ipotesi stile/epoca con
-  confidenza + motivazione. Riusa l'analisi foto già nella chat web.
-- ⚠️ **Accesso riservato** a **clienti** o **membri community** (community popolata dal modulo
-  **Outreach**): serve registro membri + gate (web: codice/iscrizione; WhatsApp: numero registrato).
-- Realismo: datazione = **stima motivata con confidenza**, non verdetto. Buon lead-magnet community.
+### 🌳 Conoscenza di bottega di Sole — FASE 1 FATTA (14/06), ⏭️ da provare dal vivo
+Invece del task grande (sovradimensionato), abbiamo dato a Sole un **documento di conoscenza
+curato** che la fa parlare da esperta a costo token ~zero (sta nel blocco system **cacheato**).
+- File: `ardy-conoscenza-restauro.txt` (essenze, stili/epoche, indizi di costruzione, difetti,
+  tecniche/finiture, **cura & manutenzione**, glossario, limiti+rimando a Michela). **v1 bozza →
+  Michela deve rivederlo/ardy-izzarlo** con le sue tecniche e il suo modo di dire.
+- Wiring: agganciato **solo lato cliente** — web (`ardy-proxy.php`, `$system`) e WhatsApp
+  (`ardy-wa-lookup.php` → `ardy_wa_system_prompt` → `system_static`). NON nel prompt della titolare.
+- ⏭️ Prova dal vivo: in chat/WhatsApp chiedere a Sole di cura del legno / riconoscere uno stile →
+  deve rispondere competente ma concisa, marcando le ipotesi come "stima" e senza inventare prezzi.
+
+### ❄️ FASE 2 (in frigo) — datazione fotografica guidata + community
+Solo se un domani serve: flusso diagnostico passo-passo via foto (coda di rondine a mano/macchina,
+fondelli, segni industriali) con stima motivata + confidenza; gate accesso clienti/community
+(registro membri); valutare **mini-RAG** se la knowledge base cresce troppo per stare cacheata.
+Datazione = stima motivata, mai verdetto. Buon lead-magnet, ma non ora.
 
 ### ⭐ Backup & centralizzazione dei widget WordPress
 ✅ infra `wordpress-snippets/` + `ardychat` centralizzato (`ardy-chat-site.js`).

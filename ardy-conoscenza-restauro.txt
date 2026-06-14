@@ -1,0 +1,157 @@
+# CONOSCENZA DI BOTTEGA — Restauro, legno e cura del mobile
+# (documento di riferimento interno per Sole — bozza v1 DA RIVEDERE con Michela)
+#
+# A COSA SERVE: dà a Sole competenza e linguaggio da bottega su legno, stili,
+# tecniche e cura del mobile. Serve a parlare in modo PIÙ PRECISO e credibile, NON
+# a fare lezioni.
+
+## COME USARE QUESTA CONOSCENZA (regole per Sole)
+- Usala per capire meglio il cliente e per rispondere con parole giuste, non per sfoggio.
+- Resta nel tuo stile: concisa, calda, una cosa alla volta. Niente spiegoni se non te li chiedono.
+- NON inventare mai prezzi, tempi di consegna o disponibilità: quelli restano fuori da qui.
+- Datazione, essenza, stile: dai sempre una **stima motivata** ("sembra", "potrebbe essere",
+  "per dirlo con certezza servirebbe vedere il pezzo dal vivo"), mai un verdetto.
+- Per interventi, modifiche o valutazioni economiche: raccogli e rimanda a Michela.
+- Quando una domanda è troppo tecnica o specifica per il singolo pezzo, proponi con naturalezza
+  un sopralluogo o di mandare qualche foto.
+
+---
+
+## 1. LE ESSENZE DEL LEGNO (riconoscere e parlarne)
+
+**Legni teneri (conifere)**
+- **Abete / Pino**: chiari, nodi evidenti, leggeri. Tipici di mobili rustici, casse, strutture,
+  interni di cassetti. Si segnano e si ammaccano facilmente.
+- **Larice / Cirmolo**: il cirmolo è profumato e amato per intagli e mobili di montagna.
+
+**Legni duri (latifoglie) — i più usati nei mobili di pregio**
+- **Noce**: bruno caldo, venatura ricca e ondulata. Il legno "nobile" del mobile italiano
+  (Rinascimento, '600-'700). Si lucida benissimo.
+- **Rovere / Quercia**: durissimo, venatura marcata con "specchiature" (raggi midollari).
+  Mobili robusti, stile rustico, arte povera, Arts & Crafts.
+- **Ciliegio**: rosato che con gli anni e la luce diventa ambrato. Molto usato in mobili
+  Biedermeier e di campagna francese.
+- **Mogano**: rosso-bruno, fine, lucido. Mobili eleganti otto-novecenteschi, stile inglese,
+  Impero. Spesso in impiallacciatura.
+- **Faggio**: chiaro, omogeneo, ottimo a vapore (curvato): sedie Thonet, telai.
+- **Castagno**: simile al rovere ma più tenero, frequente nei mobili rustici dell'Italia centrale.
+- **Palissandro, ebano, radica (di noce/olmo/tuja)**: legni pregiati e impiallacciature decorative
+  (radica = venatura "a fiamma"/occhiata, tipica del déco e dei mobili di lusso).
+
+**Impiallacciatura vs massello**
+- **Massello**: il mobile è fatto del legno pieno. **Impiallacciato**: struttura più economica
+  rivestita con un foglio sottile di legno pregiato. Non è un difetto: tecnica nobile e antichissima.
+- Indizio: sul bordo dei ripiani/ante si vede lo "strato" sottile e a volte il legno diverso sotto.
+
+---
+
+## 2. STILI ED EPOCHE (a grandi linee, per orientarsi)
+> Sempre come stima. Gli stili sono stati riprodotti in ogni epoca ("in stile"): l'epoca vera
+> si capisce dai materiali e dalla costruzione (vedi §3), non solo dalla forma.
+
+- **Rinascimento (XVI sec.)**: noce, linee architettoniche, cassettoni, intagli sobri.
+- **Barocco (XVII)**: forme mosse, ricche, dorature, intagli abbondanti.
+- **Rococò / Luigi XV (metà XVIII)**: curve, gambe mosse "a cabriole", eleganza, intarsi.
+- **Neoclassico / Luigi XVI (fine XVIII)**: ritorno alla linea dritta, gambe rastremate scanalate,
+  simmetria, festoni.
+- **Impero (inizio XIX)**: mogano, linee severe, bronzi dorati, motivi classici (sfingi, palmette).
+- **Biedermeier (1815-1848)**: borghese, essenziale, legni chiari (ciliegio, betulla), poche decorazioni.
+- **Vittoriano / eclettico (metà-fine XIX)**: mescolanza di stili, scuro, imbottiti.
+- **Liberty / Art Nouveau (~1890-1910)**: linee floreali, sinuose, natura stilizzata.
+- **Déco (anni '20-'30)**: geometrie, radiche, lacche, lusso moderno.
+- **Modernariato (dal dopoguerra)**: design industriale, compensati curvati, teak nordico.
+
+---
+
+## 3. COSTRUZIONE E INDIZI DI EPOCA (cosa "racconta" un mobile)
+> Sono indizi, non prove. Vanno valutati insieme.
+
+- **Incastri a coda di rondine**: se **irregolari**, di forma e spaziatura non identiche →
+  fatti **a mano** (mobile più antico o artigianale). Se perfettamente regolari e fitti →
+  fatti **a macchina** (dal tardo XIX sec. in poi).
+- **Fondelli e retri dei cassetti**: legno **massello** un po' grezzo, segni di pialla a mano →
+  più antico. Compensato o truciolare → XX secolo.
+- **Segni di lavorazione**: tracce di **pialla a mano** (leggermente ondulate) vs taglio netto e
+  uniforme della macchina.
+- **Ferramenta**: **chiodi forgiati** a sezione quadra e **viti** dalla filettatura irregolare →
+  antichi; viti perfette e moderne → recenti o restauri successivi.
+- **Patina e usura coerenti**: l'usura vera è dove il mobile si tocca/struscia davvero (maniglie,
+  piedi, bordi). Un'usura "ovunque uguale" può essere finta/invecchiata ad arte.
+- **Colore del legno a vista** nelle parti nascoste: il legno antico, dove non preso da luce/aria,
+  resta più chiaro; ossida col tempo.
+
+---
+
+## 4. DIFETTI E DEGRADO PIÙ COMUNI
+- **Tarlo**: forellini e polverina (rosume). Va trattato; se attivo, prima di tutto.
+- **Distacco dell'impiallacciatura / bolle**: il foglio si solleva (colla animale invecchiata, umidità).
+- **Giunti aperti, gambe o sedie traballanti**: la colla antica ha ceduto → si smonta, pulisce e riincolla.
+- **Finitura ossidata, opaca, "stanca"**: la gommalacca ingiallisce e si scrosta; spesso basta ravvivare.
+- **Aloni bianchi** (da bicchieri/calore) e **aloni scuri** (acqua penetrata).
+- **Muffa / odore di chiuso**: da ambienti umidi.
+- **Bruciature, macchie, scoloriture da sole**.
+
+---
+
+## 5. TECNICHE DI RESTAURO E FINITURA (saperle nominare)
+- **Pulitura**: rimozione di sporco e cere vecchie con metodi delicati, rispettando la patina.
+- **Sverniciatura**: rimozione della vecchia finitura quando è irrecuperabile (con cautela: a volte
+  si conserva).
+- **Consolidamento / sverminatura**: trattamento antitarlo e rinforzo del legno indebolito.
+- **Reincollaggio**: smontaggio dei giunti, pulizia delle vecchie colle, riassemblaggio.
+- **Stuccatura e rifacimento di parti mancanti** (tasselli, modanature, piedini).
+- **Lucidatura a tampone (gommalacca)**: la finitura tradizionale del mobile antico, calda e profonda,
+  data a mano con tampone in più passaggi. Bellissima ma delicata.
+- **Cere**: finitura naturale, opaca/satinata, da rinnovare nel tempo.
+- **Vernici moderne**: più resistenti (acqua/graffi), aspetto più "pieno"; scelta secondo l'uso.
+- **Laccatura**: finitura coprente colorata (opaca/lucida), per look classico o contemporaneo.
+- **Doratura a foglia** (oro/argento), **patinatura e anticatura**: per cornici, intagli, dettagli.
+- **Restauro conservativo vs estetico**: conservare i segni del tempo (scelta filologica) oppure
+  riportare il mobile "a nuovo" — dipende dal valore del pezzo e dal desiderio del cliente.
+
+---
+
+## 6. CURA E MANUTENZIONE (consigli sicuri per il cliente)
+> Questa è la parte che Sole può dare DA SOLA dopo la consegna.
+
+**Da fare**
+- Spolverare con **panno morbido asciutto o appena inumidito**, seguendo la venatura.
+- Mantenere un ambiente **stabile**: né troppo secco né troppo umido; il legno "lavora" con l'umidità.
+- Per i mobili **a cera**: rinnovare la cera **1-2 volte l'anno** con un prodotto adatto, poco e ben steso.
+- Usare **sottobicchieri e tovagliette**: proteggono da aloni e calore.
+
+**Da evitare**
+- **Acqua in abbondanza**, vapore, detergenti aggressivi, ammoniaca, alcol, sgrassatori, candeggina.
+- **Spray al silicone** ("lucidanti" da supermercato): danno lucido finto e nel tempo rovinano la
+  finitura tradizionale e complicano i restauri futuri.
+- **Sole diretto** prolungato (scolora) e fonti di **calore** ravvicinate (termosifoni, camini).
+- Trascinare il mobile: si sollevano per non sforzare i giunti.
+
+**Piccoli interventi**
+- Un alone chiaro recente a volte si attenua con metodi delicati; se non sparte o è scuro/profondo,
+  meglio non insistere e farlo vedere.
+- Cigolii/gioco nei giunti: NON incollare a casa con colle universali → si fissano problemi e si
+  complica il restauro. Meglio una valutazione.
+
+---
+
+## 7. GLOSSARIO DA BOTTEGA (per capirsi col cliente)
+- **Patina**: lo strato che il tempo dà al mobile (colore, micro-usura) — un valore, non sporco.
+- **Massello / impiallacciato**: vedi §1.
+- **Coda di rondine**: l'incastro a "trapezi" dei cassetti.
+- **Gommalacca (shellac)**: resina naturale, base della lucidatura a tampone.
+- **Lucidatura a tampone (French polish)**: tecnica manuale di finitura a gommalacca.
+- **Cabriole**: gamba mossa "a esse" tipica del rococò.
+- **Radica**: venatura decorativa pregiata (escrescenze/ceppaie del legno).
+- **Intarsio / marqueterie**: decoro fatto con legni di colore diverso accostati.
+- **Filetto**: sottile listello decorativo (anche di legno chiaro/scuro) lungo i bordi.
+- **Rosume**: la polverina prodotta dai tarli.
+
+---
+
+## 8. LIMITI E RIMANDO A MICHELA
+- "Quanto vale?" / stima economica → non è compito di Sole: serve la valutazione di Michela.
+- Diagnosi certe (epoca, autenticità, essenza esatta) → richiedono il pezzo dal vivo o buone foto.
+- Qualsiasi intervento, preventivo, modifica → si raccoglie e si passa a Michela.
+
+# FINE DOCUMENTO — v1 bozza. Michela: correggi/integra con le TUE tecniche, materiali e modo di dire.
