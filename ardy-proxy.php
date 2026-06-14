@@ -793,6 +793,15 @@ while ($iteration < $maxIterations) {
                             } catch (PDOException $e) { /* tabella fasi assente: ignora */ }
                             if (!empty($cli['wp_post_link'])) $info['pagina_lavoro'] = $cli['wp_post_link'];
                             $toolResult = 'Cliente trovato. Rispondi con tono caldo e personalizzato: saluta per nome, riassumi lo stato del lavoro e, se c\'è una pagina lavoro, condividi il link. Dati: ' . json_encode($info, JSON_UNESCAPED_UNICODE);
+                            // Contesto completo (client-safe: niente note interne) per dare a Sole
+                            // il quadro del cliente verificato. Usalo come background, non recitarlo.
+                            try {
+                                require_once __DIR__ . '/ardy-dossier.php';
+                                $dossier = ardy_genera_dossier($db, (string) $cli['session_id'], true);
+                                if ($dossier) {
+                                    $toolResult .= "\n\n--- SCHEDA COMPLETA DEL CLIENTE (riservata a te, Sole: usala come contesto, NON elencarla; rispondi solo a ciò che chiede) ---\n" . $dossier;
+                                }
+                            } catch (Throwable $e) { error_log('ARDY CERCA CLIENTE dossier: ' . $e->getMessage()); }
                         }
                     } catch (PDOException $e) {
                         error_log('ARDY CERCA CLIENTE ERROR: ' . $e->getMessage());

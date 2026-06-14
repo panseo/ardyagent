@@ -57,8 +57,12 @@ function ardy_dossier_tronca($t, $max = 1200) {
 /**
  * Genera il dossier Markdown del cliente. Ritorna la stringa Markdown,
  * oppure null se non esiste alcuna scheda per quel session_id.
+ *
+ * @param bool $perCliente  Se true → versione "client-safe": esclude le NOTE
+ *   INTERNE di Michela (da non mostrare al cliente). Tutto il resto sono dati
+ *   del cliente stesso (suoi preventivi/fasi/chat) → ok come contesto per Sole.
  */
-function ardy_genera_dossier(PDO $db, string $sessionId): ?string {
+function ardy_genera_dossier(PDO $db, string $sessionId, bool $perCliente = false): ?string {
     $sid = ardy_dossier_clean_session($sessionId);
     if ($sid === '') return null;
 
@@ -93,7 +97,8 @@ function ardy_genera_dossier(PDO $db, string $sessionId): ?string {
     foreach ($righe as $k => $v) {
         if (trim((string) $v) !== '') $md .= "- **{$k}:** {$v}\n";
     }
-    if (trim((string) ($c['note'] ?? '')) !== '') {
+    // Note interne SOLO nella versione per Michela (mai client-safe).
+    if (!$perCliente && trim((string) ($c['note'] ?? '')) !== '') {
         $md .= "\n**Note interne:** " . ardy_dossier_tronca($c['note'], 800) . "\n";
     }
     $md .= "\n";
@@ -238,8 +243,9 @@ if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === realpath(__FILE__)) {
         if (is_array($body)) $sessionId = $body['session_id'] ?? '';
     }
 
-    $format = strtolower((string) ($_GET['format'] ?? 'md'));
-    $save   = !empty($_GET['save']);
+    $format     = strtolower((string) ($_GET['format'] ?? 'md'));
+    $save       = !empty($_GET['save']);
+    $perCliente = !empty($_GET['cliente']);
 
     if (trim((string) $sessionId) === '') {
         http_response_code(400);
@@ -250,7 +256,7 @@ if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === realpath(__FILE__)) {
 
     try {
         $db = ardyDB();
-        $markdown = ardy_genera_dossier($db, $sessionId);
+        $markdown = ardy_genera_dossier($db, $sessionId, $perCliente);
     } catch (Throwable $e) {
         error_log('ARDY DOSSIER ERROR: ' . $e->getMessage());
         http_response_code(500);

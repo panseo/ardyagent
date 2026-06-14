@@ -200,9 +200,15 @@ con troncamento dei testi lunghi per il budget token. `?format=md|json`, `?save=
    per `session_id`, retention ~100 righe). `ardy-proxy.php` salva ogni turno (utente + risposta di
    Sole) best-effort, e `ardy-dossier.php` ora include la sezione "Chat web". ⏭️ Le sessioni web
    anonime restano legate al cliente solo quando diventa lead (stesso `session_id` in `clienti`).
-2. **Wiring nel prompt di Sole**: iniettare il dossier nel system (con **prompt caching**, come
-   `crm_context`) — su **web** solo dopo `cerca_cliente` (identità verificata col codice) per non
-   esporre dati in chat anonima; su **WhatsApp** per numero registrato. Attenzione ai token.
+2. ✅ **FATTO — Wiring nel prompt di Sole** (versione **client-safe**, senza note interne):
+   - **Web** (`ardy-proxy.php`): dopo `cerca_cliente` (codice verificato) il dossier client-safe è
+     aggiunto al risultato del tool, con istruzione "usalo come contesto, non elencarlo".
+   - **WhatsApp** (`ardy-wa-lookup.php`): per il numero riconosciuto (mode cliente/cliente_lavorazione)
+     il dossier client-safe è appeso al `system_prompt`; esposto anche come `crm_context` per una
+     futura migrazione a prompt caching su n8n (oggi il client mode WA non è cacheato).
+   - `ardy_genera_dossier($db,$sid,$perCliente=true)` esclude le **Note interne**.
+   ⏭️ Ottimizzazione token: per WhatsApp valutare prompt caching del dossier (crm_context separato)
+   quando si aggiorna il nodo n8n; cap chat già a 40 msg + troncamento.
 3. ✅ **FATTO — Dashboard**: bottone **📄 Dossier** sulla scheda → overlay con il Markdown
    (Copia / Scarica .md). Legge `ardy-dossier.php?format=json`. (Web chat non ancora inclusa.)
 ⚠️ **Privacy/accesso**: dati personali → niente dossier in chat anonima e mai dati di altri clienti.
