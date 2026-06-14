@@ -60,6 +60,17 @@ try {
     }
 
     $params['session_id'] = $sessionId;
+
+    // Stato precedente: serve per rilevare la transizione → CONSEGNATO (ringraziamento)
+    $statoVecchio = null;
+    if (array_key_exists('stato', $input)) {
+        try {
+            $qs = $db->prepare("SELECT stato FROM clienti WHERE session_id = :sid LIMIT 1");
+            $qs->execute([':sid' => $sessionId]);
+            $statoVecchio = strtoupper((string) $qs->fetchColumn());
+        } catch (PDOException $e) { /* ignora */ }
+    }
+
     $sql = "UPDATE `clienti` SET " . implode(', ', $set) . " WHERE `session_id` = :session_id";
     $stmt = $db->prepare($sql);
     $stmt->execute($params);
@@ -67,6 +78,19 @@ try {
     if ($stmt->rowCount() === 0) {
         echo json_encode(['success' => false, 'error' => 'Nessun record trovato per questa sessione']);
         exit();
+    }
+
+    // Transizione → CONSEGNATO: invia il ringraziamento al cliente (email + WhatsApp),
+    // una sola volta (guard interno su consegnato_grazie_at). Non blocca la risposta.
+    if (array_key_exists('stato', $input)
+        && strtoupper((string) $input['stato']) === 'CONSEGNATO'
+        && $statoVecchio !== 'CONSEGNATO') {
+        try {
+            require_once __DIR__ . '/ardy-grazie-consegna.php';
+            ardy_invia_grazie_consegna($db, $sessionId);
+        } catch (Throwable $e) {
+            error_log('ARDY UPDATE LEAD grazie consegna: ' . $e->getMessage());
+        }
     }
 
     echo json_encode(['success' => true]);

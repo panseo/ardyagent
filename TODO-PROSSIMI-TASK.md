@@ -162,6 +162,23 @@ in CGI/FPM e rifarebbe la login. Ci si affida al `.htaccess` (Basic Auth) come p
 
 ## 📋 TASK DA SVILUPPARE
 
+### 🆕 Ringraziamento alla consegna (email + WhatsApp)
+✅ **FATTO — codice** (`ardy-grazie-consegna.php`): alla transizione di stato **→ CONSEGNATO**
+(`ardy-update-lead.php` rileva il cambio) parte un **ringraziamento** al cliente, **una sola volta**
+(guard `consegnato_grazie_at`, auto-creata):
+- **Email** (Brevo) ✅ funziona subito: testo caldo + **bottone recensione Google** + link **social**
+  (IG/FB) + nota **newsletter** con **link di disiscrizione firmato** (HMAC, riusa `ardy-unsubscribe.php`).
+  From `noreply@ardy-lab.it`, Reply-To `ardy.documenti@gmail.com`.
+- **WhatsApp** ⏳: codice pronto, ma serve un **template Meta approvato** (`WA_TEMPLATE_GRAZIE`,
+  1 var {{1}}=nome) per scrivere fuori dalla finestra 24h. Senza, l'email parte e il WA viene saltato.
+- Endpoint anche per **test/reinvio manuale** (POST `session_id`, `force`), Basic Auth + `X-Ardy-Internal`.
+
+⏭️ **Serve da Michela** (config in `ardy-config.php`):
+1. **`GRAZIE_GOOGLE_REVIEW_URL`** = link recensione Google Maps di Ardy Lab (senza, il bottone è nascosto).
+2. (opz.) confermare/aggiornare `GRAZIE_IG_URL` / `GRAZIE_FB_URL` (default: ardy.lab / pagina "Ardy").
+3. Creare+approvare il **template Meta** `aggiornamento`/`grazie_consegna` e settare `WA_TEMPLATE_GRAZIE`.
+⏭️ (opz.) bottone in dashboard per **reinviare** il ringraziamento manualmente.
+
 ### 🆕 Dossier cliente in Markdown (contesto completo per Sole)
 Obiettivo: per ogni cliente un **MD** che raccoglie **tutto**: anagrafica/servizio, **preventivo(i)**,
 **registrazioni chat**, **fasi**, note, stato → quadro completo e immediato per **Sole** (web + WhatsApp).

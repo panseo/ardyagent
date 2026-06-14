@@ -36,6 +36,7 @@ ardyagent.ardy-lab.it/
 ├── ardy-config.php            # ⚠️ NON in repo — credenziali DB
 ├── ardy-crm-api.php           # API CRM interna
 ├── ardy-dossier.php           # Dossier cliente in Markdown (clienti+preventivi+fasi+chat WA) per Sole/Michela
+├── ardy-grazie-consegna.php   # Ringraziamento alla consegna: email (Brevo) + WhatsApp (template) — recensione/social/newsletter
 ├── ardy-import-preventivi.php # Import temporaneo preventivi storici da CSV (migrazione una-tantum)
 ├── ardy-import-scheda-pdf.php # Importa una scheda cliente da un PDF (estrazione AI) → dashboard
 ├── ardy-template-scheda-cliente.html # Modello PDF "Scheda Cliente" (etichette fisse, fillable)
@@ -473,6 +474,17 @@ define('WA_MICHELA_NUMBER',  '393519677973');    // numero di Michela, formato i
 define('WA_TEMPLATE_NOTIFICA', '');              // template Meta approvato (body 1 var {{1}}) — aggira la finestra 24h
 define('WA_TEMPLATE_LANG',     'it');
 ```
+
+### Config Ringraziamento alla consegna (in `ardy-config.php`)
+Per `ardy-grazie-consegna.php` (email + WhatsApp di ringraziamento alla transizione → CONSEGNATO):
+```php
+define('GRAZIE_GOOGLE_REVIEW_URL', '');  // link "lascia una recensione" su Google Maps (vuoto = bottone nascosto)
+define('GRAZIE_IG_URL', 'https://www.instagram.com/ardy.lab/');   // opzionale (default ardy.lab)
+define('GRAZIE_FB_URL', 'https://www.facebook.com/376551605541671'); // opzionale (default pagina "Ardy")
+define('WA_TEMPLATE_GRAZIE', '');        // template Meta approvato (body 1 var {{1}}=nome). Senza, niente WhatsApp.
+```
+> L'**email** funziona subito (Brevo, con link recensione/social + disiscrizione firmata).
+> Il **WhatsApp** parte solo con un template Meta approvato (fuori dalla finestra 24h serve il template).
 
 ### Secret interno per chiamate server→server (in `ardy-config.php`)
 ```php
