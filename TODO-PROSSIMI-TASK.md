@@ -202,7 +202,8 @@ con troncamento dei testi lunghi per il budget token. `?format=md|json`, `?save=
 2. **Wiring nel prompt di Sole**: iniettare il dossier nel system (con **prompt caching**, come
    `crm_context`) — su **web** solo dopo `cerca_cliente` (identità verificata col codice) per non
    esporre dati in chat anonima; su **WhatsApp** per numero registrato. Attenzione ai token.
-3. **Dashboard**: bottone **📄 Dossier** sulla scheda (apre/scarica l'MD) — comodo per Michela.
+3. ✅ **FATTO — Dashboard**: bottone **📄 Dossier** sulla scheda → overlay con il Markdown
+   (Copia / Scarica .md). Legge `ardy-dossier.php?format=json`. (Web chat non ancora inclusa.)
 ⚠️ **Privacy/accesso**: dati personali → niente dossier in chat anonima e mai dati di altri clienti.
 
 ### 🆕 "Crea FAQ di questa lavorazione" (su stato CONSEGNATO)

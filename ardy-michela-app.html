@@ -103,6 +103,8 @@
           <div class="detail-sub" id="dSub">—</div>
         </div>
         <div style="display:flex;gap:6px;margin-left:8px;align-self:flex-start;flex-wrap:wrap;justify-content:flex-end;">
+          <button id="btnDossier" onclick="apriDossier()" title="Apri il dossier completo del cliente: anagrafica, preventivi, fasi, chat WhatsApp."
+            style="background:transparent;border:1px solid #3e6f8b;color:#8ec0d9;border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;white-space:nowrap;">📄 Dossier</button>
           <button id="btnReinviaGrazie" onclick="reinviaGrazie()" title="Reinvia al cliente l'email (e WhatsApp se configurato) di ringraziamento alla consegna: recensione Google, social, newsletter."
             style="display:none;background:transparent;border:1px solid #8b6f3e;color:#c8a96e;border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;white-space:nowrap;">📧 Reinvia ringraziamento</button>
           <button id="btnLiberaSpazio" onclick="liberaSpazioCliente()" title="Lavoro concluso: cancella foto e reel dal server per liberare spazio. Tiene scheda, preventivi (con PDF), fasi e pagina sito."
@@ -386,6 +388,7 @@ const CRM_API_URL     = BASE_URL + '/ardy-crm-api.php';
 const UPDATE_URL      = BASE_URL + '/ardy-update-lead.php';
 const ELIMINA_URL     = BASE_URL + '/ardy-elimina-cliente.php';
 const GRAZIE_URL      = BASE_URL + '/ardy-grazie-consegna.php';
+const DOSSIER_URL     = BASE_URL + '/ardy-dossier.php';
 const AI_URL          = BASE_URL + '/ardy-proxy.php';
 const LAVORAZIONE_URL = BASE_URL + '/ardy-pubblica-lavorazione.php';
 const SOCIAL_URL      = BASE_URL + '/ardy-pubblica-social.php';
@@ -989,6 +992,46 @@ async function reinviaGrazie() {
     showToast('⚠ Errore di rete', 'error');
   }
   if (btn) { btn.disabled = false; btn.textContent = '📧 Reinvia ringraziamento'; }
+}
+
+// ─── DOSSIER CLIENTE ──────────────────────────────────────
+let dossierTesto = '';
+async function apriDossier() {
+  if (!currentLead) return;
+  const sid = currentLead.Session_ID;
+  if (!sid) { showToast('⚠ Scheda senza sessione', 'error'); return; }
+  dossierTesto = '';
+  document.getElementById('dossierContent').textContent = 'Caricamento…';
+  document.getElementById('dossierOverlay').classList.add('open');
+  try {
+    const res  = await fetch(DOSSIER_URL + '?format=json&session_id=' + encodeURIComponent(sid));
+    const data = await res.json();
+    if (data && data.success && data.markdown) {
+      dossierTesto = data.markdown;
+      document.getElementById('dossierContent').textContent = dossierTesto;
+    } else {
+      document.getElementById('dossierContent').textContent = '⚠ ' + ((data && data.error) || 'Dossier non disponibile');
+    }
+  } catch(e) {
+    document.getElementById('dossierContent').textContent = '⚠ Errore di rete';
+  }
+}
+function closeDossier() { document.getElementById('dossierOverlay').classList.remove('open'); }
+function copiaDossier() {
+  if (!dossierTesto) return;
+  navigator.clipboard.writeText(dossierTesto)
+    .then(() => showToast('📋 Dossier copiato', 'success'))
+    .catch(() => showToast('⚠ Copia non riuscita', 'error'));
+}
+function scaricaDossier() {
+  if (!dossierTesto) return;
+  const nome = `${(currentLead.Nome||'').trim()}_${(currentLead.Cognome||'').trim()}`.replace(/\s+/g,'') || 'dossier';
+  const blob = new Blob([dossierTesto], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'dossier_' + nome + '.md';
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 // ─── MODAL AI ─────────────────────────────────────────────
@@ -3091,6 +3134,25 @@ async function archiviaPersi() {
       <button class="btn-save" id="imp-btn-estrai" onclick="estraiSchedaPdf()">🔍 ESTRAI DATI</button>
       <button class="btn-save" id="imp-btn-crea" style="display:none;" onclick="creaSchedaDaPdf(false)">✦ CREA SCHEDA</button>
       <button class="btn-save" id="imp-btn-crea-prev" style="display:none;" onclick="creaSchedaDaPdf(true)">📄 + PREVENTIVO ARDY</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DOSSIER CLIENTE -->
+<div class="modal-overlay" id="dossierOverlay" onclick="if(event.target===this)closeDossier()">
+  <div class="modal-lg" onclick="event.stopPropagation()">
+    <div class="modal-lg-head">
+      <h3>📄 DOSSIER CLIENTE</h3>
+      <button class="modal-lg-close" onclick="closeDossier()">✕</button>
+    </div>
+    <div class="modal-lg-body">
+      <p style="font-size:11px;color:#888;margin:0 0 10px;">Quadro completo dal CRM: anagrafica, preventivi, fasi, chat WhatsApp. (La chat web non è ancora archiviata.)</p>
+      <pre id="dossierContent" style="white-space:pre-wrap;word-wrap:break-word;font-family:'DM Mono',monospace;font-size:12px;line-height:1.6;color:#ddd;background:#1a1a1a;border:1px solid #333;border-radius:6px;padding:14px;max-height:60vh;overflow:auto;margin:0;">Caricamento…</pre>
+    </div>
+    <div class="modal-lg-actions">
+      <button class="btn-cancel" onclick="closeDossier()">CHIUDI</button>
+      <button class="btn-save" onclick="copiaDossier()">📋 COPIA</button>
+      <button class="btn-save" onclick="scaricaDossier()">⬇ SCARICA .md</button>
     </div>
   </div>
 </div>
