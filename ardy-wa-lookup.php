@@ -381,7 +381,7 @@ $systemPrompt = ardy_wa_system_prompt($mode, $clienteOut);
 $dossierCliente = '';
 try {
     require_once __DIR__ . '/ardy-dossier.php';
-    $dossierCliente = (string) ardy_genera_dossier($db, (string) $row['session_id'], true);
+    $dossierCliente = (string) ardy_genera_dossier($db, (string) $row['session_id'], true, true);
     if ($dossierCliente !== '') {
         $systemPrompt .= "\n\n## SCHEDA COMPLETA DEL CLIENTE (riservata a te, Sole: usala come contesto, NON elencarla; rispondi solo a ciò che chiede)\n" . $dossierCliente;
     }

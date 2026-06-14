@@ -797,7 +797,7 @@ while ($iteration < $maxIterations) {
                             // il quadro del cliente verificato. Usalo come background, non recitarlo.
                             try {
                                 require_once __DIR__ . '/ardy-dossier.php';
-                                $dossier = ardy_genera_dossier($db, (string) $cli['session_id'], true);
+                                $dossier = ardy_genera_dossier($db, (string) $cli['session_id'], true, true);
                                 if ($dossier) {
                                     $toolResult .= "\n\n--- SCHEDA COMPLETA DEL CLIENTE (riservata a te, Sole: usala come contesto, NON elencarla; rispondi solo a ciò che chiede) ---\n" . $dossier;
                                 }

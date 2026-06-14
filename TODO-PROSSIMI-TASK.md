@@ -207,8 +207,11 @@ con troncamento dei testi lunghi per il budget token. `?format=md|json`, `?save=
      il dossier client-safe è appeso al `system_prompt`; esposto anche come `crm_context` per una
      futura migrazione a prompt caching su n8n (oggi il client mode WA non è cacheato).
    - `ardy_genera_dossier($db,$sid,$perCliente=true)` esclude le **Note interne**.
-   ⏭️ Ottimizzazione token: per WhatsApp valutare prompt caching del dossier (crm_context separato)
-   quando si aggiorna il nodo n8n; cap chat già a 40 msg + troncamento.
+   ✅ **Ottimizzazione token**: il dossier iniettato nei contesti live (web/WhatsApp) è **compatto**
+   (`$senzaChat=true`) → NIENTE sezioni chat, che nella conversazione live ci sono già (evita di
+   mandare la cronologia due volte). Il dossier completo con le chat resta solo nel bottone 📄 dashboard.
+   ⏭️ Ulteriore risparmio su WhatsApp: prompt caching del dossier (`crm_context` separato, già esposto
+   da `ardy-wa-lookup.php`) quando si aggiorna il nodo n8n del client mode.
 3. ✅ **FATTO — Dashboard**: bottone **📄 Dossier** sulla scheda → overlay con il Markdown
    (Copia / Scarica .md). Legge `ardy-dossier.php?format=json`. (Web chat non ancora inclusa.)
 ⚠️ **Privacy/accesso**: dati personali → niente dossier in chat anonima e mai dati di altri clienti.

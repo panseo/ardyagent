@@ -61,8 +61,11 @@ function ardy_dossier_tronca($t, $max = 1200) {
  * @param bool $perCliente  Se true → versione "client-safe": esclude le NOTE
  *   INTERNE di Michela (da non mostrare al cliente). Tutto il resto sono dati
  *   del cliente stesso (suoi preventivi/fasi/chat) → ok come contesto per Sole.
+ * @param bool $senzaChat   Se true → omette le sezioni chat (WhatsApp/web). Usato
+ *   quando il dossier viene iniettato in una conversazione LIVE (web/WhatsApp), dove
+ *   la cronologia è già presente: evita di mandarla due volte (token sprecati).
  */
-function ardy_genera_dossier(PDO $db, string $sessionId, bool $perCliente = false): ?string {
+function ardy_genera_dossier(PDO $db, string $sessionId, bool $perCliente = false, bool $senzaChat = false): ?string {
     $sid = ardy_dossier_clean_session($sessionId);
     if ($sid === '') return null;
 
@@ -154,7 +157,7 @@ function ardy_genera_dossier(PDO $db, string $sessionId, bool $perCliente = fals
 
     // 4) Chat WhatsApp (match per telefono; web non ancora persistita)
     $tel9 = ardy_dossier_last9($c['telefono'] ?? '');
-    if ($tel9 !== '') {
+    if (!$senzaChat && $tel9 !== '') {
         try {
             $qw = $db->prepare(
                 "SELECT role, content, created_at FROM wa_messaggi
@@ -192,7 +195,7 @@ function ardy_genera_dossier(PDO $db, string $sessionId, bool $perCliente = fals
     }
 
     // 5) Chat WEB (per session_id) — ora persistita da ardy-proxy.php
-    try {
+    if (!$senzaChat) try {
         require_once __DIR__ . '/ardy-web-memoria.php';
         $web = ardy_web_storico($db, $sid, 40);
         if ($web) {
