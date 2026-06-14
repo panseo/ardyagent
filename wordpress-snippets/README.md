@@ -30,7 +30,7 @@ base per la **centralizzazione** dei widget front-end (vedi sotto).
 | File | Nome WPCode | ID | Tipo | Posizione | Cosa fa | Centralizzabile? |
 |---|---|---|---|---|---|---|
 | `ardychat.js` | ardychat | 15170 | js | site_wide_footer | Chat generale del sito sulla pagina `/ardy-agent/` (→ `ardy-proxy.php`, elementi `ac-*`) | ✅ **Centralizzato** → `../ardy-chat-site.js` (vedi sotto) |
-| `chat-corsi.html` | Chat per i corsi | 15246 | html | site_wide_footer | `<script>` che adatta `/ardy-agent/?corso=` in "modalità corso" (intestazione, suggerimenti, primo messaggio) | ✅ Sì (è solo un `<script>`) |
+| `chat-corsi.html` | Chat per i corsi | 15246 | html | site_wide_footer | `<script>` che adatta `/ardy-agent/?corso=` in "modalità corso" (intestazione, suggerimenti, primo messaggio) | ✅ **Centralizzato** → `../ardy-chat-corsi.js` (vedi sotto) |
 | `pulsante-flottante-ovunque.php` | Pulsante flottante ovunque | 15243 | php | everywhere | Bottone flottante "Chatta con Ardy" → `/ardy-agent/`; salta le pagine `/lavori-in-corso/`, `/project/` e categoria 102 | ⚠️ Parziale (la condizione è PHP server-side; markup/CSS sì) |
 | `pulsante-corsi.php` | Pulsante corsi | 15245 | php | everywhere | Filtro `the_content`: CTA "Info su questo corso" sulle 9 pagine corso → `/ardy-agent/?corso=` | ⚠️ Parziale (mappa slug + filtro PHP) |
 | `corsi-dato-strutturato.php` | Corsi dato strutturato | 15240 | php | everywhere | Schema.org `Course` sui corsi (SEO, hook `wp_head`) | ❌ No (backup-only) |
@@ -51,6 +51,7 @@ base per la **centralizzazione** dei widget front-end (vedi sotto).
 | Widget | File servito (root repo) | URL servito | Loader in WPCode |
 |---|---|---|---|
 | `ardychat` | `../ardy-chat-site.js` | `https://ardyagent.ardy-lab.it/ardy-chat-site.js` | snippet HTML (footer) con `<script src=...>` |
+| `Chat per i corsi` | `../ardy-chat-corsi.js` | `https://ardyagent.ardy-lab.it/ardy-chat-corsi.js` | snippet HTML (footer) con `<script src=...>` |
 
 **Loader da incollare in WPCode** (snippet "ardychat"):
 1. Cambia il **tipo** dello snippet da *JavaScript* a **HTML Snippet**.
@@ -59,6 +60,15 @@ base per la **centralizzazione** dei widget front-end (vedi sotto).
 ```html
 <script src="https://ardyagent.ardy-lab.it/ardy-chat-site.js"></script>
 ```
+
+**Loader da incollare in WPCode** (snippet "Chat per i corsi", id 15246):
+1. Il tipo è già **HTML** (la posizione resta **Site Wide Footer**).
+2. Sostituisci tutto il contenuto inline con questa sola riga:
+```html
+<script src="https://ardyagent.ardy-lab.it/ardy-chat-corsi.js"></script>
+```
+> Caricalo **dopo** `ardychat` (entrambi in footer): la modalità corso ritocca il
+> DOM della chat. Usando `ready()` è comunque robusto, ma l'ordine evita sfarfalle.
 
 > ⚠️ **TRAPPOLA (già presa il 13/06):** il tag `<script src>` va messo in uno snippet di tipo
 > **HTML**, MAI in uno di tipo *JavaScript*. Uno snippet JavaScript avvolge già il contenuto in

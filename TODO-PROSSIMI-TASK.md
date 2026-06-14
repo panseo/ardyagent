@@ -125,9 +125,15 @@ Datazione = stima motivata, mai verdetto. Buon lead-magnet, ma non ora.
 
 ### ⭐ Backup & centralizzazione dei widget WordPress
 ✅ infra `wordpress-snippets/` + `ardychat` centralizzato (`ardy-chat-site.js`).
-⏭️ 1) **Export completo WPCode** (Tools → Export All → JSON) splittato in `wordpress-snippets/` (un
-file per snippet) + mappa nel README. 2) **Centralizzare gli altri widget front-end** (`Chat per i
-corsi` → `ardy-chat-corsi.js` + loader HTML; poi i pulsanti CTA). Gli snippet PHP restano backup-only.
+✅ **`Chat per i corsi` centralizzato (14/06)** → `ardy-chat-corsi.js` (servito dal server).
+   ⏭️ **Azione manuale Michela**: in WPCode, snippet "Chat per i corsi" (id 15246, già HTML, footer) →
+   sostituire il contenuto inline con la sola riga:
+   `<script src="https://ardyagent.ardy-lab.it/ardy-chat-corsi.js"></script>` → Salva. Poi verifica
+   una pagina corso (`/ardy-agent/?corso=...`). Istruzioni in `wordpress-snippets/README.md`.
+⏭️ Rimangono: 1) **Export completo WPCode** (Tools → Export All → JSON) → aggiornare il backup
+   `wordpress-snippets/` + mappa. 2) **Pulsanti CTA** (`pulsante-flottante-ovunque`, `pulsante-corsi`):
+   solo **parziali** (la condizione di visibilità è PHP server-side) → restano backup-only o si
+   centralizza solo markup/CSS. Gli snippet PHP/SEO restano backup-only.
 ⚠️ Trappola: il loader `<script src>` va in uno snippet WPCode di tipo **HTML**, MAI JavaScript.
 
 ### 🗑️ Gestione archivio cliente — resta il CESTINO 30 giorni

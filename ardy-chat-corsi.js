@@ -1,14 +1,22 @@
-<!--
-  WPCode snippet — BACKUP STORICO (NON è più la fonte attiva: vedi README.md)
-  id: 15246 | titolo: "Chat per i corsi" | tipo: html
-  posizione: site_wide_footer | auto_insert: 1 | modificato: 2026-06-11 05:32:37
+/*
+ * Ardy Lab — Chat in "modalità corso" (pagina /ardy-agent/?corso=...)
+ * -----------------------------------------------------------
+ * FONTE ATTIVA centralizzata: questo file è servito dal nostro server
+ *   https://ardyagent.ardy-lab.it/ardy-chat-corsi.js
+ * e caricato da WordPress con un solo loader nello snippet WPCode
+ * "Chat per i corsi" (tipo HTML, footer):
+ *   <script src="https://ardyagent.ardy-lab.it/ardy-chat-corsi.js"></script>
+ *
+ * Cosa fa: quando l'URL ha ?corso=<nome> e c'è la pagina chat (#ardy-chat-page),
+ * adatta intestazione, box "come funziona", primo messaggio, suggerimenti e
+ * placeholder alla "modalità corso", e all'avvio chiede info sul corso scelto.
+ *
+ * Modificare QUI + deploy aggiorna il sito (niente più copia-incolla in WPCode).
+ * Backup storico dello snippet: wordpress-snippets/chat-corsi.html
+ * (Codice identico allo snippet originale: usa già ready() perché uno script
+ * ESTERNO può caricarsi dopo che DOMContentLoaded è già scattato.)
+ */
 
-  ⚠️ CENTRALIZZATO il 14/06/2026 → fonte attiva: ../ardy-chat-corsi.js
-  (servito da https://ardyagent.ardy-lab.it/ardy-chat-corsi.js). In WPCode resta
-  solo il loader di una riga. NON re-incollare questo contenuto inline.
--->
-
-<script>
 (function () {
   function ready(fn){ document.readyState!=='loading' ? fn() : document.addEventListener('DOMContentLoaded', fn); }
   ready(function () {
@@ -73,4 +81,3 @@
     }
   });
 })();
-</script>

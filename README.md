@@ -27,6 +27,7 @@ ardyagent.ardy-lab.it/
 ├── ardy-proxy.php             # Proxy API Claude per chatbot pubblico
 ├── ardy-proxy-lavorazione.php # Proxy API Claude per widget lavorazione (con calendario)
 ├── ardy-chat-site.js          # Chat generale del sito /ardy-agent/ (servita dal server; in WPCode solo loader)
+├── ardy-chat-corsi.js         # Chat in "modalità corso" /ardy-agent/?corso= (servita dal server; in WPCode solo loader)
 ├── ardy-widget-lavorazione.js # Widget chat contestuale per pagine lavorazione
 ├── ardy-verify-client.php     # Verifica identità cliente (telefono + wp_post_id)
 ├── ardy-whatsapp-webhook.php  # Webhook WhatsApp Cloud API
