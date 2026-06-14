@@ -60,27 +60,56 @@
         attachBtn.onclick = function () { fileInput.click(); };
     }
 
+    function processFiles(files) {
+        Array.from(files).forEach(function (file) {
+            if (!file.type.startsWith('image/')) return;
+            if (file.size > 8 * 1024 * 1024) {
+                alert('La foto è troppo grande. Massimo 8MB.');
+                return;
+            }
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                pendingImages.push({
+                    data:    e.target.result.split(',')[1],
+                    type:    file.type,
+                    preview: e.target.result
+                });
+                renderPreviews();
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
     if (fileInput) {
         fileInput.addEventListener('change', function () {
-            Array.from(fileInput.files).forEach(function (file) {
-                if (!file.type.startsWith('image/')) return;
-                if (file.size > 8 * 1024 * 1024) {
-                    alert('La foto è troppo grande. Massimo 8MB.');
-                    return;
-                }
-                var reader = new FileReader();
-                reader.onload = function (e) {
-                    pendingImages.push({
-                        data:    e.target.result.split(',')[1],
-                        type:    file.type,
-                        preview: e.target.result
-                    });
-                    renderPreviews();
-                };
-                reader.readAsDataURL(file);
-            });
+            processFiles(fileInput.files);
             fileInput.value = '';
         });
+    }
+
+    // 📷 Fotocamera da cellulare: bottone dedicato + input con capture.
+    // Iniettato via JS così resta tutto nel file servito (la pagina WP non si tocca).
+    // L'allega esistente resta per galleria/file; questo apre direttamente la camera.
+    if (attachBtn) {
+        var camInput = document.createElement('input');
+        camInput.type = 'file';
+        camInput.accept = 'image/*';
+        camInput.setAttribute('capture', 'environment');
+        camInput.style.display = 'none';
+        (document.body || document.documentElement).appendChild(camInput);
+        camInput.addEventListener('change', function () {
+            processFiles(camInput.files);
+            camInput.value = '';
+        });
+
+        var camBtn = document.createElement('button');
+        camBtn.type = 'button';
+        camBtn.className = attachBtn.className; // eredita lo stile del bottone allega
+        camBtn.title = 'Scatta foto';
+        camBtn.setAttribute('aria-label', 'Scatta foto');
+        camBtn.textContent = '📷';
+        camBtn.onclick = function () { camInput.click(); };
+        attachBtn.parentNode.insertBefore(camBtn, attachBtn);
     }
 
     function renderPreviews() {
