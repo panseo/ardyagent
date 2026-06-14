@@ -186,6 +186,18 @@ impegni Google Calendar). ⏭️ Rimasto (opzionale): **trigger "prima risposta 
 data ultimo briefing per numero così il riepilogo lungo parte da solo al primo "buongiorno" e non a
 ogni messaggio. Senza, funziona quando Michela chiede "come va oggi?".
 
+### Archivio clienti CONSEGNATI (dalla sidebar)
+> Contesto (14/06): nella lista clienti c'è ora il **semaforo lavorazione** (pallino+testo per
+> ACCONTO/IN_LAVORAZIONE in base alle date, regola 4gg). La **fine lavoro ≠ consegna** (si può
+> consegnare anche un mese dopo) → la data di consegna non si traccia.
+- **Flusso "consegnato → archivio"**: quando Michela/io premiamo **CONSEGNATO** (o un nuovo
+  "ARCHIVIA"), il cliente esce dalla vista normale della sidebar e finisce in un **archivio**,
+  richiamabile dai **filtri** (chip "ARCHIVIATI"/"CONSEGNATI"). Serve per non avere la lista
+  intasata di lavori finiti, tenendoli comunque consultabili. Da decidere: usare lo stato
+  `CONSEGNATO` (e `PAGATO`) come "archivio" implicito + escluderli dalla lista di default, oppure
+  un flag dedicato (`archiviato_at`). NB: tenere coerenza con il futuro Cestino 30gg (sezione
+  "Gestione archivio cliente").
+
 ### Migliorie minori UX (bassa priorità)
 - **Popup date all'attivazione stato IN_LAVORAZIONE**: al click del bottone stato, aprire un
   modale che chiede subito `inizio_lavoro` / `fine_lavoro_prevista` (riusa campi/salvataggio

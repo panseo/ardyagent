@@ -68,7 +68,7 @@
       <div style="width:100%;margin-top:8px;font-size:10px;color:#888;line-height:1.7;">
         <span style="color:#e08a3c;">●</span> Sta per iniziare &nbsp;
         <span style="color:#4caf72;">●</span> Nei tempi &nbsp;
-        <span style="color:#e05c5c;">●</span> Consegna / ritardo &nbsp;
+        <span style="color:#e05c5c;">●</span> Fine lavoro / ritardo &nbsp;
         <span style="color:#d8b23c;">●</span> Date da pianificare
       </div>
     </div>
@@ -452,15 +452,16 @@ function faseSegnale(l) {
   const stato = (l.Stato || '').toUpperCase();
   const ini = l.Inizio_lavoro || '';
   const fin = l.Fine_lavoro_prevista || '';
-  if (!['ACCONTO','IN_LAVORAZIONE','CONSEGNATO'].includes(stato)) return null;
+  // Solo lavori in corso/da avviare: CONSEGNATO è gia' concluso (niente urgenza).
+  if (!['ACCONTO','IN_LAVORAZIONE'].includes(stato)) return null;
   const oggi = new Date(); oggi.setHours(0,0,0,0);
   const gg = v => Math.round((new Date(v + 'T00:00:00') - oggi) / 86400000);
-  // 1) Fine prevista: consegna imminente o ritardo (priorità)
+  // 1) Fine LAVORO (non consegna): in ritardo o vicina (priorità)
   if (fin) {
     const g = gg(fin);
     if (g < 0)  return { color:'red', label:'In ritardo ' + (-g) + 'g' };
-    if (g === 0) return { color:'red', label:'Consegna oggi' };
-    if (g <= 4) return { color:'red', label:'Consegna fra ' + g + 'g' };
+    if (g === 0) return { color:'red', label:'Fine lavoro oggi' };
+    if (g <= 4) return { color:'red', label:'Fine fra ' + g + 'g' };
   }
   // 2) Inizio imminente
   if (ini) {
@@ -473,10 +474,7 @@ function faseSegnale(l) {
     return { color:'green', label:'Nei tempi' };
   }
   // 4) Stato operativo senza date pianificate
-  if (['ACCONTO','IN_LAVORAZIONE'].includes(stato)) {
-    return { color:'yellow', label:'Date da pianificare' };
-  }
-  return null;
+  return { color:'yellow', label:'Date da pianificare' };
 }
 
 function renderList() {
