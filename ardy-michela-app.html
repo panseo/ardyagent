@@ -235,15 +235,9 @@
               <div id="lavScadenzaHint" class="lav-scadenza-hint" style="display:none;"></div>
             </div>
 
-            <!-- Elenco fasi già pubblicate (sola lettura): solo titolo + data -->
-            <div id="fasiPubblicateWrap" style="display:none;margin-bottom:16px;">
-              <div class="lav-title" style="margin-bottom:8px;">📋 Fasi pubblicate</div>
-              <div id="fasiPubblicateList"></div>
-            </div>
-
-            <div class="lav-form">
-              <button class="btn-secondary" id="btnToggleNuovaFase" onclick="toggleNuovaFase()" style="width:100%;">➕ Crea e pubblica nuova fase</button>
-              <div id="nuovaFaseBody" style="display:none;margin-top:12px;">
+            <!-- Bottone PRIMARIO: crea e pubblica una nuova fase -->
+            <button class="btn-pubblica" id="btnToggleNuovaFase" onclick="toggleNuovaFase()" style="width:100%;margin-bottom:14px;">➕ Crea e pubblica nuova fase</button>
+            <div id="nuovaFaseBody" class="lav-form" style="display:none;margin-bottom:16px;">
               <div class="lav-row">
                 <input class="lav-input" id="lavFase" placeholder="Nome fase (es. Sverniciatura)">
                 <input class="lav-input" id="lavMobile" placeholder="Mobile (es. Credenza anni 60)">
@@ -281,8 +275,15 @@
               </button>
               <p style="font-size:11px;color:var(--text-dim);margin:6px 2px 0;">Usa la comunicazione straordinaria per un imprevisto da segnalare al cliente prima di procedere (non è un avanzamento, non va sui social).</p>
               <div class="lav-result" id="lavResult"></div>
-              </div><!-- /nuovaFaseBody -->
+            </div><!-- /nuovaFaseBody -->
 
+            <!-- Elenco fasi già pubblicate (sola lettura): solo titolo + data -->
+            <div id="fasiPubblicateWrap" style="display:none;margin-bottom:16px;">
+              <div class="lav-title" style="margin-bottom:8px;">📋 Fasi pubblicate</div>
+              <div id="fasiPubblicateList"></div>
+            </div>
+
+            <div class="lav-form">
               <div id="socialPanel" style="display:none;margin-top:18px;border-top:1px dashed var(--border);padding-top:16px;">
                 <div class="lav-title" style="margin-bottom:4px;">📲 Vuoi pubblicare sui social?</div>
                 <p style="font-size:12px;color:var(--text-dim);margin:0 0 10px;">Rivedi e modifica il testo. Niente esce su Facebook/Instagram finché non premi tu.</p>
