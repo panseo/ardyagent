@@ -354,6 +354,21 @@
         </div>
       </div>
 
+      <!-- ═══ 5. FAQ DELLA LAVORAZIONE ═══ -->
+      <div class="acc-section" id="acc-faq" style="display:none;">
+        <button class="acc-header" onclick="toggleAcc('acc-faq')">
+          <span class="acc-title">❓ FAQ della lavorazione</span>
+          <span class="acc-chevron">▾</span>
+        </button>
+        <div class="acc-body">
+          <div id="faqPanel">
+            <p style="font-size:12px;color:var(--text-dim);margin:0 0 14px;">Genera con l'AI le domande frequenti su questo lavoro e pubblicale sull'articolo (con dati strutturati per la SEO).</p>
+            <button class="btn-pubblica" id="btnFaq" style="width:100%;" onclick="creaFaq()">❓ CREA FAQ DI QUESTA LAVORAZIONE</button>
+            <div class="lav-result" id="faqResult"></div>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- SAVE BAR -->
@@ -393,6 +408,7 @@ const AI_URL          = BASE_URL + '/ardy-proxy.php';
 const LAVORAZIONE_URL = BASE_URL + '/ardy-pubblica-lavorazione.php';
 const SOCIAL_URL      = BASE_URL + '/ardy-pubblica-social.php';
 const REEL_URL        = BASE_URL + '/ardy-crea-reel.php';
+const FAQ_URL         = BASE_URL + '/ardy-crea-faq.php';
 const REEL_PUB_URL    = BASE_URL + '/ardy-pubblica-reel.php';
 const REEL_TPL_URL    = BASE_URL + '/ardy-reel-template-api.php';
 const MUSICA_URL      = BASE_URL + '/ardy-lista-musica.php';
@@ -753,12 +769,17 @@ function aggiornaSezioniVisibili(stato) {
   if (showReel) { caricaListaMusica(); caricaTemplate(); }
   if (showReel) document.getElementById('reelResult').classList.remove('visible');
 
+  // FAQ: solo a lavoro concluso (CONSEGNATO; PAGATO è alias legacy)
+  const showFaq = ['CONSEGNATO','PAGATO'].includes(s);
+  document.getElementById('acc-faq').style.display = showFaq ? '' : 'none';
+  if (showFaq) document.getElementById('faqResult').classList.remove('visible');
+
   // Apre automaticamente la sezione più utile per lo stato corrente,
   // così non serve scrollare ogni volta. Le altre restano barre chiuse.
   let apri = 'acc-dati';
   if (s === 'PREVENTIVO') apri = 'acc-preventivi';
   else if (showLav)       apri = 'acc-lavorazione';
-  ['acc-dati','acc-preventivi','acc-lavorazione','acc-reel'].forEach(id => {
+  ['acc-dati','acc-preventivi','acc-lavorazione','acc-reel','acc-faq'].forEach(id => {
     document.getElementById(id).classList.toggle('open', id === apri);
   });
 }
@@ -1603,6 +1624,117 @@ async function creaReel() {
 
   btn.disabled = false;
   btn.textContent = '🎬 CREA REEL';
+}
+
+// ─── FAQ DELLA LAVORAZIONE ────────────────────────────────
+// Le FAQ generate restano in memoria per essere ritoccate prima della pubblicazione.
+let faqCorrente = [];
+
+async function creaFaq() {
+  if (!currentLead) return;
+  const btn = document.getElementById('btnFaq');
+  const out = document.getElementById('faqResult');
+  btn.disabled = true;
+  btn.textContent = '⏳ GENERAZIONE IN CORSO...';
+  out.classList.add('visible');
+  out.innerHTML = '<div class="spinner"></div> Sto preparando le FAQ di questa lavorazione...';
+
+  try {
+    const res = await fetch(FAQ_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ action: 'genera', session_id: currentLead.Session_ID })
+    });
+    const data = await res.json();
+    if (data.success && Array.isArray(data.faq) && data.faq.length) {
+      faqCorrente = data.faq;
+      renderFaqEditor();
+      showToast('✓ FAQ generate', 'success');
+    } else {
+      out.innerHTML = '⚠ ' + escHtml(data.error || 'Nessuna FAQ generata');
+      showToast('⚠ ' + (data.error || 'Errore FAQ'), 'error');
+    }
+  } catch(e) {
+    out.innerHTML = '⚠ Errore di rete durante la generazione.';
+    showToast('⚠ Errore di rete', 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '❓ CREA FAQ DI QUESTA LAVORAZIONE';
+}
+
+// Anteprima MODIFICABILE: ogni FAQ è una coppia domanda/risposta editabile.
+function renderFaqEditor() {
+  const out = document.getElementById('faqResult');
+  let h = '<strong>✓ FAQ pronte</strong> — rivedile e modificale prima di pubblicare.<br>'
+        + '<div id="faqEditor" style="margin-top:12px;">';
+  faqCorrente.forEach((f, i) => {
+    h += `<div style="border:1px solid var(--border,#333);border-radius:8px;padding:10px;margin-bottom:10px;">
+      <input class="lav-input faq-q" data-i="${i}" value="${escHtml(f.q)}" style="width:100%;font-weight:bold;margin-bottom:6px;" />
+      <textarea class="lav-textarea faq-a" data-i="${i}" style="min-height:80px;width:100%;">${escHtml(f.a)}</textarea>
+      <div style="text-align:right;"><button class="btn-secondary" style="font-size:11px;padding:2px 8px;" onclick="rimuoviFaq(${i})">🗑 Rimuovi</button></div>
+    </div>`;
+  });
+  h += '</div>'
+     + '<button class="btn-pubblica" id="btnPubFaq" style="margin-top:6px;width:100%;" onclick="pubblicaFaq()">📤 PUBBLICA LE FAQ SULL\'ARTICOLO</button>';
+  out.innerHTML = h;
+}
+
+function rimuoviFaq(i) {
+  raccogliFaqDalForm();
+  faqCorrente.splice(i, 1);
+  if (!faqCorrente.length) { document.getElementById('faqResult').innerHTML = '⚠ Nessuna FAQ rimasta. Rigenera.'; return; }
+  renderFaqEditor();
+}
+
+// Legge i campi editati e riallinea faqCorrente prima di pubblicare.
+function raccogliFaqDalForm() {
+  const qs = document.querySelectorAll('.faq-q');
+  const as = document.querySelectorAll('.faq-a');
+  const nuovo = [];
+  qs.forEach((q, idx) => {
+    const a = as[idx];
+    const qv = (q.value || '').trim();
+    const av = (a ? a.value : '').trim();
+    if (qv && av) nuovo.push({ q: qv, a: av });
+  });
+  faqCorrente = nuovo;
+}
+
+async function pubblicaFaq() {
+  raccogliFaqDalForm();
+  if (!faqCorrente.length) { showToast('⚠ Nessuna FAQ da pubblicare', 'error'); return; }
+  const btn = document.getElementById('btnPubFaq');
+  btn.disabled = true;
+  btn.textContent = '⏳ PUBBLICAZIONE...';
+
+  try {
+    const res = await fetch(FAQ_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        action:     'pubblica',
+        session_id: currentLead.Session_ID,
+        wp_post_id: lavWpPostId,
+        faq:        faqCorrente,
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('faqResult').innerHTML =
+        `<strong>✓ ${data.count} FAQ pubblicate</strong><br><br>`
+        + `<a href="${safeUrl(data.post_link)}" target="_blank" style="color:var(--accent);">→ Vedi l'articolo aggiornato</a>`;
+      showToast('✓ FAQ pubblicate', 'success');
+    } else {
+      btn.disabled = false;
+      btn.textContent = '📤 PUBBLICA LE FAQ SULL\'ARTICOLO';
+      showToast('⚠ ' + (data.error || 'Errore pubblicazione'), 'error');
+    }
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '📤 PUBBLICA LE FAQ SULL\'ARTICOLO';
+    showToast('⚠ Errore di rete', 'error');
+  }
 }
 
 // ─── PUBBLICAZIONE SOCIAL (manuale) ───────────────────────
