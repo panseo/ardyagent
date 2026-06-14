@@ -220,6 +220,8 @@
               <a href="#" class="lav-post-link" id="lavPostLink" target="_blank" style="display:none;">Vedi post →</a>
             </div>
             <div class="lav-date-box">
+              <div class="lav-title" style="margin-bottom:8px;">📅 Periodo del lavoro</div>
+              <p style="font-size:11px;color:var(--text-dim);margin:0 0 10px;">Si riferiscono all'<strong>intero lavoro</strong>, non alla singola fase.</p>
               <div class="lav-row">
                 <div style="flex:1;">
                   <label class="lav-date-label">Inizio lavoro</label>
@@ -232,6 +234,13 @@
               </div>
               <div id="lavScadenzaHint" class="lav-scadenza-hint" style="display:none;"></div>
             </div>
+
+            <!-- Elenco fasi già pubblicate (sola lettura): solo titolo + data -->
+            <div id="fasiPubblicateWrap" style="display:none;margin-bottom:16px;">
+              <div class="lav-title" style="margin-bottom:8px;">📋 Fasi pubblicate</div>
+              <div id="fasiPubblicateList"></div>
+            </div>
+
             <div class="lav-form">
               <div class="lav-row">
                 <input class="lav-input" id="lavFase" placeholder="Nome fase (es. Sverniciatura)">
@@ -547,6 +556,7 @@ function aggiornaSezioniVisibili(stato) {
     document.getElementById('lavVideoCount').textContent   = '';
     pendingSocial = null;
     renderSocialPending();
+    caricaFasiPubblicate(currentLead.Session_ID ?? '');
   }
 
   // Reel: solo CONSEGNATO e PAGATO
@@ -904,6 +914,40 @@ async function caricaFotoScheda(sessionId) {
   }
 }
 
+// ─── Fasi pubblicate (sola lettura: solo titolo + data) ───
+async function caricaFasiPubblicate(sessionId) {
+  const wrap = document.getElementById('fasiPubblicateWrap');
+  const cont = document.getElementById('fasiPubblicateList');
+  if (!wrap || !cont) return;
+  cont.innerHTML = '';
+  wrap.style.display = 'none';
+  if (!sessionId) return;
+  try {
+    const r = await fetch('ardy-get-fasi.php?session_id=' + encodeURIComponent(sessionId));
+    const fasi = await r.json();
+    if (!Array.isArray(fasi) || !fasi.length) return;
+    const link = currentLead && currentLead.wp_post_link;
+    cont.innerHTML = fasi.map(f => {
+      const isCom  = (f.fase_tipo === 'comunicazione');
+      const titolo = (f.fase_nome && f.fase_nome.trim())
+        ? f.fase_nome
+        : (isCom ? 'Comunicazione straordinaria' : 'Fase');
+      const data   = f.created_at ? f.created_at.substring(0, 10).split('-').reverse().join('/') : '';
+      const nFoto  = Array.isArray(f.foto_urls) ? f.foto_urls.length : 0;
+      const badge  = isCom ? '<span style="color:#e08a3c;">⚠</span> ' : '';
+      const foto   = nFoto ? ` · 📷 ${nFoto}` : '';
+      return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:6px;">
+        <span style="font-size:13px;">${badge}${escHtml(titolo)}</span>
+        <span style="font-size:11px;color:var(--text-dim);white-space:nowrap;">${escHtml(data)}${foto}</span>
+      </div>`;
+    }).join('');
+    if (link) {
+      cont.innerHTML += `<a href="${safeUrl(link)}" target="_blank" style="font-size:12px;color:var(--accent);">→ Vedi tutte sul sito</a>`;
+    }
+    wrap.style.display = 'block';
+  } catch (e) { /* lista facoltativa: in caso di errore resta nascosta */ }
+}
+
 function handleSchedaFotoUpload(event) {
   const sessionId = currentLead && currentLead.Session_ID;
   const files = Array.from(event.target.files);
@@ -1011,6 +1055,8 @@ async function pubblicaFase(tipo) {
         aggiornaPannelloReel();
         showToast('✓ Fase pubblicata e cliente notificato', 'success');
       }
+      // Aggiorna l'elenco fasi pubblicate (sia fase che comunicazione)
+      caricaFasiPubblicate(currentLead.Session_ID ?? '');
     } else {
       showToast('⚠ Errore: ' + (data.error ?? 'sconosciuto'), 'error');
     }
@@ -1333,16 +1379,36 @@ function renderSocialPending() {
   const list = caricaSocialPending();
   if (!list.length) { wrap.style.display = 'none'; cont.innerHTML = ''; return; }
   wrap.style.display = 'block';
-  cont.innerHTML = list.map(p => `
-    <div style="border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:10px;">
-      <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;">${escHtml(p.mobile || '')} · ${escHtml(p.fase || '')} · ${escHtml(p.data || '')}</div>
-      <textarea class="lav-textarea" id="pendText_${escHtml(p.id)}" style="min-height:90px;">${escHtml(p.testo_social || '')}</textarea>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
-        <button class="btn-pubblica" style="flex:2 1 120px;" onclick="pubblicaPending('${escHtml(p.id)}')">📲 PUBBLICA</button>
-        <button class="btn-secondary" style="flex:1 1 90px;" onclick="eliminaPending('${escHtml(p.id)}')">🗑 ELIMINA</button>
+  cont.innerHTML = list.map(p => {
+    const titolo = (p.fase && p.fase.trim()) ? p.fase : (p.mobile || 'Post');
+    const thumbs = (Array.isArray(p.immagini) && p.immagini.length)
+      ? `<div class="lav-preview" style="margin-top:8px;">${p.immagini.map(u => `<img src="${safeUrl(u)}">`).join('')}</div>`
+      : '';
+    return `
+    <div style="border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <span style="font-size:13px;">📲 ${escHtml(titolo)}</span>
+        <span style="font-size:11px;color:var(--text-dim);white-space:nowrap;">${escHtml(p.data || '')}</span>
       </div>
-    </div>
-  `).join('');
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+        <button class="btn-secondary" style="flex:1 1 90px;" onclick="togglePendingEdit('${escHtml(p.id)}')">✏ Modifica</button>
+        <button class="btn-pubblica" style="flex:1 1 90px;" onclick="pubblicaPending('${escHtml(p.id)}')">📲 Pubblica</button>
+        <button class="btn-secondary" style="flex:0 1 60px;" onclick="eliminaPending('${escHtml(p.id)}')">🗑</button>
+      </div>
+      <div id="pendEdit_${escHtml(p.id)}" style="display:none;margin-top:8px;">
+        <textarea class="lav-textarea" id="pendText_${escHtml(p.id)}" style="min-height:120px;">${escHtml(p.testo_social || '')}</textarea>
+        ${thumbs}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Apre/chiude l'editor del post in attesa (la textarea resta nel DOM anche
+// se chiusa, così "Pubblica" funziona senza dover prima aprire "Modifica").
+function togglePendingEdit(id) {
+  const el = document.getElementById('pendEdit_' + id);
+  if (!el) return;
+  el.style.display = (el.style.display === 'block') ? 'none' : 'block';
 }
 
 async function pubblicaPending(id) {
