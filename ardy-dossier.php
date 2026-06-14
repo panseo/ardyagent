@@ -186,7 +186,20 @@ function ardy_genera_dossier(PDO $db, string $sessionId): ?string {
         }
     }
 
-    $md .= "\n> Chat web non inclusa: non ancora archiviata lato server (vedi TODO).\n";
+    // 5) Chat WEB (per session_id) — ora persistita da ardy-proxy.php
+    try {
+        require_once __DIR__ . '/ardy-web-memoria.php';
+        $web = ardy_web_storico($db, $sid, 40);
+        if ($web) {
+            $md .= "## Chat web (ultimi " . count($web) . " messaggi)\n";
+            foreach ($web as $m) {
+                $who = (($m['role'] ?? '') === 'assistant') ? 'Sole' : 'Cliente';
+                $md .= "- **{$who}:** " . ardy_dossier_tronca(str_replace("\n", ' ', $m['content']), 400) . "\n";
+            }
+            $md .= "\n";
+        }
+    } catch (Throwable $e) { error_log('ARDY DOSSIER web chat: ' . $e->getMessage()); }
+
     return $md;
 }
 

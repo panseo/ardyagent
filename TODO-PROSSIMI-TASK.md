@@ -196,9 +196,10 @@ con troncamento dei testi lunghi per il budget token. `?format=md|json`, `?save=
 (`ARDY_INTERNAL_SECRET`) per le chiamate server-to-server (Sole). Read-only.
 
 ⏭️ **Da fare (prossimi passi):**
-1. **Persistere la chat WEB**: oggi il proxy web è **stateless** → la chat web NON è salvata, quindi
-   nel dossier manca. Aggiungere una tabella (es. `web_messaggi` per `session_id`) e farla scrivere
-   da `ardy-proxy.php` (come `wa-memoria` per WhatsApp). Poi includerla nel dossier.
+1. ✅ **FATTO — Persistere la chat WEB**: nuovo helper `ardy-web-memoria.php` (tabella `web_messaggi`
+   per `session_id`, retention ~100 righe). `ardy-proxy.php` salva ogni turno (utente + risposta di
+   Sole) best-effort, e `ardy-dossier.php` ora include la sezione "Chat web". ⏭️ Le sessioni web
+   anonime restano legate al cliente solo quando diventa lead (stesso `session_id` in `clienti`).
 2. **Wiring nel prompt di Sole**: iniettare il dossier nel system (con **prompt caching**, come
    `crm_context`) — su **web** solo dopo `cerca_cliente` (identità verificata col codice) per non
    esporre dati in chat anonima; su **WhatsApp** per numero registrato. Attenzione ai token.

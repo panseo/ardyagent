@@ -1030,6 +1030,22 @@ if ($rescheduleNote !== null) {
 }
 
 // -----------------------------------------------------------
+// PERSISTENZA CHAT WEB (per il dossier cliente)
+// Salva il nuovo turno (messaggio utente + risposta di Sole) legato alla sessione.
+// Non deve mai bloccare la risposta: tutto in try/catch best-effort.
+// -----------------------------------------------------------
+try {
+    require_once __DIR__ . '/ardy-web-memoria.php';
+    $righeChat = [];
+    if (trim((string) $message) !== '') $righeChat[] = ['role' => 'user', 'content' => $message];
+    elseif (!empty($images))            $righeChat[] = ['role' => 'user', 'content' => '[immagine inviata]'];
+    if (trim((string) $reply) !== '')   $righeChat[] = ['role' => 'assistant', 'content' => $reply];
+    if ($righeChat) ardy_web_salva(ardyDB(), $cleanSession, $righeChat);
+} catch (Throwable $e) {
+    error_log('ARDY PROXY salva chat web: ' . $e->getMessage());
+}
+
+// -----------------------------------------------------------
 // RISPOSTA AL WIDGET
 // -----------------------------------------------------------
 echo json_encode(['reply' => $reply]);
