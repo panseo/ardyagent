@@ -13,38 +13,64 @@ header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
 
+function ardy_map_cliente(array $r, bool $withDeletedAt = false): array {
+    $out = [
+        'Session_ID'    => $r['session_id']    ?? '',
+        'Nome'          => $r['nome']           ?? '',
+        'Cognome'       => $r['cognome']        ?? '',
+        'Telefono'      => $r['telefono']       ?? '',
+        'Email'         => $r['email']          ?? '',
+        'Servizio'      => $r['servizio']       ?? '',
+        'Mobile'        => $r['mobile']         ?? '',
+        'Zona'          => $r['zona']           ?? '',
+        'Budget'        => $r['budget']         ?? '',
+        'Indirizzo'     => $r['indirizzo']      ?? '',
+        'Stato'         => $r['stato']          ?? 'LEAD',
+        'Note'          => $r['note']           ?? '',
+        'Data_followup' => $r['data_followup']  ?? '',
+        'Inizio_lavoro'         => $r['inizio_lavoro']        ?? '',
+        'Fine_lavoro_prevista'  => $r['fine_lavoro_prevista'] ?? '',
+        'wp_post_id'    => $r['wp_post_id']     ?? '',
+        'wp_post_link'  => $r['wp_post_link']   ?? '',
+        'foto_archiviate_at' => $r['foto_archiviate_at'] ?? '',
+        'faq_pubblicata_at'  => $r['faq_pubblicata_at']  ?? '',
+        'created_at'    => $r['created_at']     ?? '',
+        'updated_at'    => $r['updated_at']     ?? '',
+    ];
+    if ($withDeletedAt) {
+        $out['deleted_at'] = $r['deleted_at'] ?? '';
+        // Giorni rimasti prima della purga automatica
+        $giorni = null;
+        if (!empty($r['deleted_at'])) {
+            $diff   = (new DateTime())->diff(new DateTime($r['deleted_at']));
+            $giorni = max(0, 30 - (int) $diff->days);
+        }
+        $out['giorni_rimasti'] = $giorni;
+    }
+    return $out;
+}
+
 try {
     $db   = ardyDB();
-    $rows = $db->query("SELECT * FROM clienti ORDER BY updated_at DESC")->fetchAll();
 
-    // Mappa nomi colonne MySQL → PascalCase attesi dalla dashboard JS
-    $mapped = array_map(function($r) {
-        return [
-            'Session_ID'    => $r['session_id']    ?? '',
-            'Nome'          => $r['nome']           ?? '',
-            'Cognome'       => $r['cognome']        ?? '',
-            'Telefono'      => $r['telefono']       ?? '',
-            'Email'         => $r['email']          ?? '',
-            'Servizio'      => $r['servizio']       ?? '',
-            'Mobile'        => $r['mobile']         ?? '',
-            'Zona'          => $r['zona']           ?? '',
-            'Budget'        => $r['budget']         ?? '',
-            'Indirizzo'     => $r['indirizzo']      ?? '',
-            'Stato'         => $r['stato']          ?? 'LEAD',
-            'Note'          => $r['note']           ?? '',
-            'Data_followup' => $r['data_followup']  ?? '',
-            'Inizio_lavoro'         => $r['inizio_lavoro']        ?? '',
-            'Fine_lavoro_prevista'  => $r['fine_lavoro_prevista'] ?? '',
-            'wp_post_id'    => $r['wp_post_id']     ?? '',
-            'wp_post_link'  => $r['wp_post_link']   ?? '',
-            'foto_archiviate_at' => $r['foto_archiviate_at'] ?? '',
-            'faq_pubblicata_at'  => $r['faq_pubblicata_at']  ?? '',
-            'created_at'    => $r['created_at']     ?? '',
-            'updated_at'    => $r['updated_at']     ?? '',
-        ];
-    }, $rows);
+    // Assicura che la colonna deleted_at esista (DDL idempotente)
+    try { $db->exec("ALTER TABLE clienti ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL"); }
+    catch (PDOException $e) { /* già presente */ }
 
-    echo json_encode($mapped);
+    // ── Vista Cestino ──────────────────────────────────────
+    if (($_GET['vista'] ?? '') === 'cestino') {
+        $rows = $db->query(
+            "SELECT * FROM clienti WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC"
+        )->fetchAll();
+        echo json_encode(array_map(fn($r) => ardy_map_cliente($r, true), $rows));
+        exit();
+    }
+
+    // ── Lista normale (esclusi i cestinati) ────────────────
+    $rows = $db->query(
+        "SELECT * FROM clienti WHERE deleted_at IS NULL ORDER BY updated_at DESC"
+    )->fetchAll();
+    echo json_encode(array_map(fn($r) => ardy_map_cliente($r), $rows));
 
 } catch (PDOException $e) {
     error_log('ARDY CRM API ERROR: ' . $e->getMessage());

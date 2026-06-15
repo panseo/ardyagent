@@ -95,6 +95,85 @@ if ($sessionId === '') {
     exit();
 }
 
+// Assicura che la colonna deleted_at esista (one-shot idempotente)
+function ardy_ensure_deleted_at($db) {
+    try { $db->exec("ALTER TABLE clienti ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL"); }
+    catch (PDOException $e) { /* già presente */ }
+}
+
+// Purge opportunistica: hard-delete max 5 record scaduti (>30 giorni nel cestino).
+// Chiamata su ogni richiesta a questo endpoint → nessun cron necessario.
+function ardy_purge_scaduti($db) {
+    try {
+        $rows = $db->query(
+            "SELECT session_id FROM clienti WHERE deleted_at IS NOT NULL AND deleted_at < NOW() - INTERVAL 30 DAY LIMIT 5"
+        )->fetchAll(PDO::FETCH_COLUMN);
+        if (!$rows) return 0;
+        $tabelle = ['solleciti', 'wa_messaggi', 'fasi', 'preventivi', 'clienti'];
+        foreach ($rows as $sid) {
+            foreach ($tabelle as $t) {
+                try {
+                    $db->prepare("DELETE FROM `$t` WHERE session_id = :sid")->execute([':sid' => $sid]);
+                } catch (PDOException $e) { /* tabella assente */ }
+            }
+            ardy_elimina_file_sessione($sid);
+        }
+        return count($rows);
+    } catch (PDOException $e) {
+        error_log('ARDY PURGE SCADUTI: ' . $e->getMessage());
+        return 0;
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// AZIONE: cestina — soft-delete (imposta deleted_at = NOW())
+// ═══════════════════════════════════════════════════════════
+if ($azione === 'cestina') {
+    try {
+        $db = ardyDB();
+        ardy_ensure_deleted_at($db);
+        $chk = $db->prepare("SELECT 1 FROM clienti WHERE session_id = :sid AND (deleted_at IS NULL) LIMIT 1");
+        $chk->execute([':sid' => $sessionId]);
+        if (!$chk->fetchColumn()) {
+            echo json_encode(['success' => false, 'error' => 'Scheda non trovata o già nel cestino']);
+            exit();
+        }
+        $db->prepare("UPDATE clienti SET deleted_at = NOW() WHERE session_id = :sid")
+           ->execute([':sid' => $sessionId]);
+        ardy_purge_scaduti($db);
+        echo json_encode(['success' => true, 'azione' => 'cestina']);
+    } catch (PDOException $e) {
+        error_log('ARDY CESTINA ERROR: ' . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'Errore interno']);
+    }
+    exit();
+}
+
+// ═══════════════════════════════════════════════════════════
+// AZIONE: ripristina — annulla il soft-delete (deleted_at = NULL)
+// ═══════════════════════════════════════════════════════════
+if ($azione === 'ripristina') {
+    try {
+        $db = ardyDB();
+        ardy_ensure_deleted_at($db);
+        $chk = $db->prepare("SELECT 1 FROM clienti WHERE session_id = :sid AND deleted_at IS NOT NULL LIMIT 1");
+        $chk->execute([':sid' => $sessionId]);
+        if (!$chk->fetchColumn()) {
+            echo json_encode(['success' => false, 'error' => 'Scheda non trovata nel cestino']);
+            exit();
+        }
+        $db->prepare("UPDATE clienti SET deleted_at = NULL WHERE session_id = :sid")
+           ->execute([':sid' => $sessionId]);
+        echo json_encode(['success' => true, 'azione' => 'ripristina']);
+    } catch (PDOException $e) {
+        error_log('ARDY RIPRISTINA ERROR: ' . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'Errore interno']);
+    }
+    exit();
+}
+
 // ═══════════════════════════════════════════════════════════
 // AZIONE: libera_spazio (cancella solo foto + reel, tiene tutto il resto)
 // ═══════════════════════════════════════════════════════════
@@ -184,5 +263,8 @@ try {
 // 3) File: cartella foto della sessione + reel collegati
 $res = ardy_elimina_file_sessione($sessionId);
 $deleted['reel_file'] = $res['reel_file'];
+
+// Purge opportunistica degli altri record scaduti
+ardy_purge_scaduti($db);
 
 echo json_encode(['success' => true, 'deleted' => $deleted]);
