@@ -609,6 +609,12 @@ permette il deploy push-button da cPanel (richiede Jailed Shell).
   (`proc_open` detached) + **polling** stato dalla dashboard. Quick win a parte: rimuovere i 2 download
   ridondanti prima/dopo, scaricare le foto in parallelo (`curl_multi`), caption fuori dal path critico.
 
+### Sicurezza (priorità bassa)
+- [ ] **Prompt injection caption reel** (`ardy-crea-reel.php` → `generaCaptionReel`): `$mobile` e i nomi
+  fase finiscono grezzi nel prompt a Claude. Rischio basso (endpoint dietro Basic Auth, `$mobile` dal DB,
+  caption rivista a mano prima di pubblicare). Hardening: delimitare i dati non fidati con tag
+  (`<dati_cliente>…</dati_cliente>`) + istruzione a trattarli come dati.
+
 ### Dashboard / Lavorazioni
 - [x] **Caricamento video delle lavorazioni** — nelle fasi si possono caricare anche video (oltre alle foto). Upload multipart via `ardy-upload-video.php` → Media Library WP; incorporati come `<video>` nel post e salvati in `fasi.video_urls` (sessione 7)
 - [ ] Autenticare il dominio `ardy-lab.it` su Brevo (DKIM/SPF) ed evitare il mittente Gmail (deliverability)
