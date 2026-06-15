@@ -248,7 +248,28 @@ tra telefono e computer, come la libreria fasi.*
 
 ---
 
-## 📚 9. La Libreria delle fasi
+## ❓ 9. Le FAQ della lavorazione (per farti trovare su Google)
+
+Quando un lavoro è **CONSEGNATO**, in fondo alla scheda compare il riquadro
+**"❓ FAQ della lavorazione"**. Serve a creare delle **domande e risposte**
+(quelle che un cliente cerca su Google su un lavoro simile) e a **pubblicarle
+sull'articolo** del lavoro: aiutano il sito a farsi trovare (SEO).
+
+**Come si fa:**
+1. Premi **❓ CREA FAQ DI QUESTA LAVORAZIONE** → l'AI scrive 5-7 domande e risposte
+   partendo dal mobile, dal servizio e dalle fasi.
+2. **Rivedi e modifica** ogni domanda/risposta; puoi anche **rimuoverne** qualcuna
+   (🗑) o rigenerarle.
+3. Premi **📤 PUBBLICA LE FAQ SULL'ARTICOLO** → le aggiunge in fondo alla pagina del
+   lavoro (a fisarmonica) con i dati per Google.
+
+💡 *Se rifai le FAQ e ripubblichi, la nuova versione **sostituisce** quella vecchia
+sull'articolo (niente doppioni). Se le hai già pubblicate, il riquadro te lo dice
+("✓ FAQ già pubblicate il …") e il bottone diventa **🔄 Rigenera / aggiorna FAQ**.*
+
+---
+
+## 📚 10. La Libreria delle fasi
 
 Sono **frasi pronte** per le lavorazioni più comuni (così non riscrivi tutto ogni volta).
 - Quando pubblichi una fase, puoi premere **📚 SCEGLI DA LIBRERIA** e prenderne una
@@ -259,7 +280,7 @@ modifichi da un dispositivo la ritrovi anche sull'altro.*
 
 ---
 
-## ➕ 10. Aggiungere un cliente a mano
+## ➕ 11. Aggiungere un cliente a mano
 
 Non tutti arrivano dal sito. Per inserirne uno tu:
 1. Clicca **+ NUOVO** (in alto a sinistra)
@@ -268,7 +289,7 @@ Non tutti arrivano dal sito. Per inserirne uno tu:
 
 ---
 
-## 🤖 11. Da dove arrivano i clienti "da soli"
+## 🤖 12. Da dove arrivano i clienti "da soli"
 
 Due strumenti automatici riempiono la dashboard senza che tu faccia niente:
 
@@ -290,7 +311,7 @@ gli avvisi ti arrivano senza costi.
 
 ---
 
-## 💸 12. Clienti che non pagano (Morosi)
+## 💸 13. Clienti che non pagano (Morosi)
 
 Il pulsante **💸 MOROSI** (in alto a sinistra, sotto a GUIDA) apre la gestione dei clienti
 che non hanno saldato. È la tua "segretaria ferma ma corretta": prepara i solleciti al posto
