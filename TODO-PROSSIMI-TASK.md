@@ -5,9 +5,12 @@
 
 ---
 
-## ▶️ STATO (15/06/2026)
+## ▶️ STATO (15/06/2026 — sera)
 CRM in attività piena. WhatsApp Cloud API attivo, tutti i template approvati e collegati.
-Prossimi task per priorità: **Monitor ProntoPro** · **Funnel lead a pagamento** · **Cestino 30gg** · poi UX minori.
+- ✅ **Monitor portali lead** in produzione (n8n ogni 60min, Gmail→Claude→WA a Michela). Portali: ProntoPro, Homedeal, Cronoshare. Instapro in attesa cambio email.
+- ✅ **Cestino 30 giorni**: soft-delete con ripristino, purga automatica >30gg, modal nella dashboard.
+- ✅ **Stato COMPLETATO** aggiunto tra IN_LAVORAZIONE e CONSEGNATO.
+Prossimi task per priorità: **Funnel lead a pagamento** · poi UX minori.
 
 ---
 
@@ -119,50 +122,8 @@ Sole segnala lead interessante (vedi "Monitor ProntoPro")
 **Miglioria futura (strada B):** pipeline download media da WhatsApp Cloud API (scaricare foto che il
 cliente/Michela manda a Sole). Riuso ampio anche per le foto dei clienti veri. Oggi assente.
 
-### 🔔 Monitor portali lead — classificazione via email (multi-portale)
-Legge le email di notifica dei portali lead dalla casella Gmail `ardy.documenti@gmail.com` ogni 60 minuti,
-classifica con Claude e avvisa Michela su WhatsApp solo per i lead interessanti.
-
-**Portali iscritti (15/06/2026):** ProntoPro ✅ · Homedeal ✅ · Cronoshare ✅ · Instapro ⏳ (in attesa
-approvazione cambio email). Altri candidati: Habitissimo. Ogni portale che manda email si aggancia
-allo stesso modulo.
-
-**Architettura:**
-```
-[Gmail ardy.documenti — email portali non lette]
-      ↓ n8n trigger ogni 60 min (Gmail node: filtro per mittenti dei portali, non lette)
-      ↓ nodo Code: riconosce il portale dal mittente, estrae oggetto + body (tipo lavoro, zona, distanza)
-      ↓ Claude: punteggio 1-5 + motivazione 2 righe
-          criteri: tipo lavoro pertinente (restauro/laccatura/verniciatura mobili)
-                   zona Roma e dintorni max ~30km (Castelli, Tivoli, Guidonia ecc.)
-                   NO: montaggio, Ikea, falegnameria generica, zone troppo lontane
-      ↓ se punteggio ≥ 3 → notificaMichela() su WhatsApp
-          es. "🔔 ProntoPro: Restauro Mobili · Roma 1.5km ⭐⭐⭐ — vale un'occhiata"
-      ↓ marca email come letta + etichetta "lead-processato" (no riprocessing)
-```
-
-**File da creare:** `ardy-lead-monitor.php` (classificazione + scoring, multi-portale) chiamato da n8n.
-**Riusa:** `notificaMichela()` da `ardy-notifica-michela.php` per il WA a Michela.
-**Autenticazione Gmail:** Gmail API OAuth (credenziali Google già disponibili per il Calendar)
-  → riutilizzare lo stesso progetto GCP, aggiungere scope `gmail.readonly` + `gmail.modify`.
-
-**Note:**
-- ⚠️ **Ogni portale ha email con formato diverso** (oggetto, dove mette zona/distanza/tipo lavoro):
-  raccogliere un esempio reale per ciascuno (ProntoPro, Homedeal, Cronoshare, Instapro) prima di
-  scrivere il parser. ProntoPro: oggetto "Nuova opportunità" / "Hai X nuova opportunità", distanza nel
-  body (es. "Roma, Ostia (25.9 KM)").
-- Non aprire il link della richiesta (richiede login portale) — classificare solo da oggetto+body email.
-- Far classificare a Claude anche distanza/zona quando il portale non la dà in chiaro (deduzione dal testo).
-- Frequenza 60 min è sufficiente (le richieste non sono time-critical al minuto).
-
-### 🗑️ Cestino 30 giorni
-✅ già fatti: hard-delete (🗑 Elimina) + 🧹 Libera spazio. ⏭️ da costruire:
-1. **"Elimina tutto" → CESTINO 30gg**: soft-delete `deleted_at` su `clienti` → vista Cestino con
-   Ripristina; dopo 30gg purga DB + file (foto, reel, PDF). NON tocca WordPress/Media Library. Purga =
-   sweep opportunistico (es. in `ardy-crm-api.php`, max N per load), niente cron.
-2. *Backend* `ardy-elimina-cliente.php`: azioni `cestina | ripristina | purga` (colonna `deleted_at`
-   auto-create; riusa `ardy_elimina_file_sessione`). *API CRM*: escludere `deleted_at` dalla lista.
-   *Dashboard*: vista Cestino + Ripristina + modali conferma.
+### 🗑️ ~~Cestino 30 giorni~~ ✅ FATTO (15/06/2026)
+### 🔔 ~~Monitor portali lead~~ ✅ FATTO (15/06/2026) — `ardy-lead-monitor.php` + n8n ogni 60min
 
 ### Briefing del mattino — opzionale
 ⏭️ trigger "prima risposta del giorno": salvare data ultimo briefing per numero così il riepilogo
