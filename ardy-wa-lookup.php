@@ -73,6 +73,10 @@ if ($ownerDigits !== '' && $last9 === substr($ownerDigits, -9)) {
 
 try {
     $db = ardyDB();
+    // Colonne opzionali (auto-create) per non rompere il lookup se non sono
+    // ancora state create da altri endpoint (lead-contatto / elimina-cliente).
+    try { $db->exec("ALTER TABLE clienti ADD COLUMN primo_contatto_wa_at DATETIME NULL"); } catch (PDOException $e) { /* già presente */ }
+    try { $db->exec("ALTER TABLE clienti ADD COLUMN deleted_at DATETIME NULL"); } catch (PDOException $e) { /* già presente */ }
     $stmt = $db->prepare(
         "SELECT session_id, nome, cognome, telefono, email, servizio, mobile, zona, stato,
                 wp_post_id, wp_post_link, primo_contatto_wa_at
