@@ -257,7 +257,7 @@ function classify_lead(string $portale, string $subject, string $body): array {
     $prompt = <<<PROMPT
 Sei un assistente che valuta le richieste di lavoro ricevute via email da portali lead (ProntoPro, Homedeal ecc.) per un laboratorio artigianale di restauro mobili a Roma chiamato Ardy Lab.
 
-Il laboratorio esegue: restauro mobili antichi/classici, laccatura, verniciatura, rivestimento (sedute/testiere), lucidatura a tampone, sverniciatura. NON fa: montaggio Ikea, falegnameria generica da costruzione, traslochi, pulizie.
+Il laboratorio esegue: restauro mobili antichi/classici, laccatura, verniciatura, lucidatura a tampone, sverniciatura. NON fa: tappezzeria/rivestimento sedute, montaggio Ikea, falegnameria generica da costruzione, traslochi, pulizie.
 
 Zona servita: Roma e dintorni, max ~30 km (Castelli Romani, Tivoli, Guidonia, Fiumicino, Ostia). Zone oltre i 40 km o fuori Lazio = scartare.
 
