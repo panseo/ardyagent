@@ -63,6 +63,7 @@
       <button class="filter-chip" data-stato="PREVENTIVO" onclick="setFilter(this)">PREVENTIVO</button>
       <button class="filter-chip" data-stato="ACCONTO" onclick="setFilter(this)">ACCONTO</button>
       <button class="filter-chip" data-stato="IN_LAVORAZIONE" onclick="setFilter(this)">IN LAVORAZIONE</button>
+      <button class="filter-chip" data-stato="COMPLETATO" onclick="setFilter(this)">COMPLETATO</button>
       <button class="filter-chip" data-stato="CONSEGNATO" onclick="setFilter(this)">CONSEGNATO</button>
       <button class="filter-chip" data-stato="STANDBY" onclick="setFilter(this)">STANDBY</button>
       <button class="filter-chip" data-stato="PERSO" onclick="setFilter(this)">PERSO</button>
@@ -529,7 +530,7 @@ function faseSegnale(l) {
   const ini = l.Inizio_lavoro || '';
   const fin = l.Fine_lavoro_prevista || '';
   // Solo lavori in corso/da avviare: CONSEGNATO è gia' concluso (niente urgenza).
-  if (!['ACCONTO','IN_LAVORAZIONE'].includes(stato)) return null;
+  if (!['ACCONTO','IN_LAVORAZIONE','COMPLETATO'].includes(stato)) return null;
   const oggi = new Date(); oggi.setHours(0,0,0,0);
   const gg = v => Math.round((new Date(v + 'T00:00:00') - oggi) / 86400000);
   // 1) Fine LAVORO (non consegna): in ritardo o vicina (priorità)
@@ -701,7 +702,7 @@ function renderDetail() {
   // Nota: 'PAGATO' è stato rimosso dagli stati cliente (coincideva con CONSEGNATO; il
   // "saldato/non moroso" è gestito dal modulo MOROSI). Resta riconosciuto come alias
   // legacy nei raggruppamenti d'archivio per i clienti già marcati così.
-  const stati = ['LEAD','SOPRALLUOGO','PREVENTIVO','ACCONTO','IN_LAVORAZIONE','CONSEGNATO','STANDBY','PERSO'];
+  const stati = ['LEAD','SOPRALLUOGO','PREVENTIVO','ACCONTO','IN_LAVORAZIONE','COMPLETATO','CONSEGNATO','STANDBY','PERSO'];
   document.getElementById('statoSelector').innerHTML = stati.map(s => `
     <button class="stato-btn ${(l.Stato??'').toUpperCase() === s ? 'current' : ''}"
             onclick="setStato('${s}')">
@@ -733,11 +734,11 @@ function aggiornaSezioniVisibili(stato) {
   const s = (stato ?? '').toUpperCase();
 
   // Preventivi: da PREVENTIVO in poi (inclusi STANDBY e PERSO — il preventivo c'era)
-  const statiPrev = ['PREVENTIVO','ACCONTO','IN_LAVORAZIONE','CONSEGNATO','PAGATO','STANDBY','PERSO'];
+  const statiPrev = ['PREVENTIVO','ACCONTO','IN_LAVORAZIONE','COMPLETATO','CONSEGNATO','PAGATO','STANDBY','PERSO'];
   document.getElementById('acc-preventivi').style.display = statiPrev.includes(s) ? '' : 'none';
 
   // Lavorazione: da ACCONTO in poi (incluso IN_LAVORAZIONE)
-  const statiLav = ['ACCONTO','IN_LAVORAZIONE','CONSEGNATO','PAGATO'];
+  const statiLav = ['ACCONTO','IN_LAVORAZIONE','COMPLETATO','CONSEGNATO','PAGATO'];
   const showLav  = statiLav.includes(s);
   document.getElementById('acc-lavorazione').style.display = showLav ? '' : 'none';
   if (showLav) {
