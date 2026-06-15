@@ -87,6 +87,12 @@ Tracciamento delivery/read dai webhook Meta = miglioria futura.
 ### 🗑️ ~~Cestino 30 giorni~~ ✅ FATTO (15/06/2026)
 ### 🔔 ~~Monitor portali lead~~ ✅ FATTO (15/06/2026) — `ardy-lead-monitor.php` + n8n ogni 60min
 
+### 👤 Multi-utente: accesso Andrea come Michela
+Dare ad Andrea gli stessi permessi della dashboard (Basic Auth + accesso WhatsApp Sole).
+Da decidere: stesso utente/password di Michela, oppure credenziali separate + secondo
+numero WA autorizzato nel lookup (aggiungere `WA_ANDREA_NUMBER` in `ardy-config.php` e
+trattarlo come `titolare` in `ardy-wa-lookup.php`).
+
 ### Briefing del mattino — opzionale
 ⏭️ trigger "prima risposta del giorno": salvare data ultimo briefing per numero così il riepilogo
 lungo parte da solo al primo "buongiorno". Senza, funziona quando Michela chiede "come va oggi?".
