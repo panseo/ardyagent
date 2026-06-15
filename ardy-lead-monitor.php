@@ -176,33 +176,58 @@ function gmail_get_message(string $accessToken, string $msgId): ?array {
 }
 
 // Estrae il testo del body (preferisce text/plain, fallback da HTML strip).
+// Le email dei portali sono quasi sempre multipart nested:
+// multipart/mixed → multipart/alternative → text/plain | text/html
+// Raccogliamo ricorsivamente TUTTI i candidati prima di scegliere.
 function gmail_extract_body(array $payload): string {
-    // Parte singola
-    if (isset($payload['body']['data']) && $payload['body']['data'] !== '') {
-        $raw  = base64_decode(strtr($payload['body']['data'], '-_', '+/'));
-        $mime = $payload['mimeType'] ?? '';
-        if (strpos($mime, 'text/html') !== false) return strip_tags($raw);
-        return $raw;
+    $candidates = [];
+    gmail_collect_parts($payload, $candidates);
+
+    // Preferenza: text/plain prima di text/html
+    foreach ($candidates as $c) {
+        if ($c['mime'] === 'text/plain' && trim($c['text']) !== '') return $c['text'];
+    }
+    foreach ($candidates as $c) {
+        if (strpos($c['mime'], 'text/html') !== false && trim($c['text']) !== '') {
+            return gmail_html_to_text($c['text']);
+        }
+    }
+    return '';
+}
+
+// Raccoglie ricorsivamente tutte le parti con contenuto testuale.
+function gmail_collect_parts(array $part, array &$out): void {
+    $mime = $part['mimeType'] ?? '';
+    $data = $part['body']['data'] ?? '';
+
+    if ($data !== '') {
+        $decoded = base64_decode(strtr($data, '-_', '+/'));
+        if ($decoded !== false) {
+            $out[] = ['mime' => $mime, 'text' => $decoded];
+        }
     }
 
-    // Multipart: cerca text/plain prima, poi text/html
-    $parts = $payload['parts'] ?? [];
-    $html  = '';
-    foreach ($parts as $part) {
-        $mime = $part['mimeType'] ?? '';
-        $data = $part['body']['data'] ?? '';
-        if (!$data && !empty($part['parts'])) {
-            // nested multipart
-            $nested = gmail_extract_body($part);
-            if ($nested !== '') return $nested;
-            continue;
-        }
-        if (!$data) continue;
-        $decoded = base64_decode(strtr($data, '-_', '+/'));
-        if ($mime === 'text/plain') return $decoded;
-        if (strpos($mime, 'text/html') !== false) $html = $decoded;
+    foreach ($part['parts'] ?? [] as $sub) {
+        gmail_collect_parts($sub, $out);
     }
-    return $html !== '' ? strip_tags($html) : '';
+}
+
+// Converte HTML email in testo leggibile (meglio di strip_tags grezzo).
+function gmail_html_to_text(string $html): string {
+    // Rimuovi style/script prima di tutto
+    $html = preg_replace('/<style[^>]*>.*?<\/style>/is', '', $html);
+    $html = preg_replace('/<script[^>]*>.*?<\/script>/is', '', $html);
+    // <br>, </p>, </div>, </tr>, </li> → newline
+    $html = preg_replace('/<br\s*\/?>/i', "\n", $html);
+    $html = preg_replace('/<\/(p|div|tr|li|h[1-6])>/i', "\n", $html);
+    // Strip tag rimanenti
+    $text = strip_tags($html);
+    // Decodifica entità HTML
+    $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    // Comprimi spazi bianchi multipli (ma preserva newline)
+    $text = preg_replace('/[ \t]+/', ' ', $text);
+    $text = preg_replace('/\n{3,}/', "\n\n", $text);
+    return trim($text);
 }
 
 // Marca il messaggio come letto e applica il label.
