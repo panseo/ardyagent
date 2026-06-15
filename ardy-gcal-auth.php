@@ -35,7 +35,11 @@ $params = http_build_query([
     'client_id'     => $CLIENT_ID,
     'redirect_uri'  => $REDIRECT_URI,
     'response_type' => 'code',
-    'scope'         => 'https://www.googleapis.com/auth/calendar',
+    'scope'         => implode(' ', [
+        'https://www.googleapis.com/auth/calendar',
+        'https://www.googleapis.com/auth/gmail.readonly',
+        'https://www.googleapis.com/auth/gmail.modify',
+    ]),
     'access_type'   => 'offline',
     'prompt'        => 'consent'
 ]);
