@@ -29,26 +29,23 @@
   <aside class="sidebar">
     <div class="sidebar-header">
       <div style="margin-bottom:12px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-          <div class="sidebar-title" style="margin-bottom:0;">Clienti / Lead <span class="count-badge" id="count">—</span></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <div class="sidebar-title" style="margin-bottom:0;flex:1;">Clienti / Lead</div>
+          <input type="text" id="search" placeholder="Cerca..." oninput="filterLeads()" style="flex:1;background:#1e1e1e;border:1px solid #444;color:#ccc;padding:4px 8px;border-radius:4px;font-family:monospace;font-size:10px;min-width:0;">
           <button id="btnArchivio" onclick="apriArchivio()" title="Lavori conclusi (CONSEGNATO)" style="display:none;background:none;border:1px solid #555;color:#999;padding:3px 7px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;white-space:nowrap;">📦 Archivio <span id="archCount">0</span></button>
         </div>
         <div style="display:flex;gap:5px;">
           <button class="btn-nuovo-cliente" onclick="openNuovoCliente()" style="flex:1;text-align:center;background:none;border:1px solid #8b6f3e;color:#c8a96e;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">+ NUOVO</button>
           <button class="btn-nuovo-cliente" onclick="openGestioneLibreria()" style="flex:1;text-align:center;background:none;border:1px solid #444;color:#888;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">LIBRERIA</button>
           <button class="btn-nuovo-cliente" onclick="window.open('ardy-guida-michela.html','_blank')" style="flex:1;text-align:center;background:none;border:1px solid #444;color:#888;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">❓ GUIDA</button>
+          <button onclick="toggleStrumenti()" id="btnStrumenti" title="Strumenti" style="background:none;border:1px solid #444;color:#888;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">⚙︎</button>
         </div>
-        <div style="display:flex;gap:5px;margin-top:5px;">
+        <div id="strumentiPanel" style="display:none;gap:5px;margin-top:5px;flex-wrap:wrap;">
           <button class="btn-nuovo-cliente" onclick="openMorosi()" style="flex:1;text-align:center;background:none;border:1px solid #8b3e3e;color:#d98a8a;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">💸 MOROSI</button>
           <button class="btn-nuovo-cliente" onclick="openImportPdf()" style="flex:1;text-align:center;background:none;border:1px solid #3e6f8b;color:#8ec0d9;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">📥 PDF</button>
-        </div>
-        <div style="display:flex;gap:5px;margin-top:5px;">
-          <button class="btn-nuovo-cliente" onclick="archiviaPersi()" title="Sposta in una cartella di quarantena le foto e i reel dei clienti PERSI, così puoi cancellarli a mano dal server e liberare spazio. Non cancella nulla." style="flex:1;text-align:center;background:none;border:1px solid #6f6f6f;color:#aaa;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">🧹 LIBERA SPAZIO (PERSI)</button>
+          <button class="btn-nuovo-cliente" onclick="archiviaPersi()" title="Sposta in una cartella di quarantena le foto e i reel dei clienti PERSI, così puoi cancellarli a mano dal server e liberare spazio. Non cancella nulla." style="flex:1;text-align:center;background:none;border:1px solid #6f6f6f;color:#aaa;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">🧹 LIBERA SPAZIO</button>
           <button class="btn-nuovo-cliente" onclick="openCestino()" title="Clienti spostati nel cestino — ripristinabili per 30 giorni" style="flex:1;text-align:center;background:none;border:1px solid #6f3e3e;color:#c87070;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">🗑 CESTINO</button>
         </div>
-      </div>
-      <div class="search-box">
-        <input type="text" id="search" placeholder="Cerca nome, zona, servizio..." oninput="filterLeads()">
       </div>
     </div>
 
@@ -625,6 +622,15 @@ function apriArchivio() {
 }
 
 // Mostra/nasconde i filtri di stato (ricerca avanzata)
+function toggleStrumenti() {
+  const p = document.getElementById('strumentiPanel');
+  const b = document.getElementById('btnStrumenti');
+  if (!p) return;
+  const aperto = p.style.display === 'flex';
+  p.style.display = aperto ? 'none' : 'flex';
+  if (b) b.style.color = aperto ? '#888' : '#c8a96e';
+}
+
 function toggleFiltri() {
   const f = document.getElementById('filters');
   const b = document.getElementById('btnFiltri');
