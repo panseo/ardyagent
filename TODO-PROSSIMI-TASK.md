@@ -71,6 +71,35 @@ il layout/CSS del PDF, **bumpa `PDF_CACHE_VER`** per invalidare le cache esisten
 
 ## 📋 TASK DA SVILUPPARE (aperti)
 
+### 🔔 Monitor ProntoPro — classificazione lead via email
+Legge le email di notifica ProntoPro dalla casella Gmail `ardy.documenti@gmail.com` ogni 60 minuti,
+classifica con Claude e avvisa Michela su WhatsApp solo per i lead interessanti.
+
+**Architettura:**
+```
+[Gmail ardy.documenti — email ProntoPro non lette]
+      ↓ n8n trigger ogni 60 min (Gmail node: mittente=ProntoPro, non lette)
+      ↓ nodo Code: estrae oggetto + body (tipo lavoro, zona, distanza)
+      ↓ Claude: punteggio 1-5 + motivazione 2 righe
+          criteri: tipo lavoro pertinente (restauro/laccatura/verniciatura mobili)
+                   zona Roma e dintorni max ~30km (Castelli, Tivoli, Guidonia ecc.)
+                   NO: montaggio, Ikea, falegnameria generica, zone troppo lontane
+      ↓ se punteggio ≥ 3 → notificaMichela() su WhatsApp
+          es. "🔔 ProntoPro: Restauro Mobili · Roma 1.5km ⭐⭐⭐ — vale un'occhiata"
+      ↓ marca email come letta + etichetta "ProntoPro-processata" (no riprocessing)
+```
+
+**File da creare:** `ardy-prontopro-monitor.php` (classificazione + scoring) chiamato da n8n.
+**Riusa:** `notificaMichela()` da `ardy-notifica-michela.php` per il WA a Michela.
+**Autenticazione Gmail:** Gmail API OAuth (credenziali Google già disponibili per il Calendar)
+  → riutilizzare lo stesso progetto GCP, aggiungere scope `gmail.readonly` + `gmail.modify`.
+
+**Note:**
+- Solo email con mittente ProntoPro, oggetto "Nuova opportunità" / "Hai X nuova opportunità"
+- Non aprire il link della richiesta (richiede login ProntoPro) — classificare solo da oggetto+body email
+- Distanza: estrarre il km dall'anteprima email (es. "Roma, Ostia (25.9 KM)") → soglia 30km
+- Frequenza 60 min è sufficiente (le richieste ProntoPro non sono time-critical al minuto)
+
 ### 🗑️ Cestino 30 giorni
 ✅ già fatti: hard-delete (🗑 Elimina) + 🧹 Libera spazio. ⏭️ da costruire:
 1. **"Elimina tutto" → CESTINO 30gg**: soft-delete `deleted_at` su `clienti` → vista Cestino con
