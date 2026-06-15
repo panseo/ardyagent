@@ -62,6 +62,11 @@ if (PHP_SAPI !== 'cli') {
     }
 }
 
+// Modalità debug (?debug=1): riprende le email recenti ignorando lo stato
+// letto/etichetta, classifica con Claude ma NON marca come processate e NON
+// invia WhatsApp. Serve solo per testare la classificazione senza effetti.
+$DEBUG = !empty($_GET['debug']) || !empty($_POST['debug']);
+
 // -----------------------------------------------------------
 // Ottieni access token Google (riusa quello del Calendar)
 // -----------------------------------------------------------
@@ -137,9 +142,13 @@ function gmail_get_or_create_label(string $accessToken): ?string {
     return $new['id'] ?? null;
 }
 
-// Cerca messaggi non letti da un mittente specifico (max 10 per portale).
-function gmail_list_unread(string $accessToken, string $fromDomain): array {
-    $q   = 'from:' . $fromDomain . ' is:unread -label:' . GMAIL_LABEL_NAME;
+// Cerca messaggi da un mittente specifico (max 10 per portale).
+// Normale: solo non letti e non ancora processati.
+// Debug: email recenti (14gg) a prescindere da stato letto/etichetta.
+function gmail_list_unread(string $accessToken, string $fromDomain, bool $debug = false): array {
+    $q   = $debug
+        ? 'from:' . $fromDomain . ' newer_than:14d'
+        : 'from:' . $fromDomain . ' is:unread -label:' . GMAIL_LABEL_NAME;
     $url = 'https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=10&q=' . urlencode($q);
     $res = gmail_request($url, $accessToken);
     return $res['messages'] ?? [];
@@ -211,9 +220,9 @@ function gmail_mark_processed(string $accessToken, string $msgId, string $labelI
 // -----------------------------------------------------------
 
 function classify_lead(string $portale, string $subject, string $body): array {
-    $apiKey = defined('ANTHROPIC_API_KEY') ? ANTHROPIC_API_KEY : '';
+    $apiKey = defined('ARDY_API_KEY') ? ARDY_API_KEY : '';
     if (!$apiKey) {
-        error_log('ARDY LEAD MONITOR: ANTHROPIC_API_KEY mancante');
+        error_log('ARDY LEAD MONITOR: ARDY_API_KEY mancante');
         return ['score' => 0, 'motivo' => 'API key mancante'];
     }
 
@@ -326,10 +335,10 @@ $saltati    = 0;
 $log        = [];
 
 foreach ($PORTALI as $dominio => $nomePortale) {
-    $messaggi = gmail_list_unread($accessToken, $dominio);
+    $messaggi = gmail_list_unread($accessToken, $dominio, $DEBUG);
     if (empty($messaggi)) continue;
 
-    error_log('ARDY LEAD MONITOR: ' . count($messaggi) . ' email da ' . $nomePortale);
+    error_log('ARDY LEAD MONITOR: ' . count($messaggi) . ' email da ' . $nomePortale . ($DEBUG ? ' [DEBUG]' : ''));
 
     foreach ($messaggi as $m) {
         $msgId = $m['id'];
@@ -338,8 +347,8 @@ foreach ($PORTALI as $dominio => $nomePortale) {
         $email = gmail_get_message($accessToken, $msgId);
         if (!$email) {
             error_log('ARDY LEAD MONITOR: impossibile leggere msg ' . $msgId);
-            // Marca comunque letta per non riprocessare
-            gmail_mark_processed($accessToken, $msgId, $labelId);
+            // Marca comunque letta per non riprocessare (non in debug)
+            if (!$DEBUG) gmail_mark_processed($accessToken, $msgId, $labelId);
             $saltati++;
             continue;
         }
@@ -357,31 +366,37 @@ foreach ($PORTALI as $dominio => $nomePortale) {
             'score'      => $cl['score'],
             'tipo'       => $cl['tipo_lavoro'] ?? '',
             'zona'       => $cl['zona'] ?? '',
+            'motivo'     => $cl['motivo'] ?? '',
             'notificata' => false,
         ];
 
         if ((int) $cl['score'] >= LEAD_MIN_SCORE) {
-            $testo    = format_notifica($nomePortale, $email['subject'], $cl);
-            $dedupeKey = 'lead:' . $msgId;
-            $inviato  = notificaMichela($testo, $dedupeKey);
-            if ($inviato) {
-                $notificati++;
-                $entry['notificata'] = true;
+            if ($DEBUG) {
+                // Debug: non inviare, mostra solo cosa sarebbe stato mandato
+                $entry['anteprima_wa'] = format_notifica($nomePortale, $email['subject'], $cl);
+            } else {
+                $testo     = format_notifica($nomePortale, $email['subject'], $cl);
+                $dedupeKey = 'lead:' . $msgId;
+                if (notificaMichela($testo, $dedupeKey)) {
+                    $notificati++;
+                    $entry['notificata'] = true;
+                }
             }
         } else {
             $saltati++;
         }
 
-        // Marca sempre come processata (letta + label) anche se score basso
-        gmail_mark_processed($accessToken, $msgId, $labelId);
+        // Marca processata (letta + label) solo in produzione, mai in debug
+        if (!$DEBUG) gmail_mark_processed($accessToken, $msgId, $labelId);
         $log[] = $entry;
     }
 }
 
 echo json_encode([
     'ok'         => true,
+    'debug'      => $DEBUG,
     'processate' => $totali,
     'notificate' => $notificati,
     'saltate'    => $saltati,
     'dettaglio'  => $log,
-]);
+], JSON_UNESCAPED_UNICODE);
