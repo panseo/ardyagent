@@ -10,7 +10,7 @@ CRM in attività piena. WhatsApp Cloud API attivo, tutti i template approvati e 
 - ✅ **Monitor portali lead** in produzione (n8n ogni 60min, Gmail→Claude→WA a Michela). Portali: ProntoPro, Homedeal, Cronoshare. Instapro in attesa cambio email.
 - ✅ **Cestino 30 giorni**: soft-delete con ripristino, purga automatica >30gg, modal nella dashboard.
 - ✅ **Stato COMPLETATO** aggiunto tra IN_LAVORAZIONE e CONSEGNATO.
-Prossimi task per priorità: **Funnel lead a pagamento** · poi UX minori.
+Prossimi task per priorità: UX minori · briefing del mattino · backlog performance/sicurezza.
 
 ---
 
@@ -75,52 +75,11 @@ il layout/CSS del PDF, **bumpa `PDF_CACHE_VER`** per invalidare le cache esisten
 
 ## 📋 TASK DA SVILUPPARE (aperti)
 
-### 🎯 Funnel lead a pagamento (ProntoPro & simili) — acquisizione + primo contatto
-Estende il monitor ProntoPro: dall'annuncio segnalato fino al primo contatto col potenziale cliente.
-Razionale ROI: la chat interna ai portali viene letta poco → il contatto su **WhatsApp** rende molto
-di più; se anche il WA non funziona, fallback email, poi telefonata di Michela se il lavoro vale.
-
-**Flusso completo:**
-```
-Sole segnala lead interessante (vedi "Monitor ProntoPro")
-      ↓ Michela valuta e ACQUISTA il lead su ProntoPro (crediti) → ottiene nome/tel/email (+foto a volte)
-      ↓ Michela scrive a Sole su WhatsApp (modalità titolare): detta i dati del lead
-      ↓ Sole crea la scheda — RIUSA [[CREA_SCHEDA]] → ardy-wa-crea-scheda.php
-      ↓ Sole PREPARA il messaggio di primo contatto e lo mostra a Michela
-      ↓ ⏸️ Sole ASPETTA l'OK finale di Michela (deciso: conferma obbligatoria, è contatto a freddo)
-      ↓ Michela conferma → Sole invia il 1° WhatsApp al lead (presentazione + link webchat personalizzato)
-      ↓ tracciamento esito sulla scheda
-      ↓ fallback se non risponde: email → telefonata Michela
-```
-
-**Decisioni prese:**
-- ✅ **Conferma obbligatoria**: Sole non invia mai al lead senza l'OK di Michela in chat.
-- ✅ **Link webchat personalizzato**: il link porta un token/session_id → quando il lead clicca, la
-  webchat lo riconosce già (nome + cosa ha chiesto) e Sole continua la qualifica senza ripartire da zero.
-- ✅ **Tracciamento esito** sulla scheda: primo contatto WA inviato il X / consegnato / letto / risposto
-  → serve a Michela per decidere quando passare a email o telefonata. (Nuove colonne su `clienti` o
-  tabella dedicata; gli status delivered/read arrivano dai webhook Meta.)
-- ✅ **Foto del lead** (i lead più di valore): per ora **strada A** — Michela le carica dalla dashboard
-  (sezione "Foto della scheda", `ardy-lead-foto.php`, già esistente) dopo la creazione scheda. Strada B
-  (pipeline media WhatsApp per riceverle direttamente da Sole) = miglioria futura, vedi sotto.
-
-**⚠️ Rischio Meta da gestire (importante):**
-- Il 1° messaggio al lead è business-initiated verso numero **freddo** → serve **template Meta**.
-- Un template **Marketing** verso numero nuovo viene spesso throttলato/non consegnato (err 131049, lo
-  stesso visto col ringraziamento). → Usare un template **Utility** formulato come "risposta a una tua
-  richiesta di preventivo" (messaggio atteso, Meta lo consegna meglio). Da creare/approvare.
-- Tenere comunque il fallback email/telefonata se il WA non viene consegnato/letto.
-
-**Da costruire:**
-- Estensione del prompt titolare + marker (oltre a `[[CREA_SCHEDA]]`, un passo "prepara primo contatto"
-  con conferma) — riusa l'infrastruttura WhatsApp esistente.
-- Endpoint invio primo contatto al lead (template Utility) + generazione link webchat firmato.
-- Riconoscimento lead nella webchat dal token del link.
-- Colonne/tabella tracciamento esito + lettura status dai webhook Meta.
-- Template Meta Utility "risposta richiesta preventivo" da approvare.
-
-**Miglioria futura (strada B):** pipeline download media da WhatsApp Cloud API (scaricare foto che il
-cliente/Michela manda a Sole). Riuso ampio anche per le foto dei clienti veri. Oggi assente.
+### 🎯 ~~Funnel lead a pagamento~~ ✅ FATTO (15/06/2026)
+Flusso: Sole segnala → Michela risponde su ProntoPro → se il lead non risponde → Michela
+detta i dati a Sole (`[[CREA_SCHEDA]]` + `[[CONTATTA_LEAD]]`) → WA con link webchat
+personalizzata → lead riconosciuto per nome. Template Meta `primo_contatto_lead` (Marketing,
+3 var). Tracciamento delivery/read dai webhook Meta = miglioria futura.
 
 ### 🗑️ ~~Cestino 30 giorni~~ ✅ FATTO (15/06/2026)
 ### 🔔 ~~Monitor portali lead~~ ✅ FATTO (15/06/2026) — `ardy-lead-monitor.php` + n8n ogni 60min
