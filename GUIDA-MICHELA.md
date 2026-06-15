@@ -37,7 +37,7 @@ Per aprire un cliente, **cliccaci sopra** nella lista a sinistra. La sua scheda 
   mostrano solo i clienti in quello stato, con la **legenda dei colori** (vedi sotto)
 
 ### 🚦 I pallini colorati accanto ai clienti
-Accanto ai lavori **in corso** (stati Acconto / In lavorazione) vedi un pallino e una scritta che
+Accanto ai lavori **in corso** (stati Acconto / In lavorazione / Completato) vedi un pallino e una scritta che
 ti dice "a colpo d'occhio" come sta il lavoro, in base alle **date** che hai messo:
 - 🟠 **Arancio — "sta per iniziare"**: l'inizio lavoro è entro 4 giorni (o oggi)
 - 🔴 **Rosso — "fine lavoro / in ritardo"**: la fine lavoro prevista è entro 4 giorni, oggi, o già passata
@@ -61,6 +61,9 @@ di adesso; **cliccalo** per aprire i bottoni e sceglierne un altro (poi ricordat
 | **SOPRALLUOGO** | Va fatto/è stato fissato un sopralluogo |
 | **PREVENTIVO** | Gli hai mandato (o stai facendo) un preventivo |
 | **ACCONTO** | Ha pagato l'acconto → il lavoro parte! |
+| **IN LAVORAZIONE** | Il lavoro è in corso in laboratorio |
+| **COMPLETATO** | Lavoro finito in bottega, da consegnare al cliente |
+| **CONSEGNATO** | Consegnato al cliente (scatta il ringraziamento) |
 | **STANDBY** | In pausa, da risentire più avanti |
 | **PERSO** | Trattativa chiusa senza accordo |
 
@@ -340,6 +343,59 @@ Per le diffide, una volta fattela controllare da un commercialista o avvocato.*
 
 💡 *I solleciti via WhatsApp partono anche se il cliente non ti ha scritto di recente
 (il modello approvato è già attivo). L'**email** è comunque sempre inclusa dal livello 2 in su.*
+
+---
+
+## 🗑️ 14. Cestino (eliminare e recuperare clienti)
+
+Quando vuoi togliere un cliente dalla lista, **non viene cancellato subito**: va nel **cestino**
+e ci resta per **30 giorni**. Se ti accorgi che ti serve, puoi ripristinarlo.
+
+**Come funziona:**
+1. Apri la scheda del cliente → clicca **🗑 Cestino** → conferma nel popup
+2. Il cliente sparisce dalla lista (ma non è cancellato)
+3. Per recuperarlo: clicca **🗑 CESTINO** nella colonna di sinistra (in basso)
+4. Si apre la lista dei cestinati con i **giorni rimasti** → clicca **↩ Ripristina**
+
+Se non lo ripristini entro 30 giorni, viene cancellato definitivamente in automatico
+(scheda, preventivi, fasi, foto e reel).
+
+Da lì puoi anche fare **✕ Elimina** per cancellarlo subito senza aspettare i 30 giorni
+(ti chiede di scrivere ELIMINA per sicurezza).
+
+---
+
+## 🔔 15. Monitor lead automatico (ProntoPro e altri portali)
+
+Il sistema controlla automaticamente **ogni ora** le email dei portali (ProntoPro, Homedeal,
+Cronoshare) sulla casella `ardy.documenti@gmail.com`.
+
+Quando arriva una richiesta interessante per te (restauro, verniciatura, laccatura in zona Roma),
+**ti arriva un WhatsApp** con il riepilogo:
+
+> 🔔 *ProntoPro*: Verniciatura tavolo · Roma, Grottaferrata ⭐⭐⭐⭐⭐
+
+Le richieste non pertinenti (montaggio Ikea, falegnameria generica, zone troppo lontane,
+tappezzeria) vengono scartate automaticamente. Tu valuti solo quelle buone.
+
+Non devi fare nulla per attivarlo: è già attivo e gira da solo.
+
+---
+
+## 📲 16. Contattare un lead da portale (tramite Sole su WhatsApp)
+
+Se hai acquistato un lead su ProntoPro e non ti risponde dalla chat del portale, puoi
+usare Sole per contattarlo direttamente via WhatsApp:
+
+1. **Scrivi a Sole** (dal tuo numero, su WhatsApp): "Sole, segna un cliente nuovo:
+   Mario Rossi, 333 1234567, vuole verniciare un tavolo, zona Grottaferrata"
+2. Sole ti ripete i dati e ti chiede conferma → dì **sì**
+3. La scheda viene creata nel CRM
+4. Poi dì a Sole: "contattalo" → Sole ti mostra cosa manderebbe e **aspetta il tuo OK**
+5. Confermi → parte un WhatsApp al lead con un link alla chat del sito
+
+Se il lead clicca il link, arriva nella chat di Sole che **lo riconosce già per nome** e
+sa cosa ha chiesto — non deve rispiegare tutto da capo.
 
 ---
 
