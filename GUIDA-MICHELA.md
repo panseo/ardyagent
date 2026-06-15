@@ -305,9 +305,8 @@ Tu non devi fare nulla per questi: lavorano da soli e ti portano i contatti già
 
 💡 **Sole ti avvisa su WhatsApp.** Quando arriva un nuovo contatto, viene fissato un
 sopralluogo, oppure un cliente segnala un reclamo, un problema di pagamento o una richiesta
-particolare, Sole ti manda **un messaggio WhatsApp di riepilogo**, come una segretaria. Per
-riceverli, **saluta Sole su WhatsApp ogni mattina**: basta un "ciao" e per tutta la giornata
-gli avvisi ti arrivano senza costi.
+particolare, Sole ti manda **un messaggio WhatsApp di riepilogo**, come una segretaria.
+Gli avvisi arrivano sempre, anche se non hai scritto a Sole di recente.
 
 ---
 
@@ -339,8 +338,8 @@ paga o la pratica si chiude.
 ⚠️ *Il **livello 4 (diffida)** non parte da solo: l'AI prepara la bozza, ma la invii tu a mano.
 Per le diffide, una volta fattela controllare da un commercialista o avvocato.*
 
-💡 *Per i solleciti via WhatsApp valgono le regole di WhatsApp: se il cliente non ti ha scritto
-di recente, serve un modello approvato (ci pensiamo noi quando serve). L'**email** funziona sempre.*
+💡 *I solleciti via WhatsApp partono anche se il cliente non ti ha scritto di recente
+(il modello approvato è già attivo). L'**email** è comunque sempre inclusa dal livello 2 in su.*
 
 ---
 

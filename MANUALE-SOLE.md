@@ -29,6 +29,7 @@ di Ardy Lab: i canali su cui lavora, le mansioni, le regole che segue e i suoi l
 | **WhatsApp** | Numero dedicato **+39 379 375 6437** | Chiunque scriva: lead, clienti, ex clienti |
 
 Su WhatsApp Sole capisce **con chi sta parlando** e si comporta di conseguenza (modalità):
+- **titolare** → è Michela: Sole fa da assistente personale, accede al CRM e risponde su lead/clienti/lavori;
 - **lead** → nuovo contatto, parte la qualifica;
 - **cliente** → cliente nel CRM senza lavorazione attiva, lo tratta con familiarità;
 - **cliente_lavorazione** → cliente con un lavoro in corso, gli dà aggiornamenti e contesto.
@@ -74,7 +75,7 @@ Come una segretaria, Sole avvisa Michela su WhatsApp quando succede qualcosa di 
 - un **sopralluogo** è stato fissato;
 - un cliente segnala un **reclamo**, un **problema di pagamento**, una **richiesta di modifica** o una **richiesta fuori standard**.
 
-> Le notifiche partono in modo gratuito se Michela ha scritto a Sole nelle ultime 24h (basta un saluto al mattino).
+> Le notifiche arrivano sempre, anche se Michela non ha scritto di recente (modello WhatsApp approvato attivo).
 
 ### 7. Creare una scheda cliente su dettatura di Michela (WhatsApp)
 Quando Michela detta a Sole un cliente nuovo (es. *«Sole, segnami Mario Rossi, 333 1234567, vuole rilaccare una credenza, zona Prati»*), Sole raccoglie i dati, **li rilegge e chiede conferma**, e solo dopo il "sì" crea la scheda nel CRM. Stessa scheda se Michela ridetta lo stesso telefono (niente doppioni). Per ora crea **solo la scheda cliente** (il preventivo si fa dalla dashboard).

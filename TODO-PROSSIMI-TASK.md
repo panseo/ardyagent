@@ -5,9 +5,9 @@
 
 ---
 
-## ▶️ RIPARTENZA
-Branch nuovo allineato a `main`; dopo ogni push, deploy col comando nelle NOTE OPERATIVE.
-Candidati pronti da costruire: **Cestino 30gg** · poi UX minori. Frozen/parcheggiati in fondo.
+## ▶️ STATO (15/06/2026)
+CRM in attività piena. WhatsApp Cloud API attivo, tutti i template approvati e collegati.
+Prossimi task per priorità: **Monitor ProntoPro** · **Funnel lead a pagamento** · **Cestino 30gg** · poi UX minori.
 
 ---
 
@@ -39,13 +39,16 @@ il layout/CSS del PDF, **bumpa `PDF_CACHE_VER`** per invalidare le cache esisten
 ---
 
 ## ⏳ DA VERIFICARE DAL VIVO / AZIONI MANUALI
+- ✅ **Template `ringraziamento_consegna`** testato (15/06/2026) con cliente fittizio + reinvio → WA arrivato.
+- **Template `aggiornamento_fase`** (4 var): pubblica una fase sul cliente fittizio con numero reale →
+  verifica che arrivi il WA con nome/mobile/fase/link correttamente compilati.
+- **Template `sollecito_pagamento`**: provare con un caso moroso vero (o fittizio).
 - **Dossier in Sole** (web: dare il codice in chat → risposta con contesto; WhatsApp: scrivere da
   numero registrato).
 - **Prompt caching titolare (WhatsApp)**: dal numero VERO di Michela ("come va oggi?") → Sole risponde
   con dati reali del CRM.
 - **"Sole crea scheda da WhatsApp"** (`[[CREA_SCHEDA]]`): end-to-end dal numero di Michela → "Scheda
   creata ✅" + scheda in dashboard (LEAD). Se errore: Executions del nodo Code in n8n.
-- **Template `sollecito_pagamento`**: provare con un caso moroso vero.
 - **FAQ lavorazione**: confermare il **rich result** col Google Rich Results Test sull'URL dell'articolo.
 - **Conoscenza di bottega di Sole** (`ardy-conoscenza-restauro.txt`): è una **v1** → Michela la rivede
   e la "ardy-izza" con le sue tecniche/parole. Prova dal vivo: chiedere a Sole cura del legno /
@@ -61,11 +64,9 @@ il layout/CSS del PDF, **bumpa `PDF_CACHE_VER`** per invalidare le cache esisten
   (Utility, 1 var). Codice di invio già implementato per tutti.
 - ✅ **`ardy-config.php` completo (15/06/2026)**: tutti e 4 i `WA_TEMPLATE_*` definiti + `WA_APP_SECRET`
   impostato (verifica firma webhook). Nessun collante mancante.
-- ⚠️ **Verifica conteggio variabili**: il codice si aspetta GRAZIE/SOLLECITO/NOTIFICA = **1 var**,
-  `aggiornamento_fase` = **4 var** ({{1}} nome · {{2}} mobile · {{3}} fase · {{4}} link). Se il body del
-  template ne ha un numero diverso → Meta rifiuta (err 132000/132018). Controllare soprattutto FASI.
-- 🧪 **Test da fare con Michela in piedi** (vedi DA VERIFICARE): cliente fittizio col **numero reale** di
-  chi riceve → CONSEGNATO (grazie) · pubblica fase (aggiornamento_fase) · caso moroso (sollecito).
+- ⚠️ **Verifica conteggio variabili `aggiornamento_fase`**: il codice manda **4 var** ({{1}} nome ·
+  {{2}} mobile · {{3}} fase · {{4}} link). Confermare che il body del template Meta abbia esattamente
+  4 variabili — se diverso Meta rifiuta (err 132000/132018). Verificare col test "pubblica fase" sopra.
 
 ---
 

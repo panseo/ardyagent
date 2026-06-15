@@ -623,6 +623,21 @@ permette il deploy push-button da cPanel (richiede Jailed Shell).
 
 ## 📝 Note sessioni
 
+**Giugno 2026 — Sessione 15/06 (attività piena, audit, template WA, ProntoPro)**
+- **CRM in attività piena**: WhatsApp Cloud API attivo, carta Meta inserita, tutti e 4 i template
+  approvati (`ringraziamento_consegna`, `aggiornamento_fase`, `sollecito_pagamento`, `notifica_michela`)
+  e collegati in `ardy-config.php` (`WA_TEMPLATE_*` + `WA_APP_SECRET`). Test `ringraziamento_consegna` OK.
+- **Audit performance** (`ardy-crea-reel.php`): confermato che la generazione reel è sincrona
+  (worker FPM bloccato fino a 10 min, download foto in serie, 5 passaggi I/O, caption API sincrona).
+  Bassa urgenza (uso singolo), registrato nel backlog performance con quick win e refactor asincrono.
+- **Audit sicurezza** (`ardy-crea-reel.php`): `escapeshellarg()` su tutti i parametri FFmpeg ✅,
+  sanitizzazione input ✅, SSRF via `ardySafeHttpGet` (con validazione host + redirect + protocolli) ✅.
+  Rischio residuo basso: prompt injection via `$mobile` nella caption — registrato nel backlog sicurezza.
+- **Progettazione Monitor ProntoPro + Funnel lead**: architettura completa nel TODO. Monitor: n8n ogni
+  60 min legge email Gmail ProntoPro, Claude classifica (zona max 30km, tipo lavoro), notifica Michela
+  su WA solo per lead ≥3/5. Funnel: Michela detta i dati a Sole su WA → scheda CRM → primo contatto
+  al lead con conferma obbligatoria di Michela + link webchat personalizzato + tracciamento esito.
+
 **Giugno 2026 — Sessione 14/06 sera (archivio, dossier, ringraziamento, single-social, fix WP)**
 - **Archivio implicito CONSEGNATI** + **🧹 Libera spazio** (`ardy-elimina-cliente.php` azione `libera_spazio`) + **rimozione stato `PAGATO`** (ridondante con CONSEGNATO; il "saldato" è il modulo MOROSI).
 - **Pubblicazione per singolo social**: toggle FB/IG in dashboard + nodo n8n "Meta" col gate `wantFB`/`wantIG` (vedi `ardy-pubblica-social-n8n.md`).
