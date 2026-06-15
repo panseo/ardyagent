@@ -79,7 +79,10 @@ il layout/CSS del PDF, **bumpa `PDF_CACHE_VER`** per invalidare le cache esisten
 Flusso: Sole segnala → Michela risponde su ProntoPro → se il lead non risponde → Michela
 detta i dati a Sole (`[[CREA_SCHEDA]]` + `[[CONTATTA_LEAD]]`) → WA con link webchat
 personalizzata → lead riconosciuto per nome. Template Meta `primo_contatto_lead` (Marketing,
-3 var). Tracciamento delivery/read dai webhook Meta = miglioria futura.
+3 var). **Bonus (15/06 sera):** se il lead risponde direttamente sul WhatsApp invece di
+cliccare il link, `ardy-wa-lookup.php` lo riconosce (`mode=lead_portale`, lookup su
+`primo_contatto_wa_at`) e Sole prosegue la conversazione lì senza riqualificare.
+Tracciamento delivery/read dai webhook Meta = miglioria futura.
 
 ### 🗑️ ~~Cestino 30 giorni~~ ✅ FATTO (15/06/2026)
 ### 🔔 ~~Monitor portali lead~~ ✅ FATTO (15/06/2026) — `ardy-lead-monitor.php` + n8n ogni 60min

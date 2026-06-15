@@ -394,8 +394,13 @@ usare Sole per contattarlo direttamente via WhatsApp:
 4. Poi dì a Sole: "contattalo" → Sole ti mostra cosa manderebbe e **aspetta il tuo OK**
 5. Confermi → parte un WhatsApp al lead con un link alla chat del sito
 
-Se il lead clicca il link, arriva nella chat di Sole che **lo riconosce già per nome** e
-sa cosa ha chiesto — non deve rispiegare tutto da capo.
+Da qui il lead ha **due strade**, entrambe funzionano:
+- **Risponde direttamente sul WhatsApp** → Sole continua la conversazione lì, lo riconosce
+  già per nome e sa cosa ha chiesto. È la strada più naturale.
+- **Clicca il link** → arriva nella chat del sito (webchat), Sole lo riconosce uguale e
+  riprende da dove ha lasciato.
+
+In entrambi i casi il lead **non deve rispiegare tutto da capo**.
 
 ---
 
