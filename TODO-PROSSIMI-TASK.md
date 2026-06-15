@@ -55,17 +55,17 @@ il layout/CSS del PDF, **bumpa `PDF_CACHE_VER`** per invalidare le cache esisten
 ---
 
 ## 🚧 BLOCCHI ESTERNI (azioni di Michela su Meta, non codice)
-- ✅ **Carta di credito su Meta inserita (15/06/2026)** → sbloccati i messaggi business→cliente **fuori
-  dalle 24h**. ⚠️ Necessario ma **non sufficiente**: ogni flusso richiede ancora il suo template Meta
-  **approvato** e definito in `ardy-config.php`. Stato template:
-  - `WA_TEMPLATE_GRAZIE` (ringraziamento alla consegna) → **attivo** ✅ → **testabile ora**.
-  - `WA_TEMPLATE_NOTIFICA` (notifica a Michela) → da creare/approvare + definire.
-  - `WA_TEMPLATE_SOLLECITO` (solleciti morosi) → da creare/approvare + definire.
-  - `WA_TEMPLATE_FASI` / `aggiornamento_fase` (4 var) → da creare/approvare + definire.
-  - 🧪 **Test da fare con Michela in piedi** (vedi DA VERIFICARE): cliente fittizio col **numero reale**
-    di chi riceve (Michela o numero di test) → passaggio a CONSEGNATO → arriva il WhatsApp di grazie.
-- **Template Meta `aggiornamento_fase`** (4 var) da creare/approvare, poi `define('WA_TEMPLATE_FASI', ...)`
-  in `ardy-config.php`. (Quello di ringraziamento è già attivo.)
+- ✅ **Carta di credito su Meta inserita (15/06/2026)** → sbloccati i messaggi business→cliente fuori dalle 24h.
+- ✅ **Template Meta tutti APPROVATI (15/06/2026)**: `ringraziamento_consegna` (Marketing, 1 var),
+  `aggiornamento_fase` (Utility, 4 var), `sollecito_pagamento` (Utility, 1 var), `notifica_michela`
+  (Utility, 1 var). Codice di invio già implementato per tutti.
+- ✅ **`ardy-config.php` completo (15/06/2026)**: tutti e 4 i `WA_TEMPLATE_*` definiti + `WA_APP_SECRET`
+  impostato (verifica firma webhook). Nessun collante mancante.
+- ⚠️ **Verifica conteggio variabili**: il codice si aspetta GRAZIE/SOLLECITO/NOTIFICA = **1 var**,
+  `aggiornamento_fase` = **4 var** ({{1}} nome · {{2}} mobile · {{3}} fase · {{4}} link). Se il body del
+  template ne ha un numero diverso → Meta rifiuta (err 132000/132018). Controllare soprattutto FASI.
+- 🧪 **Test da fare con Michela in piedi** (vedi DA VERIFICARE): cliente fittizio col **numero reale** di
+  chi riceve → CONSEGNATO (grazie) · pubblica fase (aggiornamento_fase) · caso moroso (sollecito).
 
 ---
 

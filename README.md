@@ -562,7 +562,7 @@ permette il deploy push-button da cPanel (richiede Jailed Shell).
 - [x] Prompt WhatsApp (`ardy-whatsapp-system.txt`, modalità Lead/Cliente/Cliente_lavorazione)
 - [x] Test end-to-end OK
 - [x] **Memoria conversazione** (storico per numero) — `ardy-wa-memoria.php` (tabella `wa_messaggi`); il nodo Code recupera lo storico, lo passa a Claude e salva la nuova coppia (sessione 7)
-- [ ] Impostare `WA_APP_SECRET` in `ardy-config.php` (verifica firma webhook)
+- [x] Impostare `WA_APP_SECRET` in `ardy-config.php` (verifica firma webhook)
 - [ ] Spostare token/chiavi dal nodo Code alle credenziali/variabili n8n
 - [ ] Gestire messaggi non testuali (foto inviate dal cliente)
 - [ ] **Inbox WhatsApp nella dashboard** — Michela legge le conversazioni Sole↔cliente (dati già in `wa_messaggi`), può mettere Sole **in pausa** per una chat, **rispondere manualmente** (invio via Cloud API, token in `ardy-config.php`) e riattivare Sole. Il nodo n8n deve controllare il flag di pausa prima di rispondere. NB: finestra 24h per i messaggi liberi.
