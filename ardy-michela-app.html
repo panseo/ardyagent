@@ -567,7 +567,7 @@ function renderList() {
     return matchFilter && matchSearch;
   });
 
-  document.getElementById('count').textContent = filtered.length;
+  const _cnt = document.getElementById('count'); if (_cnt) _cnt.textContent = filtered.length;
 
   // Contatore archivio (sempre visibile se ci sono lavori conclusi)
   const nArch = allLeads.filter(l => ARCHIVE_STATES.includes((l.Stato ?? '').toUpperCase())).length;
