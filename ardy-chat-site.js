@@ -31,6 +31,23 @@
     var suggestionsHidden   = false;
     var msgCount            = 0;
 
+    // ── LEAD DA PORTALE: link firmato ?lead=<session_id>&tok=<hmac16> ──
+    // Quando un lead clicca il link nel WhatsApp di primo contatto, la chat
+    // lo riconosce: carica nome + contesto dal server e parte con un saluto
+    // personalizzato, senza ripartire da zero.
+    var leadSessionId = null;
+    var leadToken     = null;
+    (function checkLeadLink() {
+        var params = new URLSearchParams(window.location.search);
+        var ls = params.get('lead');
+        var lt = params.get('tok');
+        if (ls && lt) {
+            leadSessionId = ls;
+            leadToken     = lt;
+            sessionId     = ls; // usa lo stesso session_id della scheda CRM
+        }
+    })();
+
     var welcomeEl  = document.getElementById('ac-welcome');
     var chatBodyEl = document.getElementById('ac-chat-body');
     var startBtn   = document.getElementById('ac-start-btn');
@@ -253,7 +270,9 @@
                     message:   text,
                     history:   conversationHistory,
                     images:    imagesToSend.map(function (i) { return { data: i.data, type: i.type }; }),
-                    sessionId: sessionId
+                    sessionId: sessionId,
+                    leadSessionId: leadSessionId || undefined,
+                    leadToken:     leadToken || undefined
                 })
             });
 
@@ -277,6 +296,16 @@
 
     if (sendBtn)  sendBtn.onclick = sendMessage;
     if (inputEl)  inputEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') sendMessage(); });
+
+    // ── Auto-start per lead da portale ──
+    // Salta la welcome screen e invia un messaggio invisibile che attiva il contesto.
+    if (leadSessionId && leadToken) {
+        if (welcomeEl) welcomeEl.style.display = 'none';
+        if (chatBodyEl) chatBodyEl.classList.add('visible');
+        // Messaggio automatico: il proxy riconosce leadSessionId e carica il contesto
+        inputEl.value = 'Ciao, ho ricevuto il vostro messaggio';
+        sendMessage();
+    }
 
     });
 })();

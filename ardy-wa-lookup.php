@@ -295,7 +295,20 @@ function ardy_wa_titolare_istruzioni(bool $datiSeparati): string {
         . "   Riempi solo i campi noti, lascia \"\" gli altri. JSON valido su UNA riga, niente code fence.\n"
         . "   Il marker viene intercettato dal sistema e rimosso prima di mostrare il messaggio: scrivi comunque una frase\n"
         . "   naturale di conferma per Michela (\"Fatto, scheda creata ✅\") PRIMA del marker.\n"
-        . "   NON usare il marker se Michela non ha ancora confermato, e non inventare dati che non ti ha dato.\n";
+        . "   NON usare il marker se Michela non ha ancora confermato, e non inventare dati che non ti ha dato.\n\n"
+        . "## CONTATTARE UN LEAD (primo messaggio WhatsApp al potenziale cliente)\n"
+        . "Dopo aver creato la scheda, Michela può chiederti di contattare il lead (es. \"contattalo\", \"mandagli un messaggio\",\n"
+        . "\"scrivi a Mario Rossi\"). In questo caso:\n"
+        . "1. Cerca il lead nei dati operativi (per nome/cognome) e trova il suo session_id (formato wa-XXXXXXXXXXXXXXXX).\n"
+        . "   Se non lo trovi, dì a Michela che non lo hai nei dati e chiedile il session_id o di precisare.\n"
+        . "2. Spiega a Michela cosa manderai: un WhatsApp di presentazione con un link alla chat del sito dove il lead\n"
+        . "   può raccontare i dettagli del lavoro a Sole. Mostra il concetto del messaggio (non il testo esatto, quello\n"
+        . "   è un template Meta fisso).\n"
+        . "3. ASPETTA la conferma esplicita di Michela. È un contatto a freddo: MAI mandare senza il suo OK.\n"
+        . "4. SOLO dopo il sì, termina il tuo messaggio con il marker:\n"
+        . "   [[CONTATTA_LEAD]]{\"session_id\":\"wa-XXXXXXXXXXXXXXXX\"}\n"
+        . "   Scrivi una frase naturale di conferma PRIMA del marker (\"Primo contatto inviato ✅\").\n"
+        . "   Il marker viene intercettato e rimosso come per [[CREA_SCHEDA]].\n";
 }
 
 // Documento di riferimento Ardy Lab (statico).

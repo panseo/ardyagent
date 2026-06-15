@@ -121,6 +121,24 @@ $images    = $input['images']    ?? [];
 $sessionId = $input['sessionId'] ?? 'unknown_' . time();
 $cleanSession = preg_replace('/[^a-zA-Z0-9_\-]/', '', $sessionId);
 
+// ── Lead da portale: link firmato ?lead=<sid>&tok=<hmac16> ──
+$leadSessionId = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string)($input['leadSessionId'] ?? ''));
+$leadToken     = (string)($input['leadToken'] ?? '');
+$leadContext    = null;
+if ($leadSessionId !== '' && $leadToken !== '') {
+    $expectedTok = substr(hash_hmac('sha256', $leadSessionId, WA_LOOKUP_SECRET), 0, 16);
+    if (hash_equals($expectedTok, $leadToken)) {
+        try {
+            $ldb = ardyDB();
+            $lstm = $ldb->prepare("SELECT nome, cognome, servizio, mobile, zona FROM clienti WHERE session_id = :sid AND deleted_at IS NULL LIMIT 1");
+            $lstm->execute([':sid' => $leadSessionId]);
+            $leadContext = $lstm->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log('ARDY PROXY LEAD CONTEXT: ' . $e->getMessage());
+        }
+    }
+}
+
 // -----------------------------------------------------------
 // RATE LIMIT PER SESSIONE
 // -----------------------------------------------------------
@@ -192,6 +210,24 @@ $system .= "\n\n## CODICE DI ACCESSO E STATO DEL LAVORO (tool cerca_cliente)\n\n
     . "- Se ti fornisce il suo **codice**, chiama `cerca_cliente` con quel codice e rispondi con i dati che ricevi (saluta per nome, riassumi lo stato, condividi l'eventuale link alla pagina del lavoro).\n"
     . "- Se NON ha un codice, **non** cercare per nome o telefono (sulla chat non è possibile per tutela della privacy). Invitalo a lasciare i suoi dati così gliene generiamo uno, oppure a contattare direttamente Ardy Lab.\n"
     . "Non inventare mai uno stato: riferisci solo ciò che il tool ti restituisce.\n";
+
+// ── Contesto lead da portale (link firmato) ──
+// Se il lead arriva dal link nel WhatsApp di primo contatto, ha già una scheda:
+// Sole lo saluta per nome e sa già cosa ha chiesto, senza ripartire da zero.
+if ($leadContext) {
+    $ln = trim(($leadContext['nome'] ?? '') . ' ' . ($leadContext['cognome'] ?? ''));
+    $ls = trim((string)($leadContext['servizio'] ?? ''));
+    $lm = trim((string)($leadContext['mobile'] ?? ''));
+    $lz = trim((string)($leadContext['zona'] ?? ''));
+    $system .= "\n\n## LEAD DA PORTALE — CONTESTO PRECARICATO\n"
+        . "Questo cliente arriva da un link che gli abbiamo mandato su WhatsApp dopo aver visto la sua richiesta su un portale (ProntoPro o simili). "
+        . "Ha già una scheda nel CRM. NON ripartire da zero con la qualifica: salutalo per nome, mostra che sai già cosa ha chiesto e prosegui da lì.\n";
+    if ($ln) $system .= "- Nome: {$ln}\n";
+    if ($ls) $system .= "- Servizio richiesto: {$ls}\n";
+    if ($lm) $system .= "- Mobile/oggetto: {$lm}\n";
+    if ($lz) $system .= "- Zona: {$lz}\n";
+    $system .= "Parti con un saluto caldo che mostra che lo conosci già, es: \"Ciao {$ln}! Ho visto la tua richiesta per {$ls}. Raccontami di più, così posso darti un'idea...\" e prosegui la qualifica da dove serve (foto, misure, sopralluogo).\n";
+}
 
 // Conoscenza di bottega (legno/restauro/cura): arricchisce il linguaggio e la competenza
 // di Sole. Sta in un file a sé (sapere ≠ regole) e resta DENTRO il blocco system cacheato
