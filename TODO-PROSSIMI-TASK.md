@@ -55,9 +55,15 @@ il layout/CSS del PDF, **bumpa `PDF_CACHE_VER`** per invalidare le cache esisten
 ---
 
 ## 🚧 BLOCCHI ESTERNI (azioni di Michela su Meta, non codice)
-- **Carta di credito su Meta** → sblocca i messaggi business→cliente **fuori dalle 24h** (template
-  fasi, `sollecito_pagamento`, `notifica_michela`). Senza, le notifiche proattive non partono. Michela
-  che scrive a Sole resta gratis. WhatsApp Manager → Fatturazione.
+- ✅ **Carta di credito su Meta inserita (15/06/2026)** → sbloccati i messaggi business→cliente **fuori
+  dalle 24h**. ⚠️ Necessario ma **non sufficiente**: ogni flusso richiede ancora il suo template Meta
+  **approvato** e definito in `ardy-config.php`. Stato template:
+  - `WA_TEMPLATE_GRAZIE` (ringraziamento alla consegna) → **attivo** ✅ → **testabile ora**.
+  - `WA_TEMPLATE_NOTIFICA` (notifica a Michela) → da creare/approvare + definire.
+  - `WA_TEMPLATE_SOLLECITO` (solleciti morosi) → da creare/approvare + definire.
+  - `WA_TEMPLATE_FASI` / `aggiornamento_fase` (4 var) → da creare/approvare + definire.
+  - 🧪 **Test da fare con Michela in piedi** (vedi DA VERIFICARE): cliente fittizio col **numero reale**
+    di chi riceve (Michela o numero di test) → passaggio a CONSEGNATO → arriva il WhatsApp di grazie.
 - **Template Meta `aggiornamento_fase`** (4 var) da creare/approvare, poi `define('WA_TEMPLATE_FASI', ...)`
   in `ardy-config.php`. (Quello di ringraziamento è già attivo.)
 
