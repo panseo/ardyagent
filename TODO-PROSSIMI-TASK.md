@@ -120,6 +120,16 @@ a "Sole" quando si tocca lo snippet in WPCode.
 - **`ardy-crm-api.php`**: `SELECT *` su `clienti` senza `LIMIT` → solo colonne usate + paginazione + indice.
 
 ### Da pianificare / decisi
+- **Reel async (`ardy-crea-reel.php`) — priorità media**. Oggi monta il video in **sincrono** dentro
+  la richiesta HTTP: `set_time_limit(600)` tiene un worker FPM occupato fino a 10 min, foto scaricate
+  in serie (fino a `MAX_FOTO=40`), I/O pesante (src→norm→clip→raw→final) e attesa API caption (60s) a
+  fine pipeline. Non urgente: lo usa **solo Michela** dalla dashboard (no concorrenza); diventa
+  prioritario se più utenti usano la dashboard o se compaiono **504**/"Errore nella finalizzazione del
+  reel". Refactor: job in **background** (`proc_open` detached) → risposta immediata con job-id +
+  **polling** dello stato dalla dashboard (tocca anche il JS). Quick win indipendenti, a basso rischio:
+  (1) eliminare i **2 download ridondanti** prima/dopo (righe ~206-217 ri-scaricano foto già prese nel
+  ciclo) riusando i file già scaricati; (2) **download paralleli** con `curl_multi`; (3) caption Claude
+  fuori dal path critico.
 - **Estrarre JS inline (~3.400 righe) dalla dashboard** in `ardy-michela-app.js` (CSS già esterno).
   Win di caching ma refactor delicato su HTML live → task a sé, da testare a fondo.
 - ❌ ~~Rate-limit su APCu/Redis~~ — scartato: dipende dal server, guadagno piccolo, rischio medio.

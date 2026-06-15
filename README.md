@@ -601,6 +601,14 @@ permette il deploy push-button da cPanel (richiede Jailed Shell).
 - [ ] Automatizzare deploy da GitHub al server (ora manuale via cPanel)
 - [ ] Deploy via git sul server
 
+### Performance
+- [ ] **Reel asincrono** (`ardy-crea-reel.php`, priorità media) — oggi monta il video in **sincrono**
+  nella richiesta HTTP (`set_time_limit(600)` occupa un worker FPM fino a 10 min, download foto in serie
+  fino a 40, I/O pesante src→norm→clip→raw→final, attesa API caption 60s). Non urgente (lo usa solo
+  Michela dalla dashboard, niente concorrenza); da fare se compaiono 504/timeout. → job in **background**
+  (`proc_open` detached) + **polling** stato dalla dashboard. Quick win a parte: rimuovere i 2 download
+  ridondanti prima/dopo, scaricare le foto in parallelo (`curl_multi`), caption fuori dal path critico.
+
 ### Dashboard / Lavorazioni
 - [x] **Caricamento video delle lavorazioni** — nelle fasi si possono caricare anche video (oltre alle foto). Upload multipart via `ardy-upload-video.php` → Media Library WP; incorporati come `<video>` nel post e salvati in `fasi.video_urls` (sessione 7)
 - [ ] Autenticare il dominio `ardy-lab.it` su Brevo (DKIM/SPF) ed evitare il mittente Gmail (deliverability)
