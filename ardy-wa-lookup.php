@@ -74,10 +74,11 @@ if ($ownerDigits !== '' && $last9 === substr($ownerDigits, -9)) {
 try {
     $db = ardyDB();
     $stmt = $db->prepare(
-        "SELECT session_id, nome, cognome, telefono, email, servizio, mobile, stato,
-                wp_post_id, wp_post_link
+        "SELECT session_id, nome, cognome, telefono, email, servizio, mobile, zona, stato,
+                wp_post_id, wp_post_link, primo_contatto_wa_at
            FROM clienti
           WHERE REPLACE(REPLACE(REPLACE(REPLACE(telefono,' ',''),'+',''),'-',''),'.','') LIKE :p
+            AND deleted_at IS NULL
        ORDER BY updated_at DESC, id DESC
           LIMIT 1"
     );
@@ -347,6 +348,26 @@ function ardy_wa_system_prompt(string $mode, ?array $cliente): string {
     } else {
         $ctx .= "cliente: (nessuno — nuovo contatto)\n";
     }
+
+    // Lead da portale: Sole lo riconosce già e continua la conversazione senza riqualificare.
+    if ($mode === 'lead_portale' && $cliente) {
+        $ln = trim((string)($cliente['nome'] ?? ''));
+        $ls = trim((string)($cliente['servizio'] ?? ''));
+        $lm = trim((string)($cliente['mobile'] ?? ''));
+        $lz = trim((string)($cliente['zona'] ?? ''));
+        $ctx .= "\n## LEAD DA PORTALE — CONTESTO PRECARICATO\n"
+            . "Questo cliente ha risposto al tuo WhatsApp di presentazione (arrivava da un portale tipo ProntoPro). "
+            . "Ha già una scheda nel CRM. NON ripartire da zero con la qualifica: salutalo per nome, "
+            . "mostra che sai già cosa ha chiesto e prosegui la conversazione da lì.\n"
+            . "Sei su WhatsApp: risposte brevi e dirette, niente HTML o markdown complesso.\n";
+        if ($ln) $ctx .= "- Nome: {$ln}\n";
+        if ($ls) $ctx .= "- Servizio richiesto: {$ls}\n";
+        if ($lm) $ctx .= "- Mobile/oggetto: {$lm}\n";
+        if ($lz) $ctx .= "- Zona: {$lz}\n";
+        $ctx .= "Obiettivo: qualificarlo completamente (foto, misure, stato del pezzo, budget indicativo, sopralluogo) "
+            . "così Michela ha tutto per fare un preventivo.\n";
+    }
+
     $doc = $base . ($conoscenza !== '' ? "\n\n---\n" . $conoscenza : '');
     return $wrap . $ctx . "\n" . $doc;
 }
@@ -362,8 +383,18 @@ if (!$row) {
     exit();
 }
 
-$hasLavorazione = !empty($row['wp_post_id']);
-$mode = $hasLavorazione ? 'cliente_lavorazione' : 'cliente';
+$hasLavorazione   = !empty($row['wp_post_id']);
+$hasPrimoContatto = !empty($row['primo_contatto_wa_at']);
+
+// Priorità: se il lavoro è avviato è già un cliente a pieno titolo;
+// altrimenti, se gli abbiamo già inviato il template di primo contatto, è un lead da portale.
+if ($hasLavorazione) {
+    $mode = 'cliente_lavorazione';
+} elseif ($hasPrimoContatto) {
+    $mode = 'lead_portale';
+} else {
+    $mode = 'cliente';
+}
 
 // Ultima fase pubblicata (contesto per la modalità cliente_lavorazione)
 $ultimaFase = null;
@@ -385,6 +416,7 @@ $clienteOut = [
     'email'        => $row['email'] ?? '',
     'servizio'     => $row['servizio'] ?? '',
     'mobile'       => $row['mobile'] ?? '',
+    'zona'         => $row['zona'] ?? '',
     'stato'        => $row['stato'] ?? '',
     'wp_post_link' => $row['wp_post_link'] ?? '',
     'ultima_fase'  => $ultimaFase,
