@@ -183,6 +183,7 @@
               <div class="info-label">Fasi previste dal sopralluogo <small style="color:var(--text-dim);font-size:9px;">(dalla libreria)</small></div>
               <div id="notTemplateChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
               <button type="button" class="btn-secondary" style="width:100%;" onclick="generaFasiDaTemplate()">📐 Genera fasi da template selezionati</button>
+              <div id="notaSenzaFasiHint" style="display:none;font-size:11px;color:#c8a96e;margin-top:8px;">📐 C'è una nota ma nessuna fase è stata ancora generata — scegli i template quando hai deciso con calma.</div>
             </div>
             <div class="info-cell anag-field">
               <div class="info-label">Data followup</div>
@@ -555,6 +556,13 @@ async function loadLeads() {
 // Semaforo lavorazione: pallino + testo in base alle date (regola dei 4 gg).
 // Solo per stati operativi; gli altri non hanno segnale.
 const SEG_COLORI = { red:'#e05c5c', orange:'#e08a3c', green:'#4caf72', yellow:'#d8b23c' };
+// Stati in cui ha senso ricordare "c'è una nota ma nessuna fase generata ancora"
+// (esclude LEAD/STANDBY/PERSO/CONSEGNATO, dove le note non riguardano le fasi).
+const FASI_BADGE_STATES = ['SOPRALLUOGO','PREVENTIVO','ACCONTO','IN_LAVORAZIONE','COMPLETATO'];
+function notaSenzaFasi(l) {
+  const stato = (l.Stato || '').toUpperCase();
+  return FASI_BADGE_STATES.includes(stato) && (l.Note || '').trim() !== '' && !l.ha_fasi;
+}
 function faseSegnale(l) {
   const stato = (l.Stato || '').toUpperCase();
   const ini = l.Inizio_lavoro || '';
@@ -628,6 +636,7 @@ function renderList() {
       <div class="lead-nome" style="display:flex;align-items:center;">${dot}<span>${escHtml(l.Nome)} ${escHtml(l.Cognome)}</span></div>
       <div class="lead-meta">
         <span class="stato-badge stato-${(l.Stato??'LEAD').toUpperCase().replace(/[^A-Z]/g,'')}">${escHtml(l.Stato ?? 'LEAD')}</span>
+        ${notaSenzaFasi(l) ? '<span class="stato-badge" style="background:rgba(200,169,110,.18);color:#c8a96e;" title="Nota di sopralluogo senza fasi generate">📐 da pianificare</span>' : ''}
         <span class="lead-zona">${escHtml(l.Zona)}</span>
         ${segLabel}
       </div>
@@ -713,6 +722,8 @@ function renderDetail() {
   notaTemplateSel.clear();
   renderNoteTemplateChips();
   if (!libLoadedOnce) { libLoadedOnce = true; libLoadRemote().then(renderNoteTemplateChips); }
+  const hintEl = document.getElementById('notaSenzaFasiHint');
+  if (hintEl) hintEl.style.display = notaSenzaFasi(l) ? 'block' : 'none';
   document.getElementById('dDataFollowup').value    = l.Data_followup ?? '';
   document.getElementById('dInizioLavoro').value        = l.Inizio_lavoro ?? '';
   document.getElementById('dFineLavoroPrevista').value  = l.Fine_lavoro_prevista ?? '';
@@ -1473,6 +1484,11 @@ async function generaFasiDaTemplate() {
     renderNoteTemplateChips();
     showToast(`✓ ${data.bozze.length} fasi pre-compilate — modificale e pubblicale dal pannello Lavorazione`, 'success');
     caricaFasiBozza(currentLead.Session_ID);
+    if (data.bozze.length) {
+      currentLead.ha_fasi = true;
+      document.getElementById('notaSenzaFasiHint').style.display = 'none';
+      renderList();
+    }
   } catch(e) {
     showToast('⚠ Errore: ' + e.message, 'error');
   }
@@ -1650,6 +1666,12 @@ async function pubblicaFase(tipo) {
       // Se questa pubblicazione veniva da una bozza, ricarica la lista (ora più corta)
       faseBozzaIdInCorso = null;
       caricaFasiBozza(currentLead.Session_ID ?? '');
+      if (!currentLead.ha_fasi) {
+        currentLead.ha_fasi = true;
+        const hintEl = document.getElementById('notaSenzaFasiHint');
+        if (hintEl) hintEl.style.display = 'none';
+        renderList();
+      }
     } else {
       showToast('⚠ Errore: ' + (data.error ?? 'sconosciuto'), 'error');
     }
