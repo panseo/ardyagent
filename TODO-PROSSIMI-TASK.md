@@ -169,8 +169,6 @@ a "Sole" quando si tocca lo snippet in WPCode.
 
 ## ⚡ BACKLOG PERFORMANCE
 ### Alto impatto / basso sforzo (aperti)
-- **Ricerca telefono full-scan** (`ardy-wa-lookup.php`, `ardy-proxy.php`): `REPLACE(...) LIKE '%...'`
-  impedisce gli indici → colonna `telefono_last9` normalizzata + indice, match esatto.
 - **DDL su ogni request** (`SHOW COLUMNS`/`ALTER`/`CREATE TABLE IF NOT EXISTS` in vari endpoint):
   spostare in una migrazione one-shot, togliere dal path di richiesta.
 - **`ardy-crm-api.php`**: `SELECT *` su `clienti` senza `LIMIT` → solo colonne usate + paginazione + indice.
