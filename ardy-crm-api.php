@@ -13,7 +13,7 @@ header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
 
-function ardy_map_cliente(array $r, bool $withDeletedAt = false): array {
+function ardy_map_cliente(array $r, bool $withDeletedAt = false, bool $haFasi = false): array {
     $out = [
         'Session_ID'    => $r['session_id']    ?? '',
         'Nome'          => $r['nome']           ?? '',
@@ -36,6 +36,9 @@ function ardy_map_cliente(array $r, bool $withDeletedAt = false): array {
         'faq_pubblicata_at'  => $r['faq_pubblicata_at']  ?? '',
         'created_at'    => $r['created_at']     ?? '',
         'updated_at'    => $r['updated_at']     ?? '',
+        // Vero se esiste già almeno una fase (bozza o pubblicata) per questo cliente:
+        // usato in dashboard per il badge "nota senza fasi generate".
+        'ha_fasi'       => $haFasi,
     ];
     if ($withDeletedAt) {
         $out['deleted_at'] = $r['deleted_at'] ?? '';
@@ -67,10 +70,18 @@ try {
     }
 
     // ── Lista normale (esclusi i cestinati) ────────────────
+    // Una sola query aggregata per sapere quali clienti hanno già almeno una
+    // fase (bozza o pubblicata), evitando una query per cliente.
+    $fasiMap = [];
+    try {
+        $fr = $db->query("SELECT session_id, COUNT(*) AS c FROM fasi GROUP BY session_id")->fetchAll();
+        foreach ($fr as $row) { $fasiMap[$row['session_id']] = ((int) $row['c']) > 0; }
+    } catch (PDOException $e) { /* tabella fasi non ancora creata: nessun cliente ha fasi */ }
+
     $rows = $db->query(
         "SELECT * FROM clienti WHERE deleted_at IS NULL ORDER BY updated_at DESC"
     )->fetchAll();
-    echo json_encode(array_map(fn($r) => ardy_map_cliente($r), $rows));
+    echo json_encode(array_map(fn($r) => ardy_map_cliente($r, false, $fasiMap[$r['session_id']] ?? false), $rows));
 
 } catch (PDOException $e) {
     error_log('ARDY CRM API ERROR: ' . $e->getMessage());
