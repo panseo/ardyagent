@@ -46,6 +46,12 @@ il layout/CSS del PDF, **bumpa `PDF_CACHE_VER`** per invalidare le cache esisten
 ---
 
 ## ⏳ DA VERIFICARE DAL VIVO / AZIONI MANUALI
+- **Fasi bozza da template libreria + badge "da pianificare"** (deployato 16/06/2026, da testare dal vivo):
+  1. Badge "📐 da pianificare" in lista e in scheda su un cliente con nota ma senza fasi.
+  2. Nel box Note, selezionare 1-2 chip template e generare le bozze → toast di conferma, badge che scompare.
+  3. Pannello Lavorazione → sezione "Fasi previste": "✎ Modifica e pubblica" precompila il form, "✕" elimina la bozza.
+  4. Pubblicare una bozza modificata → deve uscire dalla lista bozze e comparire come fase pubblicata.
+  5. Widget pubblico lato cliente: deve mostrare SOLO le fasi pubblicate, mai le bozze.
 - ✅ **Template `ringraziamento_consegna`** testato (15/06/2026) con cliente fittizio + reinvio → WA arrivato.
 - **Template `aggiornamento_fase`** (4 var): pubblica una fase sul cliente fittizio con numero reale →
   verifica che arrivi il WA con nome/mobile/fase/link correttamente compilati.
