@@ -20,7 +20,7 @@ define('PDF_OUTPUT_DIR', __DIR__ . '/preventivi_pdf/');
 define('LOGO_PATH',      __DIR__ . '/assets/logo.png');
 // Versione della cache PDF: da bumpare se cambia il layout/CSS del PDF, così le
 // cache content-hash esistenti vengono invalidate al primo render successivo.
-define('PDF_CACHE_VER', '2026-06-16b');
+define('PDF_CACHE_VER', '2026-06-16c');
 
 if (!is_dir(PDF_OUTPUT_DIR) && !mkdir(PDF_OUTPUT_DIR, 0755, true) && !is_dir(PDF_OUTPUT_DIR)) {
     http_response_code(500);
@@ -683,11 +683,11 @@ table.firma-t { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
 .firma-line-r { width: 48%; float: right; border-top: 1.5px solid #888; padding-top: 6px; font-size: 9pt; color: #666; text-align: center; margin-top: 32px; }
 
 /* GRAZIE */
-.grazie-page { background: #7bb8d4; padding: 50px 40px 40px; text-align: center; }
+.grazie-page { background: #fff; padding: 50px 40px 40px; text-align: center; }
 .grazie-logo-wrap { margin-bottom: 14px; }
-.grazie-logo-img { width: 110px; height: auto; }
-.grazie-h { font-size: 90pt; font-weight: 700; color: #000; line-height: 1; margin-bottom: 36px; letter-spacing: 2px; }
-.grazie-msg { text-align: left; font-size: 12.5pt; line-height: 1.8; color: #1a3a4a; max-width: 150mm; margin: 0 auto 44px; }
+.grazie-logo-img { width: 90px; height: auto; }
+.grazie-h { font-size: 72pt; font-weight: 700; color: #000; line-height: 1; margin-bottom: 28px; letter-spacing: 2px; }
+.grazie-msg { text-align: left; font-size: 12.5pt; line-height: 1.7; color: #1a3a4a; max-width: 150mm; margin: 0 auto 30px; padding: 0 30px; }
 .grazie-msg p { margin-bottom: 14px; }
 .grazie-addr { font-size: 9pt; color: #1a3a4a; line-height: 1.7; text-decoration: underline; }
 .grazie-web { font-size: 9pt; color: #1a3a4a; line-height: 1.9; }
