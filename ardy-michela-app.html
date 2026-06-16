@@ -1344,7 +1344,13 @@ async function generaContenuto() {
 
   const cfg    = modalConfig[currentAction];
   const extra  = document.getElementById('modalPrompt').value;
-  const prompt = cfg.prompt(ctx) + (extra ? `\n\nIstruzioni aggiuntive: ${extra}` : '');
+  let prompt = cfg.prompt(ctx) + (extra ? `\n\nIstruzioni aggiuntive: ${extra}` : '');
+  // Questo testo finisce com'è (anche nel corpo di una email/WA al cliente):
+  // niente commenti o suggerimenti di Sole mischiati dentro, solo il
+  // contenuto richiesto, racchiuso tra marker così lo isoliamo qui sotto.
+  if (currentAction !== 'note_interne') {
+    prompt += `\n\nIMPORTANTE: rispondi SOLO con il testo finale da usare (sarà inviato così com'è al cliente). Nessun saluto o commento per chi te lo ha chiesto, nessun suggerimento, nessuna spiegazione prima o dopo. Racchiudi il testo esattamente tra i marker [[TESTO]] e [[/TESTO]].`;
+  }
 
   try {
     const res  = await fetch(AI_URL, {
@@ -1357,8 +1363,11 @@ async function generaContenuto() {
       })
     });
     const data = await res.json();
+    let reply = data.reply ?? 'Errore nella generazione.';
+    const m = reply.match(/\[\[TESTO\]\]([\s\S]*?)\[\[\/TESTO\]\]/);
+    if (m) reply = m[1].trim();
     const result = document.getElementById('modalResult');
-    result.textContent = data.reply ?? 'Errore nella generazione.';
+    result.textContent = reply;
     result.classList.add('visible');
   } catch(e) {
     document.getElementById('modalResult').textContent = '⚠ Errore di rete.';
