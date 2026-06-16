@@ -20,7 +20,7 @@ define('PDF_OUTPUT_DIR', __DIR__ . '/preventivi_pdf/');
 define('LOGO_PATH',      __DIR__ . '/assets/logo.png');
 // Versione della cache PDF: da bumpare se cambia il layout/CSS del PDF, così le
 // cache content-hash esistenti vengono invalidate al primo render successivo.
-define('PDF_CACHE_VER', '2026-06-16c');
+define('PDF_CACHE_VER', '2026-06-16e');
 
 if (!is_dir(PDF_OUTPUT_DIR) && !mkdir(PDF_OUTPUT_DIR, 0755, true) && !is_dir(PDF_OUTPUT_DIR)) {
     http_response_code(500);
@@ -670,17 +670,17 @@ table.costi td { padding: 7px 10px; border: 1px solid #ddd; font-size: 10pt; }
 
 /* FIRMA */
 .firma-h { font-size: 16pt; font-weight: 700; text-align: center; margin-bottom: 16px; }
-.firma-intro { font-size: 12pt; margin-bottom: 18px; }
-table.firma-t { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+.firma-intro { font-size: 12pt; margin-bottom: 12px; }
+table.firma-t { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
 .fl { font-weight: 700; font-size: 8.5pt; padding: 7px 10px 7px 0; width: 120px; color: #555; text-transform: uppercase; }
 .fv { border-bottom: 1px solid #ccc; padding: 7px 0; font-size: 10pt; }
-.validita { font-size: 12pt; font-weight: 700; margin-top: 16px; padding: 10px 14px; background: #f5f5f5; border-left: 4px solid #111; }
-.privacy-h { font-size: 11pt; font-weight: 700; margin: 22px 0 6px; }
+.validita { font-size: 12pt; font-weight: 700; margin-top: 12px; padding: 8px 14px; background: #f5f5f5; border-left: 4px solid #111; }
+.privacy-h { font-size: 11pt; font-weight: 700; margin: 16px 0 6px; }
 .privacy-p { font-size: 7.8pt; line-height: 1.5; color: #444; text-align: justify; margin-bottom: 6px; }
-.privacy-consent { font-size: 11pt; line-height: 1.5; margin-top: 12px; padding: 10px 12px; border: 1px solid #111; }
+.privacy-consent { font-size: 11pt; line-height: 1.5; margin-top: 8px; padding: 8px 12px; border: 1px solid #111; }
 .privacy-box { display: inline-block; width: 11px; height: 11px; border: 1.5px solid #111; margin-right: 7px; vertical-align: middle; }
-.firma-line-l { width: 48%; float: left; border-top: 1.5px solid #888; padding-top: 6px; font-size: 9pt; color: #666; text-align: center; margin-top: 32px; }
-.firma-line-r { width: 48%; float: right; border-top: 1.5px solid #888; padding-top: 6px; font-size: 9pt; color: #666; text-align: center; margin-top: 32px; }
+.firma-line-l { width: 48%; float: left; border-top: 1.5px solid #888; padding-top: 6px; font-size: 9pt; color: #666; text-align: center; margin-top: 22px; }
+.firma-line-r { width: 48%; float: right; border-top: 1.5px solid #888; padding-top: 6px; font-size: 9pt; color: #666; text-align: center; margin-top: 22px; }
 
 /* GRAZIE */
 .grazie-page { background: #fff; padding: 50px 40px 40px; text-align: center; }
