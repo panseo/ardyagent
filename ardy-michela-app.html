@@ -179,11 +179,13 @@
               </div>
               <textarea class="info-value editable" id="dNote" rows="6" oninput="markDirty()"></textarea>
             </div>
-            <div class="info-cell">
+            <div class="info-cell anag-field">
               <div class="info-label">Data followup</div>
               <input type="date" class="info-value editable" id="dDataFollowup" oninput="markDirty()" style="width:100%;">
             </div>
-            <div class="info-cell">
+            <!-- Session ID: dato tecnico (per Sole/n8n), non utile in dashboard.
+                 Resta nel DOM perché il JS lo popola (rimuoverlo romperebbe il riempimento). -->
+            <div class="info-cell" style="display:none;">
               <div class="info-label">Session ID</div>
               <div class="info-value" id="dSessionId" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-dim);">—</div>
             </div>
