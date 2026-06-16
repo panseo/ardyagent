@@ -71,7 +71,8 @@ if ($mode === 'stato') {
     exit;
 }
 
-// ─── Elimina preventivo (solo BOZZA) — POST + header custom (anti-CSRF) ──────────
+// ─── Elimina preventivo (qualunque stato — pulizia di doppioni/allegati sbagliati)
+// POST + header custom (anti-CSRF). Rimuove anche il PDF su disco, se presente.
 if ($mode === 'delete') {
     header('Content-Type: application/json');
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -84,9 +85,20 @@ if ($mode === 'delete') {
     $id = intval($_POST['id'] ?? 0);
     if (!$id) { http_response_code(400); echo json_encode(['error' => 'id mancante']); exit; }
     $db   = dbConnect();
-    $stmt = $db->prepare("DELETE FROM preventivi WHERE id=? AND stato='bozza'");
+    $get  = $db->prepare("SELECT file_pdf FROM preventivi WHERE id=?");
+    $get->bind_param('i', $id);
+    $get->execute();
+    $row  = $get->get_result()->fetch_assoc();
+
+    $stmt = $db->prepare("DELETE FROM preventivi WHERE id=?");
     $stmt->bind_param('i', $id);
     $stmt->execute();
+
+    if ($stmt->affected_rows && !empty($row['file_pdf'])) {
+        $path = PDF_OUTPUT_DIR . basename($row['file_pdf']);
+        if (is_file($path)) @unlink($path);
+    }
+
     echo json_encode(['success' => true, 'deleted' => $stmt->affected_rows]);
     exit;
 }

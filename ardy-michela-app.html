@@ -3205,9 +3205,7 @@ function renderStoricoPrev(preventivi) {
             : (p.stato === 'bozza'
                 ? `<button class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="modificaPreventivo(${p.id})">✏️ Modifica</button>`
                 : `<span title="Definitivo: non modificabile" style="font-size:11px;color:var(--muted);padding:4px 6px;">🔒</span>`)}
-          ${p.stato === 'bozza'
-            ? `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;" title="Elimina bozza" onclick="eliminaPreventivo(${p.id})">🗑</button>`
-            : ''}
+          <button class="btn-secondary" style="padding:4px 8px;font-size:11px;" title="Elimina" onclick="eliminaPreventivo(${p.id}, ${p.stato === 'bozza'})">🗑</button>
           ${p.file_pdf ? `<button class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="scaricaPrevDB('${p.file_pdf}')">⬇ PDF</button>` : ''}
           ${p.file_pdf ? `<button class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="apriEmailPerPreventivo(${p.id})">📤 Invia email</button>` : ''}
         </div>
@@ -3406,9 +3404,13 @@ async function creaBozzeDaPreventivo() {
   }
 }
 
-// Elimina una bozza (es. per ripulire eventuali doppioni). Solo bozze.
-async function eliminaPreventivo(id) {
-  if (!confirm('Eliminare questa bozza di preventivo? L\'operazione è definitiva.')) return;
+// Elimina un preventivo dallo Storico (es. PDF caricato per errore, doppione,
+// allegato non più utile) — qualunque stato, rimuove anche il PDF su disco.
+async function eliminaPreventivo(id, eraBozza) {
+  const msg = eraBozza
+    ? 'Eliminare questa bozza di preventivo? L\'operazione è definitiva.'
+    : '⚠ Questo preventivo non è una bozza (è già stato inviato/gestito). Eliminarlo comunque? L\'operazione è definitiva e rimuove anche il PDF allegato.';
+  if (!confirm(msg)) return;
   try {
     const res  = await fetch(PREV_API + '?mode=delete', {
       method: 'POST',
@@ -3417,7 +3419,7 @@ async function eliminaPreventivo(id) {
     });
     const data = await res.json();
     if (data.success) {
-      showToast(data.deleted ? '✓ Bozza eliminata' : 'Niente da eliminare (non è una bozza)', data.deleted ? 'success' : 'error');
+      showToast(data.deleted ? '✓ Eliminato' : 'Niente da eliminare', data.deleted ? 'success' : 'error');
       caricaStoricoPrev(pvCurrentSessionId || (currentLead?.Session_ID ?? ''));
     } else {
       showToast('⚠ ' + (data.error || 'Errore eliminazione'), 'error');
