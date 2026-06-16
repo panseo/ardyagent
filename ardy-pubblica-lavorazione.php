@@ -43,6 +43,7 @@ $wpPostId     = !empty($input['wp_post_id']) ? (int)$input['wp_post_id'] : null;
 $faseId       = !empty($input['fase_id'])    ? (int)$input['fase_id']    : null; // se presente: pubblica una bozza esistente invece di crearne una nuova
 $immagini     = $input['immagini']   ?? [];
 $videoUrls    = $input['video_urls'] ?? [];   // URL video già caricati via ardy-upload-video.php
+$prezzo       = parseImportoLavorazione((string)($input['prezzo'] ?? '')); // dato interno, non va al cliente
 
 // Tipo di pubblicazione: 'fase' (avanzamento normale) o 'comunicazione' (comunicazione straordinaria)
 $tipo = ($input['tipo'] ?? 'fase') === 'comunicazione' ? 'comunicazione' : 'fase';
@@ -327,7 +328,7 @@ try {
         // invece di crearne una nuova, mantenendo il suo "ordine" di lavoro.
         $db->prepare(
             "UPDATE fasi SET fase_nome=:fase, fase_tipo=:tipo, testo_breve=:breve, testo_generato=:generato,
-                foto_urls=:foto, video_urls=:video, stato='pubblicata'
+                foto_urls=:foto, video_urls=:video, stato='pubblicata', prezzo=:prezzo
              WHERE id=:id AND session_id=:sid"
         )->execute([
             ':fase'     => $faseNome,
@@ -336,11 +337,12 @@ try {
             ':generato' => $testoGenerato,
             ':foto'     => json_encode($savedImageUrls),
             ':video'    => json_encode($videoUrlsClean),
+            ':prezzo'   => $prezzo,
             ':id'       => $faseId,
             ':sid'      => $sessionId,
         ]);
     } else {
-        $db->prepare("INSERT INTO fasi (session_id, fase_nome, fase_tipo, testo_breve, testo_generato, foto_urls, video_urls) VALUES (:sid, :fase, :tipo, :breve, :generato, :foto, :video)")
+        $db->prepare("INSERT INTO fasi (session_id, fase_nome, fase_tipo, testo_breve, testo_generato, foto_urls, video_urls, prezzo) VALUES (:sid, :fase, :tipo, :breve, :generato, :foto, :video, :prezzo)")
            ->execute([
                ':sid'      => $sessionId,
                ':fase'     => $faseNome,
@@ -349,6 +351,7 @@ try {
                ':generato' => $testoGenerato,
                ':foto'     => json_encode($savedImageUrls),
                ':video'    => json_encode($videoUrlsClean),
+               ':prezzo'   => $prezzo,
            ]);
     }
 } catch (PDOException $e) {
@@ -390,6 +393,21 @@ echo json_encode([
 // ============================================================
 // FUNZIONI
 // ============================================================
+
+/** "350,00" / "350.00" → float, oppure null se vuoto/non numerico. */
+function parseImportoLavorazione(string $s): ?float {
+    $s = trim($s);
+    if ($s === '') return null;
+    $s = preg_replace('/[^\d,.\-]/', '', $s);
+    if ($s === '') return null;
+    if (strpos($s, ',') !== false && strpos($s, '.') !== false) {
+        if (strrpos($s, ',') > strrpos($s, '.')) { $s = str_replace('.', '', $s); $s = str_replace(',', '.', $s); }
+        else { $s = str_replace(',', '', $s); }
+    } elseif (strpos($s, ',') !== false) {
+        $s = str_replace(',', '.', $s);
+    }
+    return is_numeric($s) ? (float)$s : null;
+}
 
 function generaTestoFase(string $noteBrevi, string $faseNome, string $mobile): string {
     $prompt = "Sei un esperto restauratore di mobili antichi che scrive aggiornamenti per i clienti. 

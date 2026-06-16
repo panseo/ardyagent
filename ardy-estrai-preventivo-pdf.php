@@ -59,9 +59,11 @@ function estraiPreventivo(): array {
         . "(es. Sverniciatura, Carteggiatura, Laccatura, Restauro ferramenta, Trasporto). "
         . "Rispondi ESCLUSIVAMENTE con un oggetto JSON valido, senza testo prima o dopo, senza code fence. "
         . "Chiavi obbligatorie: oggetto (string, breve), totale (string col formato \"1450,00\", stringa vuota "
-        . "se non c'è un totale chiaro), fasi (ARRAY di oggetti {\"nome\":..., \"descrizione\":...}, uno per "
-        . "ogni voce/lavorazione distinta elencata nel preventivo; 'nome' breve, max 6 parole; 'descrizione' "
-        . "il dettaglio della voce se presente, altrimenti stringa vuota). "
+        . "se non c'è un totale chiaro), fasi (ARRAY di oggetti {\"nome\":..., \"descrizione\":..., \"prezzo\":...}, "
+        . "uno per ogni voce/lavorazione distinta elencata nel preventivo; 'nome' breve, max 6 parole; 'descrizione' "
+        . "il dettaglio della voce se presente, altrimenti stringa vuota; 'prezzo' SOLO se il documento elenca un "
+        . "importo specifico per QUELLA voce (string formato \"350,00\"), altrimenti stringa vuota — non dedurre "
+        . "un prezzo dividendo il totale). "
         . "Non inventare voci che non sono nel documento. Se non trovi nessuna fase, 'fasi' è un array vuoto.";
 
     $messages = [[
@@ -86,10 +88,11 @@ function estraiPreventivo(): array {
     if (!empty($dati['fasi']) && is_array($dati['fasi'])) {
         foreach ($dati['fasi'] as $f) {
             if (!is_array($f)) continue;
-            $nome  = trim((string)($f['nome'] ?? ''));
-            $descr = trim((string)($f['descrizione'] ?? ''));
+            $nome   = trim((string)($f['nome'] ?? ''));
+            $descr  = trim((string)($f['descrizione'] ?? ''));
+            $prezzo = parseImportoEstrai((string)($f['prezzo'] ?? ''));
             if ($nome === '' && $descr === '') continue;
-            $fasi[] = ['nome' => $nome ?: $descr, 'descrizione' => $descr];
+            $fasi[] = ['nome' => $nome ?: $descr, 'descrizione' => $descr, 'prezzo' => $prezzo];
         }
     }
 
@@ -143,6 +146,21 @@ function callAnthropicDocEstrai(array $messages, string $system, string $apiKey)
         if (($block['type'] ?? '') === 'text') $text .= $block['text'];
     }
     return ['ok' => true, 'text' => $text];
+}
+
+/** "1.450,00" / "1450.00" → float, oppure null se vuoto/non numerico. */
+function parseImportoEstrai(string $s): ?float {
+    $s = trim($s);
+    if ($s === '') return null;
+    $s = preg_replace('/[^\d,.\-]/', '', $s);
+    if ($s === '') return null;
+    if (strpos($s, ',') !== false && strpos($s, '.') !== false) {
+        if (strrpos($s, ',') > strrpos($s, '.')) { $s = str_replace('.', '', $s); $s = str_replace(',', '.', $s); }
+        else { $s = str_replace(',', '', $s); }
+    } elseif (strpos($s, ',') !== false) {
+        $s = str_replace(',', '.', $s);
+    }
+    return is_numeric($s) ? (float)$s : null;
 }
 
 /** Estrae il primo oggetto JSON da un testo (tollera code fence/testo extra). */

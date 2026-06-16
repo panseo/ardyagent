@@ -25,24 +25,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit();
 // Inserisce N bozze (nome + testo_breve) per un cliente, in coda all'ordine
 // esistente. Condiviso dai modi 'genera' (da libreria) e 'genera_custom'
 // (da voci libere, es. estratte da un PDF).
+/** Accetta sia un numero (già float, dall'estrazione AI) sia una stringa "1.450,00" / "350,00". */
+function ardyParseImportoFase($v): ?float {
+    if (is_numeric($v)) return (float) $v;
+    if (!is_string($v) || trim($v) === '') return null;
+    $s = preg_replace('/[^\d,.\-]/', '', trim($v));
+    if ($s === '') return null;
+    if (strpos($s, ',') !== false && strpos($s, '.') !== false) {
+        if (strrpos($s, ',') > strrpos($s, '.')) { $s = str_replace('.', '', $s); $s = str_replace(',', '.', $s); }
+        else { $s = str_replace(',', '', $s); }
+    } elseif (strpos($s, ',') !== false) {
+        $s = str_replace(',', '.', $s);
+    }
+    return is_numeric($s) ? (float) $s : null;
+}
+
 function ardyInserisciBozzeFasi(PDO $db, string $sessionId, array $items): array {
     $stOrd = $db->prepare("SELECT COALESCE(MAX(ordine),0) FROM fasi WHERE session_id = ?");
     $stOrd->execute([$sessionId]);
     $ordine = (int) $stOrd->fetchColumn();
 
     $ins = $db->prepare(
-        "INSERT INTO fasi (session_id, fase_nome, fase_tipo, testo_breve, testo_generato, foto_urls, video_urls, stato, ordine)
-         VALUES (:sid, :nome, 'fase', :breve, '', '[]', '[]', 'bozza', :ordine)"
+        "INSERT INTO fasi (session_id, fase_nome, fase_tipo, testo_breve, testo_generato, foto_urls, video_urls, stato, ordine, prezzo)
+         VALUES (:sid, :nome, 'fase', :breve, '', '[]', '[]', 'bozza', :ordine, :prezzo)"
     );
 
     $bozze = [];
     foreach ($items as $it) {
-        $nome  = trim((string) ($it['nome']  ?? ''));
-        $breve = trim((string) ($it['breve'] ?? ''));
+        $nome   = trim((string) ($it['nome']  ?? ''));
+        $breve  = trim((string) ($it['breve'] ?? ''));
+        $prezzo = ardyParseImportoFase($it['prezzo'] ?? null);
         if ($nome === '') continue;
         $ordine++;
-        $ins->execute([':sid' => $sessionId, ':nome' => $nome, ':breve' => $breve, ':ordine' => $ordine]);
-        $bozze[] = ['id' => (int) $db->lastInsertId(), 'fase_nome' => $nome, 'testo_breve' => $breve, 'ordine' => $ordine];
+        $ins->execute([':sid' => $sessionId, ':nome' => $nome, ':breve' => $breve, ':ordine' => $ordine, ':prezzo' => $prezzo]);
+        $bozze[] = ['id' => (int) $db->lastInsertId(), 'fase_nome' => $nome, 'testo_breve' => $breve, 'ordine' => $ordine, 'prezzo' => $prezzo];
     }
     return $bozze;
 }
@@ -55,7 +71,7 @@ try {
         $sessionId = preg_replace('/[^a-zA-Z0-9_\-]/', '', $_GET['session_id'] ?? '');
         if ($sessionId === '') { echo json_encode([]); exit(); }
         $stmt = $db->prepare(
-            "SELECT id, fase_nome, testo_breve, ordine, created_at FROM fasi
+            "SELECT id, fase_nome, testo_breve, ordine, prezzo, created_at FROM fasi
              WHERE session_id = ? AND stato = 'bozza' ORDER BY ordine ASC, created_at ASC"
         );
         $stmt->execute([$sessionId]);
@@ -104,7 +120,11 @@ try {
         $items = [];
         foreach ($fasiInput as $f) {
             if (!is_array($f)) continue;
-            $items[] = ['nome' => $f['nome'] ?? '', 'breve' => $f['descrizione'] ?? ($f['testo_breve'] ?? '')];
+            $items[] = [
+                'nome'   => $f['nome'] ?? '',
+                'breve'  => $f['descrizione'] ?? ($f['testo_breve'] ?? ''),
+                'prezzo' => $f['prezzo'] ?? null,
+            ];
         }
 
         echo json_encode(['success' => true, 'bozze' => ardyInserisciBozzeFasi($db, $sessionId, $items)]);

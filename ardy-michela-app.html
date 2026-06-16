@@ -298,6 +298,9 @@
                 <input class="lav-input" id="lavFase" placeholder="Nome fase (es. Sverniciatura)">
                 <input class="lav-input" id="lavMobile" placeholder="Mobile (es. Credenza anni 60)">
               </div>
+              <div class="lav-row">
+                <input class="lav-input" id="lavPrezzo" placeholder="Prezzo fase (interno, es. 350,00)" inputmode="decimal">
+              </div>
               <textarea class="lav-textarea" id="lavNote" placeholder="Scrivi 2-3 righe su cosa hai fatto — Claude le espande in testo professionale..."></textarea>
               <div class="lav-foto-buttons">
                 <label class="lav-foto-btn" for="lavFotoCamera">
@@ -1675,7 +1678,7 @@ async function caricaFasiBozza(sessionId) {
     fasiBozzaCache = bozze;
     cont.innerHTML = bozze.map(b => `
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px dashed var(--border);border-radius:6px;padding:8px 10px;margin-bottom:6px;">
-        <span style="font-size:13px;">${escHtml(b.fase_nome)}</span>
+        <span style="font-size:13px;">${escHtml(b.fase_nome)}${b.prezzo ? ` <span style="color:var(--text-dim);">— € ${parseFloat(b.prezzo).toLocaleString('it-IT', {minimumFractionDigits:2})}</span>` : ''}</span>
         <span style="display:flex;gap:6px;flex-shrink:0;">
           <button type="button" class="lib-btn-edit" onclick="modificaFaseBozza(${b.id})">✎ Modifica e pubblica</button>
           <button type="button" class="lib-btn-del" onclick="eliminaFaseBozza(${b.id})" title="Elimina">✕</button>
@@ -1692,6 +1695,7 @@ function modificaFaseBozza(id) {
   faseBozzaIdInCorso = b.id;
   document.getElementById('lavFase').value = b.fase_nome   || '';
   document.getElementById('lavNote').value = b.testo_breve || '';
+  document.getElementById('lavPrezzo').value = b.prezzo ? String(b.prezzo).replace('.', ',') : '';
   const body = document.getElementById('nuovaFaseBody');
   if (body) body.style.display = 'block';
   document.getElementById('lavFase').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1754,6 +1758,7 @@ async function pubblicaFase(tipo) {
   const fase  = document.getElementById('lavFase').value.trim();
   const note  = document.getElementById('lavNote').value.trim();
   const mobile = document.getElementById('lavMobile').value.trim() || (currentLead.Mobile ?? '');
+  const prezzo = document.getElementById('lavPrezzo').value.trim();
 
   // Per la fase serve il nome fase; per la comunicazione l'oggetto è facoltativo
   if (!note || (!isCom && !fase)) {
@@ -1775,6 +1780,7 @@ async function pubblicaFase(tipo) {
     fase_nome:   fase,
     note_brevi:  note,
     mobile:      mobile,
+    prezzo:      prezzo,
     email:       currentLead.Email    ?? '',
     nome:        `${currentLead.Nome ?? ''} ${currentLead.Cognome ?? ''}`.trim(),
     wp_post_id:  lavWpPostId,
@@ -1807,6 +1813,7 @@ async function pubblicaFase(tipo) {
       // Reset form
       document.getElementById('lavFase').value  = '';
       document.getElementById('lavNote').value  = '';
+      document.getElementById('lavPrezzo').value = '';
       document.getElementById('lavPreview').innerHTML = '';
       lavImmagini = [];
       aggiornaContatoreFoto();
@@ -3348,17 +3355,22 @@ function renderAllegaFasiEstratte() {
   const cont = document.getElementById('allega-fasi-list');
   if (!allegaFasiEstratte.length) { wrap.style.display = 'none'; cont.innerHTML = ''; return; }
   cont.innerHTML = allegaFasiEstratte.map((f, i) => `
-    <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;margin-bottom:6px;cursor:pointer;">
-      <input type="checkbox" id="allega-fase-chk-${i}" checked style="margin-top:2px;">
-      <span><b>${escHtml(f.nome)}</b>${f.descrizione ? ' — ' + escHtml(f.descrizione) : ''}</span>
-    </label>
+    <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;margin-bottom:6px;">
+      <label style="display:flex;align-items:flex-start;gap:8px;flex:1;cursor:pointer;">
+        <input type="checkbox" id="allega-fase-chk-${i}" checked style="margin-top:2px;">
+        <span><b>${escHtml(f.nome)}</b>${f.descrizione ? ' — ' + escHtml(f.descrizione) : ''}</span>
+      </label>
+      <input type="text" id="allega-fase-prezzo-${i}" value="${f.prezzo != null ? String(f.prezzo).replace('.', ',') : ''}" placeholder="€ prezzo" style="width:90px;flex-shrink:0;font-size:11px;padding:3px 6px;">
+    </div>
   `).join('');
   wrap.style.display = 'block';
 }
 
 async function creaBozzeDaPreventivo() {
   if (!currentLead || !currentLead.Session_ID) { showToast('⚠ Seleziona prima un cliente', 'error'); return; }
-  const fasi = allegaFasiEstratte.filter((f, i) => document.getElementById(`allega-fase-chk-${i}`)?.checked);
+  const fasi = allegaFasiEstratte
+    .map((f, i) => ({ ...f, prezzo: document.getElementById(`allega-fase-prezzo-${i}`)?.value.trim() || null, __i: i }))
+    .filter(f => document.getElementById(`allega-fase-chk-${f.__i}`)?.checked);
   if (!fasi.length) { showToast('⚠ Seleziona almeno una fase', 'error'); return; }
   try {
     const res  = await fetch(FASI_BOZZA_URL, {
