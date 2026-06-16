@@ -31,4 +31,7 @@ function ardyEnsureFasiStatoOrdine(PDO $db): void {
     if (!$db->query("SHOW COLUMNS FROM fasi LIKE 'ordine'")->fetch()) {
         $db->exec("ALTER TABLE fasi ADD COLUMN ordine INT NULL AFTER stato");
     }
+    if (!$db->query("SHOW COLUMNS FROM fasi LIKE 'prezzo'")->fetch()) {
+        $db->exec("ALTER TABLE fasi ADD COLUMN prezzo DECIMAL(10,2) NULL AFTER ordine");
+    }
 }

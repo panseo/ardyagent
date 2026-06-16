@@ -298,6 +298,9 @@
                 <input class="lav-input" id="lavFase" placeholder="Nome fase (es. Sverniciatura)">
                 <input class="lav-input" id="lavMobile" placeholder="Mobile (es. Credenza anni 60)">
               </div>
+              <div class="lav-row">
+                <input class="lav-input" id="lavPrezzo" placeholder="Prezzo fase (interno, es. 350,00)" inputmode="decimal">
+              </div>
               <textarea class="lav-textarea" id="lavNote" placeholder="Scrivi 2-3 righe su cosa hai fatto — Claude le espande in testo professionale..."></textarea>
               <div class="lav-foto-buttons">
                 <label class="lav-foto-btn" for="lavFotoCamera">
@@ -422,6 +425,28 @@
     <div class="modal-title" id="modalTitle">GENERA</div>
     <textarea id="modalPrompt" placeholder="Aggiungi istruzioni specifiche (opzionale)..."></textarea>
     <div class="modal-result" id="modalResult"></div>
+
+    <!-- Solo per l'azione "Email cliente": invio/bozza con allegato PDF -->
+    <div id="modalEmailExtra" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:12px;">
+      <div class="dark-field full" style="margin-bottom:8px;">
+        <label>Destinatario</label>
+        <input type="email" id="emailDestinatario" placeholder="mario@email.it">
+      </div>
+      <div class="dark-field full" style="margin-bottom:8px;">
+        <label>Allega preventivo già presente nello Storico (opzionale)</label>
+        <select id="emailPreventivoSel"><option value="">— nessuno —</option></select>
+      </div>
+      <div class="dark-field full" style="margin-bottom:8px;">
+        <label>...oppure carica un nuovo PDF</label>
+        <input type="file" id="emailPdfNuovo" accept="application/pdf">
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn-secondary" id="btnSalvaBozzaEmail" onclick="salvaEmailBozza()">💾 SALVA IN BOZZA</button>
+        <button class="btn-save" id="btnInviaEmail" onclick="inviaEmailCliente()">📤 INVIA AL CLIENTE</button>
+      </div>
+      <div id="emailBozzeList" style="margin-top:12px;"></div>
+    </div>
+
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal()">ANNULLA</button>
       <button class="btn-save" id="btnGenera" onclick="generaContenuto()">GENERA CON AI</button>
@@ -441,6 +466,7 @@ const AI_URL          = BASE_URL + '/ardy-proxy.php';
 const LAVORAZIONE_URL = BASE_URL + '/ardy-pubblica-lavorazione.php';
 const FASI_BOZZA_URL  = BASE_URL + '/ardy-fasi-bozza-api.php';
 const SOCIAL_URL      = BASE_URL + '/ardy-pubblica-social.php';
+const EMAIL_CLIENTE_URL = BASE_URL + '/ardy-email-cliente-api.php';
 const REEL_URL        = BASE_URL + '/ardy-crea-reel.php';
 const FAQ_URL         = BASE_URL + '/ardy-crea-faq.php';
 const REEL_PUB_URL    = BASE_URL + '/ardy-pubblica-reel.php';
@@ -1190,6 +1216,19 @@ function openModal(action) {
   document.getElementById('modalResult').textContent = '';
   document.getElementById('btnGenera').textContent = 'GENERA CON AI';
   document.getElementById('btnGenera').disabled = false;
+
+  const extra = document.getElementById('modalEmailExtra');
+  if (action === 'email') {
+    extra.style.display = 'block';
+    document.getElementById('emailDestinatario').value = currentLead.Email ?? '';
+    document.getElementById('emailPdfNuovo').value = '';
+    emailBozzaIdInCorso = null;
+    caricaPreventiviPerAllegato(currentLead.Session_ID ?? '');
+    caricaEmailBozze(currentLead.Session_ID ?? '');
+  } else {
+    extra.style.display = 'none';
+  }
+
   document.getElementById('modalOverlay').classList.add('open');
 }
 
@@ -1299,6 +1338,132 @@ async function generaContenuto() {
 
   btn.disabled = false;
   btn.textContent = 'RIGENERA';
+}
+
+// ─── EMAIL CLIENTE: invio / bozza con allegato PDF ─────────
+// Il testo viene generato sopra con l'AI (generaContenuto); qui si gestisce
+// solo l'invio vero e proprio (o il salvataggio come bozza per dopo), con
+// l'eventuale allegato di un preventivo PDF già nello Storico o appena caricato.
+let emailBozzaIdInCorso = null;
+let emailBozzeCache     = [];
+
+async function caricaPreventiviPerAllegato(sessionId) {
+  const sel = document.getElementById('emailPreventivoSel');
+  sel.innerHTML = '<option value="">— nessuno —</option>';
+  if (!sessionId) return;
+  try {
+    const res  = await fetch(PREV_API + '?mode=lista&session_id=' + encodeURIComponent(sessionId));
+    const data = await res.json();
+    (Array.isArray(data) ? data : []).filter(p => p.file_pdf).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.file_pdf;
+      opt.textContent = `${p.numero} — ${p.oggetto || p.tipo || ''}`;
+      sel.appendChild(opt);
+    });
+  } catch (e) { /* select facoltativo: in caso di errore resta solo "nessuno" */ }
+}
+
+async function caricaEmailBozze(sessionId) {
+  const cont = document.getElementById('emailBozzeList');
+  cont.innerHTML = '';
+  emailBozzeCache = [];
+  if (!sessionId) return;
+  try {
+    const r = await fetch(EMAIL_CLIENTE_URL + '?session_id=' + encodeURIComponent(sessionId));
+    const bozze = await r.json();
+    if (!Array.isArray(bozze) || !bozze.length) return;
+    emailBozzeCache = bozze;
+    cont.innerHTML = '<div style="font-size:11px;color:#aaa;margin-bottom:6px;">Bozze salvate:</div>' + bozze.map(b => `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px dashed var(--border);border-radius:6px;padding:8px 10px;margin-bottom:6px;">
+        <span style="font-size:12px;">${escHtml(b.oggetto || '(senza oggetto)')}</span>
+        <span style="display:flex;gap:6px;flex-shrink:0;">
+          <button type="button" class="lib-btn-edit" onclick="caricaBozzaEmailNelModale(${b.id})">✎ Carica</button>
+          <button type="button" class="lib-btn-del" onclick="eliminaEmailBozza(${b.id})" title="Elimina">✕</button>
+        </span>
+      </div>
+    `).join('');
+  } catch (e) { /* lista facoltativa: in caso di errore resta nascosta */ }
+}
+
+function caricaBozzaEmailNelModale(id) {
+  const b = emailBozzeCache.find(x => x.id === id);
+  if (!b) return;
+  emailBozzaIdInCorso = b.id;
+  document.getElementById('emailDestinatario').value = b.destinatario || (currentLead.Email ?? '');
+  document.getElementById('modalResult').textContent = b.testo || '';
+  document.getElementById('modalResult').classList.add('visible');
+  showToast('✎ Bozza caricata: modifica e premi INVIA o SALVA IN BOZZA', '');
+}
+
+async function eliminaEmailBozza(id) {
+  if (!confirm('Eliminare questa bozza email?')) return;
+  try {
+    const res  = await fetch(EMAIL_CLIENTE_URL, { method: 'POST', body: new URLSearchParams({ mode: 'delete', id }) });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Errore');
+    if (emailBozzaIdInCorso === id) emailBozzaIdInCorso = null;
+    caricaEmailBozze(currentLead.Session_ID ?? '');
+  } catch (e) {
+    showToast('⚠ Errore eliminazione: ' + e.message, 'error');
+  }
+}
+
+function buildEmailFormData() {
+  const fd = new FormData();
+  fd.append('session_id', currentLead.Session_ID ?? '');
+  fd.append('destinatario', document.getElementById('emailDestinatario').value.trim());
+  fd.append('oggetto', modalConfig[currentAction].title);
+  fd.append('testo', document.getElementById('modalResult').textContent || '');
+  if (emailBozzaIdInCorso) fd.append('bozza_id', emailBozzaIdInCorso);
+  const preventivoFile = document.getElementById('emailPreventivoSel').value;
+  if (preventivoFile) fd.append('preventivo_file', preventivoFile);
+  const pdfNuovo = document.getElementById('emailPdfNuovo').files[0];
+  if (pdfNuovo) fd.append('pdf', pdfNuovo);
+  return fd;
+}
+
+async function salvaEmailBozza() {
+  if (!currentLead || !currentLead.Session_ID) { showToast('⚠ Seleziona prima un cliente', 'error'); return; }
+  if (!document.getElementById('modalResult').textContent.trim()) { showToast('⚠ Genera prima il testo con AI', 'error'); return; }
+  const fd = buildEmailFormData();
+  fd.append('mode', 'salva_bozza');
+  const btn = document.getElementById('btnSalvaBozzaEmail');
+  btn.disabled = true; btn.textContent = '⏳ SALVO…';
+  try {
+    const res  = await fetch(EMAIL_CLIENTE_URL, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Errore');
+    emailBozzaIdInCorso = data.id;
+    showToast('✓ Bozza salvata', 'success');
+    caricaEmailBozze(currentLead.Session_ID);
+  } catch (e) {
+    showToast('⚠ Errore: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 SALVA IN BOZZA';
+  }
+}
+
+async function inviaEmailCliente() {
+  if (!currentLead || !currentLead.Session_ID) { showToast('⚠ Seleziona prima un cliente', 'error'); return; }
+  if (!document.getElementById('modalResult').textContent.trim()) { showToast('⚠ Genera prima il testo con AI', 'error'); return; }
+  if (!document.getElementById('emailDestinatario').value.trim()) { showToast('⚠ Indica un destinatario', 'error'); return; }
+  if (!confirm('Inviare questa email al cliente?')) return;
+  const fd = buildEmailFormData();
+  fd.append('mode', 'invia');
+  const btn = document.getElementById('btnInviaEmail');
+  btn.disabled = true; btn.textContent = '⏳ INVIO…';
+  try {
+    const res  = await fetch(EMAIL_CLIENTE_URL, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Errore');
+    showToast('✓ Email inviata al cliente', 'success');
+    emailBozzaIdInCorso = null;
+    closeModal();
+  } catch (e) {
+    showToast('⚠ Errore invio: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '📤 INVIA AL CLIENTE';
+  }
 }
 
 // ─── LAVORAZIONI ──────────────────────────────────────────
@@ -1513,7 +1678,7 @@ async function caricaFasiBozza(sessionId) {
     fasiBozzaCache = bozze;
     cont.innerHTML = bozze.map(b => `
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px dashed var(--border);border-radius:6px;padding:8px 10px;margin-bottom:6px;">
-        <span style="font-size:13px;">${escHtml(b.fase_nome)}</span>
+        <span style="font-size:13px;">${escHtml(b.fase_nome)}${b.prezzo ? ` <span style="color:var(--text-dim);">— € ${parseFloat(b.prezzo).toLocaleString('it-IT', {minimumFractionDigits:2})}</span>` : ''}</span>
         <span style="display:flex;gap:6px;flex-shrink:0;">
           <button type="button" class="lib-btn-edit" onclick="modificaFaseBozza(${b.id})">✎ Modifica e pubblica</button>
           <button type="button" class="lib-btn-del" onclick="eliminaFaseBozza(${b.id})" title="Elimina">✕</button>
@@ -1530,6 +1695,7 @@ function modificaFaseBozza(id) {
   faseBozzaIdInCorso = b.id;
   document.getElementById('lavFase').value = b.fase_nome   || '';
   document.getElementById('lavNote').value = b.testo_breve || '';
+  document.getElementById('lavPrezzo').value = b.prezzo ? String(b.prezzo).replace('.', ',') : '';
   const body = document.getElementById('nuovaFaseBody');
   if (body) body.style.display = 'block';
   document.getElementById('lavFase').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1592,6 +1758,7 @@ async function pubblicaFase(tipo) {
   const fase  = document.getElementById('lavFase').value.trim();
   const note  = document.getElementById('lavNote').value.trim();
   const mobile = document.getElementById('lavMobile').value.trim() || (currentLead.Mobile ?? '');
+  const prezzo = document.getElementById('lavPrezzo').value.trim();
 
   // Per la fase serve il nome fase; per la comunicazione l'oggetto è facoltativo
   if (!note || (!isCom && !fase)) {
@@ -1613,6 +1780,7 @@ async function pubblicaFase(tipo) {
     fase_nome:   fase,
     note_brevi:  note,
     mobile:      mobile,
+    prezzo:      prezzo,
     email:       currentLead.Email    ?? '',
     nome:        `${currentLead.Nome ?? ''} ${currentLead.Cognome ?? ''}`.trim(),
     wp_post_id:  lavWpPostId,
@@ -1645,6 +1813,7 @@ async function pubblicaFase(tipo) {
       // Reset form
       document.getElementById('lavFase').value  = '';
       document.getElementById('lavNote').value  = '';
+      document.getElementById('lavPrezzo').value = '';
       document.getElementById('lavPreview').innerHTML = '';
       lavImmagini = [];
       aggiornaContatoreFoto();
@@ -2932,17 +3101,20 @@ if (pvValutaEl) pvValutaEl.addEventListener('change', () => pvRenderOpzioni());
 
 const PREV_API = '/ardy-preventivo.php';
 
+let storicoPrevCache = [];
+
 async function caricaStoricoPrev(sessionId) {
   const list = document.getElementById('storicoPrevList');
   if (!list) return;
-  if (!sessionId) { list.innerHTML = ''; return; }
+  if (!sessionId) { list.innerHTML = ''; storicoPrevCache = []; return; }
 
   list.innerHTML = '<div class="storico-empty">CARICAMENTO...</div>';
 
   try {
     const res  = await fetch(PREV_API + '?mode=lista&session_id=' + encodeURIComponent(sessionId));
     const data = await res.json();
-    renderStoricoPrev(data);
+    storicoPrevCache = Array.isArray(data) ? data : [];
+    renderStoricoPrev(storicoPrevCache);
   } catch(e) {
     list.innerHTML = '<div class="storico-empty">Errore caricamento storico.</div>';
   }
@@ -2959,6 +3131,7 @@ function renderStoricoPrev(preventivi) {
   list.innerHTML = preventivi.map(p => {
     const totale = p.grand_total ? '€ ' + parseFloat(p.grand_total).toLocaleString('it-IT', {minimumFractionDigits:2}) : '—';
     const oggetto = p.oggetto || p.tipo || '—';
+    const isAllegato = p.tipo === 'Preventivo (allegato)';
     return `<div class="storico-prev-item">
       <div class="storico-prev-info">
         <div class="storico-prev-numero">${escHtml(p.numero)}</div>
@@ -2973,11 +3146,16 @@ function renderStoricoPrev(preventivi) {
               `<option value="${k}" ${k===p.stato?'selected':''}>${v}</option>`
             ).join('')}
           </select>
+          ${isAllegato
+            ? `<button class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="modificaAllegato(storicoPrevCache.find(x=>x.id===${p.id}))">✏️ Modifica</button>`
+            : (p.stato === 'bozza'
+                ? `<button class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="modificaPreventivo(${p.id})">✏️ Modifica</button>`
+                : `<span title="Definitivo: non modificabile" style="font-size:11px;color:var(--muted);padding:4px 6px;">🔒</span>`)}
           ${p.stato === 'bozza'
-            ? `<button class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="modificaPreventivo(${p.id})">✏️ Modifica</button>
-               <button class="btn-secondary" style="padding:4px 8px;font-size:11px;" title="Elimina bozza" onclick="eliminaPreventivo(${p.id})">🗑</button>`
-            : `<span title="Definitivo: non modificabile" style="font-size:11px;color:var(--muted);padding:4px 6px;">🔒</span>`}
+            ? `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;" title="Elimina bozza" onclick="eliminaPreventivo(${p.id})">🗑</button>`
+            : ''}
           ${p.file_pdf ? `<button class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="scaricaPrevDB('${p.file_pdf}')">⬇ PDF</button>` : ''}
+          ${p.file_pdf ? `<button class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="inviaPreventivoEmail(${p.id})">📤 Invia email</button>` : ''}
         </div>
       </div>
     </div>`;
@@ -3005,9 +3183,56 @@ function scaricaPrevDB(file) {
   window.open(PREV_API + '?mode=download&file=' + encodeURIComponent(file), '_blank');
 }
 
+// Invia per email (con PDF già nello Storico in allegato) un preventivo esistente.
+async function inviaPreventivoEmail(id) {
+  if (!currentLead) { showToast('⚠ Seleziona prima un cliente', 'error'); return; }
+  const p = storicoPrevCache.find(x => x.id === id);
+  if (!p || !p.file_pdf) { showToast('⚠ Preventivo non trovato', 'error'); return; }
+  const destinatario = currentLead.Email ?? '';
+  if (!destinatario) { showToast('⚠ Il cliente non ha un indirizzo email', 'error'); return; }
+
+  const nome = ((currentLead.Nome ?? '') + ' ' + (currentLead.Cognome ?? '')).trim() || 'cliente';
+  const oggetto = p.oggetto || p.numero || 'Preventivo';
+  const testoDefault = `Ciao ${nome},\n\nin allegato trovi il preventivo richiesto.\n\nResto a disposizione per qualsiasi chiarimento.\n\nArdy Lab`;
+  const testo = prompt('Testo email al cliente:', testoDefault);
+  if (testo === null) return; // annullato
+
+  if (!confirm(`Invio il preventivo "${oggetto}" a ${destinatario}?`)) return;
+
+  const fd = new FormData();
+  fd.append('mode', 'invia');
+  fd.append('session_id', currentLead.Session_ID ?? '');
+  fd.append('destinatario', destinatario);
+  fd.append('oggetto', oggetto);
+  fd.append('testo', testo);
+  fd.append('preventivo_file', p.file_pdf);
+
+  try {
+    const res  = await fetch(EMAIL_CLIENTE_URL, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!data.success) { showToast('⚠ ' + (data.error || 'Invio non riuscito'), 'error'); return; }
+    showToast('✓ Email inviata al cliente', 'success');
+    if (p.stato === 'bozza') {
+      try {
+        await fetch(PREV_API + '?mode=stato', {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          body: new URLSearchParams({ id: id, stato: 'inviato' })
+        });
+      } catch (e) {}
+    }
+    caricaStoricoPrev(currentLead.Session_ID ?? '');
+  } catch (e) {
+    showToast('⚠ Errore di rete durante l\'invio', 'error');
+  }
+}
+
 // ── Allega un preventivo PDF già pronto allo Storico ──────────────
+let allegaEditId = null; // id del preventivo allegato in modifica, null = nuovo allegato
+
 function openAllegaPanel() {
   if (!currentLead) { showToast('⚠ Seleziona prima un cliente', 'error'); return; }
+  allegaEditId = null;
   const nome = ((currentLead.Nome ?? '') + ' ' + (currentLead.Cognome ?? '')).trim() || 'questo cliente';
   document.getElementById('allega-cliente').textContent = nome;
   document.getElementById('allega-file').value = '';
@@ -3019,6 +3244,31 @@ function openAllegaPanel() {
   allegaFasiEstratte = [];
   document.getElementById('allega-fasi-estratte').style.display = 'none';
   document.getElementById('allega-fasi-list').innerHTML = '';
+  document.getElementById('allega-estrai-btn').style.display = '';
+  document.getElementById('allega-file').required = true;
+  document.getElementById('allega-btn').textContent = '📎 ALLEGA ALLO STORICO';
+  document.getElementById('allegaOverlay').classList.add('open');
+}
+
+// Riapre in modifica un "Preventivo (allegato)": stesso modale, ma con dati
+// precompilati e PDF facoltativo (se non lo ricarichi, resta quello attuale).
+// Non passa dal generatore a voci, perché un allegato non ne ha.
+function modificaAllegato(p) {
+  allegaEditId = p.id;
+  const nome = ((currentLead.Nome ?? '') + ' ' + (currentLead.Cognome ?? '')).trim() || 'questo cliente';
+  document.getElementById('allega-cliente').textContent = nome;
+  document.getElementById('allega-file').value = '';
+  document.getElementById('allega-file').required = false;
+  document.getElementById('allega-oggetto').value = p.oggetto || '';
+  document.getElementById('allega-numero').value = p.numero || '';
+  document.getElementById('allega-totale').value = p.grand_total ? String(p.grand_total).replace('.', ',') : '';
+  document.getElementById('allega-stato').value = p.stato || 'inviato';
+  const r = document.getElementById('allega-result'); r.style.display = 'none'; r.textContent = '';
+  allegaFasiEstratte = [];
+  document.getElementById('allega-fasi-estratte').style.display = 'none';
+  document.getElementById('allega-fasi-list').innerHTML = '';
+  document.getElementById('allega-estrai-btn').style.display = 'none'; // l'estrazione fasi resta solo al primo allegato
+  document.getElementById('allega-btn').textContent = '💾 AGGIORNA';
   document.getElementById('allegaOverlay').classList.add('open');
 }
 function closeAllegaPanel() {
@@ -3034,29 +3284,32 @@ async function allegaPreventivo() {
   const sid  = currentLead.Session_ID ?? '';
   const file = document.getElementById('allega-file').files[0];
   if (!sid)  { showToast('⚠ Cliente non valido', 'error'); return; }
-  if (!file) { allegaErrore('Scegli un file PDF.'); return; }
+  if (!allegaEditId && !file) { allegaErrore('Scegli un file PDF.'); return; }
 
   const fd = new FormData();
+  fd.append('mode', allegaEditId ? 'aggiorna' : 'crea');
   fd.append('session_id', sid);
-  fd.append('pdf', file);
+  if (allegaEditId) fd.append('id', allegaEditId);
+  if (file) fd.append('pdf', file);
   fd.append('oggetto', document.getElementById('allega-oggetto').value);
   fd.append('numero',  document.getElementById('allega-numero').value);
   fd.append('totale',  document.getElementById('allega-totale').value);
   fd.append('stato_preventivo', document.getElementById('allega-stato').value);
 
   const btn = document.getElementById('allega-btn');
-  btn.disabled = true; btn.textContent = 'CARICAMENTO…';
+  const labelOk = allegaEditId ? '💾 AGGIORNA' : '📎 ALLEGA ALLO STORICO';
+  btn.disabled = true; btn.textContent = allegaEditId ? 'AGGIORNO…' : 'CARICAMENTO…';
   try {
     const r = await fetch(ALLEGA_URL, { method: 'POST', body: fd });
     const data = await r.json();
     if (!data.ok) { allegaErrore('⚠ ' + (data.error || 'Errore')); return; }
-    showToast('✓ Preventivo allegato allo Storico', 'success');
+    showToast(allegaEditId ? '✓ Preventivo aggiornato' : '✓ Preventivo allegato allo Storico', 'success');
     closeAllegaPanel();
     caricaStoricoPrev(sid);
   } catch (e) {
     allegaErrore('⚠ Errore di rete');
   } finally {
-    btn.disabled = false; btn.textContent = '📎 ALLEGA ALLO STORICO';
+    btn.disabled = false; btn.textContent = labelOk;
   }
 }
 
@@ -3102,17 +3355,22 @@ function renderAllegaFasiEstratte() {
   const cont = document.getElementById('allega-fasi-list');
   if (!allegaFasiEstratte.length) { wrap.style.display = 'none'; cont.innerHTML = ''; return; }
   cont.innerHTML = allegaFasiEstratte.map((f, i) => `
-    <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;margin-bottom:6px;cursor:pointer;">
-      <input type="checkbox" id="allega-fase-chk-${i}" checked style="margin-top:2px;">
-      <span><b>${escHtml(f.nome)}</b>${f.descrizione ? ' — ' + escHtml(f.descrizione) : ''}</span>
-    </label>
+    <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;margin-bottom:6px;">
+      <label style="display:flex;align-items:flex-start;gap:8px;flex:1;cursor:pointer;">
+        <input type="checkbox" id="allega-fase-chk-${i}" checked style="margin-top:2px;">
+        <span><b>${escHtml(f.nome)}</b>${f.descrizione ? ' — ' + escHtml(f.descrizione) : ''}</span>
+      </label>
+      <input type="text" id="allega-fase-prezzo-${i}" value="${f.prezzo != null ? String(f.prezzo).replace('.', ',') : ''}" placeholder="€ prezzo" style="width:90px;flex-shrink:0;font-size:11px;padding:3px 6px;">
+    </div>
   `).join('');
   wrap.style.display = 'block';
 }
 
 async function creaBozzeDaPreventivo() {
   if (!currentLead || !currentLead.Session_ID) { showToast('⚠ Seleziona prima un cliente', 'error'); return; }
-  const fasi = allegaFasiEstratte.filter((f, i) => document.getElementById(`allega-fase-chk-${i}`)?.checked);
+  const fasi = allegaFasiEstratte
+    .map((f, i) => ({ ...f, prezzo: document.getElementById(`allega-fase-prezzo-${i}`)?.value.trim() || null, __i: i }))
+    .filter(f => document.getElementById(`allega-fase-chk-${f.__i}`)?.checked);
   if (!fasi.length) { showToast('⚠ Seleziona almeno una fase', 'error'); return; }
   try {
     const res  = await fetch(FASI_BOZZA_URL, {
