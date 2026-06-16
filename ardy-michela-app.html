@@ -1211,6 +1211,8 @@ const modalConfig = {
 function openModal(action) {
   if (!currentLead) return;
   currentAction = action;
+  emailOggettoOverride = null;
+  emailPreventivoStatoTarget = null;
   const cfg = modalConfig[action];
   document.getElementById('modalTitle').textContent = cfg.title;
   document.getElementById('modalPrompt').value = '';
@@ -1232,6 +1234,31 @@ function openModal(action) {
   }
 
   document.getElementById('modalOverlay').classList.add('open');
+}
+
+// Apre il box "Email" precompilato per inviare un preventivo già presente
+// nello Storico (selezionato come allegato, testo di default, oggetto =
+// numero/oggetto del preventivo) — stesso box con supporto AI/bozze usato
+// per le altre email, invece del prompt() spicciolo di prima.
+async function apriEmailPerPreventivo(id) {
+  if (!currentLead) { showToast('⚠ Seleziona prima un cliente', 'error'); return; }
+  const p = storicoPrevCache.find(x => x.id === id);
+  if (!p || !p.file_pdf) { showToast('⚠ Preventivo non trovato', 'error'); return; }
+  if (!currentLead.Email) { showToast('⚠ Il cliente non ha un indirizzo email', 'error'); return; }
+
+  const nome    = ((currentLead.Nome ?? '') + ' ' + (currentLead.Cognome ?? '')).trim() || 'cliente';
+  const oggetto = p.oggetto || p.numero || 'Preventivo';
+
+  openModal('email');
+  document.getElementById('modalTitle').textContent = 'EMAIL CLIENTE — ' + oggetto;
+  emailOggettoOverride = oggetto;
+  emailPreventivoStatoTarget = (p.stato === 'bozza') ? p.id : null;
+  document.getElementById('modalResult').textContent =
+    `Ciao ${nome},\n\nin allegato trovi il preventivo richiesto.\n\nResto a disposizione per qualsiasi chiarimento.\n\nArdy Lab`;
+  document.getElementById('modalResult').classList.add('visible');
+
+  await caricaPreventiviPerAllegato(currentLead.Session_ID ?? '');
+  document.getElementById('emailPreventivoSel').value = p.file_pdf;
 }
 
 function closeModal(e) {
@@ -1348,6 +1375,11 @@ async function generaContenuto() {
 // l'eventuale allegato di un preventivo PDF già nello Storico o appena caricato.
 let emailBozzaIdInCorso = null;
 let emailBozzeCache     = [];
+// Quando si invia da Storico preventivi (apriEmailPerPreventivo): forzano
+// l'oggetto sul numero/oggetto del preventivo e, se era una bozza, ne
+// aggiornano lo stato a "inviato" dopo l'invio.
+let emailOggettoOverride       = null;
+let emailPreventivoStatoTarget = null;
 
 async function caricaPreventiviPerAllegato(sessionId) {
   const sel = document.getElementById('emailPreventivoSel');
@@ -1414,7 +1446,7 @@ function buildEmailFormData() {
   const fd = new FormData();
   fd.append('session_id', currentLead.Session_ID ?? '');
   fd.append('destinatario', document.getElementById('emailDestinatario').value.trim());
-  fd.append('oggetto', modalConfig[currentAction].title);
+  fd.append('oggetto', emailOggettoOverride || modalConfig[currentAction].title);
   fd.append('testo', document.getElementById('modalResult').textContent || '');
   if (emailBozzaIdInCorso) fd.append('bozza_id', emailBozzaIdInCorso);
   const preventivoFile = document.getElementById('emailPreventivoSel').value;
@@ -1460,6 +1492,17 @@ async function inviaEmailCliente() {
     if (!data.success) throw new Error(data.error || 'Errore');
     showToast('✓ Email inviata al cliente', 'success');
     emailBozzaIdInCorso = null;
+    if (emailPreventivoStatoTarget) {
+      try {
+        await fetch(PREV_API + '?mode=stato', {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          body: new URLSearchParams({ id: emailPreventivoStatoTarget, stato: 'inviato' })
+        });
+      } catch (e) {}
+      emailPreventivoStatoTarget = null;
+      caricaStoricoPrev(currentLead.Session_ID ?? '');
+    }
     closeModal();
   } catch (e) {
     showToast('⚠ Errore invio: ' + e.message, 'error');
@@ -3157,7 +3200,7 @@ function renderStoricoPrev(preventivi) {
             ? `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;" title="Elimina bozza" onclick="eliminaPreventivo(${p.id})">🗑</button>`
             : ''}
           ${p.file_pdf ? `<button class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="scaricaPrevDB('${p.file_pdf}')">⬇ PDF</button>` : ''}
-          ${p.file_pdf ? `<button class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="inviaPreventivoEmail(${p.id})">📤 Invia email</button>` : ''}
+          ${p.file_pdf ? `<button class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="apriEmailPerPreventivo(${p.id})">📤 Invia email</button>` : ''}
         </div>
       </div>
     </div>`;
@@ -3185,49 +3228,6 @@ function scaricaPrevDB(file) {
   window.open(PREV_API + '?mode=download&file=' + encodeURIComponent(file), '_blank');
 }
 
-// Invia per email (con PDF già nello Storico in allegato) un preventivo esistente.
-async function inviaPreventivoEmail(id) {
-  if (!currentLead) { showToast('⚠ Seleziona prima un cliente', 'error'); return; }
-  const p = storicoPrevCache.find(x => x.id === id);
-  if (!p || !p.file_pdf) { showToast('⚠ Preventivo non trovato', 'error'); return; }
-  const destinatario = currentLead.Email ?? '';
-  if (!destinatario) { showToast('⚠ Il cliente non ha un indirizzo email', 'error'); return; }
-
-  const nome = ((currentLead.Nome ?? '') + ' ' + (currentLead.Cognome ?? '')).trim() || 'cliente';
-  const oggetto = p.oggetto || p.numero || 'Preventivo';
-  const testoDefault = `Ciao ${nome},\n\nin allegato trovi il preventivo richiesto.\n\nResto a disposizione per qualsiasi chiarimento.\n\nArdy Lab`;
-  const testo = prompt('Testo email al cliente:', testoDefault);
-  if (testo === null) return; // annullato
-
-  if (!confirm(`Invio il preventivo "${oggetto}" a ${destinatario}?`)) return;
-
-  const fd = new FormData();
-  fd.append('mode', 'invia');
-  fd.append('session_id', currentLead.Session_ID ?? '');
-  fd.append('destinatario', destinatario);
-  fd.append('oggetto', oggetto);
-  fd.append('testo', testo);
-  fd.append('preventivo_file', p.file_pdf);
-
-  try {
-    const res  = await fetch(EMAIL_CLIENTE_URL, { method: 'POST', body: fd });
-    const data = await res.json();
-    if (!data.success) { showToast('⚠ ' + (data.error || 'Invio non riuscito'), 'error'); return; }
-    showToast('✓ Email inviata al cliente', 'success');
-    if (p.stato === 'bozza') {
-      try {
-        await fetch(PREV_API + '?mode=stato', {
-          method: 'POST',
-          headers: { 'X-Requested-With': 'XMLHttpRequest' },
-          body: new URLSearchParams({ id: id, stato: 'inviato' })
-        });
-      } catch (e) {}
-    }
-    caricaStoricoPrev(currentLead.Session_ID ?? '');
-  } catch (e) {
-    showToast('⚠ Errore di rete durante l\'invio', 'error');
-  }
-}
 
 // ── Allega un preventivo PDF già pronto allo Storico ──────────────
 let allegaEditId = null; // id del preventivo allegato in modifica, null = nuovo allegato
