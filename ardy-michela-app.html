@@ -426,7 +426,7 @@
   <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-title" id="modalTitle">GENERA</div>
     <textarea id="modalPrompt" placeholder="Aggiungi istruzioni specifiche (opzionale)..."></textarea>
-    <div class="modal-result" id="modalResult"></div>
+    <textarea class="modal-result" id="modalResult" rows="10" placeholder="Il testo generato apparirà qui — modificabile prima di inviare."></textarea>
 
     <!-- Solo per l'azione "Email cliente": invio/bozza con allegato PDF -->
     <div id="modalEmailExtra" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:12px;">
@@ -1217,7 +1217,7 @@ function openModal(action) {
   document.getElementById('modalTitle').textContent = cfg.title;
   document.getElementById('modalPrompt').value = '';
   document.getElementById('modalResult').classList.remove('visible');
-  document.getElementById('modalResult').textContent = '';
+  document.getElementById('modalResult').value = '';
   document.getElementById('btnGenera').textContent = 'GENERA CON AI';
   document.getElementById('btnGenera').disabled = false;
 
@@ -1253,7 +1253,7 @@ async function apriEmailPerPreventivo(id) {
   document.getElementById('modalTitle').textContent = 'EMAIL CLIENTE — ' + oggetto;
   emailOggettoOverride = oggetto;
   emailPreventivoStatoTarget = (p.stato === 'bozza') ? p.id : null;
-  document.getElementById('modalResult').textContent =
+  document.getElementById('modalResult').value =
     `Ciao ${nome},\n\nin allegato trovi il preventivo richiesto.\n\nResto a disposizione per qualsiasi chiarimento.\n\nArdy Lab`;
   document.getElementById('modalResult').classList.add('visible');
 
@@ -1367,10 +1367,10 @@ async function generaContenuto() {
     const m = reply.match(/\[\[TESTO\]\]([\s\S]*?)\[\[\/TESTO\]\]/);
     if (m) reply = m[1].trim();
     const result = document.getElementById('modalResult');
-    result.textContent = reply;
+    result.value = reply;
     result.classList.add('visible');
   } catch(e) {
-    document.getElementById('modalResult').textContent = '⚠ Errore di rete.';
+    document.getElementById('modalResult').value = '⚠ Errore di rete.';
     document.getElementById('modalResult').classList.add('visible');
   }
 
@@ -1433,7 +1433,7 @@ function caricaBozzaEmailNelModale(id) {
   if (!b) return;
   emailBozzaIdInCorso = b.id;
   document.getElementById('emailDestinatario').value = b.destinatario || (currentLead.Email ?? '');
-  document.getElementById('modalResult').textContent = b.testo || '';
+  document.getElementById('modalResult').value = b.testo || '';
   document.getElementById('modalResult').classList.add('visible');
   showToast('✎ Bozza caricata: modifica e premi INVIA o SALVA IN BOZZA', '');
 }
@@ -1456,7 +1456,7 @@ function buildEmailFormData() {
   fd.append('session_id', currentLead.Session_ID ?? '');
   fd.append('destinatario', document.getElementById('emailDestinatario').value.trim());
   fd.append('oggetto', emailOggettoOverride || modalConfig[currentAction].title);
-  fd.append('testo', document.getElementById('modalResult').textContent || '');
+  fd.append('testo', document.getElementById('modalResult').value || '');
   if (emailBozzaIdInCorso) fd.append('bozza_id', emailBozzaIdInCorso);
   const preventivoFile = document.getElementById('emailPreventivoSel').value;
   if (preventivoFile) fd.append('preventivo_file', preventivoFile);
@@ -1467,7 +1467,7 @@ function buildEmailFormData() {
 
 async function salvaEmailBozza() {
   if (!currentLead || !currentLead.Session_ID) { showToast('⚠ Seleziona prima un cliente', 'error'); return; }
-  if (!document.getElementById('modalResult').textContent.trim()) { showToast('⚠ Genera prima il testo con AI', 'error'); return; }
+  if (!document.getElementById('modalResult').value.trim()) { showToast('⚠ Genera prima il testo con AI', 'error'); return; }
   const fd = buildEmailFormData();
   fd.append('mode', 'salva_bozza');
   const btn = document.getElementById('btnSalvaBozzaEmail');
@@ -1488,7 +1488,7 @@ async function salvaEmailBozza() {
 
 async function inviaEmailCliente() {
   if (!currentLead || !currentLead.Session_ID) { showToast('⚠ Seleziona prima un cliente', 'error'); return; }
-  if (!document.getElementById('modalResult').textContent.trim()) { showToast('⚠ Genera prima il testo con AI', 'error'); return; }
+  if (!document.getElementById('modalResult').value.trim()) { showToast('⚠ Genera prima il testo con AI', 'error'); return; }
   if (!document.getElementById('emailDestinatario').value.trim()) { showToast('⚠ Indica un destinatario', 'error'); return; }
   if (!confirm('Inviare questa email al cliente?')) return;
   const fd = buildEmailFormData();

@@ -625,21 +625,35 @@
   .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
 
   .modal-result {
+    display: none;
+    margin-bottom: 16px;
+  }
+
+  .modal-result.visible { display: block; }
+
+  /* Textarea vera (non un div di sola lettura): su iPhone un testo
+     selezionabile ma non editabile dentro un riquadro scrollabile scatena
+     lo zoom-on-tap di Safari — con un campo nativo niente di tutto questo,
+     e font-size >=16px evita anche il classico autozoom-on-focus iOS. */
+  #modalResult {
+    width: 100%;
+    box-sizing: border-box;
     background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: 4px;
     padding: 14px;
-    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
     line-height: 1.6;
     color: var(--text);
-    white-space: pre-wrap;
     max-height: 300px;
+    min-height: 140px;
     overflow-y: auto;
-    margin-bottom: 16px;
-    display: none;
+    resize: vertical;
+    outline: none;
   }
 
-  .modal-result.visible { display: block; }
+  #modalResult:focus { border-color: var(--accent); }
 
   /* ── ACCORDION ── */
   .acc-section { border:1px solid var(--border); border-radius:6px; margin-bottom:10px; overflow:hidden; }
