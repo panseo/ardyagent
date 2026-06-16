@@ -20,7 +20,7 @@ define('PDF_OUTPUT_DIR', __DIR__ . '/preventivi_pdf/');
 define('LOGO_PATH',      __DIR__ . '/assets/logo.png');
 // Versione della cache PDF: da bumpare se cambia il layout/CSS del PDF, così le
 // cache content-hash esistenti vengono invalidate al primo render successivo.
-define('PDF_CACHE_VER', '2026-06-16f');
+define('PDF_CACHE_VER', '2026-06-16g');
 
 if (!is_dir(PDF_OUTPUT_DIR) && !mkdir(PDF_OUTPUT_DIR, 0755, true) && !is_dir(PDF_OUTPUT_DIR)) {
     http_response_code(500);
@@ -211,6 +211,7 @@ if ($mode === 'ai') {
 // ─── Raccolta dati ─────────────────────────────────────────────────────────────
 
 $dati = sanitizeInput([
+    'session_id'        => $_POST['session_id']        ?? '',
     'tipo_preventivo'   => $_POST['tipo_preventivo']   ?? 'Preventivo Servizi',
     'numero_preventivo' => $_POST['numero_preventivo'] ?? generaNumero(),
     'data_emissione'    => $_POST['data_emissione']    ?? date('d/m/Y'),
@@ -372,6 +373,12 @@ $pdfCached = is_file($pdfPath) && is_file($hashFile)
 
 if (!$pdfCached) {
     try {
+        // Font elegante (Playfair Display) per tutto il documento, al posto
+        // del default Arial — i 4 stili (regular/bold/italic/bolditalic)
+        // sono in assets/fonts/, mPDF non lo include di serie.
+        $fontDirConfig  = (new \Mpdf\Config\ConfigVariables())->getDefaults()['fontDir'];
+        $fontDataConfig = (new \Mpdf\Config\FontVariables())->getDefaults()['fontdata'];
+
         $mpdf = new \Mpdf\Mpdf([
             'mode'              => 'utf-8',
             'format'            => 'A4',
@@ -380,6 +387,16 @@ if (!$pdfCached) {
             'margin_left'       => 0,
             'margin_right'      => 0,
             'tempDir'           => sys_get_temp_dir(),
+            'fontDir'           => array_merge($fontDirConfig, [__DIR__ . '/assets/fonts']),
+            'fontdata'          => $fontDataConfig + [
+                'playfairdisplay' => [
+                    'R'  => 'PlayfairDisplay-Regular.ttf',
+                    'B'  => 'PlayfairDisplay-Bold.ttf',
+                    'I'  => 'PlayfairDisplay-Italic.ttf',
+                    'BI' => 'PlayfairDisplay-BoldItalic.ttf',
+                ],
+            ],
+            'default_font'      => 'playfairdisplay',
         ]);
 
         // CSS comune a tutte le pagine
@@ -606,7 +623,7 @@ function parseImgDataUris($arr, int $max = 8): array {
 function buildCss(): string {
     return '<style>
 * { margin:0; padding:0; box-sizing:border-box; }
-body { font-family: Arial, sans-serif; font-size: 10pt; color: #111; line-height: 1.55; }
+body { font-family: \'playfairdisplay\', serif; font-size: 10pt; color: #6b4f1e; line-height: 1.55; }
 
 /* COPERTINA */
 .cover { background: #000; color: #fff; padding: 40px 40px 32px; }
@@ -686,11 +703,15 @@ table.firma-t { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
 .grazie-page { background: #fff; padding: 50px 40px 40px; text-align: center; }
 .grazie-logo-wrap { margin-bottom: 14px; }
 .grazie-logo-img { width: 90px; height: auto; }
-.grazie-h { font-size: 72pt; font-weight: 700; color: #000; line-height: 1; margin-bottom: 28px; letter-spacing: 2px; }
+.grazie-h { font-size: 72pt; font-weight: 700; color: #6b4f1e; line-height: 1; margin-bottom: 28px; letter-spacing: 2px; }
 .grazie-msg { text-align: left; font-size: 12.5pt; line-height: 1.7; color: #1a3a4a; max-width: 150mm; margin: 0 auto 30px; padding: 0 30px; }
 .grazie-msg p { margin-bottom: 14px; }
 .grazie-addr { font-size: 9pt; color: #1a3a4a; line-height: 1.7; text-decoration: underline; }
 .grazie-web { font-size: 9pt; color: #1a3a4a; line-height: 1.9; }
+.grazie-links { font-size: 9pt; color: #1a3a4a; line-height: 1.7; margin-top: 16px; }
+.grazie-qr-wrap { margin-top: 14px; }
+.grazie-qr-img { width: 70px; height: 70px; }
+.grazie-qr-cap { font-size: 8pt; color: #1a3a4a; margin-top: 4px; }
 </style>';
 }
 
@@ -897,6 +918,22 @@ function buildPagine(array $d, array $opzioni, float $bollo, string $spedizione,
   </div>
 </div>';
 
+    // ── Link webchat (firmato se abbiamo session_id+secret, altrimenti
+    // generico) + relativo QR code, per far scrivere subito a Sole ──────────
+    $webchatLink = 'https://ardy-lab.it/ardy-agent/';
+    if (!empty($d['session_id']) && defined('WA_LOOKUP_SECRET') && WA_LOOKUP_SECRET !== '') {
+        $shortTok    = substr(hash_hmac('sha256', $d['session_id'], WA_LOOKUP_SECRET), 0, 16);
+        $webchatLink = 'https://ardy-lab.it/ardy-agent/?lead=' . urlencode($d['session_id']) . '&tok=' . $shortTok;
+    }
+    $qrDataUri = '';
+    try {
+        $qrcode    = new \Mpdf\QrCode\QrCode($webchatLink);
+        $qrPng     = (new \Mpdf\QrCode\Output\Png())->output($qrcode, 300);
+        $qrDataUri = 'data:image/png;base64,' . base64_encode($qrPng);
+    } catch (\Throwable $e) {
+        // Niente QR se la libreria non è disponibile: il link testuale resta comunque.
+    }
+
     // ── PAGINA 6: GRAZIE ──────────────────────────────────────────────────────
     $pagine[] = '
 <div class="grazie-page">
@@ -909,6 +946,8 @@ function buildPagine(array $d, array $opzioni, float $bollo, string $spedizione,
   </div>
   <div class="grazie-addr">Via James Joyce 4, 00143 Roma (RM)</div>
   <div class="grazie-web">www.ardy-lab.it<br>ardy.documenti@gmail.com</div>
+  <div class="grazie-links">Seguici: instagram.com/ardy.lab &nbsp;·&nbsp; Chatta con Sole: ardy-lab.it/ardy-agent</div>
+  ' . ($qrDataUri ? '<div class="grazie-qr-wrap"><img class="grazie-qr-img" src="' . $qrDataUri . '"><div class="grazie-qr-cap">Scansiona per parlare con Sole</div></div>' : '') . '
 </div>';
 
     return $pagine;
