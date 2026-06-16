@@ -7,7 +7,9 @@
 // modifica e pubblica una per una dal pannello Lavorazione.
 //
 //   GET  ?session_id=...         → lista bozze del cliente (in ordine)
-//   POST {mode:'genera', ...}    → crea N bozze dai template scelti
+//   POST {mode:'genera', ...}        → crea N bozze dai template di libreria scelti
+//   POST {mode:'genera_custom', ...} → crea N bozze da voci libere (es. lette da un
+//                                       preventivo PDF esterno con ardy-estrai-preventivo-pdf.php)
 //   POST {mode:'delete', id}     → elimina una bozza (solo se stato='bozza')
 // -----------------------------------------------------------
 
@@ -19,6 +21,31 @@ header('Access-Control-Allow-Headers: Content-Type');
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
+
+// Inserisce N bozze (nome + testo_breve) per un cliente, in coda all'ordine
+// esistente. Condiviso dai modi 'genera' (da libreria) e 'genera_custom'
+// (da voci libere, es. estratte da un PDF).
+function ardyInserisciBozzeFasi(PDO $db, string $sessionId, array $items): array {
+    $stOrd = $db->prepare("SELECT COALESCE(MAX(ordine),0) FROM fasi WHERE session_id = ?");
+    $stOrd->execute([$sessionId]);
+    $ordine = (int) $stOrd->fetchColumn();
+
+    $ins = $db->prepare(
+        "INSERT INTO fasi (session_id, fase_nome, fase_tipo, testo_breve, testo_generato, foto_urls, video_urls, stato, ordine)
+         VALUES (:sid, :nome, 'fase', :breve, '', '[]', '[]', 'bozza', :ordine)"
+    );
+
+    $bozze = [];
+    foreach ($items as $it) {
+        $nome  = trim((string) ($it['nome']  ?? ''));
+        $breve = trim((string) ($it['breve'] ?? ''));
+        if ($nome === '') continue;
+        $ordine++;
+        $ins->execute([':sid' => $sessionId, ':nome' => $nome, ':breve' => $breve, ':ordine' => $ordine]);
+        $bozze[] = ['id' => (int) $db->lastInsertId(), 'fase_nome' => $nome, 'testo_breve' => $breve, 'ordine' => $ordine];
+    }
+    return $bozze;
+}
 
 try {
     $db = ardyDB();
@@ -53,34 +80,34 @@ try {
         $byId = [];
         foreach ($stmt->fetchAll() as $r) { $byId[$r['id']] = $r; }
 
-        $stOrd = $db->prepare("SELECT COALESCE(MAX(ordine),0) FROM fasi WHERE session_id = ?");
-        $stOrd->execute([$sessionId]);
-        $ordine = (int) $stOrd->fetchColumn();
-
-        $ins = $db->prepare(
-            "INSERT INTO fasi (session_id, fase_nome, fase_tipo, testo_breve, testo_generato, foto_urls, video_urls, stato, ordine)
-             VALUES (:sid, :nome, 'fase', :breve, '', '[]', '[]', 'bozza', :ordine)"
-        );
-
-        $bozze = [];
+        // Mantiene l'ordine di selezione scelto dall'operatore, ignorando i template non trovati.
+        $items = [];
         foreach ($templateIds as $tid) {
             if (!isset($byId[$tid])) continue;
-            $ordine++;
-            $ins->execute([
-                ':sid'    => $sessionId,
-                ':nome'   => $byId[$tid]['nome'],
-                ':breve'  => $byId[$tid]['descr'] ?? '',
-                ':ordine' => $ordine,
-            ]);
-            $bozze[] = [
-                'id'          => (int) $db->lastInsertId(),
-                'fase_nome'   => $byId[$tid]['nome'],
-                'testo_breve' => $byId[$tid]['descr'] ?? '',
-                'ordine'      => $ordine,
-            ];
+            $items[] = ['nome' => $byId[$tid]['nome'], 'breve' => $byId[$tid]['descr'] ?? ''];
         }
 
-        echo json_encode(['success' => true, 'bozze' => $bozze]);
+        echo json_encode(['success' => true, 'bozze' => ardyInserisciBozzeFasi($db, $sessionId, $items)]);
+        exit();
+    }
+
+    if ($mode === 'genera_custom') {
+        // Bozze da voci libere (es. lette da un preventivo PDF esterno con
+        // ardy-estrai-preventivo-pdf.php): niente libreria, il testo arriva già pronto.
+        $sessionId = preg_replace('/[^a-zA-Z0-9_\-]/', '', $input['session_id'] ?? '');
+        $fasiInput = is_array($input['fasi'] ?? null) ? array_values($input['fasi']) : [];
+        if ($sessionId === '' || !$fasiInput) {
+            echo json_encode(['success' => false, 'error' => 'Dati mancanti']);
+            exit();
+        }
+
+        $items = [];
+        foreach ($fasiInput as $f) {
+            if (!is_array($f)) continue;
+            $items[] = ['nome' => $f['nome'] ?? '', 'breve' => $f['descrizione'] ?? ($f['testo_breve'] ?? '')];
+        }
+
+        echo json_encode(['success' => true, 'bozze' => ardyInserisciBozzeFasi($db, $sessionId, $items)]);
         exit();
     }
 

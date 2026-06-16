@@ -2536,6 +2536,7 @@ function showResult(id, msg, type) {
 
 const PREVENTIVO_URL = BASE_URL + '/ardy-preventivo.php';
 const ALLEGA_URL     = BASE_URL + '/ardy-allega-preventivo.php';
+const ESTRAI_PREVENTIVO_URL = BASE_URL + '/ardy-estrai-preventivo-pdf.php';
 let pvOpzioni = [];
 let pvLibTarget = null;
 let pvOpzSeq = 1;
@@ -3015,6 +3016,9 @@ function openAllegaPanel() {
   document.getElementById('allega-totale').value = '';
   document.getElementById('allega-stato').value = 'inviato';
   const r = document.getElementById('allega-result'); r.style.display = 'none'; r.textContent = '';
+  allegaFasiEstratte = [];
+  document.getElementById('allega-fasi-estratte').style.display = 'none';
+  document.getElementById('allega-fasi-list').innerHTML = '';
   document.getElementById('allegaOverlay').classList.add('open');
 }
 function closeAllegaPanel() {
@@ -3053,6 +3057,83 @@ async function allegaPreventivo() {
     allegaErrore('⚠ Errore di rete');
   } finally {
     btn.disabled = false; btn.textContent = '📎 ALLEGA ALLO STORICO';
+  }
+}
+
+// ── Estrai oggetto/totale/fasi da un preventivo PDF esterno (Canva, Word...) ──
+// Lettura via AI: non scrive nulla, propone solo i dati da rivedere/confermare.
+let allegaFasiEstratte = [];
+
+async function estraiDatiPdfAllegato() {
+  const file = document.getElementById('allega-file').files[0];
+  if (!file) { allegaErrore('Scegli prima un file PDF.'); return; }
+
+  const fd = new FormData();
+  fd.append('pdf', file);
+
+  const btn = document.getElementById('allega-estrai-btn');
+  btn.disabled = true; btn.textContent = '⏳ LEGGO IL PDF…';
+  try {
+    const r = await fetch(ESTRAI_PREVENTIVO_URL, { method: 'POST', body: fd });
+    const data = await r.json();
+    if (!data.ok) { allegaErrore('⚠ ' + (data.error || 'Errore')); return; }
+
+    const oggettoEl = document.getElementById('allega-oggetto');
+    const totaleEl  = document.getElementById('allega-totale');
+    if (!oggettoEl.value && data.oggetto) oggettoEl.value = data.oggetto;
+    if (!totaleEl.value && data.totale) totaleEl.value = data.totale;
+
+    allegaFasiEstratte = Array.isArray(data.fasi) ? data.fasi : [];
+    renderAllegaFasiEstratte();
+    if (allegaFasiEstratte.length) {
+      showToast(`✓ Lette ${allegaFasiEstratte.length} fasi dal PDF`, 'success');
+    } else {
+      showToast('Nessuna fase trovata nel PDF', '');
+    }
+  } catch (e) {
+    allegaErrore('⚠ Errore di rete');
+  } finally {
+    btn.disabled = false; btn.textContent = '🔍 Leggi dati dal PDF (oggetto, totale, fasi)';
+  }
+}
+
+function renderAllegaFasiEstratte() {
+  const wrap = document.getElementById('allega-fasi-estratte');
+  const cont = document.getElementById('allega-fasi-list');
+  if (!allegaFasiEstratte.length) { wrap.style.display = 'none'; cont.innerHTML = ''; return; }
+  cont.innerHTML = allegaFasiEstratte.map((f, i) => `
+    <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;margin-bottom:6px;cursor:pointer;">
+      <input type="checkbox" id="allega-fase-chk-${i}" checked style="margin-top:2px;">
+      <span><b>${escHtml(f.nome)}</b>${f.descrizione ? ' — ' + escHtml(f.descrizione) : ''}</span>
+    </label>
+  `).join('');
+  wrap.style.display = 'block';
+}
+
+async function creaBozzeDaPreventivo() {
+  if (!currentLead || !currentLead.Session_ID) { showToast('⚠ Seleziona prima un cliente', 'error'); return; }
+  const fasi = allegaFasiEstratte.filter((f, i) => document.getElementById(`allega-fase-chk-${i}`)?.checked);
+  if (!fasi.length) { showToast('⚠ Seleziona almeno una fase', 'error'); return; }
+  try {
+    const res  = await fetch(FASI_BOZZA_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ mode: 'genera_custom', session_id: currentLead.Session_ID, fasi })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Errore');
+    showToast(`✓ ${data.bozze.length} fasi pre-compilate — modificale e pubblicale dal pannello Lavorazione`, 'success');
+    caricaFasiBozza(currentLead.Session_ID);
+    if (data.bozze.length) {
+      currentLead.ha_fasi = true;
+      const hint = document.getElementById('notaSenzaFasiHint');
+      if (hint) hint.style.display = 'none';
+      renderList();
+    }
+    allegaFasiEstratte = [];
+    renderAllegaFasiEstratte();
+  } catch (e) {
+    showToast('⚠ Errore: ' + e.message, 'error');
   }
 }
 
@@ -3648,6 +3729,7 @@ async function archiviaPersi() {
         <div class="dark-field full">
           <label>File PDF *</label>
           <input type="file" id="allega-file" accept="application/pdf">
+          <button type="button" class="btn-secondary" id="allega-estrai-btn" style="margin-top:8px;font-size:11px;" onclick="estraiDatiPdfAllegato()">🔍 Leggi dati dal PDF (oggetto, totale, fasi)</button>
         </div>
         <div class="dark-field full"><label>Oggetto / descrizione</label><input type="text" id="allega-oggetto" placeholder="es. Restauro credenza anni '60"></div>
         <div class="dark-field"><label>Numero (facolt.)</label><input type="text" id="allega-numero" placeholder="auto se vuoto"></div>
@@ -3660,6 +3742,11 @@ async function archiviaPersi() {
             <option value="rifiutato">Rifiutato</option>
           </select>
         </div>
+      </div>
+      <div id="allega-fasi-estratte" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:12px;">
+        <p style="font-size:11px;color:#aaa;margin:0 0 8px;">Fasi/lavorazioni lette dal PDF — seleziona quelle da trasformare in bozze nel pannello Lavorazione:</p>
+        <div id="allega-fasi-list"></div>
+        <button type="button" class="btn-secondary" style="margin-top:8px;font-size:11px;" onclick="creaBozzeDaPreventivo()">📐 Crea bozze fasi dalle voci selezionate</button>
       </div>
       <div id="allega-result" style="display:none;margin-top:12px;padding:10px 14px;border-radius:4px;font-family:'DM Mono',monospace;font-size:11px;"></div>
     </div>
