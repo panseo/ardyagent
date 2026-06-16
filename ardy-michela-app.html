@@ -207,7 +207,13 @@
           </div>
 
           <!-- Azioni contestuali -->
-          <div class="acc-azioni">
+          <button type="button" id="azioniToggleBtn" onclick="toggleAzioniCliente()"
+                  style="width:100%;text-align:left;background:none;border:1px dashed var(--border);
+                         color:var(--text-dim);padding:8px 12px;border-radius:6px;margin-bottom:8px;
+                         font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;">
+            ▾ Azioni cliente (email, WA, contenuti)
+          </button>
+          <div class="acc-azioni" id="azioniClienteBody">
             <button class="azione-btn" onclick="openModal('email')">
               <span class="azione-icon">📧</span>
               <span class="azione-label">Email cliente</span>
@@ -1201,10 +1207,24 @@ function toggleDatiAnagrafici(force) {
     ? '▴ Dati anagrafici (nascondi)'
     : '▾ Dati anagrafici (Nome, Telefono, Indirizzo, Budget…)';
 }
+// Collassa/espande le azioni contestuali (email, WA, contenuti, note interne):
+// in sopralluogo non servono e occupano lo schermo. Default chiuso su mobile.
+function toggleAzioniCliente(force) {
+  const body = document.getElementById('azioniClienteBody');
+  const btn = document.getElementById('azioniToggleBtn');
+  if (!body || !btn) return;
+  const hidden = body.style.display === 'none';
+  const show = (typeof force === 'boolean') ? force : hidden;
+  body.style.display = show ? '' : 'none';
+  btn.innerHTML = show
+    ? '▴ Azioni cliente (nascondi)'
+    : '▾ Azioni cliente (email, WA, contenuti)';
+}
 // Al primo render della scheda: chiudi su mobile (≤768px).
 document.addEventListener('DOMContentLoaded', () => {
   if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) {
     toggleDatiAnagrafici(false);
+    toggleAzioniCliente(false);
   }
 });
 
