@@ -163,8 +163,13 @@
               <input class="info-value editable" id="dIndirizzo" oninput="markDirty()">
             </div>
             <div class="info-cell full">
-              <div class="info-label">Note <small style="color:var(--text-dim);font-size:9px;">(modificabile)</small></div>
-              <textarea class="info-value editable" id="dNote" rows="3" oninput="markDirty()"></textarea>
+              <div class="info-label" style="display:flex;align-items:center;gap:8px;">
+                <span>Note <small style="color:var(--text-dim);font-size:9px;">(modificabile)</small></span>
+                <button type="button" onclick="openNoteEditor()" title="Apri editor a tutto schermo"
+                        style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--text-dim);
+                               border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;">⛶ Espandi</button>
+              </div>
+              <textarea class="info-value editable" id="dNote" rows="6" oninput="markDirty()"></textarea>
             </div>
             <div class="info-cell">
               <div class="info-label">Data followup</div>
@@ -1148,6 +1153,30 @@ function closeModal(e) {
   if (!e || e.target === document.getElementById('modalOverlay')) {
     document.getElementById('modalOverlay').classList.remove('open');
   }
+}
+
+// Editor Note a tutto schermo: comodo per scrivere lunghi appunti
+// (sopralluogo, misure, ipotesi prezzo) anche dal telefono.
+function openNoteEditor() {
+  const src = document.getElementById('dNote');
+  const dst = document.getElementById('noteEditorArea');
+  if (!src || !dst) return;
+  dst.value = src.value || '';
+  document.getElementById('noteEditorOverlay').classList.add('open');
+  setTimeout(() => dst.focus(), 50);
+}
+function closeNoteEditor() {
+  document.getElementById('noteEditorOverlay').classList.remove('open');
+}
+function saveNoteEditor() {
+  const src = document.getElementById('noteEditorArea');
+  const dst = document.getElementById('dNote');
+  if (!src || !dst) return;
+  if (dst.value !== src.value) {
+    dst.value = src.value;
+    if (typeof markDirty === 'function') markDirty();
+  }
+  closeNoteEditor();
 }
 
 async function generaContenuto() {
@@ -3285,6 +3314,28 @@ async function archiviaPersi() {
     <div class="modal-lg-actions">
       <button class="btn-cancel" onclick="closeNuovoCliente()">ANNULLA</button>
       <button class="btn-save" id="btn-nc-salva" onclick="salvaNuovoCliente()">✦ SALVA CLIENTE</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NOTE FULLSCREEN -->
+<div class="modal-overlay" id="noteEditorOverlay" onclick="if(event.target===this)closeNoteEditor()">
+  <div class="modal-lg" onclick="event.stopPropagation()"
+       style="width:min(900px,96vw);max-width:96vw;height:min(90vh,800px);display:flex;flex-direction:column;">
+    <div class="modal-lg-head">
+      <h3>NOTE — EDITOR ESPANSO</h3>
+      <button class="modal-lg-close" onclick="closeNoteEditor()">✕</button>
+    </div>
+    <div class="modal-lg-body" style="flex:1;display:flex;padding:0;">
+      <textarea id="noteEditorArea"
+                style="flex:1;width:100%;border:none;outline:none;resize:none;padding:18px;
+                       font-family:'DM Mono',monospace;font-size:14px;line-height:1.55;
+                       background:var(--bg-panel,#1a1a1a);color:var(--text,#e8e8e8);"
+                placeholder="Note sopralluogo, misure, ipotesi prezzo, materiali..."></textarea>
+    </div>
+    <div class="modal-lg-actions">
+      <button class="btn-cancel" onclick="closeNoteEditor()">ANNULLA</button>
+      <button class="btn-save" onclick="saveNoteEditor()">✓ APPLICA</button>
     </div>
   </div>
 </div>
