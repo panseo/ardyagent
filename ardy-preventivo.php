@@ -20,7 +20,7 @@ define('PDF_OUTPUT_DIR', __DIR__ . '/preventivi_pdf/');
 define('LOGO_PATH',      __DIR__ . '/assets/logo.png');
 // Versione della cache PDF: da bumpare se cambia il layout/CSS del PDF, così le
 // cache content-hash esistenti vengono invalidate al primo render successivo.
-define('PDF_CACHE_VER', '2026-06-14');
+define('PDF_CACHE_VER', '2026-06-16');
 
 if (!is_dir(PDF_OUTPUT_DIR) && !mkdir(PDF_OUTPUT_DIR, 0755, true) && !is_dir(PDF_OUTPUT_DIR)) {
     http_response_code(500);
@@ -618,6 +618,8 @@ body { font-family: Arial, sans-serif; font-size: 10pt; color: #111; line-height
 
 /* PROPOSTA per opzione (prima/dopo) — niente object-fit: mPDF non lo supporta */
 .proposal-h { font-size: 20pt; font-weight: 700; margin-bottom: 6px; }
+.opz-block { margin-bottom: 28px; page-break-inside: avoid; }
+.opz-block:last-child { margin-bottom: 0; }
 .ba-row { width: 100%; border-collapse: collapse; margin: 8px 0 14px; }
 .ba-cell { width: 50%; padding: 5px; vertical-align: top; text-align: center; }
 .ba-img { width: 100%; height: auto; border: 1px solid #eee; border-radius: 4px; }
@@ -631,16 +633,21 @@ body { font-family: Arial, sans-serif; font-size: 10pt; color: #111; line-height
 .footer-right { float: right; }
 
 /* STORIA */
-.storia-h { font-size: 22pt; font-weight: 700; margin-bottom: 18px; }
-.storia-p { font-size: 10pt; line-height: 1.7; margin-bottom: 12px; }
+.storia-h { font-size: 24pt; font-weight: 700; margin-bottom: 6px; }
+.storia-accent { width: 60px; height: 4px; background: #7bb8d4; margin-bottom: 24px; }
+.storia-p { font-size: 10.5pt; line-height: 1.85; margin-bottom: 14px; text-align: justify; }
+.storia-quote { font-size: 13pt; font-style: italic; font-weight: 500; color: #1a3a4a; border-left: 4px solid #7bb8d4; padding: 4px 0 4px 16px; margin: 22px 0; }
+.storia-sign { font-size: 10pt; font-style: italic; color: #555; text-align: right; margin-top: 22px; }
 
 /* TECNICA */
 .prev-title { font-size: 20pt; font-weight: 700; text-align: right; margin-bottom: 20px; }
 .prev-oggetto { font-size: 10pt; font-weight: 700; margin-bottom: 18px; text-transform: uppercase; }
 .proc-h { font-size: 11pt; font-weight: 700; margin: 14px 0 6px; }
-.proc-p { font-size: 10pt; line-height: 1.7; }
+.proc-p { font-size: 10.5pt; line-height: 1.85; }
 .proc-img-wrap { text-align: center; margin-top: 18px; }
 .proc-img { max-width: 100%; max-height: 135mm; border: 1px solid #eee; border-radius: 4px; }
+.proc-list { margin: 6px 0 0 18px; padding: 0; font-size: 10.5pt; line-height: 1.9; }
+.proc-list li { margin-bottom: 5px; }
 
 /* TABELLA COSTI */
 .budget-h1 { font-size: 18pt; font-weight: 700; text-align: right; line-height: 1.1; }
@@ -747,6 +754,20 @@ function buildPagine(array $d, array $opzioni, float $bollo, string $spedizione,
     $scadDiv    = $d['data_scadenza'] ? '<div class="validita" style="margin-top:8px;">Offerta valida fino al: <strong>' . $d['data_scadenza'] . '</strong></div>' : '';
     $coverProj  = $d['oggetto'] ? '<div class="cover-project">' . $d['oggetto'] . '</div>' : '';
 
+    // Recap sintetico delle voci di lavorazione: contenuto sempre disponibile
+    // (non dipende dal testo AI, che può essere breve) per non lasciare la
+    // pagina "Procedimento Tecnico" semivuota.
+    $descrizioniVoci = [];
+    foreach ($opzioni[0]['voci'] ?? [] as $v) {
+        $desc = trim(strip_tags($v['desc'] ?? ''));
+        if ($desc !== '' && !in_array($desc, $descrizioniVoci, true)) $descrizioniVoci[] = $desc;
+    }
+    $faseRecap = '';
+    if (!empty($descrizioniVoci)) {
+        $faseRecap = '<div class="proc-h" style="margin-top:22px;">Fasi previste</div>'
+            . '<ul class="proc-list">' . implode('', array_map(fn($x) => '<li>' . $x . '</li>', $descrizioniVoci)) . '</ul>';
+    }
+
     $pagine = [];
 
     // ── PAGINA 1: COPERTINA ───────────────────────────────────────────────────
@@ -771,10 +792,13 @@ function buildPagine(array $d, array $opzioni, float $bollo, string $spedizione,
         $pagine[] = '
 <div class="inner">
   <div class="storia-h">Un po\' di storia...</div>
+  <div class="storia-accent"></div>
   <p class="storia-p">Nel cuore dell\'Italia, dove storia e arte si intrecciano, nasce Ardy Lab, una bottega di restauro che simboleggia una passione tramandata di generazione in generazione. Il fulcro è Andrea Panella, un maestro ebanista e restauratore con quarant\'anni di esperienza. Le sue mani hanno ridato vita a pezzi inestimabili, inclusi oggetti di grande prestigio come il <strong>Trono</strong> del Re.</p>
   <p class="storia-p">Andrea ha trasformato la sua famiglia in un team di esperti, insegnando alla moglie l\'arte della foglia d\'oro e guidando i figli nel restauro.</p>
+  <div class="storia-quote">&ldquo;Ogni pezzo che restauriamo porta con sé una storia: il nostro compito è custodirla, non cancellarla.&rdquo;</div>
   <p class="storia-p">Il vero salto avviene con la figlia <strong>Michela</strong>. Insieme, hanno creato Ardy Lab, un progetto che unisce passato e futuro. Andrea, con la sua profonda conoscenza delle tecniche tradizionali, e Michela, esperta di innovazione e <strong>stampa 3D</strong>, hanno dato vita a un laboratorio ibrido.</p>
   <p class="storia-p">Ardy Lab non solo restaura, ma innova. Utilizzando la stampa 3D per ricreare parti mancanti con precisione millimetrica, l\'azienda preserva l\'integrità e il valore storico dei mobili con tecnologie all\'avanguardia. Questa fusione unica di antico e moderno è la firma di Ardy Lab, il luogo dove la tradizione incontra il futuro, e dove ogni pezzo rinasce.</p>
+  <div class="storia-sign">— Andrea &amp; Michela Panella, fondatori di Ardy Lab</div>
   ' . $footer . '
 </div>';
     }
@@ -787,11 +811,14 @@ function buildPagine(array $d, array $opzioni, float $bollo, string $spedizione,
   <div class="proc-h">Procedimento Tecnico Dettagliato</div>
   <p class="proc-p">' . ($d['analisi'] ? nl2br($d['analisi']) : 'Il lavoro verrà eseguito seguendo rigorosi standard artigianali per garantire la massima qualità e durata nel tempo.') . '</p>
   ' . (!empty($d['analisi_img']) ? '<div class="proc-img-wrap"><img class="proc-img" src="' . $d['analisi_img'] . '"></div>' : '') . '
+  ' . $faseRecap . '
   ' . $noteDiv . '
   ' . $footer . '
 </div>';
 
-    // ── UNA PAGINA PER OPZIONE: prima/dopo in testa + costi di quell'opzione ───
+    // ── OPZIONI: tutte in una sezione che mPDF impagina da sé (prima ogni
+    // opzione forzava una pagina intera anche quando 2-3 ci stavano comode
+    // in una sola) — prima/dopo in testa + costi di ciascuna opzione ─────────
     $thead = '<thead><tr>'
         . '<th style="width:45%">Descrizione</th>'
         . '<th class="tc" style="width:13%">Quantità</th>'
@@ -802,6 +829,7 @@ function buildPagine(array $d, array $opzioni, float $bollo, string $spedizione,
         $contenuto = $img !== '' ? '<img class="ba-img" src="' . $img . '">' : '<div class="ba-empty">—</div>';
         return '<td class="ba-cell"><div class="ba-tag">' . $tag . '</div>' . $contenuto . '</td>';
     };
+    $opzioniHtml = '';
     foreach ($opzioni as $idx => $opz) {
         $titolo = $multiOpz
             ? 'Opzione ' . chr(65 + $idx) . ($opz['nome'] !== '' ? ' — ' . $opz['nome'] : '')
@@ -815,16 +843,20 @@ function buildPagine(array $d, array $opzioni, float $bollo, string $spedizione,
                 . '</tr></table>';
         }
 
-        $pagine[] = '
-<div class="inner">
+        $opzioniHtml .= '
+<div class="opz-block">
   <div class="proposal-h">' . $titolo . '</div>
-  ' . ($d['oggetto'] ? '<div class="prev-oggetto">' . $d['oggetto'] . '</div>' : '') . '
+  ' . ($idx === 0 && $d['oggetto'] ? '<div class="prev-oggetto">' . $d['oggetto'] . '</div>' : '') . '
   ' . $primaDopo . '
   <div class="budget-sub">Dettaglio dei Costi</div>
   <table class="costi">' . $thead . '<tbody>' . $righeOpzione($opz) . '</tbody></table>
-  ' . $footer . '
 </div>';
     }
+    $pagine[] = '
+<div class="inner">
+  ' . $opzioniHtml . '
+  ' . $footer . '
+</div>';
 
     // ── CONDIZIONI (+ nota scelta opzione) ────────────────────────────────────
     $notaScelta = $multiOpz
