@@ -20,7 +20,7 @@ define('PDF_OUTPUT_DIR', __DIR__ . '/preventivi_pdf/');
 define('LOGO_PATH',      __DIR__ . '/assets/logo.png');
 // Versione della cache PDF: da bumpare se cambia il layout/CSS del PDF, così le
 // cache content-hash esistenti vengono invalidate al primo render successivo.
-define('PDF_CACHE_VER', '2026-06-16');
+define('PDF_CACHE_VER', '2026-06-16b');
 
 if (!is_dir(PDF_OUTPUT_DIR) && !mkdir(PDF_OUTPUT_DIR, 0755, true) && !is_dir(PDF_OUTPUT_DIR)) {
     http_response_code(500);
@@ -386,10 +386,14 @@ if (!$pdfCached) {
         $css = buildCss();
         $mpdf->WriteHTML($css, \Mpdf\HTMLParserMode::HEADER_CSS);
 
-        // Pagine separate
+        // Pagine separate. Se il contenuto della pagina precedente ha già
+        // sforato su una pagina nuova (testo più lungo del previsto), il
+        // cursore si trova già in cima a una pagina vuota: in quel caso non
+        // forziamo un ulteriore AddPage(), altrimenti resterebbe una pagina
+        // bianca di troppo prima della pagina successiva.
         $pagine = buildPagine($dati, $opzioni, $bollo, $sped_val, $copertina);
         foreach ($pagine as $i => $pageHtml) {
-            if ($i > 0) $mpdf->AddPage();
+            if ($i > 0 && $mpdf->y > $mpdf->tMargin + 2) $mpdf->AddPage();
             $mpdf->WriteHTML($pageHtml, \Mpdf\HTMLParserMode::HTML_BODY);
         }
 
@@ -635,7 +639,7 @@ body { font-family: Arial, sans-serif; font-size: 10pt; color: #111; line-height
 /* STORIA */
 .storia-h { font-size: 24pt; font-weight: 700; margin-bottom: 6px; }
 .storia-accent { width: 60px; height: 4px; background: #7bb8d4; margin-bottom: 24px; }
-.storia-p { font-size: 10.5pt; line-height: 1.85; margin-bottom: 14px; text-align: justify; }
+.storia-p { font-size: 12.5pt; line-height: 1.85; margin-bottom: 14px; text-align: justify; }
 .storia-quote { font-size: 13pt; font-style: italic; font-weight: 500; color: #1a3a4a; border-left: 4px solid #7bb8d4; padding: 4px 0 4px 16px; margin: 22px 0; }
 .storia-sign { font-size: 10pt; font-style: italic; color: #555; text-align: right; margin-top: 22px; }
 
@@ -643,10 +647,10 @@ body { font-family: Arial, sans-serif; font-size: 10pt; color: #111; line-height
 .prev-title { font-size: 20pt; font-weight: 700; text-align: right; margin-bottom: 20px; }
 .prev-oggetto { font-size: 10pt; font-weight: 700; margin-bottom: 18px; text-transform: uppercase; }
 .proc-h { font-size: 11pt; font-weight: 700; margin: 14px 0 6px; }
-.proc-p { font-size: 10.5pt; line-height: 1.85; }
+.proc-p { font-size: 12.5pt; line-height: 1.85; }
 .proc-img-wrap { text-align: center; margin-top: 18px; }
 .proc-img { max-width: 100%; max-height: 135mm; border: 1px solid #eee; border-radius: 4px; }
-.proc-list { margin: 6px 0 0 18px; padding: 0; font-size: 10.5pt; line-height: 1.9; }
+.proc-list { margin: 6px 0 0 18px; padding: 0; font-size: 12.5pt; line-height: 1.9; }
 .proc-list li { margin-bottom: 5px; }
 
 /* TABELLA COSTI */
@@ -662,27 +666,30 @@ table.costi td { padding: 7px 10px; border: 1px solid #ddd; font-size: 10pt; }
 .row-sub td { background: #e0e0e0; font-weight: 700; }
 .row-grand td { background: #111; color: #fff; font-weight: 700; font-size: 11pt; }
 .cond-h { font-size: 11pt; font-weight: 700; font-style: italic; margin: 20px 0 8px; }
-.cond-p { font-size: 9.5pt; line-height: 1.75; font-style: italic; }
+.cond-p { font-size: 11.5pt; line-height: 1.75; font-style: italic; }
 
 /* FIRMA */
 .firma-h { font-size: 16pt; font-weight: 700; text-align: center; margin-bottom: 16px; }
-.firma-intro { font-size: 10pt; margin-bottom: 18px; }
+.firma-intro { font-size: 12pt; margin-bottom: 18px; }
 table.firma-t { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
 .fl { font-weight: 700; font-size: 8.5pt; padding: 7px 10px 7px 0; width: 120px; color: #555; text-transform: uppercase; }
 .fv { border-bottom: 1px solid #ccc; padding: 7px 0; font-size: 10pt; }
-.validita { font-size: 10pt; font-weight: 700; margin-top: 16px; padding: 10px 14px; background: #f5f5f5; border-left: 4px solid #111; }
+.validita { font-size: 12pt; font-weight: 700; margin-top: 16px; padding: 10px 14px; background: #f5f5f5; border-left: 4px solid #111; }
 .privacy-h { font-size: 11pt; font-weight: 700; margin: 22px 0 6px; }
 .privacy-p { font-size: 7.8pt; line-height: 1.5; color: #444; text-align: justify; margin-bottom: 6px; }
-.privacy-consent { font-size: 9pt; line-height: 1.5; margin-top: 12px; padding: 10px 12px; border: 1px solid #111; }
+.privacy-consent { font-size: 11pt; line-height: 1.5; margin-top: 12px; padding: 10px 12px; border: 1px solid #111; }
 .privacy-box { display: inline-block; width: 11px; height: 11px; border: 1.5px solid #111; margin-right: 7px; vertical-align: middle; }
 .firma-line-l { width: 48%; float: left; border-top: 1.5px solid #888; padding-top: 6px; font-size: 9pt; color: #666; text-align: center; margin-top: 32px; }
 .firma-line-r { width: 48%; float: right; border-top: 1.5px solid #888; padding-top: 6px; font-size: 9pt; color: #666; text-align: center; margin-top: 32px; }
 
 /* GRAZIE */
-.grazie-page { background: #7bb8d4; padding: 50px 40px 40px; }
-.grazie-h { font-size: 80pt; font-weight: 400; color: #000; line-height: 1; margin-bottom: 40px; }
-.grazie-ardy { font-size: 80pt; font-weight: 700; color: #000; text-align: right; margin-top: 60px; }
-.grazie-addr { font-size: 9pt; color: #1a3a4a; line-height: 1.7; margin-top: 40px; text-decoration: underline; }
+.grazie-page { background: #7bb8d4; padding: 50px 40px 40px; text-align: center; }
+.grazie-logo-wrap { margin-bottom: 14px; }
+.grazie-logo-img { width: 110px; height: auto; }
+.grazie-h { font-size: 90pt; font-weight: 700; color: #000; line-height: 1; margin-bottom: 36px; letter-spacing: 2px; }
+.grazie-msg { text-align: left; font-size: 12.5pt; line-height: 1.8; color: #1a3a4a; max-width: 150mm; margin: 0 auto 44px; }
+.grazie-msg p { margin-bottom: 14px; }
+.grazie-addr { font-size: 9pt; color: #1a3a4a; line-height: 1.7; text-decoration: underline; }
 .grazie-web { font-size: 9pt; color: #1a3a4a; line-height: 1.9; }
 </style>';
 }
@@ -893,8 +900,13 @@ function buildPagine(array $d, array $opzioni, float $bollo, string $spedizione,
     // ── PAGINA 6: GRAZIE ──────────────────────────────────────────────────────
     $pagine[] = '
 <div class="grazie-page">
-  <div class="grazie-h">Grazie!</div>
-  <div class="grazie-ardy">Ardy</div>
+  <div class="grazie-logo-wrap"><img class="grazie-logo-img" src="' . LOGO_PATH . '"></div>
+  <div class="grazie-h">GRAZIE</div>
+  <div class="grazie-msg">
+    <p>Grazie per averci scelto e per il tempo che ci hai dedicato: per noi ogni cliente è una storia da custodire con la stessa cura che mettiamo nei restauri.</p>
+    <p>Con Ardy Lab non hai solo un preventivo, hai al tuo fianco <strong>Sole</strong>, la nostra assistente che segue ogni cliente passo dopo passo, risponde alle domande e tiene aggiornati sull\'avanzamento dei lavori: un servizio di customer care che oggi, in Italia, nessun altro artigiano offre.</p>
+    <p>Per qualsiasi domanda, dubbio o aggiornamento, Sole è sempre disponibile per te.</p>
+  </div>
   <div class="grazie-addr">Via James Joyce 4, 00143 Roma (RM)</div>
   <div class="grazie-web">www.ardy-lab.it<br>ardy.documenti@gmail.com</div>
 </div>';
