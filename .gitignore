@@ -13,6 +13,7 @@ import-preventivi*.csv
 # Cartelle con dati
 preventivi_pdf/
 preventivi-pdf/
+email_pdf/
 ardy-uploads/
 ardy-rate-limit/
 dossier/
