@@ -20,3 +20,15 @@ function ardyDB(): PDO {
     }
     return $pdo;
 }
+
+// Migrazione idempotente: garantisce le colonne 'stato' ('bozza'|'pubblicata')
+// e 'ordine' sulla tabella fasi, usate per le fasi pre-compilate dai template
+// di libreria (generate dal box note del sopralluogo) prima della pubblicazione.
+function ardyEnsureFasiStatoOrdine(PDO $db): void {
+    if (!$db->query("SHOW COLUMNS FROM fasi LIKE 'stato'")->fetch()) {
+        $db->exec("ALTER TABLE fasi ADD COLUMN stato VARCHAR(20) NOT NULL DEFAULT 'pubblicata' AFTER fase_tipo");
+    }
+    if (!$db->query("SHOW COLUMNS FROM fasi LIKE 'ordine'")->fetch()) {
+        $db->exec("ALTER TABLE fasi ADD COLUMN ordine INT NULL AFTER stato");
+    }
+}

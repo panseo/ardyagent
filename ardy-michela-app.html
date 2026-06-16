@@ -179,6 +179,11 @@
               </div>
               <textarea class="info-value editable" id="dNote" rows="6" oninput="markDirty()"></textarea>
             </div>
+            <div class="info-cell full">
+              <div class="info-label">Fasi previste dal sopralluogo <small style="color:var(--text-dim);font-size:9px;">(dalla libreria)</small></div>
+              <div id="notTemplateChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
+              <button type="button" class="btn-secondary" style="width:100%;" onclick="generaFasiDaTemplate()">📐 Genera fasi da template selezionati</button>
+            </div>
             <div class="info-cell anag-field">
               <div class="info-label">Data followup</div>
               <input type="date" class="info-value editable" id="dDataFollowup" oninput="markDirty()" style="width:100%;">
@@ -277,6 +282,12 @@
                 </div>
               </div>
               <div id="lavScadenzaHint" class="lav-scadenza-hint" style="display:none;"></div>
+            </div>
+
+            <!-- Fasi previste (bozze precompilate dai template scelti nel box note) -->
+            <div id="fasiBozzaWrap" style="display:none;margin-bottom:16px;">
+              <div class="lav-title" style="margin-bottom:8px;">📐 Fasi previste — da modificare e pubblicare</div>
+              <div id="fasiBozzaList"></div>
             </div>
 
             <!-- Bottone PRIMARIO: crea e pubblica una nuova fase -->
@@ -427,6 +438,7 @@ const GRAZIE_URL      = BASE_URL + '/ardy-grazie-consegna.php';
 const DOSSIER_URL     = BASE_URL + '/ardy-dossier.php';
 const AI_URL          = BASE_URL + '/ardy-proxy.php';
 const LAVORAZIONE_URL = BASE_URL + '/ardy-pubblica-lavorazione.php';
+const FASI_BOZZA_URL  = BASE_URL + '/ardy-fasi-bozza-api.php';
 const SOCIAL_URL      = BASE_URL + '/ardy-pubblica-social.php';
 const REEL_URL        = BASE_URL + '/ardy-crea-reel.php';
 const FAQ_URL         = BASE_URL + '/ardy-crea-faq.php';
@@ -698,6 +710,9 @@ function renderDetail() {
   document.getElementById('dBudget').value          = l.Budget    ?? '';
   document.getElementById('dIndirizzo').value       = l.Indirizzo ?? '';
   document.getElementById('dNote').value            = l.Note      ?? '';
+  notaTemplateSel.clear();
+  renderNoteTemplateChips();
+  if (!libLoadedOnce) { libLoadedOnce = true; libLoadRemote().then(renderNoteTemplateChips); }
   document.getElementById('dDataFollowup').value    = l.Data_followup ?? '';
   document.getElementById('dInizioLavoro').value        = l.Inizio_lavoro ?? '';
   document.getElementById('dFineLavoroPrevista').value  = l.Fine_lavoro_prevista ?? '';
@@ -788,6 +803,8 @@ function aggiornaSezioniVisibili(stato) {
     pendingSocial = null;
     renderSocialPending();
     caricaFasiPubblicate(currentLead.Session_ID ?? '');
+    caricaFasiBozza(currentLead.Session_ID ?? '');
+    faseBozzaIdInCorso = null;
     const nfBody = document.getElementById('nuovaFaseBody');
     if (nfBody) nfBody.style.display = 'none';
   }
@@ -1418,6 +1435,108 @@ async function caricaFasiPubblicate(sessionId) {
   } catch (e) { /* lista facoltativa: in caso di errore resta nascosta */ }
 }
 
+// ─── Fasi previste dal sopralluogo: template → bozze ──────
+// Nel box "Note" si scelgono uno o più template dalla libreria fasi; un click
+// li trasforma in righe "bozza" nella tabella fasi, da modificare e pubblicare
+// più avanti dal pannello Lavorazione (vedi caricaFasiBozza più sotto).
+let libLoadedOnce   = false;
+let notaTemplateSel = new Set();
+
+function renderNoteTemplateChips() {
+  const el = document.getElementById('notTemplateChips');
+  if (!el) return;
+  const fasi = libLoad();
+  el.innerHTML = fasi.map(f => `
+    <button type="button" class="filter-chip${notaTemplateSel.has(f.id) ? ' active' : ''}"
+            onclick="toggleNotaTemplate('${f.id}')">${escHtml(f.nome)}</button>
+  `).join('');
+}
+
+function toggleNotaTemplate(id) {
+  if (notaTemplateSel.has(id)) notaTemplateSel.delete(id); else notaTemplateSel.add(id);
+  renderNoteTemplateChips();
+}
+
+async function generaFasiDaTemplate() {
+  if (!currentLead || !currentLead.Session_ID) { showToast('⚠ Seleziona prima un cliente', 'error'); return; }
+  const ids = [...notaTemplateSel];
+  if (!ids.length) { showToast('⚠ Seleziona almeno una fase dalla libreria', 'error'); return; }
+  try {
+    const res  = await fetch(FASI_BOZZA_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ mode: 'genera', session_id: currentLead.Session_ID, template_ids: ids })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Errore');
+    notaTemplateSel.clear();
+    renderNoteTemplateChips();
+    showToast(`✓ ${data.bozze.length} fasi pre-compilate — modificale e pubblicale dal pannello Lavorazione`, 'success');
+    caricaFasiBozza(currentLead.Session_ID);
+  } catch(e) {
+    showToast('⚠ Errore: ' + e.message, 'error');
+  }
+}
+
+// ─── Fasi previste (bozze): lista nel pannello Lavorazione ─
+let fasiBozzaCache    = [];
+let faseBozzaIdInCorso = null;
+
+async function caricaFasiBozza(sessionId) {
+  const wrap = document.getElementById('fasiBozzaWrap');
+  const cont = document.getElementById('fasiBozzaList');
+  if (!wrap || !cont) return;
+  cont.innerHTML = '';
+  wrap.style.display = 'none';
+  fasiBozzaCache = [];
+  if (!sessionId) return;
+  try {
+    const r = await fetch(FASI_BOZZA_URL + '?session_id=' + encodeURIComponent(sessionId));
+    const bozze = await r.json();
+    if (!Array.isArray(bozze) || !bozze.length) return;
+    fasiBozzaCache = bozze;
+    cont.innerHTML = bozze.map(b => `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px dashed var(--border);border-radius:6px;padding:8px 10px;margin-bottom:6px;">
+        <span style="font-size:13px;">${escHtml(b.fase_nome)}</span>
+        <span style="display:flex;gap:6px;flex-shrink:0;">
+          <button type="button" class="lib-btn-edit" onclick="modificaFaseBozza(${b.id})">✎ Modifica e pubblica</button>
+          <button type="button" class="lib-btn-del" onclick="eliminaFaseBozza(${b.id})" title="Elimina">✕</button>
+        </span>
+      </div>
+    `).join('');
+    wrap.style.display = 'block';
+  } catch (e) { /* lista facoltativa: in caso di errore resta nascosta */ }
+}
+
+function modificaFaseBozza(id) {
+  const b = fasiBozzaCache.find(x => x.id === id);
+  if (!b) return;
+  faseBozzaIdInCorso = b.id;
+  document.getElementById('lavFase').value = b.fase_nome   || '';
+  document.getElementById('lavNote').value = b.testo_breve || '';
+  const body = document.getElementById('nuovaFaseBody');
+  if (body) body.style.display = 'block';
+  document.getElementById('lavFase').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  showToast('✎ Bozza caricata nel form: modifica e premi PUBBLICA', '');
+}
+
+async function eliminaFaseBozza(id) {
+  if (!confirm('Eliminare questa fase prevista?')) return;
+  try {
+    const res  = await fetch(FASI_BOZZA_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ mode: 'delete', id })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Errore');
+    if (faseBozzaIdInCorso === id) faseBozzaIdInCorso = null;
+    caricaFasiBozza(currentLead.Session_ID ?? '');
+  } catch(e) {
+    showToast('⚠ Errore eliminazione: ' + e.message, 'error');
+  }
+}
+
 function handleSchedaFotoUpload(event) {
   const sessionId = currentLead && currentLead.Session_ID;
   const files = Array.from(event.target.files);
@@ -1483,6 +1602,7 @@ async function pubblicaFase(tipo) {
     wp_post_id:  lavWpPostId,
     immagini:    lavImmagini,
     video_urls:  lavVideoUrls,
+    fase_id:     (!isCom && faseBozzaIdInCorso) ? faseBozzaIdInCorso : null,
   };
 
   try {
@@ -1527,6 +1647,9 @@ async function pubblicaFase(tipo) {
       }
       // Aggiorna l'elenco fasi pubblicate (sia fase che comunicazione)
       caricaFasiPubblicate(currentLead.Session_ID ?? '');
+      // Se questa pubblicazione veniva da una bozza, ricarica la lista (ora più corta)
+      faseBozzaIdInCorso = null;
+      caricaFasiBozza(currentLead.Session_ID ?? '');
     } else {
       showToast('⚠ Errore: ' + (data.error ?? 'sconosciuto'), 'error');
     }

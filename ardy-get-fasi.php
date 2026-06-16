@@ -21,7 +21,12 @@ if (empty($sessionId)) {
 
 try {
     $db   = ardyDB();
-    $stmt = $db->prepare("SELECT * FROM fasi WHERE session_id = ? ORDER BY created_at ASC");
+    ardyEnsureFasiStatoOrdine($db);
+    // Le fasi 'bozza' sono pre-compilate da template ma non ancora pubblicate:
+    // non devono mai arrivare al widget pubblico del cliente.
+    $stmt = $db->prepare(
+        "SELECT * FROM fasi WHERE session_id = ? AND stato = 'pubblicata' ORDER BY ordine ASC, created_at ASC"
+    );
     $stmt->execute([$sessionId]);
     $fasi = $stmt->fetchAll();
 

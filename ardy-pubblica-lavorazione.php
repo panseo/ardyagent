@@ -40,6 +40,7 @@ $clienteEmail = $input['email']      ?? '';
 $clienteNome  = $input['nome']       ?? '';
 $mobileTitolo = $input['mobile']     ?? '';
 $wpPostId     = !empty($input['wp_post_id']) ? (int)$input['wp_post_id'] : null;
+$faseId       = !empty($input['fase_id'])    ? (int)$input['fase_id']    : null; // se presente: pubblica una bozza esistente invece di crearne una nuova
 $immagini     = $input['immagini']   ?? [];
 $videoUrls    = $input['video_urls'] ?? [];   // URL video già caricati via ardy-upload-video.php
 
@@ -319,16 +320,37 @@ try {
     if (!$hasTipo) {
         $db->exec("ALTER TABLE fasi ADD COLUMN fase_tipo VARCHAR(20) NOT NULL DEFAULT 'fase' AFTER fase_nome");
     }
-    $db->prepare("INSERT INTO fasi (session_id, fase_nome, fase_tipo, testo_breve, testo_generato, foto_urls, video_urls) VALUES (:sid, :fase, :tipo, :breve, :generato, :foto, :video)")
-       ->execute([
-           ':sid'      => $sessionId,
-           ':fase'     => $faseNome,
-           ':tipo'     => $tipo,
-           ':breve'    => $noteBrevi,
-           ':generato' => $testoGenerato,
-           ':foto'     => json_encode($savedImageUrls),
-           ':video'    => json_encode($videoUrlsClean),
-       ]);
+    ardyEnsureFasiStatoOrdine($db);
+
+    if ($faseId) {
+        // Pubblica una bozza pre-compilata da template: aggiorna la riga esistente
+        // invece di crearne una nuova, mantenendo il suo "ordine" di lavoro.
+        $db->prepare(
+            "UPDATE fasi SET fase_nome=:fase, fase_tipo=:tipo, testo_breve=:breve, testo_generato=:generato,
+                foto_urls=:foto, video_urls=:video, stato='pubblicata'
+             WHERE id=:id AND session_id=:sid"
+        )->execute([
+            ':fase'     => $faseNome,
+            ':tipo'     => $tipo,
+            ':breve'    => $noteBrevi,
+            ':generato' => $testoGenerato,
+            ':foto'     => json_encode($savedImageUrls),
+            ':video'    => json_encode($videoUrlsClean),
+            ':id'       => $faseId,
+            ':sid'      => $sessionId,
+        ]);
+    } else {
+        $db->prepare("INSERT INTO fasi (session_id, fase_nome, fase_tipo, testo_breve, testo_generato, foto_urls, video_urls) VALUES (:sid, :fase, :tipo, :breve, :generato, :foto, :video)")
+           ->execute([
+               ':sid'      => $sessionId,
+               ':fase'     => $faseNome,
+               ':tipo'     => $tipo,
+               ':breve'    => $noteBrevi,
+               ':generato' => $testoGenerato,
+               ':foto'     => json_encode($savedImageUrls),
+               ':video'    => json_encode($videoUrlsClean),
+           ]);
+    }
 } catch (PDOException $e) {
     error_log('ARDY SALVA FASE ERROR: ' . $e->getMessage());
 }
