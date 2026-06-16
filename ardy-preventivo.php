@@ -20,7 +20,7 @@ define('PDF_OUTPUT_DIR', __DIR__ . '/preventivi_pdf/');
 define('LOGO_PATH',      __DIR__ . '/assets/logo.png');
 // Versione della cache PDF: da bumpare se cambia il layout/CSS del PDF, così le
 // cache content-hash esistenti vengono invalidate al primo render successivo.
-define('PDF_CACHE_VER', '2026-06-16g');
+define('PDF_CACHE_VER', '2026-06-16h');
 
 if (!is_dir(PDF_OUTPUT_DIR) && !mkdir(PDF_OUTPUT_DIR, 0755, true) && !is_dir(PDF_OUTPUT_DIR)) {
     http_response_code(500);
@@ -696,6 +696,7 @@ table.firma-t { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
 .privacy-p { font-size: 7.8pt; line-height: 1.5; color: #444; text-align: justify; margin-bottom: 6px; }
 .privacy-consent { font-size: 9pt; line-height: 1.5; margin-top: 8px; padding: 8px 12px; border: 1px solid #111; }
 .privacy-box { display: inline-block; width: 11px; height: 11px; border: 1.5px solid #111; margin-right: 7px; vertical-align: middle; }
+.privacy-links { font-size: 7.8pt; color: #444; margin-top: 6px; }
 .firma-line-l { width: 48%; float: left; border-top: 1.5px solid #888; padding-top: 6px; font-size: 9pt; color: #666; text-align: center; margin-top: 22px; }
 .firma-line-r { width: 48%; float: right; border-top: 1.5px solid #888; padding-top: 6px; font-size: 9pt; color: #666; text-align: center; margin-top: 22px; }
 
@@ -775,7 +776,8 @@ function buildPagine(array $d, array $opzioni, float $bollo, string $spedizione,
   <p class="privacy-p"><strong>Destinatari:</strong> i dati possono essere comunicati a consulente fiscale/commercialista, istituti di pagamento e Autorità competenti, esclusivamente per le finalità sopra indicate. Non sono diffusi né trasferiti fuori dall\'Unione Europea.</p>
   <p class="privacy-p"><strong>Conservazione:</strong> per la durata del rapporto e, successivamente, per i termini imposti dalla legge (in particolare 10 anni per la documentazione fiscale e contabile).</p>
   <p class="privacy-p"><strong>Diritti dell\'interessato:</strong> in qualsiasi momento è possibile esercitare i diritti di accesso, rettifica, cancellazione, limitazione, opposizione e portabilità (artt. 15-22 GDPR) scrivendo a ' . $d['azienda_email'] . ', nonché proporre reclamo al Garante per la protezione dei dati personali. Il conferimento dei dati è necessario per la stipula e l\'esecuzione del contratto: il rifiuto rende impossibile dar corso al servizio.</p>
-  <div class="privacy-consent"><span class="privacy-box">&nbsp;</span>Dichiaro di aver letto e compreso l\'informativa che precede e <strong>acconsento al trattamento</strong> dei miei dati personali per le finalità ivi indicate, sottoscrivendo per accettazione il presente preventivo.</div>';
+  <div class="privacy-consent"><span class="privacy-box">&nbsp;</span>Dichiaro di aver letto e compreso l\'informativa che precede e <strong>acconsento al trattamento</strong> dei miei dati personali per le finalità ivi indicate, sottoscrivendo per accettazione il presente preventivo.</div>
+  <div class="privacy-links">Informativa privacy completa: ardy-lab.it/privacy-policy &nbsp;·&nbsp; Termini e condizioni: ardy-lab.it/termini-e-condizioni</div>';
 
     $oggettoDiv = $d['oggetto'] ? '<div class="prev-oggetto">Oggetto: ' . $d['oggetto'] . '</div>' : '';
     $noteDiv    = $d['note']    ? '<p class="proc-p" style="margin-top:12px;">' . nl2br($d['note']) . '</p>' : '';
