@@ -14,6 +14,8 @@ CRM in attività piena, ora anche **multi-utente** (Michela + Andrea). Primo
 - ✅ **Monitor portali lead** in produzione (n8n ogni 60min, Gmail→Claude→WA). Portali: ProntoPro, Homedeal, Cronoshare. Instapro in attesa cambio email.
 - ✅ **Cestino 30 giorni**: soft-delete con ripristino, purga automatica >30gg, modal nella dashboard.
 - ✅ **Stato COMPLETATO** aggiunto tra IN_LAVORAZIONE e CONSEGNATO.
+- ✅ **Restyling PDF preventivo** (16/06 sera): font **Playfair Display** per tutto il documento, colore testo **dorato scuro** (`#6b4f1e`) invece del quasi-nero, pagina **Grazie** ridisegnata (logo + "GRAZIE" + customer-care Sole) con footer link Instagram + webchat + **WhatsApp diretto** (`wa.me`) e **2 QR code** (webchat + WhatsApp), link **privacy policy + termini** sulla pagina firma. `PDF_CACHE_VER` a `2026-06-16i`.
+- ✅ **Prompt WhatsApp: nudge verso webchat** (16/06 sera): sezione in `ardy-whatsapp-system.txt` che istruisce Sole a invitare con garbo il cliente sulla webchat (dopo aver dato valore, mai forzando, sempre lato-cliente).
 Prossimi task per priorità: foto-cliente nelle fasi (rimandata) · briefing del mattino · backlog performance/sicurezza.
 
 ---
@@ -61,6 +63,10 @@ il layout/CSS del PDF, **bumpa `PDF_CACHE_VER`** per invalidare le cache esisten
   3. Pannello Lavorazione → sezione "Fasi previste": "✎ Modifica e pubblica" precompila il form, "✕" elimina la bozza.
   4. Pubblicare una bozza modificata → deve uscire dalla lista bozze e comparire come fase pubblicata.
   5. Widget pubblico lato cliente: deve mostrare SOLO le fasi pubblicate, mai le bozze.
+- **PDF preventivo restyling** (deployato 16/06/2026, da vedere dal vivo): generare un preventivo e
+  controllare sul PDF reso (mPDF non è renderizzabile in locale): font Playfair su tutto il documento,
+  colore testo dorato leggibile, pagina Grazie coi 2 QR (webchat + WhatsApp) **scansionabili davvero**
+  e i link footer corretti, link privacy/termini sulla pagina firma, **nessuna pagina bianca** prima del Grazie.
 - ✅ **Template `ringraziamento_consegna`** testato (15/06/2026) con cliente fittizio + reinvio → WA arrivato.
 - **Template `aggiornamento_fase`** (4 var): pubblica una fase sul cliente fittizio con numero reale →
   verifica che arrivi il WA con nome/mobile/fase/link correttamente compilati.
@@ -205,6 +211,11 @@ a "Sole" quando si tocca lo snippet in WPCode.
   numeri non registrati (raro). Servirebbe marker `[[CERCA:ARD-XXXX]]` + lookup per `codice_accesso`.
 - **Scartati (non riproporre)**: foto/video WhatsApp che attivano fasi (pipeline media Meta assente);
   WhatsApp come "telecomando" unico della webapp. Si tiene solo Scenario 1 (creazione scheda da dati/PDF).
+- **Riorganizzare i `.php` in sottocartelle** (valutato 16/06, deciso NO): in questo hosting il **path del
+  file = URL pubblico**, quindi spostarli romperebbe n8n, il webhook Meta, il frontend e gli `__DIR__`
+  require, e il deploy (`cp *.php`, `.cpanel.yml`) non è ricorsivo → file non deployati in silenzio. La root
+  resta piatta di proposito. (L'unica mossa a rischio zero, se mai servisse: spostare i soli `.md` in `docs/`,
+  non deployati né usati a runtime.)
 
 ---
 

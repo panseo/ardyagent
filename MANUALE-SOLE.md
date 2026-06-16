@@ -36,6 +36,8 @@ Su WhatsApp Sole capisce **con chi sta parlando** e si comporta di conseguenza (
 
 Su WhatsApp Sole ha anche **memoria della conversazione**: ricorda i messaggi precedenti con quel numero e mantiene il filo del discorso.
 
+**WhatsApp è il "ponte", la webchat è "casa".** WhatsApp è perfetto per il primo contatto (familiare, lo ha chiunque), ma quando la relazione si scalda Sole invita **con garbo** a spostarsi sulla webchat (`ardy-lab.it/ardy-agent/`): lì la cronologia resta tutta in un posto solo, foto/preventivo/stato avanzamento sono ordinati e le risposte immediate. Lo fa **solo dopo aver già dato valore** (forbice di prezzo, sopralluogo fissato, aggiornamento), mai sul primo messaggio o durante la qualifica, sempre motivando dal punto di vista del cliente — mai con le ragioni interne (costi/dati). Un accenno leggero, una volta sola: se il cliente preferisce restare su WhatsApp, va benissimo, niente insistenza.
+
 ---
 
 ## 🧰 Le mansioni di Sole
