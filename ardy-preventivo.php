@@ -20,7 +20,7 @@ define('PDF_OUTPUT_DIR', __DIR__ . '/preventivi_pdf/');
 define('LOGO_PATH',      __DIR__ . '/assets/logo.png');
 // Versione della cache PDF: da bumpare se cambia il layout/CSS del PDF, così le
 // cache content-hash esistenti vengono invalidate al primo render successivo.
-define('PDF_CACHE_VER', '2026-06-16h');
+define('PDF_CACHE_VER', '2026-06-16i');
 
 if (!is_dir(PDF_OUTPUT_DIR) && !mkdir(PDF_OUTPUT_DIR, 0755, true) && !is_dir(PDF_OUTPUT_DIR)) {
     http_response_code(500);
@@ -710,10 +710,23 @@ table.firma-t { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
 .grazie-addr { font-size: 9pt; color: #1a3a4a; line-height: 1.7; text-decoration: underline; }
 .grazie-web { font-size: 9pt; color: #1a3a4a; line-height: 1.9; }
 .grazie-links { font-size: 9pt; color: #1a3a4a; line-height: 1.7; margin-top: 16px; }
-.grazie-qr-wrap { margin-top: 14px; }
+.grazie-qr-row { text-align: center; margin-top: 14px; }
+.grazie-qr-wrap { display: inline-block; text-align: center; margin: 0 20px; }
 .grazie-qr-img { width: 70px; height: 70px; }
 .grazie-qr-cap { font-size: 8pt; color: #1a3a4a; margin-top: 4px; }
 </style>';
+}
+
+// Genera un QR code (PNG, data URI) per il link passato; stringa vuota se
+// la libreria mpdf/qrcode non è disponibile (il link testuale resta comunque).
+function ardy_qr_data_uri(string $link): string {
+    try {
+        $qrcode = new \Mpdf\QrCode\QrCode($link);
+        $qrPng  = (new \Mpdf\QrCode\Output\Png())->output($qrcode, 300);
+        return 'data:image/png;base64,' . base64_encode($qrPng);
+    } catch (\Throwable $e) {
+        return '';
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -927,14 +940,13 @@ function buildPagine(array $d, array $opzioni, float $bollo, string $spedizione,
         $shortTok    = substr(hash_hmac('sha256', $d['session_id'], WA_LOOKUP_SECRET), 0, 16);
         $webchatLink = 'https://ardy-lab.it/ardy-agent/?lead=' . urlencode($d['session_id']) . '&tok=' . $shortTok;
     }
-    $qrDataUri = '';
-    try {
-        $qrcode    = new \Mpdf\QrCode\QrCode($webchatLink);
-        $qrPng     = (new \Mpdf\QrCode\Output\Png())->output($qrcode, 300);
-        $qrDataUri = 'data:image/png;base64,' . base64_encode($qrPng);
-    } catch (\Throwable $e) {
-        // Niente QR se la libreria non è disponibile: il link testuale resta comunque.
-    }
+    $qrDataUri = ardy_qr_data_uri($webchatLink);
+
+    // ── Link WhatsApp diretto al numero di Sole (wa.me apre la chat senza
+    // passare dalla rubrica/contatti) + relativo QR code ─────────────────────
+    $waNumber  = '393793756437';
+    $waLink    = 'https://wa.me/' . $waNumber;
+    $waQrDataUri = ardy_qr_data_uri($waLink);
 
     // ── PAGINA 6: GRAZIE ──────────────────────────────────────────────────────
     $pagine[] = '
@@ -948,8 +960,11 @@ function buildPagine(array $d, array $opzioni, float $bollo, string $spedizione,
   </div>
   <div class="grazie-addr">Via James Joyce 4, 00143 Roma (RM)</div>
   <div class="grazie-web">www.ardy-lab.it<br>ardy.documenti@gmail.com</div>
-  <div class="grazie-links">Seguici: instagram.com/ardy.lab &nbsp;·&nbsp; Chatta con Sole: ardy-lab.it/ardy-agent</div>
-  ' . ($qrDataUri ? '<div class="grazie-qr-wrap"><img class="grazie-qr-img" src="' . $qrDataUri . '"><div class="grazie-qr-cap">Scansiona per parlare con Sole</div></div>' : '') . '
+  <div class="grazie-links">Seguici: instagram.com/ardy.lab &nbsp;·&nbsp; Chatta con Sole: ardy-lab.it/ardy-agent &nbsp;·&nbsp; WhatsApp diretto: wa.me/' . $waNumber . '</div>
+  <div class="grazie-qr-row">
+    ' . ($qrDataUri   ? '<div class="grazie-qr-wrap"><img class="grazie-qr-img" src="' . $qrDataUri . '"><div class="grazie-qr-cap">Scansiona per parlare con Sole</div></div>' : '') . '
+    ' . ($waQrDataUri ? '<div class="grazie-qr-wrap"><img class="grazie-qr-img" src="' . $waQrDataUri . '"><div class="grazie-qr-cap">Scansiona per WhatsApp</div></div>' : '') . '
+  </div>
 </div>';
 
     return $pagine;
