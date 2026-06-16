@@ -46,6 +46,15 @@ il layout/CSS del PDF, **bumpa `PDF_CACHE_VER`** per invalidare le cache esisten
 ---
 
 ## ⏳ DA VERIFICARE DAL VIVO / AZIONI MANUALI
+- **UX "Modifica" su Preventivo (allegato)** (deployato 16/06/2026, testato dal vivo — lasciato così, da
+  rivedere con calma): il bottone "✏️ Modifica" apre correttamente il mini-form precompilato (oggetto,
+  numero, AGGIORNA) invece del generatore a voci — bug risolto. Ma Michela si aspettava di vedere anche
+  fasi/prezzi in quella schermata: non ci sono perché l'estrazione "🔍 Leggi dati dal PDF" è disponibile
+  **solo al primo allegato**, non in modifica (per non duplicare le fasi già create). Da rivedere: capire
+  se serve un modo per ri-estrarre/correggere prezzi anche in modifica, senza creare doppioni di fasi.
+- **Prezzo per fase** (deployato 16/06/2026, da testare dal vivo): su un NUOVO allegato (non in modifica),
+  dopo "🔍 Leggi dati dal PDF" verificare che la lista fasi mostri un campo prezzo editabile, precompilato
+  solo se il PDF riporta un importo per voce (mai dedotto dal totale).
 - **Fasi bozza da template libreria + badge "da pianificare"** (deployato 16/06/2026, da testare dal vivo):
   1. Badge "📐 da pianificare" in lista e in scheda su un cliente con nota ma senza fasi.
   2. Nel box Note, selezionare 1-2 chip template e generare le bozze → toast di conferma, badge che scompare.
