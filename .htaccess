@@ -19,6 +19,10 @@
 # Blocca directory listing
 Options -Indexes
 
+# La root del dominio serve direttamente la dashboard (resta dietro Basic Auth
+# via FilesMatch più sotto).
+DirectoryIndex ardy-michela-app.html
+
 # -----------------------------------------------------------
 # GZIP — comprime le risposte testuali (HTML/CSS/JS/JSON) per ridurre il
 # traffico e velocizzare il caricamento. NON tocca le immagini (jpeg/png/webp:
