@@ -58,9 +58,11 @@ if (empty($sessionId)) {
 try {
     $db = ardyDB();
 
+    ardyEnsureTelefonoLast9($db);
+
     // Campi accettati in INSERT/UPDATE
     $fields = [
-        'nome', 'cognome', 'telefono', 'email',
+        'nome', 'cognome', 'telefono', 'telefono_last9', 'email',
         'servizio', 'mobile', 'zona', 'budget',
         'indirizzo', 'stato', 'note',
         'data_followup', 'wp_post_id', 'wp_post_link'
@@ -73,6 +75,8 @@ try {
             ? $input[$f]
             : null;
     }
+    // telefono_last9 non arriva dall'input: si calcola dal telefono.
+    $values['telefono_last9'] = $values['telefono'] !== null ? ardyTelefonoLast9((string)$values['telefono']) : null;
     // Default stato
     if (empty($values['stato'])) {
         $values['stato'] = 'LEAD';

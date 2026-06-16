@@ -101,7 +101,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $errCount = 0;
 
     $db = ardyDB();
-    if (!$dryRun) $db->beginTransaction();
+    if (!$dryRun) {
+        ardyEnsureTelefonoLast9($db);
+        $db->beginTransaction();
+    }
 
     foreach ($righe as $i => $r) {
         $numRiga = $i + 2; // +1 header, +1 base-1 per l'utente
@@ -224,13 +227,14 @@ function importaRiga(PDO $db, array $r, bool $dryRun, array $statiCli, array $st
     try {
         // 1) Upsert cliente (UNIQUE KEY su session_id)
         $sqlCli = "INSERT INTO clienti
-                     (session_id, nome, cognome, telefono, email, indirizzo, servizio, zona, mobile, budget, stato, note, created_at, updated_at)
+                     (session_id, nome, cognome, telefono, telefono_last9, email, indirizzo, servizio, zona, mobile, budget, stato, note, created_at, updated_at)
                    VALUES
-                     (:sid, :nome, :cognome, :tel, :email, :indir, :serv, :zona, :mobile, :budget, :stato, :note, NOW(), NOW())
+                     (:sid, :nome, :cognome, :tel, :tel9, :email, :indir, :serv, :zona, :mobile, :budget, :stato, :note, NOW(), NOW())
                    ON DUPLICATE KEY UPDATE
                      nome      = IF(VALUES(nome)     <> '', VALUES(nome),     nome),
                      cognome   = IF(VALUES(cognome)  <> '', VALUES(cognome),  cognome),
                      telefono  = IF(VALUES(telefono) <> '', VALUES(telefono), telefono),
+                     telefono_last9 = IF(VALUES(telefono) <> '', VALUES(telefono_last9), telefono_last9),
                      email     = IF(VALUES(email)    <> '', VALUES(email),    email),
                      indirizzo = IF(VALUES(indirizzo)<> '', VALUES(indirizzo),indirizzo),
                      servizio  = IF(VALUES(servizio) <> '', VALUES(servizio), servizio),
@@ -244,6 +248,7 @@ function importaRiga(PDO $db, array $r, bool $dryRun, array $statiCli, array $st
             ':nome'   => $nome ?: null,
             ':cognome'=> $cognome ?: null,
             ':tel'    => $telefono ?: null,
+            ':tel9'   => $telefono ? ardyTelefonoLast9($telefono) : null,
             ':email'  => $email ?: null,
             ':indir'  => ($r['indirizzo'] ?? '') ?: null,
             ':serv'   => ($r['servizio'] ?? '') ?: null,

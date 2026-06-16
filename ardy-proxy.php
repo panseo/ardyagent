@@ -740,13 +740,14 @@ while ($iteration < $maxIterations) {
                             // Trova il cliente e l'evento collegato tramite le ultime 9 cifre del telefono
                             $db = ardyDB();
                             ardy_ensure_sopralluogo_cols($db);
+                            ardyEnsureTelefonoLast9($db);
                             $q = $db->prepare(
                                 "SELECT session_id, nome, cognome, gcal_event_id FROM clienti
-                                  WHERE REPLACE(REPLACE(REPLACE(REPLACE(telefono,' ',''),'+',''),'-',''),'.','') LIKE :p
+                                  WHERE telefono_last9 = :p
                                     AND gcal_event_id IS NOT NULL AND gcal_event_id <> ''
                                ORDER BY updated_at DESC, id DESC LIMIT 1"
                             );
-                            $q->execute([':p' => '%' . substr($tel, -9)]);
+                            $q->execute([':p' => substr($tel, -9)]);
                             $cli = $q->fetch(PDO::FETCH_ASSOC);
 
                             if (!$cli) {

@@ -85,16 +85,17 @@ try {
     // ancora state create da altri endpoint (lead-contatto / elimina-cliente).
     try { $db->exec("ALTER TABLE clienti ADD COLUMN primo_contatto_wa_at DATETIME NULL"); } catch (PDOException $e) { /* già presente */ }
     try { $db->exec("ALTER TABLE clienti ADD COLUMN deleted_at DATETIME NULL"); } catch (PDOException $e) { /* già presente */ }
+    ardyEnsureTelefonoLast9($db);
     $stmt = $db->prepare(
         "SELECT session_id, nome, cognome, telefono, email, servizio, mobile, zona, stato,
                 wp_post_id, wp_post_link, primo_contatto_wa_at
            FROM clienti
-          WHERE REPLACE(REPLACE(REPLACE(REPLACE(telefono,' ',''),'+',''),'-',''),'.','') LIKE :p
+          WHERE telefono_last9 = :p
             AND deleted_at IS NULL
        ORDER BY updated_at DESC, id DESC
           LIMIT 1"
     );
-    $stmt->execute([':p' => '%' . $last9]);
+    $stmt->execute([':p' => $last9]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     error_log('ARDY WA LOOKUP ERROR: ' . $e->getMessage());

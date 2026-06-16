@@ -189,16 +189,18 @@ function salvaScheda(array $statiCli, array $statiPrev): array {
     $cliNome   = trim($nome . ' ' . $cognome);
 
     $db = ardyDB();
+    ardyEnsureTelefonoLast9($db);
     $db->beginTransaction();
     try {
         $sqlCli = "INSERT INTO clienti
-                     (session_id, nome, cognome, telefono, email, indirizzo, servizio, zona, mobile, stato, note, created_at, updated_at)
+                     (session_id, nome, cognome, telefono, telefono_last9, email, indirizzo, servizio, zona, mobile, stato, note, created_at, updated_at)
                    VALUES
-                     (:sid, :nome, :cognome, :tel, :email, :indir, :serv, :zona, :mobile, :stato, :note, NOW(), NOW())
+                     (:sid, :nome, :cognome, :tel, :tel9, :email, :indir, :serv, :zona, :mobile, :stato, :note, NOW(), NOW())
                    ON DUPLICATE KEY UPDATE
                      nome      = IF(VALUES(nome)     <> '', VALUES(nome),     nome),
                      cognome   = IF(VALUES(cognome)  <> '', VALUES(cognome),  cognome),
                      telefono  = IF(VALUES(telefono) <> '', VALUES(telefono), telefono),
+                     telefono_last9 = IF(VALUES(telefono) <> '', VALUES(telefono_last9), telefono_last9),
                      email     = IF(VALUES(email)    <> '', VALUES(email),    email),
                      indirizzo = IF(VALUES(indirizzo)<> '', VALUES(indirizzo),indirizzo),
                      servizio  = IF(VALUES(servizio) <> '', VALUES(servizio), servizio),
@@ -209,7 +211,8 @@ function salvaScheda(array $statiCli, array $statiPrev): array {
         $db->prepare($sqlCli)->execute([
             ':sid' => $sessionId,
             ':nome' => $nome ?: null, ':cognome' => $cognome ?: null,
-            ':tel' => $telefono ?: null, ':email' => $email ?: null,
+            ':tel' => $telefono ?: null, ':tel9' => $telefono ? ardyTelefonoLast9($telefono) : null,
+            ':email' => $email ?: null,
             ':indir' => (trim($_POST['indirizzo'] ?? '')) ?: null,
             ':serv' => (trim($_POST['servizio'] ?? '')) ?: null,
             ':zona' => (trim($_POST['zona'] ?? '')) ?: null,
