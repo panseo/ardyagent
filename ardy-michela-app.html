@@ -126,39 +126,47 @@
         </button>
         <div class="acc-body">
           <div class="info-grid" style="margin-bottom:16px;">
-            <div class="info-cell">
+            <div class="info-cell full" id="datiAnagToggleCell">
+              <button type="button" id="datiAnagToggleBtn" onclick="toggleDatiAnagrafici()"
+                      style="width:100%;text-align:left;background:none;border:1px dashed var(--border);
+                             color:var(--text-dim);padding:8px 12px;border-radius:6px;
+                             font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;">
+                ▾ Dati anagrafici (Nome, Telefono, Indirizzo, Budget…)
+              </button>
+            </div>
+            <div class="info-cell anag-field">
               <div class="info-label">Nome</div>
               <input class="info-value editable" id="dNomeEdit" oninput="markDirty()">
             </div>
-            <div class="info-cell">
+            <div class="info-cell anag-field">
               <div class="info-label">Cognome</div>
               <input class="info-value editable" id="dCognomeEdit" oninput="markDirty()">
             </div>
-            <div class="info-cell">
+            <div class="info-cell anag-field">
               <div class="info-label">Telefono</div>
               <input class="info-value editable" id="dTelefono" oninput="markDirty()">
             </div>
-            <div class="info-cell">
+            <div class="info-cell anag-field">
               <div class="info-label">Email</div>
               <input class="info-value editable" id="dEmail" oninput="markDirty()">
             </div>
-            <div class="info-cell">
+            <div class="info-cell anag-field">
               <div class="info-label">Servizio</div>
               <input class="info-value editable" id="dServizio" oninput="markDirty()">
             </div>
-            <div class="info-cell">
+            <div class="info-cell anag-field">
               <div class="info-label">Zona</div>
               <input class="info-value editable" id="dZona" oninput="markDirty()">
             </div>
-            <div class="info-cell">
+            <div class="info-cell anag-field">
               <div class="info-label">Mobile / Pezzo</div>
               <input class="info-value editable" id="dMobile" oninput="markDirty()">
             </div>
-            <div class="info-cell">
+            <div class="info-cell anag-field">
               <div class="info-label">Budget</div>
               <input class="info-value editable" id="dBudget" oninput="markDirty()">
             </div>
-            <div class="info-cell full">
+            <div class="info-cell full anag-field">
               <div class="info-label">Indirizzo</div>
               <input class="info-value editable" id="dIndirizzo" oninput="markDirty()">
             </div>
@@ -1178,6 +1186,27 @@ function saveNoteEditor() {
   }
   closeNoteEditor();
 }
+
+// Collassa/espande i campi anagrafici (Nome…Indirizzo) per arrivare in fretta
+// a Note e Foto da mobile durante un sopralluogo. Default: chiuso su mobile,
+// aperto su desktop.
+function toggleDatiAnagrafici(force) {
+  const cells = document.querySelectorAll('.acc-body .info-cell.anag-field');
+  const btn = document.getElementById('datiAnagToggleBtn');
+  if (!cells.length || !btn) return;
+  const hidden = cells[0].style.display === 'none';
+  const show = (typeof force === 'boolean') ? force : hidden;
+  cells.forEach(c => { c.style.display = show ? '' : 'none'; });
+  btn.innerHTML = show
+    ? '▴ Dati anagrafici (nascondi)'
+    : '▾ Dati anagrafici (Nome, Telefono, Indirizzo, Budget…)';
+}
+// Al primo render della scheda: chiudi su mobile (≤768px).
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) {
+    toggleDatiAnagrafici(false);
+  }
+});
 
 async function generaContenuto() {
   const btn = document.getElementById('btnGenera');
