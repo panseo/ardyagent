@@ -5,12 +5,16 @@
 
 ---
 
-## ▶️ STATO (15/06/2026 — sera)
-CRM in attività piena. WhatsApp Cloud API attivo, tutti i template approvati e collegati.
-- ✅ **Monitor portali lead** in produzione (n8n ogni 60min, Gmail→Claude→WA a Michela). Portali: ProntoPro, Homedeal, Cronoshare. Instapro in attesa cambio email.
+## ▶️ STATO (16/06/2026)
+CRM in attività piena, ora anche **multi-utente** (Michela + Andrea). Primo
+**sopralluogo "sul campo"** fatto oggi con la scheda mobile rifinita.
+- ✅ **Multi-utente Andrea** LIVE (16/06): credenziali separate `.htpasswd` + `WA_ANDREA_NUMBER` in `ardy-config.php`. Stessi permessi di Michela (dashboard + Sole su WhatsApp che lo chiama "Andrea"). Cache prompt separate per i due.
+- ✅ **Root dominio** apre direttamente la dashboard (16/06): `https://ardyagent.ardy-lab.it` → dashboard (prima serviva `/ardy-michela-app.html`).
+- ✅ **UX scheda mobile (sopralluogo)** (16/06): Note ingrandite + bottone **⛶ Espandi** (editor a tutto schermo), **Dati anagrafici** e **Azioni cliente** dentro toggle collassabili (chiusi di default su mobile), Session ID nascosta.
+- ✅ **Monitor portali lead** in produzione (n8n ogni 60min, Gmail→Claude→WA). Portali: ProntoPro, Homedeal, Cronoshare. Instapro in attesa cambio email.
 - ✅ **Cestino 30 giorni**: soft-delete con ripristino, purga automatica >30gg, modal nella dashboard.
 - ✅ **Stato COMPLETATO** aggiunto tra IN_LAVORAZIONE e CONSEGNATO.
-Prossimi task per priorità: UX minori · briefing del mattino · backlog performance/sicurezza.
+Prossimi task per priorità: foto-cliente nelle fasi (rimandata) · briefing del mattino · backlog performance/sicurezza.
 
 ---
 
@@ -87,19 +91,24 @@ Tracciamento delivery/read dai webhook Meta = miglioria futura.
 ### 🗑️ ~~Cestino 30 giorni~~ ✅ FATTO (15/06/2026)
 ### 🔔 ~~Monitor portali lead~~ ✅ FATTO (15/06/2026) — `ardy-lead-monitor.php` + n8n ogni 60min
 
-### 👤 Multi-utente: accesso Andrea come Michela — codice ✅ FATTO (16/06/2026)
-Scelta: **credenziali separate + secondo numero WA**. Codice già pronto:
-`ardy-wa-lookup.php` riconosce anche `WA_ANDREA_NUMBER` come staff (stessi
-permessi della titolare, prompt parametrizzato sul nome → cache separata per
-ciascuno). Restano **2 azioni server-side** da fare a mano:
-1. **`.htpasswd`** (`/home/micoperibg/public_html/ardyagent.ardy-lab.it/.htpasswd`):
-   aggiungere riga `andrea:<bcrypt>` (es. `htpasswd -B .htpasswd andrea`).
-   `.htaccess` accetta già qualsiasi utente valido (`Require valid-user`).
-2. **`ardy-config.php`** (NON in repo): aggiungere
-   `define('WA_ANDREA_NUMBER', '39XXXXXXXXXX');` col numero WhatsApp di Andrea
-   (formato internazionale senza `+`).
-Test dal vivo: Andrea scrive "come va oggi?" da WA → Sole risponde col briefing
-chiamandolo per nome ("Andrea") e accetta i marker `[[CREA_SCHEDA]]` / `[[CONTATTA_LEAD]]`.
+### 👤 ~~Multi-utente: accesso Andrea come Michela~~ ✅ LIVE (16/06/2026)
+Credenziali separate (`.htpasswd` con utenti `michela` + `andrea`) + secondo numero WA
+(`WA_ANDREA_NUMBER` in `ardy-config.php`, formato `39XXXXXXXXXX`). `ardy-wa-lookup.php`
+riconosce entrambi come staff e prompt parametrizzato sul nome → cache prompt separate.
+Sole chiama ciascuno per nome. Reset password: `htpasswd -B <path> <utente>` (mai `-c`).
+
+### 📱 ~~UX scheda mobile (sopralluogo)~~ ✅ LIVE (16/06/2026)
+Field-test fatto oggi durante il primo sopralluogo vero. In `ardy-michela-app.html`:
+- Textarea "Note" 6 righe + bottone **⛶ Espandi** → modale a tutto schermo (`#noteEditorOverlay`).
+- Toggle **▾ Dati anagrafici** (Nome…Indirizzo + Data followup) → chiuso di default su mobile (≤768px).
+- Toggle **▾ Azioni cliente** (Email/WA/Genera contenuto/Note interne) → chiuso di default su mobile.
+- Session ID rimossa dalla UI (resta nel DOM perché letta dal JS; era dato tecnico).
+Note: il campo `clienti.note` finisce automaticamente nel **dossier interno** (`ardy-dossier.php:104`,
+visibile solo a Michela/Andrea, mai al cliente) e nel **PDF preventivo** (`ardy-preventivo.php:734`).
+
+### 🌐 ~~Root dominio = dashboard~~ ✅ LIVE (16/06/2026)
+`DirectoryIndex ardy-michela-app.html` nel `.htaccess` → `https://ardyagent.ardy-lab.it/`
+apre direttamente la dashboard (resta dietro Basic Auth via `FilesMatch`).
 
 ### Briefing del mattino — opzionale
 ⏭️ trigger "prima risposta del giorno": salvare data ultimo briefing per numero così il riepilogo

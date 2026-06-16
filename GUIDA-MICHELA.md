@@ -9,11 +9,18 @@ Niente termini tecnici: solo cosa vedi e cosa succede quando clicchi.
 
 Apri nel browser:
 
-> **https://ardyagent.ardy-lab.it/ardy-michela-app.html**
+> **https://ardyagent.ardy-lab.it**
+
+(dalla **root** ti porta direttamente alla dashboard — niente più `/ardy-michela-app.html`.)
 
 Il computer ti chiederà **utente e password** (quelli che abbiamo impostato).
 Inseriscili una volta e sei dentro. È la "serratura" che protegge i dati dei clienti:
 nessuno può entrare senza la password.
+
+👤 **Due utenti**: Michela e Andrea entrano ciascuno con le proprie credenziali (utenti separati
+in `.htpasswd`). Stessa dashboard, stesse cose visibili. Anche su WhatsApp Sole riconosce chi
+le sta scrivendo dal numero (`WA_MICHELA_NUMBER` / `WA_ANDREA_NUMBER` in `ardy-config.php`) e
+chiama ciascuno per nome.
 
 💡 *Consiglio: salva la pagina tra i preferiti e segnati utente e password in un posto sicuro.*
 
@@ -78,6 +85,22 @@ Zona, Mobile, Budget, Indirizzo, Note, Data follow-up.
 
 **Sono tutti modificabili.** Se un cliente ha sbagliato l'email, o manca il telefono,
 clicca nel campo e correggilo.
+
+📱 **Sopralluogo dal telefono.** Quando apri la scheda da mobile, i campi anagrafici
+(Nome, Cognome, Telefono, Email, Servizio, Zona, Mobile, Budget, Indirizzo, Data follow-up)
+e i bottoni delle Azioni cliente partono **chiusi** dentro due toggle:
+
+- **▾ Dati anagrafici** — un tap per aprirlo e modificare i campi.
+- **▾ Azioni cliente** — un tap per i bottoni Email/WA/Genera contenuto/Note interne.
+
+Le **Note** e le **Foto della scheda** restano sempre in vista perché sono quello che ti
+serve scrivere/scattare sul posto.
+
+📝 **Editor Note a tutto schermo.** Accanto all'etichetta "Note" trovi il bottone **⛶ Espandi**:
+apre un editor a pieno schermo dove scrivere comodamente gli appunti del sopralluogo
+(misure, ipotesi prezzo, materiali, scadenze). Cliccando **✓ APPLICA** il testo torna nella
+scheda. Le note finiscono automaticamente nel **dossier interno** (Sole le ricorda quando
+ti aiuta) e nel **PDF preventivo** — non vengono mai mostrate al cliente.
 
 ⚠️ **Importante:** dopo ogni modifica compare in basso la barra **"Modifiche non salvate"**.
 Clicca **SALVA MODIFICHE** per registrarle. Se cambi cliente senza salvare, ti avvisa.

@@ -8,7 +8,7 @@ Sistema di gestione clienti, preventivi, agente AI e integrazioni social per **A
 
 | Risorsa | URL |
 |---|---|
-| Dashboard Michela | `https://ardyagent.ardy-lab.it/ardy-michela-app.html` |
+| Dashboard (Michela + Andrea) | `https://ardyagent.ardy-lab.it` — la root del dominio apre direttamente la dashboard (`DirectoryIndex ardy-michela-app.html`) |
 | Chatbot pubblico | `https://ardy-lab.it/ardy-agent/` |
 | Widget lavorazione | Iniettato automaticamente su pagine categoria "Lavori in corso" (ID 102) |
 | n8n Automazione | `https://n8n.ardy-lab.it` |
@@ -622,6 +622,20 @@ permette il deploy push-button da cPanel (richiede Jailed Shell).
 ---
 
 ## 📝 Note sessioni
+
+**Giugno 2026 — Sessione 16/06 (multi-utente Andrea, root dominio, UX mobile sopralluogo)**
+- **Multi-utente LIVE**: Andrea entra come Michela. Credenziali separate in `.htpasswd`
+  (`michela` + `andrea`) e secondo numero WA in `ardy-config.php` (`WA_ANDREA_NUMBER`).
+  `ardy-wa-lookup.php` riconosce entrambi come staff con prompt parametrizzato sul nome
+  → cache prompt separata per ciascuno (`ardy_wa_titolare_istruzioni($datiSeparati, $nome)`).
+  Sole chiama ciascuno per nome.
+- **Root dominio → dashboard**: aggiunto `DirectoryIndex ardy-michela-app.html` in `.htaccess`.
+  `https://ardyagent.ardy-lab.it/` apre direttamente la dashboard (resta dietro Basic Auth).
+- **UX scheda mobile (sopralluogo)** — primo test sul campo OK:
+  - Textarea Note 6 righe + bottone **⛶ Espandi** → modale fullscreen (`#noteEditorOverlay`).
+  - Toggle **▾ Dati anagrafici** (Nome…Indirizzo + Data followup) e **▾ Azioni cliente**
+    (Email/WA/Genera contenuto/Note interne) chiusi di default su mobile (≤768px).
+  - Session ID rimossa dalla UI (resta nel DOM, popolata dal JS).
 
 **Giugno 2026 — Sessione 15/06 (attività piena, audit, template WA, ProntoPro)**
 - **CRM in attività piena**: WhatsApp Cloud API attivo, carta Meta inserita, tutti e 4 i template
