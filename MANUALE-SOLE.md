@@ -99,7 +99,9 @@ Quando Michela detta a Sole un cliente nuovo (es. *«Sole, segnami Mario Rossi, 
 
 Oltre a parlare con i clienti, Sole fa da "penna" per Michela: dai bottoni della dashboard genera testi già pronti, che Michela può rivedere e modificare:
 - **Testo professionale** di una fase di lavorazione;
-- **Post per i social** (Instagram/Facebook) e **didascalia del reel**;
+- **Post per i social** (Instagram/Facebook) e **didascalia del reel** — Michela può poi vederne
+  l'**anteprima in formato Instagram**, aggiungere/togliere foto, pubblicarlo sui singoli social o
+  **salvarlo "per dopo"** (le bozze restano salvate sul server, disponibili da ogni dispositivo);
 - **Email** al cliente e **messaggi WhatsApp** brevi;
 - **Note interne** di riepilogo;
 - **Comunicazione straordinaria** al cliente (per gli imprevisti, con tono dedicato).

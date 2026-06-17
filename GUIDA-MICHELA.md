@@ -55,6 +55,7 @@ ti dice "a colpo d'occhio" come sta il lavoro, in base alle **date** che hai mes
 > Nota: "fine lavoro" è quando finisci di lavorarci, **non** la consegna (puoi consegnare anche dopo).
 
 Oltre ai pallini, accanto al cliente possono comparire dei **badge**:
+- **💬 ha risposto** — il cliente ti ha **scritto di recente** (WhatsApp o chat del sito, nelle ultime 48 ore) e **non hai ancora aperto la sua conversazione**. Così vedi a colpo d'occhio chi aspetta una risposta. Sparisce quando apri la scheda e guardi la sua conversazione (la sezione 💬).
 - **📐 da pianificare** — c'è una nota di sopralluogo ma non hai ancora generato le fasi;
 - **📦 consegna** — hai scritto qualcosa nel box "Note consegna" (qualcosa da procurare/sistemare prima di consegnare). Sparisce quando svuoti quel box.
 
@@ -232,16 +233,28 @@ Da lì scegli tu:
 👉 Puoi **modificare il testo** prima di pubblicare: cambia parole, hashtag,
 quello che vuoi, poi premi Pubblica.
 
+**Le foto del post le decidi tu.** Nel riquadro "Vuoi pubblicare sui social?" trovi:
+- **➕ Aggiungi foto** → carichi una o più foto in più (oltre a quelle della fase)
+- **✕** su ogni miniatura → toglie quella foto dal post
+- **👁 Anteprima Instagram** → ti mostra **come verrà il post** in formato Instagram (foto quadrata,
+  più foto si sfogliano con le frecce, testo sotto) **prima** di pubblicarlo
+
+**Su quali social esce.** Le icone **Facebook / Instagram** sono interruttori: accendi solo quelli su
+cui vuoi pubblicare *quel* post (puoi anche fare solo Instagram, o solo Facebook).
+
 ### Post social in attesa
 Se hai scelto "Salva per dopo", i post messi da parte compaiono nel riquadro
 **"🕒 Post social in attesa"** (in fondo alla sezione lavorazione), come **elenco compatto**:
 per ognuno vedi 📲, il titolo, le **icone dei social** (Facebook, Instagram; Google grigio = non
-ancora attivo) e la data. Premi **✏ Modifica** per aprire il testo e cambiarlo, **📲 Pubblica**
-per mandarlo, o **🗑** per eliminarlo.
+ancora attivo) e la data. Per ciascuno puoi:
+- **✏ Modifica** → cambi il **testo** e gestisci le **foto** (➕ Aggiungi foto / ✕ togli foto), poi **💾 Salva modifica**
+- **👁 Anteprima** → vedi come verrà in formato Instagram prima di pubblicarlo
+- **📲 Pubblica** → lo mandi sui social accesi per quel post (Facebook e/o Instagram)
+- **🗑** → lo elimini
 
-⚠️ *Nota: i post "in attesa" sono salvati nel browser che stai usando. Se ne
-salvi uno dal telefono, lo ritrovi sul telefono; se lo salvi dal computer, sul
-computer. Quelli da pubblicare "ora" invece non hanno questo limite.*
+✅ *I post "in attesa" sono salvati **sul server**, non più solo nel browser: li ritrovi da
+**qualsiasi dispositivo** (telefono e computer) e li vede anche Andrea. Se modifichi testo o foto, la
+modifica resta salvata anche se chiudi e riapri.*
 
 💡 *Da telefono funziona benissimo: sei in laboratorio, scatti, pubblichi (o rimandi).*
 

@@ -50,6 +50,9 @@ ardyagent.ardy-lab.it/
 ├── ardy-outreach-api.php      # API outreach
 ├── ardy-pubblica-lavorazione.php  # Pubblica fase: pagina WP + immagine in evidenza + email cliente (NO social auto)
 ├── ardy-pubblica-social.php   # Pubblica sui social (passo manuale, separato) → webhook n8n
+├── ardy-social-bozze.php      # Bozze post social "salva per dopo" persistite in DB (tabella social_bozze) — multi-dispositivo
+├── ardy-social-foto.php       # Carica una foto del post social → URL pubblico WP Media (serve a IG/FB via API)
+├── ardy-conversazioni.php     # Conversazione unificata di un cliente (WA + chat sito) per la scheda; aggiorna il marker "conversazione vista"
 ├── ardy-get-fasi.php          # API fasi lavorative
 ├── ardy-libreria-api.php      # API libreria fasi (DB, condivisa tra dispositivi)
 ├── ardy-crea-reel.php         # Genera reel MP4 9:16 dalle fasi (FFmpeg via proc_open + GD)
@@ -96,6 +99,11 @@ sopralluogo_at (data/ora reale del sopralluogo), gcal_event_id (id evento Google
 ```
 > `sopralluogo_at` + `gcal_event_id` (auto-creati) salvano la data vera dell'appuntamento e
 > l'id dell'evento: servono per mostrare le date corrette nei riepiloghi e per **spostare** i sopralluoghi.
+
+Altre colonne (auto-aggiunte, idempotenti): `inizio_lavoro`, `fine_lavoro_prevista` (date dell'intero
+lavoro → pallini in lista), `note_consegna` (promemoria consegna), `deleted_at` (cestino soft-delete),
+`conversazione_letta_at` (marker "conversazione vista": quando Michela/Andrea apre la chat del cliente
+si salva NOW() → spegne il badge **💬 ha risposto** finché il cliente non riscrive).
 
 Campi chiave per il widget lavorazione:
 - `telefono` — usato per verifica identità cliente
@@ -145,6 +153,17 @@ Auto-creata e popolata con 4 preset (Classico, Veloce, Cinematico, Solo foto).
 id (VARCHAR), nome, sec_foto, sec_titolo, sec_finale,
 mostra_titolo, mostra_didascalie, mostra_finale, musica_default, created_at, updated_at
 ```
+
+#### `social_bozze`
+Post social messi in attesa con "🕒 Salva per dopo". **Persistiti in DB** (prima vivevano solo nel
+localStorage del browser → si perdevano cambiando dispositivo). Gestiti da `ardy-social-bozze.php`,
+visibili da ogni dispositivo e da entrambi gli utenti. Auto-creata al primo avvio.
+
+```
+id (VARCHAR, 'sp_...'), session_id, payload (JSON: testo, immagini[], piattaforme[], fase, mobile…), created_at
+```
+> Le immagini nel payload sono **URL pubblici** della WP Media Library (le foto aggiunte a mano passano
+> da `ardy-social-foto.php`): è il formato che Instagram/Facebook richiedono per la pubblicazione via API.
 
 ---
 
@@ -384,6 +403,9 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
   toggle "🔍 Ricerca avanzata"** con legenda colori + ricerca testo. Lo stato conclusivo
   **CONSEGNATO** è trattato come **archivio implicito**: esce dalla lista normale e si
   richiama col pulsante **📦 Archivio** (in cima alla lista) o dal chip ARCHIVIO
+- **Badge 💬 ha risposto**: sui clienti che hanno scritto (WA o chat sito) nelle ultime 48h e di
+  cui non è ancora stata aperta la conversazione. Calcolato in `ardy-crm-api.php` (2 query aggregate
+  su `web_messaggi`/`wa_messaggi` vs marker `conversazione_letta_at`); si spegne aprendo la sezione 💬
 - Dettaglio cliente con **tutti i campi modificabili** (nome, cognome, telefono, email, servizio, zona, mobile, budget, indirizzo, note, follow-up)
 - Cambio stato cliente sotto toggle **"🔄 Aggiorna stato"** (mostra lo stato attuale)
 - Azioni rapide: contenuto AI, post social, **proforma**, email, WhatsApp, note interne
@@ -404,10 +426,16 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
 - **Pubblicazione fasi** con foto (scatta dal telefono o galleria) sotto il bottone collassabile
   **🔨 Crea e pubblica nuova fase**; la prima foto diventa l'**immagine in evidenza** del post
 - **Pubblicazione social manuale**: dopo la fase, pannello per rivedere/modificare il post (*pubblica
-  ora / salva per dopo / non pubblicare*); coda **"post in attesa"** (localStorage) in lista compatta
-  con toggle ✏ Modifica. **Selezione per singolo social**: le icone FB/IG sono toggle (default
-  entrambi, deselezionabili fino a uno solo; Google disattivo) → il campo `piattaforme` viaggia al
-  webhook n8n. Il nodo n8n va aggiornato per rispettarlo (vedi `ardy-pubblica-social-n8n.md`)
+  ora / salva per dopo / non pubblicare*). **Selezione per singolo social**: le icone FB/IG sono toggle
+  (default entrambi, deselezionabili fino a uno solo; Google disattivo) → il campo `piattaforme` viaggia
+  al webhook n8n (vedi `ardy-pubblica-social-n8n.md`)
+- **👁 Anteprima Instagram + 🖼 gestione foto**: dal composer (e dalle bozze in attesa) si vede il post
+  in mockup formato IG (1:1, carosello, caption) e si possono **➕ aggiungere** / **✕ togliere** foto. Le
+  foto aggiunte passano da `ardy-social-foto.php` → URL pubblico WP Media (richiesto da IG/FB via API)
+- **Coda "🕒 post in attesa" persistita sul server** (`ardy-social-bozze.php`, tabella `social_bozze`):
+  i post "salva per dopo" non sono più nel localStorage del browser → **visibili da ogni dispositivo e
+  da entrambi gli utenti**. Per ognuno: ✏ Modifica (testo **+ foto**), 👁 Anteprima, 📲 Pubblica (sui
+  social scelti), 🗑 Elimina. Migrazione una-tantum delle bozze rimaste nel vecchio localStorage
 - **Reel finale**: a lavoro concluso monta un video 9:16 dalle fasi (titolo + didascalie + Prima/Dopo), con scelta **template di stile**, musica, caption automatica modificabile e pubblicazione sui social
 - **Libreria template reel** (DB): preset di stile (durate, slide attive, musica) creabili/modificabili dal pannello "⚙ Template"
 - Pulsante **❓ Guida** che apre la guida d'uso
@@ -622,6 +650,20 @@ permette il deploy push-button da cPanel (richiede Jailed Shell).
 ---
 
 ## 📝 Note sessioni
+
+**Giugno 2026 — Sessione 17/06 (ha risposto, bozze social sul server, anteprima IG + foto, fix date)**
+- **Indicatore 💬 ha risposto** in lista: badge sui clienti che hanno scritto (WA/sito) nelle ultime
+  48h e non ancora "letti". `ardy-crm-api.php` calcola il flag con 2 query aggregate; marker
+  `clienti.conversazione_letta_at` aggiornato da `ardy-conversazioni.php` all'apertura della chat.
+- **Bozze social "salva per dopo" → server** (`ardy-social-bozze.php`, tabella `social_bozze`): prima
+  solo in localStorage (si perdevano cambiando dispositivo). Ora multi-dispositivo/multi-utente, con
+  modifica/elimina/pubblica sui singoli social + migrazione una-tantum dal vecchio localStorage.
+- **👁 Anteprima Instagram + 🖼 gestione foto** (composer e bozze): mockup formato IG e ➕/✕ foto. Le
+  foto aggiunte passano da `ardy-social-foto.php` → URL pubblico WP Media (richiesto da IG/FB via API).
+- **Fix date azzerate (anti-clobber)**: `saveLead` non invia più `inizio_lavoro`/`fine_lavoro_prevista`
+  vuote, così un salvataggio non azzera una data già in DB (clobbering da tab/dispositivo non aggiornato).
+- **Git**: `main` riallineato alla lineage attiva (root `98b352f`); vecchia lineage orfana (`b49606b`)
+  da non rifondere — nota operativa nel TODO. Nuovi endpoint dietro Basic Auth nel `.htaccess`.
 
 **Giugno 2026 — Sessione 16/06 (multi-utente Andrea, root dominio, UX mobile sopralluogo)**
 - **Multi-utente LIVE**: Andrea entra come Michela. Credenziali separate in `.htpasswd`

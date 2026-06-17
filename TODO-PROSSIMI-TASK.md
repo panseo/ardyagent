@@ -28,8 +28,21 @@ CRM in attività piena, **multi-utente** (Michela + Andrea). Focus 17/06: render
   (`ardy-conversazioni.php`, dashboard)
 - ✅ **Box 📦 Note consegna** nella scheda + badge in lista + letto da Sole (riepilogo + dossier).
   Colonna `clienti.note_consegna`. Svuotando la nota il badge sparisce.
+- ✅ **Indicatore 💬 "ha risposto"** in lista (testato, no anomalie): badge sui clienti che hanno
+  scritto (WA/sito) nelle ultime 48h e non ancora "letti". Marker `clienti.conversazione_letta_at`
+  (aggiornato all'apertura della chat). (`ardy-crm-api.php`, `ardy-conversazioni.php`, dashboard)
+- ✅ **Bozze social "salva per dopo" sul server** (testato): da localStorage a DB
+  (`ardy-social-bozze.php`, tabella `social_bozze`) → multi-dispositivo + multi-utente, con
+  modifica/elimina/pubblica sui singoli social e migrazione una-tantum dal vecchio localStorage.
+- ✅ **👁 Anteprima Instagram + 🖼 gestione foto** (testato, "funziona bene"): mockup formato IG e
+  ➕/✕ foto, sia nel composer sia nelle bozze in attesa. Foto aggiunte → URL pubblico WP via
+  `ardy-social-foto.php` (richiesto da IG/FB). Endpoint nuovi dietro Basic Auth nel `.htaccess`.
+- ✅ **Fix date azzerate (anti-clobber)** (testato): `saveLead` non invia inizio/fine lavoro vuote →
+  un salvataggio non azzera più una data già in DB.
+- ✅ **Git**: `main` riallineato alla lineage attiva (root `98b352f`); vecchia lineage orfana
+  (`b49606b`) da non rifondere (vedi NOTE OPERATIVE). Cleanup dei vecchi branch `claude/*` da fare a mano.
 
-Prossimi task per priorità: indicatore "ha risposto" in lista · briefing del mattino · backlog performance/sicurezza.
+Prossimi task per priorità: accesso "dipendente" (permessi limitati) · programmazione data/ora post social (cron/n8n) · briefing del mattino · backlog performance/sicurezza.
 
 ---
 
@@ -69,24 +82,10 @@ il layout/CSS del PDF, **bumpa `PDF_CACHE_VER`** per invalidare le cache esisten
 ---
 
 ## ⏳ DA VERIFICARE DAL VIVO / AZIONI MANUALI
-- **🆕 Anteprima Instagram + gestione foto del post** (implementato 17/06, da testare dal vivo):
-  nel pannello social (e sui post in attesa) bottone **👁 Anteprima Instagram** = mockup formato IG
-  (1:1, carosello con frecce/puntini, caption sotto "ardy_lab"). Nel composer: **➕ Aggiungi foto**
-  (carica su WP Media Library via `ardy-social-foto.php` → URL pubblico, quello che serve a IG) e
-  **✕** su ogni miniatura per rimuoverla. Test: aggiungi/togli foto, apri anteprima, poi pubblica.
-  NB: l'add-foto nel composer; nelle bozze in attesa per ora c'è anteprima ed editor testo (add/del
-  foto nelle bozze = eventuale estensione futura).
-- **🆕 Bozze social sul server** (implementato 17/06, da testare dal vivo): i post "🕒 salva per
-  dopo" ora vivono in DB (`ardy-social-bozze.php`, tabella `social_bozze`) invece che nel
-  localStorage del browser → visibili da ogni dispositivo e da entrambi gli utenti. Si possono
-  **modificare** (💾 Salva modifica), **eliminare** (🗑) e **pubblicare sui singoli social**
-  (checkbox FB/IG per ogni post). Migrazione una-tantum: all'avvio le bozze rimaste nel vecchio
-  localStorage vengono caricate sul server e il locale svuotato. Test: salva per dopo su un
-  dispositivo → ricompare su un altro; modifica/elimina/pubblica.
-- **🆕 Fix date che si azzeravano** (implementato 17/06, da testare dal vivo): `saveLead` non
-  invia più `inizio_lavoro`/`fine_lavoro_prevista` quando i campi sono vuoti → un salvataggio non
-  può più azzerare una data già in DB (clobbering da tab/dispositivo non aggiornato). Test:
-  imposta date, cambia stato a COMPLETATO e salva → le date restano.
+> Le novità del 17/06 (ha risposto · bozze social sul server · anteprima IG + foto · fix date) sono
+> state **testate dal vivo, nessuna anomalia** → spostate nello STATO sopra come ✅.
+- **Recuperare le date perse pre-fix**: i clienti a cui le date si erano azzerate (es. Margherita
+  Mottini) vanno reinseriti a mano — il fix anti-clobber evita che ricapiti ma non ripristina i dati persi.
 - **UX "Modifica" su Preventivo (allegato)** (deployato 16/06/2026, testato dal vivo — lasciato così, da
   rivedere con calma): il bottone "✏️ Modifica" apre correttamente il mini-form precompilato (oggetto,
   numero, AGGIORNA) invece del generatore a voci — bug risolto. Ma Michela si aspettava di vedere anche
