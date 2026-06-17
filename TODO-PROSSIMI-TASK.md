@@ -16,6 +16,11 @@ CRM in attività piena, ora anche **multi-utente** (Michela + Andrea). Primo
 - ✅ **Stato COMPLETATO** aggiunto tra IN_LAVORAZIONE e CONSEGNATO.
 - ✅ **Restyling PDF preventivo** (16/06 sera): font **Playfair Display** per tutto il documento, colore testo **dorato scuro** (`#6b4f1e`) invece del quasi-nero, pagina **Grazie** ridisegnata (logo + "GRAZIE" + customer-care Sole) con footer link Instagram + webchat + **WhatsApp diretto** (`wa.me`) e **2 QR code** (webchat + WhatsApp), link **privacy policy + termini** sulla pagina firma. `PDF_CACHE_VER` a `2026-06-16i`.
 - ✅ **Prompt WhatsApp: nudge verso webchat** (16/06 sera): sezione in `ardy-whatsapp-system.txt` che istruisce Sole a invitare con garbo il cliente sulla webchat (dopo aver dato valore, mai forzando, sempre lato-cliente).
+- ✅ **Conversazioni visibili** (17/06): bug "Sole non legge le chat + non c'è modo di
+  vederle" risolto. (1) Sole titolare ora riceve un blocco "💬 Conversazioni recenti"
+  (chi ha scritto in 48h, WhatsApp+sito) nel riepilogo → risponde a "X ti ha risposto?".
+  (2) Nuova sezione "💬 Conversazione" nella scheda cliente della dashboard (accordion,
+  lazy-load) che mostra lo storico unificato via `ardy-conversazioni.php`.
 Prossimi task per priorità: foto-cliente nelle fasi (rimandata) · briefing del mattino · backlog performance/sicurezza.
 
 ---

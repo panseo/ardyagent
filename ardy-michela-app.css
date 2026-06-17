@@ -1317,3 +1317,16 @@
     .dark-form-grid .full { grid-column: 1; }
     .modal-lg { width: 100%; max-width: 100%; margin: 8px; max-height: 95vh; }
   }
+
+  /* ─── Conversazione cliente (WhatsApp + chat sito) ─── */
+  .conv-list { display: flex; flex-direction: column; gap: 10px; max-height: 420px; overflow-y: auto; padding: 4px 2px; }
+  .conv-msg { display: flex; flex-direction: column; max-width: 82%; }
+  .conv-msg.user { align-self: flex-start; align-items: flex-start; }
+  .conv-msg.assistant { align-self: flex-end; align-items: flex-end; }
+  .conv-bubble {
+    padding: 8px 12px; border-radius: 12px; font-size: 13px; line-height: 1.45;
+    white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere;
+  }
+  .conv-msg.user .conv-bubble { background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-top-left-radius: 3px; }
+  .conv-msg.assistant .conv-bubble { background: var(--accent2); color: #fbf6ec; border-top-right-radius: 3px; }
+  .conv-meta { font-size: 10px; color: var(--text-dim); margin-top: 3px; font-family: 'DM Mono', monospace; }

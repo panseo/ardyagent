@@ -244,6 +244,18 @@
         </div>
       </div>
 
+      <!-- ═══ 1b. CONVERSAZIONE (WhatsApp + chat sito) ═══ -->
+      <div class="acc-section" id="acc-conversazione">
+        <button class="acc-header" onclick="toggleAccConversazione()">
+          <span class="acc-title">💬 Conversazione</span>
+          <span class="acc-chevron">▾</span>
+        </button>
+        <div class="acc-body">
+          <div id="convStatus" style="font-size:11px;color:var(--text-dim);margin-bottom:10px;">Apri per caricare la conversazione (WhatsApp + chat sito).</div>
+          <div id="convList" class="conv-list"></div>
+        </div>
+      </div>
+
       <!-- ═══ 2. PREVENTIVI ═══ -->
       <div class="acc-section" id="acc-preventivi" style="display:none;">
         <button class="acc-header" onclick="toggleAcc('acc-preventivi')">
@@ -720,6 +732,8 @@ function selectLead(idx) {
   renderList();
   // Carica storico preventivi del cliente
   caricaStoricoPrev(currentLead.Session_ID ?? '');
+  // Reset conversazione: si (ri)carica alla prima apertura della sezione 💬
+  resetConversazione();
   // Mobile: apri pannello dettaglio
   if (window.innerWidth <= 768) {
     document.querySelector('.layout').classList.add('mobile-detail-open');
@@ -728,6 +742,74 @@ function selectLead(idx) {
 
 function closeMobileDetail() {
   document.querySelector('.layout').classList.remove('mobile-detail-open');
+}
+
+// ─── CONVERSAZIONE (WhatsApp + chat sito) ───────────────────
+// Storico unificato dei messaggi del cliente. Lazy-load alla prima apertura
+// della sezione 💬 (evita una fetch su ogni selezione di scheda).
+let convLoadedFor = null;
+
+function resetConversazione() {
+  convLoadedFor = null;
+  const list = document.getElementById('convList');
+  const status = document.getElementById('convStatus');
+  if (list) list.innerHTML = '';
+  if (status) { status.style.display = 'block'; status.textContent = 'Apri per caricare la conversazione (WhatsApp + chat sito).'; }
+  const sec = document.getElementById('acc-conversazione');
+  if (sec) sec.classList.remove('open'); // riparte chiusa al cambio cliente
+}
+
+function toggleAccConversazione() {
+  toggleAcc('acc-conversazione');
+  const sec = document.getElementById('acc-conversazione');
+  if (sec && sec.classList.contains('open')) {
+    const sid = currentLead && currentLead.Session_ID;
+    if (sid && convLoadedFor !== sid) caricaConversazione();
+  }
+}
+
+async function caricaConversazione() {
+  const status = document.getElementById('convStatus');
+  const list   = document.getElementById('convList');
+  if (!currentLead) return;
+  const sid = currentLead.Session_ID ?? '';
+  const tel = currentLead.Telefono ?? '';
+  if (!sid && !tel) { status.textContent = 'Nessun riferimento (sessione/telefono) per questo cliente.'; return; }
+  convLoadedFor = sid;
+  status.style.display = 'block';
+  status.textContent = 'Carico la conversazione…';
+  list.innerHTML = '';
+  try {
+    const params = new URLSearchParams();
+    if (sid) params.set('session_id', sid);
+    if (tel) params.set('phone', tel);
+    const r = await fetch('ardy-conversazioni.php?' + params.toString());
+    const data = await r.json();
+    const msgs = (data && data.messaggi) || [];
+    if (!msgs.length) { status.textContent = 'Nessun messaggio registrato per questo cliente.'; return; }
+    status.style.display = 'none';
+    renderConversazione(msgs);
+  } catch (e) {
+    status.textContent = 'Errore nel caricamento della conversazione.';
+  }
+}
+
+function renderConversazione(msgs) {
+  const list = document.getElementById('convList');
+  const esc = s => (s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  list.innerHTML = msgs.map(m => {
+    const mine = m.role === 'assistant';                 // 'assistant' = Sole/Ardy (in uscita)
+    const via  = m.via === 'whatsapp' ? 'WhatsApp' : 'sito';
+    const when = m.created_at
+      ? new Date(String(m.created_at).replace(' ', 'T')).toLocaleString('it-IT', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
+      : '';
+    const chi  = mine ? 'Sole' : ((currentLead && currentLead.Nome) || 'Cliente');
+    return `<div class="conv-msg ${mine ? 'assistant' : 'user'}">`
+         + `<div class="conv-bubble">${esc(m.content)}</div>`
+         + `<div class="conv-meta">${esc(chi)} · ${via} · ${when}</div>`
+         + `</div>`;
+  }).join('');
+  list.scrollTop = list.scrollHeight; // mostra subito i messaggi più recenti
 }
 
 function renderDetail() {
