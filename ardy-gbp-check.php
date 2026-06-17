@@ -93,6 +93,17 @@ if ($httpCode === 200) {
        . "La richiesta di aumento quota <b>non è ancora stata approvata</b> "
        . "(o il limite è 0). Controlla il valore in Cloud Console → "
        . "<i>Business Profile API → Quotas</i> e, se fermo da troppo, ri-sottometti il form di accesso.</div>";
+} elseif ($httpCode === 403 && (stripos($resp, 'does not have permission to get URL') !== false
+          || stripos($resp, 'Error 403 (Forbidden)') !== false)) {
+    echo "<div class='box err'><b>⛔ ACCESSO ALLA BUSINESS PROFILE API NON CONCESSO.</b><br>"
+       . "Risposta HTML generica del front-end Google (non un errore JSON dell'API): la "
+       . "richiesta è respinta <b>prima</b> di arrivare al servizio. Significa che il progetto "
+       . "Cloud <b>non è nell'allow-list</b> della Business Profile API → la <b>richiesta di "
+       . "accesso non è ancora stata approvata</b> (o è stata inviata da/per un progetto diverso).<br><br>"
+       . "<b>Da fare:</b> (1) verifica che il progetto del client OAuth qui sotto sia lo stesso dove "
+       . "hai inviato il form di accesso; (2) controlla l'email dell'account (anche SPAM) per "
+       . "richieste di Google rimaste senza risposta; (3) se sono passate &gt;2 settimane, "
+       . "ri-sottometti il form o apri un ticket al supporto Business Profile.</div>";
 } elseif ($httpCode === 403) {
     echo "<div class='box err'><b>⛔ Accesso negato (403).</b><br>"
        . "Tipicamente: API <b>non abilitata</b> nel progetto, oppure accesso/quota "
@@ -113,7 +124,15 @@ echo "<pre>" . h($body) . "</pre>";
 echo "<p class='muted'>Header risposta:</p>";
 echo "<pre>" . h(trim($rawHeaders) ?: '(nessun header)') . "</pre>";
 
-echo "<hr><p class='muted'>Per abilitare lo scope la prima volta: in <code>ardy-gcal-auth.php</code> "
+// Il prefisso numerico del client_id OAuth = Project Number del progetto Cloud.
+$projNum = (defined('ARDY_GCAL_CLIENT_ID') && preg_match('/^(\d+)-/', ARDY_GCAL_CLIENT_ID, $pm))
+    ? $pm[1] : '(non ricavabile)';
+echo "<hr><p class='muted'><b>Progetto del client OAuth</b> (Project Number ricavato dal "
+   . "client_id): <code>" . h($projNum) . "</code><br>Deve coincidere col progetto Cloud dove "
+   . "hai <b>abilitato le API My Business</b> e <b>inviato il form di accesso</b>. Se è diverso, "
+   . "è quello il motivo del 403.</p>";
+
+echo "<p class='muted'>Per abilitare lo scope la prima volta: in <code>ardy-gcal-auth.php</code> "
    . "aggiungi <code>https://www.googleapis.com/auth/business.manage</code> all'array degli scope, "
    . "apri quel file nel browser, completa il consenso Google, poi torna qui.</p>";
 echo "</body></html>";
