@@ -139,8 +139,19 @@ Riusa il token di `ardy-gcal-token.json`.
       NON serve sollecitare via email questa volta. Attendere l'esito su `ardy.documenti`.
 - [ ] Verificare l'approvazione con `ardy-gbp-check.php` (verde quando quota 0 → 300 QPM)
       oppure in Console → Quotas.
-- [ ] **A approvazione ottenuta**: costruire `ardy-gbp-post.php` (crea `localPost` con testo
-      + foto fase) e collegarlo al nodo n8n alla pubblicazione di una fase.
+- [x] ✅ **Codice endpoint GIÀ PRONTO (17/06, non testabile finché quota=0):**
+      - `ardy-gbp.php` — helper: `gbp_create_local_post()`, risoluzione+cache account/
+        location (`ardy-gbp-location.json`), token condiviso con Calendar/Gmail.
+      - `ardy-gbp-post.php` — endpoint HTTP (POST JSON, stile `ardy-pubblica-social.php`).
+      - `ardy-gbp-post.md` — guida integrazione (server-side, NO n8n; usa il toggle Google
+        già presente e disattivato nel pannello social della dashboard).
+      Punta all'host legacy `mybusiness.googleapis.com/v4` (localPosts).
+- [ ] **Ad approvazione ottenuta (azioni a quel punto):**
+      1. `ardy-gbp-check.php` verde → riabilitare il toggle Google in `ardy-michela-app.html`
+         e far partire la POST a `ardy-gbp-post.php` (stesso payload dei social).
+      2. Pubblicare una fase di test e verificare il post sulla scheda Google.
+      3. (eventuale) override `GBP_PARENT` in `ardy-config.php` se la scheda risolta non è
+         quella giusta.
 - [x] Scope `https://www.googleapis.com/auth/business.manage` aggiunto in
       `ardy-gcal-auth.php` (17/06). **AZIONE MANUALE**: aprire `ardy-gcal-auth.php` nel
       browser e completare il consenso Google per rigenerare il token con il nuovo scope

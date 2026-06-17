@@ -26,6 +26,7 @@ rsync -av \
   --exclude='.cpanel.yml' \
   --exclude='ardy-config.php' \
   --exclude='ardy-gcal-token.json' \
+  --exclude='ardy-gbp-location.json' \
   --exclude='ardy-uploads/' \
   --exclude='preventivi_pdf/' \
   --exclude='reels/' \

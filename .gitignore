@@ -7,6 +7,9 @@ composer.lock
 ardy-config.php
 ardy-gcal-token.json
 
+# Cache risoluzione account/location Google Business Profile (rigenerabile)
+ardy-gbp-location.json
+
 # CSV di import preventivi (contengono dati personali dei clienti — PII)
 import-preventivi*.csv
 
