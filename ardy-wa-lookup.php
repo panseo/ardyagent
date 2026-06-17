@@ -62,7 +62,7 @@ foreach ($staff as $nome => $dig) {
 }
 if ($matchedName !== '') {
     $riepilogo = '(riepilogo non disponibile al momento)';
-    try { $riepilogo = ardy_riepilogo_settimana(ardyDB()); }
+    try { $riepilogo = ardy_riepilogo_settimana(ardyDB(), array_values($staff)); }
     catch (PDOException $e) { error_log('ARDY WA RIEPILOGO ERROR: ' . $e->getMessage()); }
     echo json_encode([
         'success'       => true,
@@ -106,7 +106,7 @@ try {
 
 // Riepilogo operativo per la titolare: foto sintetica dal CRM (ultimi 7 giorni + quadro).
 // Ogni blocco è difensivo: se una tabella/colonna manca, viene saltato senza errori.
-function ardy_riepilogo_settimana(PDO $db): string {
+function ardy_riepilogo_settimana(PDO $db, array $staffDigits = []): string {
     $out = [];
 
     // Impegni in CALENDARIO (oggi e domani) — in cima: è la cosa più impellente per Michela.
@@ -136,6 +136,88 @@ function ardy_riepilogo_settimana(PDO $db): string {
             }
         }
     } catch (Throwable $e) { error_log('ARDY WA RIEPILOGO GCAL: ' . $e->getMessage()); }
+
+    // 💬 CONVERSAZIONI RECENTI dei clienti/lead (ultime 48h) — chi ha scritto a Sole.
+    // Risponde a domande tipo "i contatti di ieri ti hanno risposto?". Solo messaggi
+    // IN ARRIVO (role='user'), esclusi i numeri staff (Michela/Andrea). Difensivo: se
+    // le tabelle wa_messaggi/web_messaggi non esistono ancora, salta in silenzio.
+    try {
+        $staffLast9 = [];
+        foreach ($staffDigits as $d) {
+            $d = preg_replace('/\D+/', '', (string)$d);
+            if ($d !== '') $staffLast9[substr($d, -9)] = true;
+        }
+
+        $conv = []; // [ ['t'=>ts, 'chi'=>..., 'msg'=>..., 'via'=>'WA'|'WEB'], ... ]
+
+        // WhatsApp: ultimo messaggio in arrivo per numero nelle ultime 48h.
+        $waRows = $db->query(
+            "SELECT t.phone, t.content, t.created_at
+               FROM wa_messaggi t
+               JOIN (SELECT phone, MAX(id) mid FROM wa_messaggi
+                      WHERE role='user' AND created_at >= (NOW() - INTERVAL 48 HOUR)
+                   GROUP BY phone) x ON x.mid = t.id
+           ORDER BY t.created_at DESC"
+        )->fetchAll(PDO::FETCH_ASSOC);
+
+        $nameByPhone = $db->prepare(
+            "SELECT TRIM(CONCAT(COALESCE(nome,''),' ',COALESCE(cognome,''))) nome, mobile
+               FROM clienti WHERE telefono_last9 = :p AND deleted_at IS NULL
+           ORDER BY updated_at DESC LIMIT 1"
+        );
+        foreach ($waRows as $r) {
+            $l9 = substr(preg_replace('/\D+/', '', (string)$r['phone']), -9);
+            if (isset($staffLast9[$l9])) continue; // è Michela/Andrea, non un cliente
+            $chi = '+' . $r['phone'];
+            try {
+                $nameByPhone->execute([':p' => $l9]);
+                if ($c = $nameByPhone->fetch(PDO::FETCH_ASSOC)) {
+                    $nm = trim((string)$c['nome']);
+                    if ($nm !== '') $chi = $nm . ($c['mobile'] ? " ({$c['mobile']})" : '');
+                }
+            } catch (PDOException $e) { /* salta nome */ }
+            $conv[] = ['t' => strtotime((string)$r['created_at']), 'chi' => $chi, 'msg' => (string)$r['content'], 'via' => 'WA'];
+        }
+
+        // Chat sito: ultimo messaggio in arrivo per sessione nelle ultime 48h.
+        try {
+            $webRows = $db->query(
+                "SELECT t.session_id, t.content, t.created_at
+                   FROM web_messaggi t
+                   JOIN (SELECT session_id, MAX(id) mid FROM web_messaggi
+                          WHERE role='user' AND created_at >= (NOW() - INTERVAL 48 HOUR)
+                       GROUP BY session_id) x ON x.mid = t.id
+               ORDER BY t.created_at DESC"
+            )->fetchAll(PDO::FETCH_ASSOC);
+            $nameBySession = $db->prepare(
+                "SELECT TRIM(CONCAT(COALESCE(nome,''),' ',COALESCE(cognome,''))) nome
+                   FROM clienti WHERE session_id = :s AND deleted_at IS NULL LIMIT 1"
+            );
+            foreach ($webRows as $r) {
+                $chi = 'chat sito (anonimo)';
+                try {
+                    $nameBySession->execute([':s' => $r['session_id']]);
+                    $nm = trim((string)($nameBySession->fetchColumn() ?: ''));
+                    if ($nm !== '') $chi = $nm . ' (chat sito)';
+                } catch (PDOException $e) { /* salta */ }
+                $conv[] = ['t' => strtotime((string)$r['created_at']), 'chi' => $chi, 'msg' => (string)$r['content'], 'via' => 'WEB'];
+            }
+        } catch (PDOException $e) { /* tabella web_messaggi assente: salta */ }
+
+        if ($conv) {
+            usort($conv, fn($a, $b) => $b['t'] - $a['t']);
+            $out[] = "💬 CONVERSAZIONI RECENTI (ultime 48h — chi ti ha scritto): " . count($conv);
+            $oggiStr  = date('Y-m-d');
+            $ieriStr  = date('Y-m-d', strtotime('yesterday'));
+            foreach (array_slice($conv, 0, 12) as $c) {
+                $gStr   = date('Y-m-d', $c['t']);
+                $quando = $gStr === $oggiStr ? 'oggi' : ($gStr === $ieriStr ? 'ieri' : date('d/m', $c['t']));
+                $snip   = trim(preg_replace('/\s+/', ' ', $c['msg']));
+                if (mb_strlen($snip) > 90) $snip = mb_substr($snip, 0, 90) . '…';
+                $out[] = "- {$c['chi']} · {$quando} " . date('H:i', $c['t']) . " · «{$snip}»";
+            }
+        }
+    } catch (PDOException $e) { /* wa_messaggi assente o altro: salta */ }
 
     // Nuovi contatti ultimi 7 giorni
     try {
@@ -296,6 +378,7 @@ function ardy_wa_titolare_istruzioni(bool $datiSeparati, string $nome = 'Michela
         . "- NIENTE messaggio di benvenuto da lead, NIENTE domande di qualifica, NIENTE \"vuoi informazioni su restauri o sei un cliente\".\n"
         . "- Rivolgiti a {$nome} per nome, dalle/dagli del tu, tono confidenziale ed efficiente. Messaggi brevi (è WhatsApp).\n"
         . "- Quando ti chiede aggiornamenti (es. \"aggiornami sulla settimana\", \"come va oggi\", \"situazione lead\", \"chi devo richiamare\"), rispondi USANDO I DATI OPERATIVI {$dove}: sintetici, concreti, azionabili. Per il \"buongiorno\"/briefing del mattino apri SEMPRE con gli IMPEGNI IN CALENDARIO di oggi e con i lavori URGENTI (scadenza entro 4 giorni), poi il resto (nuovi lead da richiamare, lavori in corso, morosi).\n"
+        . "- Se {$nome} ti chiede se un cliente/lead ha risposto o ti ha scritto (es. \"i contatti di ieri ti hanno risposto?\"), GUARDA il blocco \"💬 CONVERSAZIONI RECENTI\" nei dati operativi: elenca chi ha scritto nelle ultime 48h (WhatsApp + chat sito) con orario e un estratto. Se un nome NON è in quel blocco, vuol dire che non ha scritto in quella finestra; dillo con onestà.\n"
         . "- Se ti chiede qualcosa che non è nei dati, dillo con onestà e indica dove guardare (la dashboard).\n"
         . "- Puoi aiutarla/aiutarlo a ragionare, redigere messaggi/email, organizzare la giornata.\n"
         . "- I dati operativi sono una fotografia dal CRM al momento del messaggio: se servono dettagli più precisi, rimanda alla dashboard.\n\n"
