@@ -39,6 +39,7 @@ $params = http_build_query([
         'https://www.googleapis.com/auth/calendar',
         'https://www.googleapis.com/auth/gmail.readonly',
         'https://www.googleapis.com/auth/gmail.modify',
+        'https://www.googleapis.com/auth/business.manage', // Google Business Profile (post fasi)
     ]),
     'access_type'   => 'offline',
     'prompt'        => 'consent'
