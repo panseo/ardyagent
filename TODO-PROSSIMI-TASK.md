@@ -118,22 +118,25 @@ Riusa il token di `ardy-gcal-token.json`.
 - ⚠️ **NON** usare il pannello "Modifica quota → Invia richiesta" in Cloud Console: per la
   Business Profile API la richiesta quota generica viene auto-respinta, serve il form.
 
-**CAUSA RADICE TROVATA (17/06): disallineamento di account.**
+**CAUSA RADICE CONFERMATA (17/06): canale di richiesta sbagliato. Idoneità OK.**
 - [x] GBP "Ardy di Michela Panella" **verificato da >1 anno** → requisito 60 giorni OK.
-- [x] ⚠️ La scheda GBP è di proprietà di **`a.panseo@gmail.com`** (chi fece la verifica
-      un anno fa). Tutto il resto (progetto Cloud `ardy-lab`/532339794075, token OAuth,
-      form API) è su **`ardy.documenti@gmail.com`**. Google richiede che chi invia il form
-      sia **owner/manager della scheda** → `ardy.documenti` NON lo è → **richiesta respinta**.
+- [x] **`ardy.documenti@gmail.com` = PROPRIETARIO PRINCIPALE della scheda** (verificato in
+      Persone e accesso; `a.panseo@gmail.com` è solo Gestore). → requisito owner/manager OK.
+- [x] Progetto Cloud `ardy-lab`/532339794075, token OAuth e form: tutto su `ardy.documenti`
+      → **nessun disallineamento, idoneo da sempre.**
+- [x] Sito web ufficiale: **https://ardy-lab.it**
+- ⚠️ Il rifiuto era solo perché il 31/05 è stata inviata una **quota request** (pannello
+      Console) invece della **domanda di accesso** (form). Email Google 01/06 lo conferma:
+      "submit your new request, answer all questions in detail".
 
-**FIX (Strada A):**
-- [ ] Da `a.panseo@gmail.com` (proprietario GBP) → business.google.com → scheda Ardy →
-      Impostazioni profilo → Persone e accesso → **aggiungere `ardy.documenti@gmail.com`
-      come Proprietario** (o Gestore). Accettare l'invito da `ardy.documenti`.
-- [ ] **Ri-sottomettere il form** Basic API Access da `ardy.documenti` (ora idoneo):
+**FIX (semplice — nessuna modifica account):**
+- [ ] Inviare da `ardy.documenti` il form Basic API Access:
       `https://support.google.com/business/contact/api_default` → "Application for Basic
-      API Access". Project Number 532339794075. Use-case: pubblicazione automatica
-      `localPosts` con gli aggiornamenti delle fasi di lavorazione del restauro.
-- [ ] (bozza testo form preparata 17/06 — vedi chat).
+      API Access". Dati: Business "Ardy di Michela Panella", Via Joyce 4 00143 Roma,
+      sito https://ardy-lab.it, Project Number 532339794075, 1 location propria.
+      Use-case: pubblicazione automatica `localPosts` (aggiornamenti fasi di lavorazione).
+- [ ] Dopo l'invio: attendere l'esito; ricontrollare con `ardy-gbp-check.php` (verde quando
+      la quota passa da 0 a 300 QPM).
 - [x] Scope `https://www.googleapis.com/auth/business.manage` aggiunto in
       `ardy-gcal-auth.php` (17/06). **AZIONE MANUALE**: aprire `ardy-gcal-auth.php` nel
       browser e completare il consenso Google per rigenerare il token con il nuovo scope
