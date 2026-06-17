@@ -44,6 +44,7 @@ $system    = (string) ($in['system'] ?? '');
 $messages  = is_array($in['messages'] ?? null) ? $in['messages'] : [];
 $sessionId = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string) ($in['session_id'] ?? ''));
 $cliente   = is_array($in['cliente'] ?? null) ? $in['cliente'] : [];
+$phone     = preg_replace('/\D+/', '', (string) ($in['phone'] ?? ''));   // numero WhatsApp del mittente
 
 if ($system === '' || empty($messages)) {
     echo json_encode(['success' => false, 'reply' => 'Scusa, ora non riesco a rispondere. Ti ricontatto a breve.']);
@@ -141,6 +142,27 @@ $tools = [
             'required' => ['start', 'end', 'summary', 'description'],
         ],
     ],
+    [
+        'name'        => 'salva_lead_crm',
+        'description' => 'Salva i dati del cliente nel CRM. Usalo quando un nuovo contatto ti ha fornito i suoi dati (almeno il nome e un recapito) e di cosa ha bisogno, così il contatto non si perde e Michela lo ritrova. Se non ti ha dato il telefono va bene: useremo in automatico il suo numero WhatsApp.',
+        'input_schema' => [
+            'type'       => 'object',
+            'properties' => [
+                'nome'      => ['type' => 'string', 'description' => 'Nome del cliente'],
+                'cognome'   => ['type' => 'string', 'description' => 'Cognome del cliente'],
+                'telefono'  => ['type' => 'string', 'description' => 'Numero di telefono (se non lo dà, lascia vuoto: usiamo il suo numero WhatsApp)'],
+                'email'     => ['type' => 'string', 'description' => 'Email del cliente'],
+                'indirizzo' => ['type' => 'string', 'description' => 'Indirizzo completo: via, numero, piano, citofono, città'],
+                'servizio'  => ['type' => 'string', 'description' => 'Tipo di servizio richiesto'],
+                'mobile'    => ['type' => 'string', 'description' => 'Descrizione del mobile o pezzo'],
+                'zona'      => ['type' => 'string', 'description' => 'Zona o città del cliente'],
+                'budget'    => ['type' => 'string', 'description' => 'Forbice di budget comunicata'],
+                'stato'     => ['type' => 'string', 'description' => 'Stato: LEAD, SOPRALLUOGO, PREVENTIVO, ACCONTO, STANDBY, PERSO'],
+                'note'      => ['type' => 'string', 'description' => 'Note aggiuntive per Michela'],
+            ],
+            'required' => ['nome', 'stato'],
+        ],
+    ],
 ];
 
 // -----------------------------------------------------------
@@ -236,6 +258,46 @@ while ($iteration < $maxIterations) {
             } catch (Exception $e) {
                 error_log('ARDY WA-AGENT BOOKING ERROR: ' . $e->getMessage() . ' input=' . json_encode($toolInput));
                 $toolResult = 'Errore tecnico nella prenotazione. Chiedi al cliente di riprovare.';
+            }
+
+        } elseif ($toolName === 'salva_lead_crm') {
+            // Telefono: quello fornito da Sole o, in mancanza, il numero WhatsApp del mittente.
+            $tel = preg_replace('/[^0-9+]/', '', (string) ($toolInput['telefono'] ?? ''));
+            if ($tel === '' && $phone !== '') $tel = $phone;
+            // Budget non è una colonna CRM: lo accodiamo alle note.
+            $note = trim((string) ($toolInput['note'] ?? ''));
+            if (!empty($toolInput['budget'])) {
+                $note = trim($note . "\nBudget: " . $toolInput['budget']);
+            }
+            $payload = [
+                'nome'      => $toolInput['nome']      ?? '',
+                'cognome'   => $toolInput['cognome']   ?? '',
+                'telefono'  => $tel,
+                'email'     => $toolInput['email']     ?? '',
+                'indirizzo' => $toolInput['indirizzo'] ?? '',
+                'servizio'  => $toolInput['servizio']  ?? '',
+                'mobile'    => $toolInput['mobile']    ?? '',
+                'zona'      => $toolInput['zona']       ?? '',
+                'stato'     => $toolInput['stato']      ?? 'LEAD',
+                'note'      => $note,
+            ];
+            $ch = curl_init('https://ardyagent.ardy-lab.it/ardy-wa-crea-scheda.php');
+            curl_setopt($ch, CURLOPT_POST,           true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS,     json_encode($payload));
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT,        15);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Content-Type: application/json',
+                'X-Ardy-Secret: ' . (defined('WA_LOOKUP_SECRET') ? WA_LOOKUP_SECRET : ''),
+            ]);
+            $r = json_decode(curl_exec($ch), true);
+            curl_close($ch);
+            if (is_array($r) && !empty($r['success'])) {
+                // Aggancia la scheda alla conversazione: una prenotazione successiva si attacca qui.
+                if (!empty($r['session_id'])) $sessionId = $r['session_id'];
+                $toolResult = 'Scheda cliente salvata nel CRM. Prosegui con naturalezza, NON elencare i dati al cliente.';
+            } else {
+                $toolResult = 'Non sono riuscita a salvare la scheda adesso. Prosegui comunque la conversazione; se serve, di\' che Michela la registra.';
             }
 
         } else {
