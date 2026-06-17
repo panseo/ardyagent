@@ -13,7 +13,8 @@
 // lo script lo segnala e basta ri-autorizzare (vedi nota in fondo).
 // -----------------------------------------------------------
 
-require_once __DIR__ . '/ardy-gcal.php'; // per gcal_get_access_token()
+require_once __DIR__ . '/ardy-config.php'; // costanti ARDY_GCAL_* (caricarlo PRIMA di gcal)
+require_once __DIR__ . '/ardy-gcal.php';   // per gcal_get_access_token()
 
 header('Content-Type: text/html; charset=utf-8');
 
