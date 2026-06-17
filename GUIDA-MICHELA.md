@@ -54,6 +54,10 @@ ti dice "a colpo d'occhio" come sta il lavoro, in base alle **date** che hai mes
 
 > Nota: "fine lavoro" è quando finisci di lavorarci, **non** la consegna (puoi consegnare anche dopo).
 
+Oltre ai pallini, accanto al cliente possono comparire dei **badge**:
+- **📐 da pianificare** — c'è una nota di sopralluogo ma non hai ancora generato le fasi;
+- **📦 consegna** — hai scritto qualcosa nel box "Note consegna" (qualcosa da procurare/sistemare prima di consegnare). Sparisce quando svuoti quel box.
+
 ---
 
 ## 🏷️ 3. Gli stati del cliente
@@ -101,6 +105,17 @@ apre un editor a pieno schermo dove scrivere comodamente gli appunti del soprall
 (misure, ipotesi prezzo, materiali, scadenze). Cliccando **✓ APPLICA** il testo torna nella
 scheda. Le note finiscono automaticamente nel **dossier interno** (Sole le ricorda quando
 ti aiuta) e nel **PDF preventivo** — non vengono mai mostrate al cliente.
+
+📦 **Note consegna.** Sotto le Note c'è un secondo box, **"📦 Note consegna"**, per annotare
+cosa serve o manca per consegnare un lavoro (es. *"mancano 4 bulloni M6×45 e 2 M6×70 con dadi
+e rondelle"*). Funziona come le Note (anche col bottone ⛶ Espandi). Quando ci scrivi qualcosa,
+sul cliente compare in lista un badge verde **📦 consegna**; **Sole le legge**, quindi puoi
+chiederle su WhatsApp *"cosa manca per la consegna di Rossi?"*. Quando hai procurato tutto,
+**svuota il box e salva**: il badge sparisce e per Sole quel cliente è a posto per la consegna.
+
+💬 **Conversazione.** Nella scheda cliente c'è la sezione a fisarmonica **"💬 Conversazione"**:
+aprila per leggere lo **storico dei messaggi** scambiati con quel cliente (WhatsApp + chat del
+sito) in ordine cronologico, con data e ora. Utile per sapere al volo se e cosa ti ha scritto.
 
 ⚠️ **Importante:** dopo ogni modifica compare in basso la barra **"Modifiche non salvate"**.
 Clicca **SALVA MODIFICHE** per registrarle. Se cambi cliente senza salvare, ti avvisa.

@@ -5,9 +5,9 @@
 
 ---
 
-## ▶️ STATO (16/06/2026)
-CRM in attività piena, ora anche **multi-utente** (Michela + Andrea). Primo
-**sopralluogo "sul campo"** fatto oggi con la scheda mobile rifinita.
+## ▶️ STATO (17/06/2026)
+CRM in attività piena, **multi-utente** (Michela + Andrea). Focus 17/06: rendere Sole
+**completa su WhatsApp** (canale obbligato) verso clienti e staff.
 - ✅ **Multi-utente Andrea** LIVE (16/06): credenziali separate `.htpasswd` + `WA_ANDREA_NUMBER` in `ardy-config.php`. Stessi permessi di Michela (dashboard + Sole su WhatsApp che lo chiama "Andrea"). Cache prompt separate per i due.
 - ✅ **Root dominio** apre direttamente la dashboard (16/06): `https://ardyagent.ardy-lab.it` → dashboard (prima serviva `/ardy-michela-app.html`).
 - ✅ **UX scheda mobile (sopralluogo)** (16/06): Note ingrandite + bottone **⛶ Espandi** (editor a tutto schermo), **Dati anagrafici** e **Azioni cliente** dentro toggle collassabili (chiusi di default su mobile), Session ID nascosta.
@@ -16,29 +16,20 @@ CRM in attività piena, ora anche **multi-utente** (Michela + Andrea). Primo
 - ✅ **Stato COMPLETATO** aggiunto tra IN_LAVORAZIONE e CONSEGNATO.
 - ✅ **Restyling PDF preventivo** (16/06 sera): font **Playfair Display** per tutto il documento, colore testo **dorato scuro** (`#6b4f1e`) invece del quasi-nero, pagina **Grazie** ridisegnata (logo + "GRAZIE" + customer-care Sole) con footer link Instagram + webchat + **WhatsApp diretto** (`wa.me`) e **2 QR code** (webchat + WhatsApp), link **privacy policy + termini** sulla pagina firma. `PDF_CACHE_VER` a `2026-06-16i`.
 - ✅ **Prompt WhatsApp: nudge verso webchat** (16/06 sera): sezione in `ardy-whatsapp-system.txt` che istruisce Sole a invitare con garbo il cliente sulla webchat (dopo aver dato valore, mai forzando, sempre lato-cliente).
-- ✅ **Conversazioni visibili** (17/06): bug "Sole non legge le chat + non c'è modo di
-  vederle" risolto. (1) Sole titolare ora riceve un blocco "💬 Conversazioni recenti"
-  (chi ha scritto in 48h, WhatsApp+sito) nel riepilogo → risponde a "X ti ha risposto?".
-  (2) Nuova sezione "💬 Conversazione" nella scheda cliente della dashboard (accordion,
-  lazy-load) che mostra lo storico unificato via `ardy-conversazioni.php`.
-- ✅ **Sole "sa tutto" in tempo reale** (17/06): corretto il framing fuorviante ("fotografia
-  statica / non ho accesso in tempo reale") — i dati sono letti DAL VIVO dal CRM ad ogni
-  messaggio. Riepilogo titolare arricchito: **CLIENTI ATTIVI con stato attuale** (lookup per
-  singolo cliente) + **fasi pubblicate con nome cliente** (non solo conteggio). Così risponde
-  a "Tavolo Fratino ha cambiato stato / ha una nuova fase?".
-- ✅ **Box "Note consegna"** (17/06): secondo campo editabile nella scheda cliente (sotto le
-  Note) per annotare cosa serve/manca per la consegna (es. bulloni M6 mancanti). Stessa
-  meccanica delle Note (editor ⛶ espandi, salvataggio). Colonna `clienti.note_consegna`.
-  Letto da Sole: blocco "📦 NOTE CONSEGNA" nel riepilogo titolare + nel dossier interno
-  (mai client-safe). File: ardy-michela-app.html/.css, ardy-update-lead.php, ardy-crm-api.php,
-  ardy-dossier.php, ardy-wa-lookup.php.
-- ✅ **Sole completa su WhatsApp (clienti + staff)** (17/06): (a) lato CLIENTE, Sole può dare
-  il quadro COMPLETO della lavorazione (tutte le fasi pubblicate dal dossier, non solo l'ultima);
-  istruzione `cliente_lavorazione` aggiornata. (b) **Bug privacy risolto**: il dossier per-cliente
-  e `ultima_fase` ora filtrano SOLO le fasi pubblicate (le bozze non arrivano più al cliente).
-  (c) lato STAFF, Sole ha già: conversazioni 48h, clienti attivi con stato, fasi con nome, note
-  consegna — tutto letto dal vivo dal CRM ad ogni messaggio.
-Prossimi task per priorità: foto-cliente nelle fasi (rimandata) · briefing del mattino · backlog performance/sicurezza.
+**Interventi 17/06 (fatti + deployati):**
+- ✅ **Sole staff in tempo reale**: corretto il framing "fotografia statica" → i dati sono letti
+  DAL VIVO dal CRM ad ogni messaggio. Riepilogo titolare arricchito con **conversazioni 48h**
+  (chi ha scritto, WA+sito), **clienti attivi con stato attuale**, **fasi con nome cliente**,
+  **note consegna**. (`ardy-wa-lookup.php`)
+- ✅ **Sole clienti — quadro lavorazione completo**: dà tutte le fasi **pubblicate** (non solo
+  l'ultima). Bug privacy risolto: dossier per-cliente + `ultima_fase` filtrano solo le pubblicate
+  (niente bozze al cliente). (`ardy-dossier.php`, `ardy-whatsapp-system.txt`)
+- ✅ **Vista 💬 Conversazione** nella scheda cliente (accordion lazy-load, WA+sito unificati).
+  (`ardy-conversazioni.php`, dashboard)
+- ✅ **Box 📦 Note consegna** nella scheda + badge in lista + letto da Sole (riepilogo + dossier).
+  Colonna `clienti.note_consegna`. Svuotando la nota il badge sparisce.
+
+Prossimi task per priorità: indicatore "ha risposto" in lista · briefing del mattino · backlog performance/sicurezza.
 
 ---
 
@@ -107,89 +98,30 @@ il layout/CSS del PDF, **bumpa `PDF_CACHE_VER`** per invalidare le cache esisten
 
 ---
 
-## 🌐 GOOGLE BUSINESS PROFILE — post automatici delle fasi (BLOCCATO su quota Google)
+## 🌐 GOOGLE BUSINESS PROFILE — post automatici delle fasi (IN ATTESA approvazione Google)
 **Obiettivo**: pubblicare in automatico i post delle fasi di lavorazione sul profilo
-Google Business **Ardy di Michela Panella** (Via Joyce 4, Roma — già **Verificata** ✅).
-Stesso account Google Cloud usato per Calendar/Gmail.
+Google Business **Ardy di Michela Panella** (già Verificata), col nodo n8n / endpoint PHP.
 
-**Dove siamo bloccati**: il nodo n8n è già stato creato, ma si ferma **sulla chiamata API**.
-Causa quasi certa: la **Business Profile API** parte con **quota = 0** e richiede un
-**form di richiesta accesso** approvato manualmente da Google (NON basta abilitarla in
-Cloud Console). Richiesta inviata da ~20gg, nessuna risposta via email.
+**STATO (17/06): domanda di accesso INVIATA, in attesa di Google.**
+- Diagnosi del blocco: non era codice/scope/progetto. Era stata inviata una *quota request*
+  (pannello Cloud Console, auto-respinta) invece della *domanda di accesso* (form). Idoneità OK:
+  scheda verificata >1 anno, `ardy.documenti@gmail.com` = **proprietario principale**, progetto
+  `ardy-lab`/**532339794075** coincide col client OAuth.
+- ✅ **Form Basic API Access inviato il 17/06** da `ardy.documenti` → **ID 3-7851000041139**.
+  In revisione **~7-10 giorni lavorativi**. NON sollecitare via email; attendere l'esito su `ardy.documenti`.
+- I post via API funzionano ancora nel 2026 (`localPosts.create`), ma sull'host **legacy**
+  `mybusiness.googleapis.com/v4` (sotto access-gate) — non tra le 4 API "moderne" già abilitate.
+- Verifica sblocco: `ardy-gbp-check.php` (verde quando quota 0→300) o Console → Quotas.
 
-> ⚠️ Google **non ha un endpoint** per interrogare lo stato della pratica. Si verifica solo:
-> (a) Cloud Console → *Business Profile API → Quotas* (se limite passa da 0 → approvata),
-> (b) con una chiamata reale all'API.
+**Codice GIÀ PRONTO** (non testabile finché quota=0): `ardy-gbp.php` (helper localPost + cache
+account/location), `ardy-gbp-post.php` (endpoint POST), `ardy-gbp-check.php` (diagnostica),
+guida `ardy-gbp-post.md`. Scope `business.manage` aggiunto in `ardy-gcal-auth.php` e token già rigenerato.
 
-**Strumento di verifica pronto**: `ardy-gbp-check.php` (dietro Basic Auth) → apre
-`https://ardyagent.ardy-lab.it/ardy-gbp-check.php` e dice: ✅ quota sbloccata /
-⛔ quota a zero (429) / ⚠️ manca scope `business.manage` / 403 API non abilitata.
-Riusa il token di `ardy-gcal-token.json`.
-
-**DIAGNOSI DEFINITIVA (17/06/2026)**: ⛔ **accesso NON approvato da Google.**
-- Progetto Cloud: **ardy-lab** / Project Number **532339794075** (coincide col client OAuth ✅).
-- `ardy-gbp-check.php` → 403 HTML del front-end Google ("does not have permission to get
-  URL /v1/accounts") = richiesta respinta al cancello = progetto non in allow-list.
-- Cloud Console → My Business Account Management API → Quotas → **Requests per minute = 0**
-  (0 = non approvato, 300 = approvato). **Confermato quota 0.**
-- Storico: form inviato 31/05/2026 (email conferma + msg 01/06 "serve progetto approvato"),
-  sollecito via email a `gbp-api-support` l'11/06 → **nessuna risposta**.
-- ⚠️ Il sollecito è stato mandato via **email**: l'intake ufficiale è il **form**
-  `https://support.google.com/business/contact/api_default` → "Application for Basic API
-  Access". L'email a gbp-api-support non è tracciata → va ri-sottomesso dal form.
-- ⚠️ **NON** usare il pannello "Modifica quota → Invia richiesta" in Cloud Console: per la
-  Business Profile API la richiesta quota generica viene auto-respinta, serve il form.
-
-**CAUSA RADICE CONFERMATA (17/06): canale di richiesta sbagliato. Idoneità OK.**
-- [x] GBP "Ardy di Michela Panella" **verificato da >1 anno** → requisito 60 giorni OK.
-- [x] **`ardy.documenti@gmail.com` = PROPRIETARIO PRINCIPALE della scheda** (verificato in
-      Persone e accesso; `a.panseo@gmail.com` è solo Gestore). → requisito owner/manager OK.
-- [x] Progetto Cloud `ardy-lab`/532339794075, token OAuth e form: tutto su `ardy.documenti`
-      → **nessun disallineamento, idoneo da sempre.**
-- [x] Sito web ufficiale: **https://ardy-lab.it**
-- ⚠️ Il rifiuto era solo perché il 31/05 è stata inviata una **quota request** (pannello
-      Console) invece della **domanda di accesso** (form). Email Google 01/06 lo conferma:
-      "submit your new request, answer all questions in detail".
-
-**FIX (semplice — nessuna modifica account):**
-- [x] ✅ **Form Basic API Access INVIATO il 17/06/2026** da `ardy.documenti`.
-      Nuovo **ID richiesta: 3-7851000041139** (prefisso `3-` = domanda di accesso vera,
-      non più quota request). Dati inviati: Business "Ardy di Michela Panella", Via Joyce 4
-      00143 Roma, sito https://ardy-lab.it, Project Number 532339794075, 1 location propria,
-      use-case localPosts fasi di lavorazione.
-- [ ] ⏳ **In revisione: ~7-10 giorni lavorativi** (→ indicativamente entro inizio luglio).
-      NON serve sollecitare via email questa volta. Attendere l'esito su `ardy.documenti`.
-- [ ] Verificare l'approvazione con `ardy-gbp-check.php` (verde quando quota 0 → 300 QPM)
-      oppure in Console → Quotas.
-- [x] ✅ **Codice endpoint GIÀ PRONTO (17/06, non testabile finché quota=0):**
-      - `ardy-gbp.php` — helper: `gbp_create_local_post()`, risoluzione+cache account/
-        location (`ardy-gbp-location.json`), token condiviso con Calendar/Gmail.
-      - `ardy-gbp-post.php` — endpoint HTTP (POST JSON, stile `ardy-pubblica-social.php`).
-      - `ardy-gbp-post.md` — guida integrazione (server-side, NO n8n; usa il toggle Google
-        già presente e disattivato nel pannello social della dashboard).
-      Punta all'host legacy `mybusiness.googleapis.com/v4` (localPosts).
-- [ ] **Ad approvazione ottenuta (azioni a quel punto):**
-      1. `ardy-gbp-check.php` verde → riabilitare il toggle Google in `ardy-michela-app.html`
-         e far partire la POST a `ardy-gbp-post.php` (stesso payload dei social).
-      2. Pubblicare una fase di test e verificare il post sulla scheda Google.
-      3. (eventuale) override `GBP_PARENT` in `ardy-config.php` se la scheda risolta non è
-         quella giusta.
-- [x] Scope `https://www.googleapis.com/auth/business.manage` aggiunto in
-      `ardy-gcal-auth.php` (17/06). **AZIONE MANUALE**: aprire `ardy-gcal-auth.php` nel
-      browser e completare il consenso Google per rigenerare il token con il nuovo scope
-      (il token attuale ha solo calendar+gmail → va rifatto).
-- [x] ✅ **Confermato (ricerca 17/06): i post via API funzionano ancora nel 2026.**
-      `accounts.locations.localPosts.create` è ATTIVO e non deprecato (solo
-      `localPosts.reportInsights`/statistiche è stato dismesso nel 2023 → ora le metriche
-      stanno nella Performance API). ⚠️ **MA** l'endpoint dei post vive ancora sul host
-      **legacy** `https://mybusiness.googleapis.com/v4/accounts/{id}/locations/{id}/localPosts`,
-      che NON compare nella library della console (non è tra le 4 API "moderne" già abilitate)
-      ed è **proprio quello sotto access-gate/quota** → è il muro su cui si fermava il nodo
-      n8n. Il codice/n8n dovrà puntare a `mybusiness.googleapis.com/v4`, NON alle API nuove.
-      Conclusione: **sbloccare la quota è la strada giusta, il task è fattibile.**
-
-**Quando sbloccato**: completare il nodo n8n / endpoint PHP per creare il `localPost`
-(media foto fase + testo) alla pubblicazione di una fase lavorazione.
+**Ad approvazione ottenuta:**
+- [ ] `ardy-gbp-check.php` verde → riabilitare il toggle Google in `ardy-michela-app.html` e far
+      partire la POST a `ardy-gbp-post.php` (stesso payload dei social).
+- [ ] Pubblicare una fase di test e verificare il post sulla scheda Google.
+- [ ] (eventuale) override `GBP_PARENT` in `ardy-config.php` se la scheda risolta non è quella giusta.
 
 ---
 
@@ -244,6 +176,12 @@ apre direttamente la dashboard (resta dietro Basic Auth via `FilesMatch`).
 lungo parte da solo al primo "buongiorno". Senza, funziona quando Michela chiede "come va oggi?".
 
 ### Migliorie minori UX (bassa priorità)
+- **🆕 Indicatore "ha risposto" in lista** (richiesto 17/06, da fare in una nuova sessione):
+  pallino/badge sui clienti che hanno **scritto di recente** (ultime 24-48h) e non ancora gestiti,
+  così si vede a colpo d'occhio chi ha risposto senza aprire la chat. Dati già disponibili:
+  `wa_messaggi`/`web_messaggi` (ultimo messaggio `role='user'`); la crm-api può esporre un flag
+  `ha_risposto`/`ultimo_msg_at` e la lista (`renderList` in `ardy-michela-app.html`) mostra il badge.
+  Da decidere: finestra temporale e quando "spegnere" l'indicatore (es. quando apri la chat o cambi stato).
 - **Popup date all'attivazione IN_LAVORAZIONE**: al click stato, modale che chiede `inizio_lavoro`/
   `fine_lavoro_prevista`. Tocca solo `ardy-michela-app.html/.css`.
 - **Filtro sidebar default su ACCONTO/IN_LAVORAZIONE** invece di TUTTI (da decidere sull'uso reale).

@@ -29,10 +29,10 @@ di Ardy Lab: i canali su cui lavora, le mansioni, le regole che segue e i suoi l
 | **WhatsApp** | Numero dedicato **+39 379 375 6437** | Chiunque scriva: lead, clienti, ex clienti |
 
 Su WhatsApp Sole capisce **con chi sta parlando** e si comporta di conseguenza (modalità):
-- **titolare** → è Michela: Sole fa da assistente personale, accede al CRM e risponde su lead/clienti/lavori;
+- **titolare** → è Michela o Andrea (staff): Sole fa da assistente personale, accede al CRM **in tempo reale** e risponde su lead/clienti/lavori/conversazioni;
 - **lead** → nuovo contatto, parte la qualifica;
 - **cliente** → cliente nel CRM senza lavorazione attiva, lo tratta con familiarità;
-- **cliente_lavorazione** → cliente con un lavoro in corso, gli dà aggiornamenti e contesto.
+- **cliente_lavorazione** → cliente con un lavoro in corso, gli dà il **quadro completo delle fasi pubblicate** e il contesto del suo lavoro.
 
 Su WhatsApp Sole ha anche **memoria della conversazione**: ricorda i messaggi precedenti con quel numero e mantiene il filo del discorso.
 
@@ -60,8 +60,9 @@ Sole controlla il calendario di Michela e propone **al massimo 2 slot** liberi. 
 ### 3. Salvare tutto nel CRM
 Ogni contatto utile finisce nella dashboard di Michela (nome, contatti, servizio, mobile, zona, budget, note, stato). Così Michela trova i lead già pronti.
 
-### 4. Seguire i clienti durante la lavorazione (widget)
-Sul widget delle pagine "Lavori in corso", dopo che il cliente si è fatto riconoscere col telefono, Sole:
+### 4. Seguire i clienti durante la lavorazione (widget + WhatsApp)
+Sul widget delle pagine "Lavori in corso" e su WhatsApp (dal numero riconosciuto), Sole:
+- dà al cliente il **quadro completo della sua lavorazione**: se chiede *"a che punto siete?"* / *"cosa avete fatto finora?"*, elenca **tutte le fasi pubblicate** (non solo l'ultima), in modo semplice e rassicurante. Mostra **solo** le fasi pubblicate: le bozze interne non arrivano mai al cliente;
 - spiega le **fasi** del lavoro in modo semplice e rassicurante;
 - può **prenotare una visita in laboratorio** (finestra da domani a max 3 giorni, 30 minuti);
 - **non promette mai date di consegna**;
@@ -78,6 +79,16 @@ Come una segretaria, Sole avvisa Michela su WhatsApp quando succede qualcosa di 
 - un cliente segnala un **reclamo**, un **problema di pagamento**, una **richiesta di modifica** o una **richiesta fuori standard**.
 
 > Le notifiche arrivano sempre, anche se Michela non ha scritto di recente (modello WhatsApp approvato attivo).
+
+### 6b. Rispondere in tempo reale a Michela/Andrea sul CRM (WhatsApp)
+Quando Michela o Andrea scrivono a Sole su WhatsApp, lei legge il CRM **dal vivo in quel momento** (non una vecchia istantanea). Può quindi rispondere con sicurezza su tutto ciò che accade:
+- **Chi ha scritto** nelle ultime 48h (WhatsApp + chat sito), con orario ed estratto del messaggio — utile per *"i contatti di ieri hanno risposto?"*;
+- **Stato attuale di un cliente** (es. *"Tavolo Fratino che stato ha?"*) dall'elenco dei clienti attivi;
+- **Fasi pubblicate di recente**, con nome cliente e nome fase;
+- **Note consegna** — cosa serve/manca per consegnare un lavoro (es. *"cosa manca per la consegna di Rossi?"* → "4 bulloni M6×45…"), prese dal box "Note consegna" della scheda;
+- **Calendario** (impegni di oggi/domani), lavori urgenti, sopralluoghi, follow-up, morosi.
+
+> Sole **non** rimanda più alla dashboard per queste cose né chiede di "girarle i dati": li ha già aggiornati a ogni messaggio.
 
 ### 7. Creare una scheda cliente su dettatura di Michela (WhatsApp)
 Quando Michela detta a Sole un cliente nuovo (es. *«Sole, segnami Mario Rossi, 333 1234567, vuole rilaccare una credenza, zona Prati»*), Sole raccoglie i dati, **li rilegge e chiede conferma**, e solo dopo il "sì" crea la scheda nel CRM. Stessa scheda se Michela ridetta lo stesso telefono (niente doppioni). Per ora crea **solo la scheda cliente** (il preventivo si fa dalla dashboard).
@@ -137,8 +148,11 @@ Per i clienti che non pagano, Sole indossa un secondo cappello — più formale 
 | Chatbot pubblico + tool calendario/CRM + notifiche Michela | `ardy-proxy.php` |
 | Widget lavorazione (clienti in corso) + calendario visite | `ardy-proxy-lavorazione.php`, `ardy-widget-lavorazione.js` |
 | WhatsApp — istruzioni e modalità | `ardy-whatsapp-system.txt` |
-| WhatsApp — chi è il numero (lead/cliente) | `ardy-wa-lookup.php` |
-| WhatsApp — memoria conversazione | `ardy-wa-memoria.php` |
+| WhatsApp — chi è il numero (lead/cliente) + riepilogo CRM live per staff | `ardy-wa-lookup.php` |
+| WhatsApp — memoria conversazione | `ardy-wa-memoria.php` (WhatsApp), `ardy-web-memoria.php` (sito) |
+| Conversazione cliente nella dashboard (WhatsApp + sito) | `ardy-conversazioni.php` |
+| Dossier cliente (contesto per Sole) — fasi solo pubblicate lato cliente | `ardy-dossier.php` |
+| Post automatici su Google Business Profile (in attesa accesso Google) | `ardy-gbp.php`, `ardy-gbp-post.php`, `ardy-gbp-check.php` |
 | Notifiche WhatsApp a Michela | `ardy-notifica-michela.php` |
 | Solleciti morosi ("segretaria amministrativa") | `ardy-solleciti.php`, `ardy-solleciti-system.txt` |
 | Testi fasi / comunicazioni / social / reel | `ardy-pubblica-lavorazione.php`, `ardy-crea-reel.php` |
