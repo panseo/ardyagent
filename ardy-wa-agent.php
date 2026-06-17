@@ -232,6 +232,17 @@ $tools = [
             'required' => ['nome', 'stato'],
         ],
     ],
+    [
+        'name'        => 'sposta_appuntamento',
+        'description' => 'Sposta un sopralluogo GIÀ fissato a una nuova data/ora. Usalo quando il cliente con cui stai parlando, che ha già un appuntamento, chiede di spostarlo. Prima verifica la disponibilità del nuovo periodo con ottieni_disponibilita_calendario e fatti confermare un orario preciso; poi chiama questo strumento. L\'appuntamento viene identificato in automatico dal numero WhatsApp del cliente.',
+        'input_schema' => [
+            'type'       => 'object',
+            'properties' => [
+                'start' => ['type' => 'string', 'description' => 'Nuova data e ora di inizio, ISO 8601. Es: 2026-06-20T11:00:00+02:00'],
+            ],
+            'required' => ['start'],
+        ],
+    ],
 ];
 
 // -----------------------------------------------------------
@@ -241,8 +252,9 @@ $reply          = '';
 $maxIterations  = 5;
 $iteration      = 0;
 $bookingMade    = false;
-$bookingWhen    = null;   // DateTime dell'appuntamento
-$bookingEventId = null;   // id evento Google appena creato
+$bookingWhen    = null;   // DateTime dell'appuntamento (nuovo o spostato)
+$bookingEventId = null;   // id evento Google appena creato/spostato
+$rescheduled    = false;  // true se un appuntamento è stato SPOSTATO
 
 while ($iteration < $maxIterations) {
     $iteration++;
@@ -412,6 +424,67 @@ while ($iteration < $maxIterations) {
                 $toolResult = 'Non sono riuscita a salvare la scheda adesso. Prosegui comunque la conversazione; se serve, di\' che Michela la registra.';
             }
 
+        } elseif ($toolName === 'sposta_appuntamento') {
+            // Su WhatsApp il cliente può spostare SOLO il proprio appuntamento:
+            // lo identifichiamo dal suo numero WhatsApp, non da un telefono fornito
+            // (evita che qualcuno sposti l'appuntamento di un altro).
+            $start = $toolInput['start'] ?? '';
+            if ($phone === '') {
+                $toolResult = 'Non riesco a identificare il numero del cliente. Raccogli la richiesta e di\' che Michela ricontatta.';
+            } elseif ($start === '') {
+                $toolResult = 'Errore: manca la nuova data/ora. Chiedi al cliente giorno e ora precisi.';
+            } else {
+                try {
+                    $startDt = new DateTime($start);
+                    if ($startDt < new DateTime('now')) {
+                        $toolResult = 'La nuova data è nel passato: chiedi al cliente una data futura.';
+                    } else {
+                        $db = ardyDB();
+                        waEnsureSopralluogoCols($db);
+                        ardyEnsureTelefonoLast9($db);
+                        $q = $db->prepare(
+                            "SELECT session_id, nome, cognome, email, gcal_event_id FROM clienti
+                              WHERE telefono_last9 = :p
+                                AND gcal_event_id IS NOT NULL AND gcal_event_id <> ''
+                                AND deleted_at IS NULL
+                           ORDER BY updated_at DESC, id DESC LIMIT 1"
+                        );
+                        $q->execute([':p' => substr($phone, -9)]);
+                        $cli = $q->fetch(PDO::FETCH_ASSOC);
+                        if (!$cli) {
+                            $toolResult = 'Non trovo un appuntamento collegato a questo numero. Raccogli la richiesta e di\' che Michela ricontatta il cliente per riorganizzare.';
+                        } else {
+                            $dateStr = $startDt->format('Y-m-d');
+                            $timeStr = $startDt->format('H:i');
+                            $free = gcal_is_slot_free($dateStr, $timeStr, 2);
+                            if ($free === false) {
+                                $toolResult = 'Quel nuovo orario è già occupato. Proponi al cliente un altro slot tra quelli liberi (controlla con ottieni_disponibilita_calendario).';
+                            } else {
+                                // free === true (libero) o null (impossibile verificare): procediamo.
+                                $upd = gcal_update_event($cli['gcal_event_id'], $dateStr, $timeStr, 2);
+                                if (!$upd) {
+                                    $toolResult = 'Non sono riuscita a spostare l\'appuntamento sul calendario. Riprova o di\' che Michela ricontatta.';
+                                } else {
+                                    $db->prepare("UPDATE clienti SET sopralluogo_at = :dt, stato = 'SOPRALLUOGO', updated_at = NOW() WHERE session_id = :sid")
+                                       ->execute([':dt' => $startDt->format('Y-m-d H:i:s'), ':sid' => $cli['session_id']]);
+                                    $rescheduled    = true;
+                                    $bookingWhen    = $startDt;               // per la conferma email al cliente
+                                    $bookingEventId = $cli['gcal_event_id'];
+                                    $nm = trim(($cli['nome'] ?? '') . ' ' . ($cli['cognome'] ?? ''));
+                                    if ($nm !== '') $leadNome = $nm;
+                                    $em = trim((string) ($cli['email'] ?? ''));
+                                    if ($em !== '' && filter_var($em, FILTER_VALIDATE_EMAIL)) $leadEmail = $em;
+                                    $toolResult = 'Appuntamento spostato con successo al nuovo orario nel calendario di Michela.';
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception $e) {
+                    error_log('ARDY WA-AGENT SPOSTA ERROR: ' . $e->getMessage());
+                    $toolResult = 'Errore tecnico nello spostamento. Chiedi al cliente di riprovare.';
+                }
+            }
+
         } else {
             // Tool non disponibile su questo canale: lo segnaliamo senza bloccare.
             $toolResult = 'Strumento non disponibile su WhatsApp.';
@@ -461,33 +534,38 @@ if (function_exists('fastcgi_finish_request')) { fastcgi_finish_request(); }
 // SIDE-EFFECTS POST-RISPOSTA: WhatsApp a Michela + email (come il sito).
 // -----------------------------------------------------------
 
-// 1) Avvisa Michela su WhatsApp del nuovo sopralluogo (dedupe su evento).
+// 1) Avvisa Michela su WhatsApp di nuovo sopralluogo o spostamento (dedupe).
 if ($bookingMade && $bookingWhen instanceof DateTime) {
-    $nomeCli = $leadNome ?: 'un cliente';
-    $quando  = $bookingWhen->format('d/m/Y') . ' alle ' . $bookingWhen->format('H:i');
-    $testo   = "📅 Nuovo sopralluogo fissato da Sole su WhatsApp:\n" . $nomeCli
-             . ($leadZona !== '' ? " · {$leadZona}" : '') . "\n🗓 {$quando}";
+    $quando = $bookingWhen->format('d/m/Y') . ' alle ' . $bookingWhen->format('H:i');
+    $testo  = "📅 Nuovo sopralluogo fissato da Sole su WhatsApp:\n" . ($leadNome ?: 'un cliente')
+            . ($leadZona !== '' ? " · {$leadZona}" : '') . "\n🗓 {$quando}";
     notificaMichela($testo, 'wa-sopr:' . ($bookingEventId ?: md5($testo)));
+} elseif ($rescheduled && $bookingWhen instanceof DateTime) {
+    $quando = $bookingWhen->format('d/m/Y') . ' alle ' . $bookingWhen->format('H:i');
+    $testo  = "📅 Sopralluogo SPOSTATO da Sole su WhatsApp:\n" . ($leadNome ?: 'un cliente')
+            . "\n🗓 nuovo orario: {$quando}";
+    notificaMichela($testo, 'wa-sposta:' . ($bookingEventId ?: md5($testo)) . ':' . $bookingWhen->format('YmdHi'));
 }
 
-// 2) NOTIFICA EMAIL A MICHELA — nuovo lead salvato o sopralluogo fissato.
-if ($leadCreated || $bookingMade) {
+// 2) NOTIFICA EMAIL A MICHELA — nuovo lead, sopralluogo fissato o spostato.
+if ($leadCreated || $bookingMade || $rescheduled) {
     try {
-        $body  = "Nuovo contatto da Sole su WhatsApp\n" . str_repeat('─', 40) . "\n\n";
+        $isMove = $rescheduled && !$bookingMade && !$leadCreated;
+        $body  = ($isMove ? "Sopralluogo SPOSTATO da Sole su WhatsApp\n" : "Nuovo contatto da Sole su WhatsApp\n") . str_repeat('─', 40) . "\n\n";
         $body .= "DATA:      " . date('d/m/Y H:i') . "\n";
         $body .= "NOME:      " . ($leadNome ?: '—') . "\n";
         $body .= "TELEFONO:  " . ($phone !== '' ? '+' . $phone : '—') . "\n";
         $body .= "EMAIL:     " . ($leadEmail ?: 'non fornita') . "\n";
         $body .= "ZONA:      " . ($leadZona ?: '—') . "\n";
-        if ($bookingMade && $bookingWhen instanceof DateTime) {
-            $body .= "SOPRALLUOGO: " . $bookingWhen->format('d/m/Y H:i') . "\n";
+        if ($bookingWhen instanceof DateTime) {
+            $body .= ($isMove ? "NUOVO ORARIO: " : "SOPRALLUOGO: ") . $bookingWhen->format('d/m/Y H:i') . "\n";
         }
         $body .= "\n" . str_repeat('─', 40) . "\nCONVERSAZIONE\n" . str_repeat('─', 40) . "\n\n" . $transcript;
 
         $mail = waNewMailer();
         $mail->setFrom('noreply@ardy-lab.it', 'Ardy AI');
         $mail->addAddress(ARDY_MAIL_MICHELA);
-        $mail->Subject = '📋 Nuovo lead da Sole (WhatsApp) — ' . date('d/m/Y H:i');
+        $mail->Subject = ($isMove ? '📅 Sopralluogo SPOSTATO (WhatsApp) — ' : '📋 Nuovo lead da Sole (WhatsApp) — ') . date('d/m/Y H:i');
         $mail->Body    = $body;
         $mail->send();
     } catch (\Throwable $e) {
@@ -495,24 +573,25 @@ if ($leadCreated || $bookingMade) {
     }
 }
 
-// 3) CONFERMA SOPRALLUOGO AL CLIENTE (se prenotato e email disponibile).
-if ($bookingMade && $bookingWhen instanceof DateTime && $leadEmail && filter_var($leadEmail, FILTER_VALIDATE_EMAIL)) {
+// 3) CONFERMA SOPRALLUOGO AL CLIENTE (se fissato/spostato ed email disponibile).
+if (($bookingMade || $rescheduled) && $bookingWhen instanceof DateTime && $leadEmail && filter_var($leadEmail, FILTER_VALIDATE_EMAIL)) {
     $giorni = ['Monday'=>'lunedì','Tuesday'=>'martedì','Wednesday'=>'mercoledì','Thursday'=>'giovedì','Friday'=>'venerdì','Saturday'=>'sabato','Sunday'=>'domenica'];
     $mesi   = ['January'=>'gennaio','February'=>'febbraio','March'=>'marzo','April'=>'aprile','May'=>'maggio','June'=>'giugno','July'=>'luglio','August'=>'agosto','September'=>'settembre','October'=>'ottobre','November'=>'novembre','December'=>'dicembre'];
     $gg     = $giorni[$bookingWhen->format('l')] ?? '';
     $mm     = $mesi[$bookingWhen->format('F')] ?? '';
     $quando = trim(ucfirst($gg) . ' ' . $bookingWhen->format('j') . ' ' . $mm . ' ' . $bookingWhen->format('Y') . ' alle ' . $bookingWhen->format('H:i'));
     try {
+        $isMoveC = $rescheduled && !$bookingMade;
         $mailC = waNewMailer();
         $mailC->setFrom('noreply@ardy-lab.it', 'Ardy Lab');
         $mailC->addAddress($leadEmail);
-        $mailC->Subject = '✅ Sopralluogo Ardy Lab — ' . $quando;
+        $mailC->Subject = ($isMoveC ? '✅ Sopralluogo Ardy Lab spostato — ' : '✅ Sopralluogo Ardy Lab — ') . $quando;
         $mailC->isHTML(true);
         $mailC->Body = '
 <div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:32px;color:#333;">
   ' . ardy_email_logo_cid($mailC) . '
-  <p style="color:#999;font-size:13px;margin-bottom:24px;">Conferma sopralluogo</p>
-  <p style="font-size:15px;line-height:1.7;">Ciao,<br>abbiamo fissato il tuo sopralluogo. Ecco il riepilogo:</p>
+  <p style="color:#999;font-size:13px;margin-bottom:24px;">' . ($isMoveC ? 'Sopralluogo aggiornato' : 'Conferma sopralluogo') . '</p>
+  <p style="font-size:15px;line-height:1.7;">Ciao,<br>' . ($isMoveC ? 'abbiamo aggiornato il tuo sopralluogo al nuovo orario.' : 'abbiamo fissato il tuo sopralluogo.') . ' Ecco il riepilogo:</p>
   <div style="border-left:3px solid #c8a96e;padding:12px 20px;background:#fafaf8;margin:20px 0;font-size:16px;">
     <strong>' . htmlspecialchars($quando) . '</strong>
   </div>
