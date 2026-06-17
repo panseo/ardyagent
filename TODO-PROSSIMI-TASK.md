@@ -166,12 +166,12 @@ guida `ardy-gbp-post.md`. Scope `business.manage` aggiunto in `ardy-gcal-auth.ph
 
 ## 📋 TASK DA SVILUPPARE (aperti)
 
-### 📷 Gestione foto anche nelle bozze social in attesa
-Oggi l'➕ aggiungi / ✕ rimuovi foto c'è solo nel **composer** (pubblicazione fase). Sui post
-**salvati per dopo** (bozze in attesa) c'è anteprima IG + modifica testo, ma non la gestione foto.
-Estensione: portare add/del foto anche nell'editor delle bozze, aggiornando `item.immagini` e
-salvando la bozza sul server (riuso di `ardy-social-foto.php` + `salvaModificaPending`). Da fare
-dopo aver visto come gira l'attuale.
+### 📷 ~~Gestione foto anche nelle bozze social in attesa~~ ✅ FATTO (17/06, da testare dal vivo)
+Nell'editor "✏ Modifica" di un post in attesa ora ci sono **➕ Aggiungi foto** e **✕** su ogni
+miniatura, come nel composer. Le modifiche foto si salvano **subito** sul server (upload su WP via
+`ardy-social-foto.php` → URL pubblico; bozza aggiornata via `ardy-social-bozze.php`), aggiornando
+solo la galleria in-place così l'editor resta aperto. Test: apri Modifica su una bozza → aggiungi/
+togli foto → chiudi e riapri (anche da altro dispositivo) → le foto persistono; poi Anteprima/Pubblica.
 
 ### 🎯 ~~Funnel lead a pagamento~~ ✅ FATTO (15/06/2026)
 Flusso: Sole segnala → Michela risponde su ProntoPro → se il lead non risponde → Michela

@@ -2628,9 +2628,6 @@ function renderSocialPending() {
   wrap.style.display = 'block';
   cont.innerHTML = list.map(p => {
     const titolo = (p.fase && p.fase.trim()) ? p.fase : (p.mobile || 'Post');
-    const thumbs = (Array.isArray(p.immagini) && p.immagini.length)
-      ? `<div class="lav-preview" style="margin-top:8px;">${p.immagini.map(u => `<img src="${safeUrl(u)}">`).join('')}</div>`
-      : '';
     return `
     <div style="border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:8px;">
       <div style="margin-bottom:10px;">
@@ -2647,7 +2644,9 @@ function renderSocialPending() {
       </div>
       <div id="pendEdit_${escHtml(p.id)}" style="display:none;margin-top:8px;">
         <textarea class="lav-textarea" id="pendText_${escHtml(p.id)}" style="min-height:120px;">${escHtml(p.testo_social || '')}</textarea>
-        ${thumbs}
+        <div class="social-imgs" id="pendImgs_${escHtml(p.id)}">${pendingImgsHtml(p)}</div>
+        <input type="file" id="pendImgInput_${escHtml(p.id)}" accept="image/*" multiple style="display:none;" onchange="handlePendingImgAdd('${escHtml(p.id)}', event)">
+        <button class="btn-secondary" style="margin-top:6px;width:100%;" onclick="document.getElementById('pendImgInput_${escHtml(p.id)}').click()">➕ Aggiungi foto</button>
         <button class="btn-secondary" style="margin-top:8px;width:100%;" onclick="salvaModificaPending('${escHtml(p.id)}')">💾 Salva modifica</button>
       </div>
     </div>`;
@@ -2667,6 +2666,79 @@ function toggleNuovaFase() {
   const el = document.getElementById('nuovaFaseBody');
   if (!el) return;
   el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+}
+
+// Galleria foto di una bozza in attesa: ogni foto con la ✕ per rimuoverla.
+function pendingImgsHtml(item) {
+  const imgs = (item && item.immagini) || [];
+  return imgs.map((u, i) => `
+    <div class="social-img">
+      <img src="${safeUrl(u)}" alt="">
+      <button class="social-img-del" title="Rimuovi foto" onclick="eliminaPendingImg('${escHtml(item.id)}', ${i})">✕</button>
+    </div>`).join('');
+}
+
+// Ridisegna SOLO la galleria della bozza (non l'intera lista) così l'editor resta aperto.
+function renderPendingImgs(id) {
+  const el = document.getElementById('pendImgs_' + id);
+  const item = socialPendingCache.find(p => p.id === id);
+  if (el && item) el.innerHTML = pendingImgsHtml(item);
+}
+
+// Persiste sul server la bozza con le immagini aggiornate (mantiene testo/social correnti).
+async function persistPendingImgs(id) {
+  const item = socialPendingCache.find(p => p.id === id);
+  if (!item) return;
+  const ta = document.getElementById('pendText_' + id);
+  if (ta) item.testo_social = ta.value.trim();
+  const piatt = getSelectedPlatforms(id);
+  if (piatt && piatt.length) item.piattaforme = piatt;
+  try {
+    await fetch(SOCIAL_BOZZE_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ azione: 'salva', bozza: item })
+    });
+  } catch(e) { showToast('⚠ Rete giù: foto non salvata sul server', 'error'); }
+}
+
+function eliminaPendingImg(id, idx) {
+  const item = socialPendingCache.find(p => p.id === id);
+  if (!item || !Array.isArray(item.immagini)) return;
+  item.immagini.splice(idx, 1);
+  renderPendingImgs(id);
+  persistPendingImgs(id);
+}
+
+// Aggiunge foto a una bozza: upload su WP (URL pubblico per IG) + salva la bozza.
+async function handlePendingImgAdd(id, event) {
+  const files = Array.from(event.target.files || []);
+  event.target.value = '';
+  const item = socialPendingCache.find(p => p.id === id);
+  if (!item) return;
+  if (!Array.isArray(item.immagini)) item.immagini = [];
+  for (const file of files) {
+    showToast('⏳ Carico la foto…', 'success');
+    try {
+      const base64 = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload  = e => res(e.target.result.split(',')[1]);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+      const resp = await fetch(SOCIAL_FOTO_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ immagine: base64 })
+      });
+      const d = await resp.json();
+      if (d && d.success && d.url) {
+        item.immagini.push(d.url);
+        renderPendingImgs(id);
+      } else {
+        showToast('⚠ ' + ((d && d.error) || 'Foto non caricata'), 'error');
+      }
+    } catch(e) { showToast('⚠ Errore caricamento foto', 'error'); }
+  }
+  persistPendingImgs(id);
 }
 
 // Salva sul server le modifiche (testo + social selezionati) a una bozza, senza pubblicarla.
