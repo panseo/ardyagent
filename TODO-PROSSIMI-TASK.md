@@ -108,6 +108,12 @@ il layout/CSS del PDF, **bumpa `PDF_CACHE_VER`** per invalidare le cache esisten
 ## ⏳ DA VERIFICARE DAL VIVO / AZIONI MANUALI
 > Le novità del 17/06 (ha risposto · bozze social sul server · anteprima IG + foto · fix date) sono
 > state **testate dal vivo, nessuna anomalia** → spostate nello STATO sopra come ✅.
+- **Test Piano B — spostamento appuntamento su WhatsApp** (da fare, da numero NON staff): da un
+  numero che ha già un sopralluogo fissato, chiedere a Sole di spostarlo. Verificare: (a) l'evento
+  Google Calendar si SPOSTA (non ne crea uno nuovo), (b) Michela riceve la notifica "SPOSTATO"
+  (WhatsApp + email a `ardy.documenti@gmail.com`), (c) al cliente arriva la conferma del nuovo
+  orario. NB: deploy richiesto di `ardy-wa-agent.php` + `ardy-whatsapp-system.txt`. Il resto di
+  Piano B (disponibilità · prenotazione · salva-scheda · email) è già stato testato OK il 17/06.
 - **Recuperare le date perse pre-fix**: i clienti a cui le date si erano azzerate (es. Margherita
   Mottini) vanno reinseriti a mano — il fix anti-clobber evita che ricapiti ma non ripristina i dati persi.
 - **UX "Modifica" su Preventivo (allegato)** (deployato 16/06/2026, testato dal vivo — lasciato così, da
