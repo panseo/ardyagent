@@ -49,6 +49,14 @@ runuser -u micoperibg -- bash -c 'cd ~/repositories/ardyagent && git pull origin
 **Auth endpoint chiamati via fetch**: NON usare `ardyRequireAuth()` (in CGI/FPM l'header
 `Authorization` non arriva a PHP → rifarebbe login). Affidarsi al `.htaccess` (Basic Auth).
 
+**⚠️ Git — lineage di `main` (evita l'errore "unrelated histories")**: la storia BUONA di
+`main` parte dal root-commit **`98b352f`**. Esiste anche una **vecchia lineage orfana** (root
+`b49606b`, i "v2.0…") scollegata da quella attuale: NON va più rifusa. Se un comando git dà
+*"refusing to merge unrelated histories"* o `git merge-base <branch> main` non trova antenati
+comuni, quel branch è sulla lineage vecchia → **non fonderlo**, riparti da `origin/main`.
+Regola pratica per chiudere una sessione: branchare da `origin/main` aggiornato e fast-forward
+indietro su `main`. I vecchi branch `claude/*` orfani sono da cancellare (cleanup, non bloccante).
+
 **`session_id`**: sempre sanificato (no path traversal) prima di toccare i path file.
 
 **n8n**: due workflow — "Meta" (ramo post-foto = social FB/IG; ramo Reels) e "WhatsApp" (webhook
