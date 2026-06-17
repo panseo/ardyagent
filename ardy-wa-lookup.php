@@ -244,6 +244,28 @@ function ardy_riepilogo_settimana(PDO $db, array $staffDigits = []): string {
         }
     } catch (PDOException $e) { /* salta */ }
 
+    // Elenco clienti attivi con STATO ATTUALE — tabella di lookup per domande sul
+    // singolo cliente (es. "Tavolo Fratino ha cambiato stato?"). Esclusi i cestinati;
+    // ordinati per ultima attività (i cambi recenti finiscono in cima); cap a 30 per
+    // non gonfiare il prompt. Difensivo: se 'deleted_at' non esiste, salta in silenzio.
+    try {
+        $rows = $db->query(
+            "SELECT nome, cognome, mobile, COALESCE(NULLIF(stato,''),'-') stato, updated_at
+               FROM clienti
+              WHERE deleted_at IS NULL
+           ORDER BY updated_at DESC, id DESC
+              LIMIT 30"
+        )->fetchAll(PDO::FETCH_ASSOC);
+        if ($rows) {
+            $out[] = "CLIENTI ATTIVI — stato attuale (prime 30 per ultima attività):";
+            foreach ($rows as $r) {
+                $nome = trim(($r['nome'] ?? '') . ' ' . ($r['cognome'] ?? '')) ?: '(senza nome)';
+                $mob  = $r['mobile'] ? ' · ' . $r['mobile'] : '';
+                $out[] = "- {$nome}{$mob} · stato {$r['stato']}";
+            }
+        }
+    } catch (PDOException $e) { /* colonna deleted_at assente o altro: salta */ }
+
     // Lavori in corso (stato ACCONTO)
     try {
         $rows = $db->query("SELECT nome, cognome, mobile FROM clienti WHERE UPPER(stato)='ACCONTO' ORDER BY updated_at DESC")
@@ -338,10 +360,24 @@ function ardy_riepilogo_settimana(PDO $db, array $staffDigits = []): string {
         }
     } catch (PDOException $e) { /* salta */ }
 
-    // Fasi pubblicate ultimi 7 giorni
+    // Fasi/aggiornamenti pubblicati di recente — CON cliente e nome fase (non solo il
+    // conteggio), così Sole sa SE e SU CHI è stata pubblicata una fase.
     try {
-        $n = (int)$db->query("SELECT COUNT(*) FROM fasi WHERE created_at >= (NOW() - INTERVAL 7 DAY)")->fetchColumn();
-        $out[] = "FASI/AGGIORNAMENTI pubblicati (ultimi 7 giorni): {$n}";
+        $rows = $db->query(
+            "SELECT f.fase_nome, f.created_at,
+                    TRIM(CONCAT(COALESCE(c.nome,''),' ',COALESCE(c.cognome,''))) AS cliente, c.mobile
+               FROM fasi f
+          LEFT JOIN clienti c ON c.session_id = f.session_id
+              WHERE f.created_at >= (NOW() - INTERVAL 7 DAY)
+                AND COALESCE(f.stato,'pubblicata') = 'pubblicata'
+           ORDER BY f.created_at DESC"
+        )->fetchAll(PDO::FETCH_ASSOC);
+        $out[] = "FASI/AGGIORNAMENTI pubblicati (ultimi 7 giorni): " . count($rows);
+        foreach (array_slice($rows, 0, 12) as $r) {
+            $chi = trim((string)$r['cliente']) ?: '(cliente?)';
+            $mob = $r['mobile'] ? ' · ' . $r['mobile'] : '';
+            $out[] = "- " . substr((string)$r['created_at'], 0, 10) . " · {$chi}{$mob} → " . ($r['fase_nome'] ?: 'fase');
+        }
     } catch (PDOException $e) { /* salta */ }
 
     // Morosi aperti (tabella opzionale)
@@ -381,7 +417,7 @@ function ardy_wa_titolare_istruzioni(bool $datiSeparati, string $nome = 'Michela
         . "- Se {$nome} ti chiede se un cliente/lead ha risposto o ti ha scritto (es. \"i contatti di ieri ti hanno risposto?\"), GUARDA il blocco \"💬 CONVERSAZIONI RECENTI\" nei dati operativi: elenca chi ha scritto nelle ultime 48h (WhatsApp + chat sito) con orario e un estratto. Se un nome NON è in quel blocco, vuol dire che non ha scritto in quella finestra; dillo con onestà.\n"
         . "- Se ti chiede qualcosa che non è nei dati, dillo con onestà e indica dove guardare (la dashboard).\n"
         . "- Puoi aiutarla/aiutarlo a ragionare, redigere messaggi/email, organizzare la giornata.\n"
-        . "- I dati operativi sono una fotografia dal CRM al momento del messaggio: se servono dettagli più precisi, rimanda alla dashboard.\n\n"
+        . "- ⚡ IMPORTANTE: questi dati operativi sono letti DAL VIVO dal CRM a OGNI tuo messaggio, quindi sono in TEMPO REALE — NON una vecchia istantanea che {$nome} ti ha girato. Rispondi con sicurezza sullo stato ATTUALE di clienti, cambi di stato, fasi e lavori. NON dire \"non ho accesso in tempo reale alla dashboard\" e NON chiedere a {$nome} di mandarti i dati mattina e sera: ce li hai già aggiornati ad ogni messaggio. Per sapere se un cliente ha cambiato stato o ha una nuova fase, GUARDA i blocchi \"CLIENTI ATTIVI — stato attuale\" e \"FASI/AGGIORNAMENTI pubblicati\". Rimanda alla dashboard SOLO per ciò che davvero non è nei dati (es. allegati/foto o il testo integrale di una chat).\n\n"
         . "## CREARE UNA SCHEDA CLIENTE ({$nome} ti detta un nuovo contatto)\n"
         . "Quando {$nome} ti dà i dati di un cliente nuovo da mettere a CRM (a voce o per iscritto, es.\n"
         . "\"segna Mario Rossi, 3331234567, vuole rilaccare una credenza, zona Prati\"), aiutala a creare la scheda:\n"

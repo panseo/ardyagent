@@ -21,6 +21,11 @@ CRM in attività piena, ora anche **multi-utente** (Michela + Andrea). Primo
   (chi ha scritto in 48h, WhatsApp+sito) nel riepilogo → risponde a "X ti ha risposto?".
   (2) Nuova sezione "💬 Conversazione" nella scheda cliente della dashboard (accordion,
   lazy-load) che mostra lo storico unificato via `ardy-conversazioni.php`.
+- ✅ **Sole "sa tutto" in tempo reale** (17/06): corretto il framing fuorviante ("fotografia
+  statica / non ho accesso in tempo reale") — i dati sono letti DAL VIVO dal CRM ad ogni
+  messaggio. Riepilogo titolare arricchito: **CLIENTI ATTIVI con stato attuale** (lookup per
+  singolo cliente) + **fasi pubblicate con nome cliente** (non solo conteggio). Così risponde
+  a "Tavolo Fratino ha cambiato stato / ha una nuova fase?".
 Prossimi task per priorità: foto-cliente nelle fasi (rimandata) · briefing del mattino · backlog performance/sicurezza.
 
 ---
