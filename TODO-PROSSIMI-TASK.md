@@ -118,15 +118,22 @@ Riusa il token di `ardy-gcal-token.json`.
 - ⚠️ **NON** usare il pannello "Modifica quota → Invia richiesta" in Cloud Console: per la
   Business Profile API la richiesta quota generica viene auto-respinta, serve il form.
 
-**Requisiti idoneità da confermare (causa probabile del rifiuto silenzioso):**
-- [ ] GBP "Ardy di Michela Panella" **verificato e attivo da 60+ giorni** (se <2 mesi → non
-      approvano finché non maturano). Data ricavabile dall'email Google "Sei verificato".
-- [ ] Email che invia il form (`ardy.documenti@gmail.com`) = **owner/manager del GBP**
-      (business.google.com → Impostazioni → Persone e accesso).
-- [ ] Sito web dell'attività collegato al GBP.
+**CAUSA RADICE TROVATA (17/06): disallineamento di account.**
+- [x] GBP "Ardy di Michela Panella" **verificato da >1 anno** → requisito 60 giorni OK.
+- [x] ⚠️ La scheda GBP è di proprietà di **`a.panseo@gmail.com`** (chi fece la verifica
+      un anno fa). Tutto il resto (progetto Cloud `ardy-lab`/532339794075, token OAuth,
+      form API) è su **`ardy.documenti@gmail.com`**. Google richiede che chi invia il form
+      sia **owner/manager della scheda** → `ardy.documenti` NON lo è → **richiesta respinta**.
 
-**Azione**: verificati i 3 requisiti, **ri-sottomettere dal form ufficiale** con Project
-Number 532339794075 e use-case "pubblicazione automatica aggiornamenti fasi di lavorazione".
+**FIX (Strada A):**
+- [ ] Da `a.panseo@gmail.com` (proprietario GBP) → business.google.com → scheda Ardy →
+      Impostazioni profilo → Persone e accesso → **aggiungere `ardy.documenti@gmail.com`
+      come Proprietario** (o Gestore). Accettare l'invito da `ardy.documenti`.
+- [ ] **Ri-sottomettere il form** Basic API Access da `ardy.documenti` (ora idoneo):
+      `https://support.google.com/business/contact/api_default` → "Application for Basic
+      API Access". Project Number 532339794075. Use-case: pubblicazione automatica
+      `localPosts` con gli aggiornamenti delle fasi di lavorazione del restauro.
+- [ ] (bozza testo form preparata 17/06 — vedi chat).
 - [x] Scope `https://www.googleapis.com/auth/business.manage` aggiunto in
       `ardy-gcal-auth.php` (17/06). **AZIONE MANUALE**: aprire `ardy-gcal-auth.php` nel
       browser e completare il consenso Google per rigenerare il token con il nuovo scope
