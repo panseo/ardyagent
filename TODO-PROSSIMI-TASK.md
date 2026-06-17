@@ -104,20 +104,29 @@ Cloud Console). Richiesta inviata da ~20gg, nessuna risposta via email.
 ⛔ quota a zero (429) / ⚠️ manca scope `business.manage` / 403 API non abilitata.
 Riusa il token di `ardy-gcal-token.json`.
 
-**Checklist per sbloccare / verificare:**
-- [ ] Aprire `ardy-gbp-check.php` → leggere l'esito (può rivelare che la quota è già
-      stata alzata in silenzio, senza email).
-- [x] API abilitate in Cloud Console (verificato 17/06): *My Business Account Management*,
-      *My Business Business Information*, *My Business Place Actions*, *Business Profile
-      Performance* = Enabled. → il blocco NON è l'abilitazione, è la **quota/accesso**.
-- [ ] Verificare **Quotas > 0** sulle API My Business (Cloud Console → quella API → Quotas):
-      se a 0 → form di accesso non ancora approvato.
-- [ ] Controllare la **email** dell'account Google che ha mandato la richiesta (anche
-      SPAM): se Google ha chiesto chiarimenti e non si è risposto, la pratica resta ferma.
-- [ ] Verificare di aver compilato il **form di accesso dedicato** (collegato al
-      **Project Number**, non al Project ID), non la generica "richiesta aumento quota".
-- [ ] Se >2 settimane senza risposta: **ri-sottomettere** il form o aprire ticket al
-      supporto Business Profile.
+**DIAGNOSI DEFINITIVA (17/06/2026)**: ⛔ **accesso NON approvato da Google.**
+- Progetto Cloud: **ardy-lab** / Project Number **532339794075** (coincide col client OAuth ✅).
+- `ardy-gbp-check.php` → 403 HTML del front-end Google ("does not have permission to get
+  URL /v1/accounts") = richiesta respinta al cancello = progetto non in allow-list.
+- Cloud Console → My Business Account Management API → Quotas → **Requests per minute = 0**
+  (0 = non approvato, 300 = approvato). **Confermato quota 0.**
+- Storico: form inviato 31/05/2026 (email conferma + msg 01/06 "serve progetto approvato"),
+  sollecito via email a `gbp-api-support` l'11/06 → **nessuna risposta**.
+- ⚠️ Il sollecito è stato mandato via **email**: l'intake ufficiale è il **form**
+  `https://support.google.com/business/contact/api_default` → "Application for Basic API
+  Access". L'email a gbp-api-support non è tracciata → va ri-sottomesso dal form.
+- ⚠️ **NON** usare il pannello "Modifica quota → Invia richiesta" in Cloud Console: per la
+  Business Profile API la richiesta quota generica viene auto-respinta, serve il form.
+
+**Requisiti idoneità da confermare (causa probabile del rifiuto silenzioso):**
+- [ ] GBP "Ardy di Michela Panella" **verificato e attivo da 60+ giorni** (se <2 mesi → non
+      approvano finché non maturano). Data ricavabile dall'email Google "Sei verificato".
+- [ ] Email che invia il form (`ardy.documenti@gmail.com`) = **owner/manager del GBP**
+      (business.google.com → Impostazioni → Persone e accesso).
+- [ ] Sito web dell'attività collegato al GBP.
+
+**Azione**: verificati i 3 requisiti, **ri-sottomettere dal form ufficiale** con Project
+Number 532339794075 e use-case "pubblicazione automatica aggiornamenti fasi di lavorazione".
 - [x] Scope `https://www.googleapis.com/auth/business.manage` aggiunto in
       `ardy-gcal-auth.php` (17/06). **AZIONE MANUALE**: aprire `ardy-gcal-auth.php` nel
       browser e completare il consenso Google per rigenerare il token con il nuovo scope
