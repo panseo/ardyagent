@@ -166,6 +166,13 @@ guida `ardy-gbp-post.md`. Scope `business.manage` aggiunto in `ardy-gcal-auth.ph
 
 ## 📋 TASK DA SVILUPPARE (aperti)
 
+### 📷 Gestione foto anche nelle bozze social in attesa
+Oggi l'➕ aggiungi / ✕ rimuovi foto c'è solo nel **composer** (pubblicazione fase). Sui post
+**salvati per dopo** (bozze in attesa) c'è anteprima IG + modifica testo, ma non la gestione foto.
+Estensione: portare add/del foto anche nell'editor delle bozze, aggiornando `item.immagini` e
+salvando la bozza sul server (riuso di `ardy-social-foto.php` + `salvaModificaPending`). Da fare
+dopo aver visto come gira l'attuale.
+
 ### 🎯 ~~Funnel lead a pagamento~~ ✅ FATTO (15/06/2026)
 Flusso: Sole segnala → Michela risponde su ProntoPro → se il lead non risponde → Michela
 detta i dati a Sole (`[[CREA_SCHEDA]]` + `[[CONTATTA_LEAD]]`) → WA con link webchat
