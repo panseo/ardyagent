@@ -130,13 +130,17 @@ Riusa il token di `ardy-gcal-token.json`.
       "submit your new request, answer all questions in detail".
 
 **FIX (semplice — nessuna modifica account):**
-- [ ] Inviare da `ardy.documenti` il form Basic API Access:
-      `https://support.google.com/business/contact/api_default` → "Application for Basic
-      API Access". Dati: Business "Ardy di Michela Panella", Via Joyce 4 00143 Roma,
-      sito https://ardy-lab.it, Project Number 532339794075, 1 location propria.
-      Use-case: pubblicazione automatica `localPosts` (aggiornamenti fasi di lavorazione).
-- [ ] Dopo l'invio: attendere l'esito; ricontrollare con `ardy-gbp-check.php` (verde quando
-      la quota passa da 0 a 300 QPM).
+- [x] ✅ **Form Basic API Access INVIATO il 17/06/2026** da `ardy.documenti`.
+      Nuovo **ID richiesta: 3-7851000041139** (prefisso `3-` = domanda di accesso vera,
+      non più quota request). Dati inviati: Business "Ardy di Michela Panella", Via Joyce 4
+      00143 Roma, sito https://ardy-lab.it, Project Number 532339794075, 1 location propria,
+      use-case localPosts fasi di lavorazione.
+- [ ] ⏳ **In revisione: ~7-10 giorni lavorativi** (→ indicativamente entro inizio luglio).
+      NON serve sollecitare via email questa volta. Attendere l'esito su `ardy.documenti`.
+- [ ] Verificare l'approvazione con `ardy-gbp-check.php` (verde quando quota 0 → 300 QPM)
+      oppure in Console → Quotas.
+- [ ] **A approvazione ottenuta**: costruire `ardy-gbp-post.php` (crea `localPost` con testo
+      + foto fase) e collegarlo al nodo n8n alla pubblicazione di una fase.
 - [x] Scope `https://www.googleapis.com/auth/business.manage` aggiunto in
       `ardy-gcal-auth.php` (17/06). **AZIONE MANUALE**: aprire `ardy-gcal-auth.php` nel
       browser e completare il consenso Google per rigenerare il token con il nuovo scope
