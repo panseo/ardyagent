@@ -88,6 +88,17 @@ try {
         } catch (PDOException $e) { /* tabella assente: salta */ }
     }
 
+    // Aprire la conversazione in dashboard = "ho visto chi ha scritto": salva il
+    // marker così il badge "ha risposto" in lista si spegne (vedi ardy-crm-api.php).
+    if ($sessionId !== '') {
+        try {
+            $st = $db->prepare(
+                "UPDATE clienti SET conversazione_letta_at = NOW() WHERE session_id = :s"
+            );
+            $st->execute([':s' => $sessionId]);
+        } catch (PDOException $e) { /* colonna non ancora creata o cliente assente: ignora */ }
+    }
+
     // Ordine cronologico complessivo (i due canali intrecciati per data).
     usort($messaggi, function ($a, $b) {
         $ta = strtotime($a['created_at']); $tb = strtotime($b['created_at']);

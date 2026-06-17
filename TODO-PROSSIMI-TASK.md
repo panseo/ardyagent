@@ -195,12 +195,18 @@ apre direttamente la dashboard (resta dietro Basic Auth via `FilesMatch`).
 lungo parte da solo al primo "buongiorno". Senza, funziona quando Michela chiede "come va oggi?".
 
 ### Migliorie minori UX (bassa priorità)
-- **🆕 Indicatore "ha risposto" in lista** (richiesto 17/06, da fare in una nuova sessione):
-  pallino/badge sui clienti che hanno **scritto di recente** (ultime 24-48h) e non ancora gestiti,
-  così si vede a colpo d'occhio chi ha risposto senza aprire la chat. Dati già disponibili:
-  `wa_messaggi`/`web_messaggi` (ultimo messaggio `role='user'`); la crm-api può esporre un flag
-  `ha_risposto`/`ultimo_msg_at` e la lista (`renderList` in `ardy-michela-app.html`) mostra il badge.
-  Da decidere: finestra temporale e quando "spegnere" l'indicatore (es. quando apri la chat o cambi stato).
+- **🆕 Indicatore "ha risposto" in lista** (implementato 17/06, **da testare dal vivo**):
+  badge verde `💬 ha risposto` sui clienti che hanno **scritto di recente** (finestra **48h**) e di
+  cui **non hai ancora aperto la chat**. Decisioni prese: finestra 48h; spegnimento **all'apertura
+  della conversazione** (accordion 💬). Implementazione:
+  - `ardy-crm-api.php`: 2 query aggregate (`web_messaggi` per session_id, `wa_messaggi` per ultime 9
+    cifre tel) sull'ultimo `role='user'` entro 48h; flag `ha_risposto`/`ultimo_msg_at` esposti.
+    Nuova colonna idempotente `clienti.conversazione_letta_at` (marker "vista").
+  - `ardy-conversazioni.php`: aprendo la chat fa `UPDATE clienti SET conversazione_letta_at=NOW()` →
+    il badge si spegne al prossimo reload (e subito lato client).
+  - `ardy-michela-app.html`: badge in `renderList`; spegnimento immediato in `caricaConversazione`.
+  Test dal vivo: far scrivere un cliente (WA/sito) → badge in lista; aprire l'accordion 💬 → badge via.
+  Eventuale ritocco: finestra 24h vs 48h; aggiungere spegnimento anche al cambio stato (ora solo apertura chat).
 - **Popup date all'attivazione IN_LAVORAZIONE**: al click stato, modale che chiede `inizio_lavoro`/
   `fine_lavoro_prevista`. Tocca solo `ardy-michela-app.html/.css`.
 - **Filtro sidebar default su ACCONTO/IN_LAVORAZIONE** invece di TUTTI (da decidere sull'uso reale).

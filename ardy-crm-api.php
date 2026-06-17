@@ -13,7 +13,7 @@ header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
 
-function ardy_map_cliente(array $r, bool $withDeletedAt = false, bool $haFasi = false): array {
+function ardy_map_cliente(array $r, bool $withDeletedAt = false, bool $haFasi = false, bool $haRisposto = false, string $ultimoMsgAt = ''): array {
     $out = [
         'Session_ID'    => $r['session_id']    ?? '',
         'Nome'          => $r['nome']           ?? '',
@@ -40,6 +40,10 @@ function ardy_map_cliente(array $r, bool $withDeletedAt = false, bool $haFasi = 
         // Vero se esiste già almeno una fase (bozza o pubblicata) per questo cliente:
         // usato in dashboard per il badge "nota senza fasi generate".
         'ha_fasi'       => $haFasi,
+        // Vero se il CLIENTE ha scritto (WA o sito) nelle ultime 48h DOPO l'ultima
+        // volta che la conversazione è stata aperta in dashboard → badge "ha risposto".
+        'ha_risposto'   => $haRisposto,
+        'ultimo_msg_at' => $ultimoMsgAt,
     ];
     if ($withDeletedAt) {
         $out['deleted_at'] = $r['deleted_at'] ?? '';
@@ -61,6 +65,12 @@ try {
     try { $db->exec("ALTER TABLE clienti ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL"); }
     catch (PDOException $e) { /* già presente */ }
 
+    // Marker "conversazione vista in dashboard": quando Michela/Andrea apre la chat
+    // di un cliente (ardy-conversazioni.php) si salva NOW() qui; il badge "ha
+    // risposto" si spegne se non ci sono messaggi del cliente più recenti.
+    try { $db->exec("ALTER TABLE clienti ADD COLUMN conversazione_letta_at DATETIME NULL DEFAULT NULL"); }
+    catch (PDOException $e) { /* già presente */ }
+
     // ── Vista Cestino ──────────────────────────────────────
     if (($_GET['vista'] ?? '') === 'cestino') {
         $rows = $db->query(
@@ -79,10 +89,45 @@ try {
         foreach ($fr as $row) { $fasiMap[$row['session_id']] = ((int) $row['c']) > 0; }
     } catch (PDOException $e) { /* tabella fasi non ancora creata: nessun cliente ha fasi */ }
 
+    // ── "Ha risposto": ultimo messaggio del CLIENTE (role='user') negli ultimi
+    //    2 giorni, per canale. Due query aggregate (non una per cliente):
+    //      - web_messaggi  → per session_id
+    //      - wa_messaggi   → per ultime 9 cifre del telefono
+    //    Il badge si accende se questo timestamp è più recente del marker
+    //    conversazione_letta_at (o se la chat non è mai stata aperta).
+    $HA_RISPOSTO_ORE = 48;
+    $webMsgMap = []; // session_id => 'YYYY-MM-DD HH:MM:SS'
+    $waMsgMap  = []; // ultime 9 cifre tel => 'YYYY-MM-DD HH:MM:SS'
+    try {
+        $wr = $db->query(
+            "SELECT session_id, MAX(created_at) AS m FROM web_messaggi
+              WHERE role = 'user' AND created_at >= (NOW() - INTERVAL $HA_RISPOSTO_ORE HOUR)
+              GROUP BY session_id"
+        )->fetchAll();
+        foreach ($wr as $row) { $webMsgMap[$row['session_id']] = (string) $row['m']; }
+    } catch (PDOException $e) { /* tabella assente: nessun messaggio web */ }
+    try {
+        $ar = $db->query(
+            "SELECT RIGHT(phone, 9) AS p9, MAX(created_at) AS m FROM wa_messaggi
+              WHERE role = 'user' AND created_at >= (NOW() - INTERVAL $HA_RISPOSTO_ORE HOUR)
+              GROUP BY p9"
+        )->fetchAll();
+        foreach ($ar as $row) { $waMsgMap[$row['p9']] = (string) $row['m']; }
+    } catch (PDOException $e) { /* tabella assente: nessun messaggio WhatsApp */ }
+
     $rows = $db->query(
         "SELECT * FROM clienti WHERE deleted_at IS NULL ORDER BY updated_at DESC"
     )->fetchAll();
-    echo json_encode(array_map(fn($r) => ardy_map_cliente($r, false, $fasiMap[$r['session_id']] ?? false), $rows));
+    echo json_encode(array_map(function ($r) use ($fasiMap, $webMsgMap, $waMsgMap) {
+        // Ultimo messaggio del cliente = il più recente tra canale web e WhatsApp.
+        $tsWeb = $webMsgMap[$r['session_id'] ?? ''] ?? '';
+        $last9 = substr(preg_replace('/\D+/', '', (string)($r['telefono'] ?? '')), -9);
+        $tsWa  = ($last9 !== '' ? ($waMsgMap[$last9] ?? '') : '');
+        $ultimo = ($tsWeb > $tsWa) ? $tsWeb : $tsWa; // confronto lessicografico OK su 'Y-m-d H:i:s'
+        $letta  = (string)($r['conversazione_letta_at'] ?? '');
+        $haRisposto = ($ultimo !== '') && ($letta === '' || $ultimo > $letta);
+        return ardy_map_cliente($r, false, $fasiMap[$r['session_id']] ?? false, $haRisposto, $ultimo);
+    }, $rows));
 
 } catch (PDOException $e) {
     error_log('ARDY CRM API ERROR: ' . $e->getMessage());

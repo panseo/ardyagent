@@ -685,6 +685,7 @@ function renderList() {
       <div class="lead-nome" style="display:flex;align-items:center;">${dot}<span>${escHtml(l.Nome)} ${escHtml(l.Cognome)}</span></div>
       <div class="lead-meta">
         <span class="stato-badge stato-${(l.Stato??'LEAD').toUpperCase().replace(/[^A-Z]/g,'')}">${escHtml(l.Stato ?? 'LEAD')}</span>
+        ${l.ha_risposto ? '<span class="stato-badge" style="background:rgba(76,175,114,.22);color:#7fd49b;" title="Il cliente ha scritto di recente (ultime 48h) e non hai ancora aperto la chat">💬 ha risposto</span>' : ''}
         ${notaSenzaFasi(l) ? '<span class="stato-badge" style="background:rgba(200,169,110,.18);color:#c8a96e;" title="Nota di sopralluogo senza fasi generate">📐 da pianificare</span>' : ''}
         ${(l.NoteConsegna && l.NoteConsegna.trim()) ? '<span class="stato-badge" style="background:rgba(120,160,90,.20);color:#a9c47a;" title="Ci sono note consegna da evadere">📦 consegna</span>' : ''}
         <span class="lead-zona">${escHtml(l.Zona)}</span>
@@ -796,6 +797,9 @@ async function caricaConversazione() {
     const r = await fetch('ardy-conversazioni.php?' + params.toString());
     const data = await r.json();
     const msgs = (data && data.messaggi) || [];
+    // Aperta la chat: il backend ha aggiornato il marker "letta" → spegni subito
+    // il badge "ha risposto" in lista senza aspettare il prossimo reload.
+    if (currentLead && currentLead.ha_risposto) { currentLead.ha_risposto = false; renderList(); }
     if (!msgs.length) { status.textContent = 'Nessun messaggio registrato per questo cliente.'; return; }
     status.style.display = 'none';
     renderConversazione(msgs);
