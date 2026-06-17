@@ -686,6 +686,7 @@ function renderList() {
       <div class="lead-meta">
         <span class="stato-badge stato-${(l.Stato??'LEAD').toUpperCase().replace(/[^A-Z]/g,'')}">${escHtml(l.Stato ?? 'LEAD')}</span>
         ${notaSenzaFasi(l) ? '<span class="stato-badge" style="background:rgba(200,169,110,.18);color:#c8a96e;" title="Nota di sopralluogo senza fasi generate">📐 da pianificare</span>' : ''}
+        ${(l.NoteConsegna && l.NoteConsegna.trim()) ? '<span class="stato-badge" style="background:rgba(120,160,90,.20);color:#a9c47a;" title="Ci sono note consegna da evadere">📦 consegna</span>' : ''}
         <span class="lead-zona">${escHtml(l.Zona)}</span>
         ${segLabel}
       </div>
