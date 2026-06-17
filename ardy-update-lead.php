@@ -32,6 +32,11 @@ try {
         if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'fine_lavoro_prevista'")->fetch()) {
             $db->exec("ALTER TABLE clienti ADD COLUMN fine_lavoro_prevista DATE NULL");
         }
+        // Note consegna: promemoria operativo per la consegna (materiali mancanti,
+        // bulloni, accordi logistici…). Editabile in dashboard, letto da Sole.
+        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'note_consegna'")->fetch()) {
+            $db->exec("ALTER TABLE clienti ADD COLUMN note_consegna TEXT NULL");
+        }
     } catch (PDOException $e) {
         error_log('ARDY UPDATE LEAD ENSURE COLS: ' . $e->getMessage());
     }
@@ -39,7 +44,7 @@ try {
     $fields = [
         'nome', 'cognome', 'telefono', 'email',
         'servizio', 'mobile', 'zona', 'budget',
-        'indirizzo', 'stato', 'note',
+        'indirizzo', 'stato', 'note', 'note_consegna',
         'data_followup', 'inizio_lavoro', 'fine_lavoro_prevista',
         'wp_post_id', 'wp_post_link'
     ];

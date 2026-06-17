@@ -27,6 +27,7 @@ function ardy_map_cliente(array $r, bool $withDeletedAt = false, bool $haFasi = 
         'Indirizzo'     => $r['indirizzo']      ?? '',
         'Stato'         => $r['stato']          ?? 'LEAD',
         'Note'          => $r['note']           ?? '',
+        'NoteConsegna'  => $r['note_consegna']  ?? '',
         'Data_followup' => $r['data_followup']  ?? '',
         'Inizio_lavoro'         => $r['inizio_lavoro']        ?? '',
         'Fine_lavoro_prevista'  => $r['fine_lavoro_prevista'] ?? '',

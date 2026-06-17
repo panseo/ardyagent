@@ -104,6 +104,10 @@ function ardy_genera_dossier(PDO $db, string $sessionId, bool $perCliente = fals
     if (!$perCliente && trim((string) ($c['note'] ?? '')) !== '') {
         $md .= "\n**Note interne:** " . ardy_dossier_tronca($c['note'], 800) . "\n";
     }
+    // Note consegna (materiali mancanti, logistica) — interne, mai al cliente.
+    if (!$perCliente && trim((string) ($c['note_consegna'] ?? '')) !== '') {
+        $md .= "\n**📦 Note consegna (cosa serve/manca per consegnare):** " . ardy_dossier_tronca($c['note_consegna'], 800) . "\n";
+    }
     $md .= "\n";
 
     // 2) Preventivi

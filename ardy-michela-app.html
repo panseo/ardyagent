@@ -187,6 +187,15 @@
               </details>
               <div id="notaSenzaFasiHint" style="display:none;font-size:11px;color:#c8a96e;margin-top:8px;">📐 C'è una nota ma nessuna fase è stata ancora generata — scegli i template quando hai deciso con calma.</div>
             </div>
+            <div class="info-cell full">
+              <div class="info-label" style="display:flex;align-items:center;gap:8px;">
+                <span>📦 Note consegna <small style="color:var(--text-dim);font-size:9px;">(materiali/logistica — la legge Sole)</small></span>
+                <button type="button" onclick="openNoteEditor('dNoteConsegna')" title="Apri editor a tutto schermo"
+                        style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--text-dim);
+                               border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;">⛶ Espandi</button>
+              </div>
+              <textarea class="info-value editable" id="dNoteConsegna" rows="4" oninput="markDirty()" placeholder="Es: per la consegna mancano 4 bulloni M6x45 e 2 M6x70 testa esagonale con dadi e rondelle..."></textarea>
+            </div>
             <div class="info-cell anag-field">
               <div class="info-label">Data followup</div>
               <input type="date" class="info-value editable" id="dDataFollowup" oninput="markDirty()" style="width:100%;">
@@ -829,6 +838,7 @@ function renderDetail() {
   document.getElementById('dBudget').value          = l.Budget    ?? '';
   document.getElementById('dIndirizzo').value       = l.Indirizzo ?? '';
   document.getElementById('dNote').value            = l.Note      ?? '';
+  document.getElementById('dNoteConsegna').value    = l.NoteConsegna ?? '';
   notaTemplateSel.clear();
   renderNoteTemplateChips();
   if (!libLoadedOnce) { libLoadedOnce = true; libLoadRemote().then(renderNoteTemplateChips); }
@@ -1012,6 +1022,7 @@ async function saveLead() {
     session_id:     currentLead.Session_ID,
     stato:          currentLead.Stato,
     note:           document.getElementById('dNote').value,
+    note_consegna:  document.getElementById('dNoteConsegna').value,
     data_followup:  document.getElementById('dDataFollowup').value,
     nome:           document.getElementById('dNomeEdit').value.trim(),
     cognome:        document.getElementById('dCognomeEdit').value.trim(),
@@ -1047,6 +1058,7 @@ async function saveLead() {
         Object.assign(allLeads[idx], {
           Stato: currentLead.Stato,
           Note: payload.note,
+          NoteConsegna: payload.note_consegna,
           Data_followup: payload.data_followup,
           Nome: payload.nome,
           Cognome: payload.cognome,
@@ -1351,11 +1363,16 @@ function closeModal(e) {
 
 // Editor Note a tutto schermo: comodo per scrivere lunghi appunti
 // (sopralluogo, misure, ipotesi prezzo) anche dal telefono.
-function openNoteEditor() {
-  const src = document.getElementById('dNote');
+let noteEditorTarget = 'dNote';
+function openNoteEditor(targetId) {
+  noteEditorTarget = targetId || 'dNote';
+  const src = document.getElementById(noteEditorTarget);
   const dst = document.getElementById('noteEditorArea');
   if (!src || !dst) return;
   dst.value = src.value || '';
+  const titleEl = document.getElementById('noteEditorTitle');
+  if (titleEl) titleEl.textContent = noteEditorTarget === 'dNoteConsegna'
+    ? '📦 NOTE CONSEGNA — EDITOR ESPANSO' : 'NOTE — EDITOR ESPANSO';
   document.getElementById('noteEditorOverlay').classList.add('open');
   setTimeout(() => dst.focus(), 50);
 }
@@ -1364,7 +1381,7 @@ function closeNoteEditor() {
 }
 function saveNoteEditor() {
   const src = document.getElementById('noteEditorArea');
-  const dst = document.getElementById('dNote');
+  const dst = document.getElementById(noteEditorTarget);
   if (!src || !dst) return;
   if (dst.value !== src.value) {
     dst.value = src.value;
@@ -3953,7 +3970,7 @@ async function archiviaPersi() {
   <div class="modal-lg" onclick="event.stopPropagation()"
        style="width:min(900px,96vw);max-width:96vw;height:min(90vh,800px);display:flex;flex-direction:column;">
     <div class="modal-lg-head">
-      <h3>NOTE — EDITOR ESPANSO</h3>
+      <h3 id="noteEditorTitle">NOTE — EDITOR ESPANSO</h3>
       <button class="modal-lg-close" onclick="closeNoteEditor()">✕</button>
     </div>
     <div class="modal-lg-body" style="flex:1;display:flex;padding:0;">

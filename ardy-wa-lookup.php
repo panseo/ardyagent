@@ -330,6 +330,29 @@ function ardy_riepilogo_settimana(PDO $db, array $staffDigits = []): string {
         }
     } catch (PDOException $e) { /* colonne assenti o altro: salta */ }
 
+    // 📦 NOTE CONSEGNA: clienti con un promemoria di consegna (materiali mancanti,
+    // bulloni, logistica…). Sono le info che servono a Sole per rispondere "cosa manca
+    // per consegnare a X". Mostrate solo per chi ha la nota valorizzata. Difensivo.
+    try {
+        $rows = $db->query(
+            "SELECT nome, cognome, mobile, note_consegna
+               FROM clienti
+              WHERE note_consegna IS NOT NULL AND TRIM(note_consegna) <> ''
+                AND deleted_at IS NULL
+           ORDER BY updated_at DESC LIMIT 15"
+        )->fetchAll(PDO::FETCH_ASSOC);
+        if ($rows) {
+            $out[] = "📦 NOTE CONSEGNA (cosa manca/serve per consegnare): " . count($rows);
+            foreach ($rows as $r) {
+                $nome = trim(($r['nome'] ?? '') . ' ' . ($r['cognome'] ?? '')) ?: '(senza nome)';
+                $mob  = $r['mobile'] ? ' · ' . $r['mobile'] : '';
+                $nota = trim(preg_replace('/\s+/', ' ', (string)$r['note_consegna']));
+                if (mb_strlen($nota) > 300) $nota = mb_substr($nota, 0, 300) . '…';
+                $out[] = "- {$nome}{$mob}: {$nota}";
+            }
+        }
+    } catch (PDOException $e) { /* colonna note_consegna assente o altro: salta */ }
+
     // Sopralluoghi fissati (data VERA dal calendario, salvata in sopralluogo_at)
     try {
         $rows = $db->query("SELECT nome, cognome, zona, sopralluogo_at FROM clienti

@@ -26,6 +26,12 @@ CRM in attività piena, ora anche **multi-utente** (Michela + Andrea). Primo
   messaggio. Riepilogo titolare arricchito: **CLIENTI ATTIVI con stato attuale** (lookup per
   singolo cliente) + **fasi pubblicate con nome cliente** (non solo conteggio). Così risponde
   a "Tavolo Fratino ha cambiato stato / ha una nuova fase?".
+- ✅ **Box "Note consegna"** (17/06): secondo campo editabile nella scheda cliente (sotto le
+  Note) per annotare cosa serve/manca per la consegna (es. bulloni M6 mancanti). Stessa
+  meccanica delle Note (editor ⛶ espandi, salvataggio). Colonna `clienti.note_consegna`.
+  Letto da Sole: blocco "📦 NOTE CONSEGNA" nel riepilogo titolare + nel dossier interno
+  (mai client-safe). File: ardy-michela-app.html/.css, ardy-update-lead.php, ardy-crm-api.php,
+  ardy-dossier.php, ardy-wa-lookup.php.
 Prossimi task per priorità: foto-cliente nelle fasi (rimandata) · briefing del mattino · backlog performance/sicurezza.
 
 ---
