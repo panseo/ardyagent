@@ -26,6 +26,7 @@ require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-gcal.php';
 require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-net.php';
+require_once __DIR__ . '/ardy-sanitize.php';
 require_once __DIR__ . '/ardy-notifica-michela.php';
 require_once __DIR__ . '/ardy-email.php';
 require_once __DIR__ . '/phpmailer/src/PHPMailer.php';
@@ -564,7 +565,7 @@ while ($iteration < $maxIterations) {
 
     if ($stopReason === 'end_turn') {
         foreach ($content as $block) {
-            if ($block['type'] === 'text') { $reply = $block['text']; break; }
+            if ($block['type'] === 'text') { $reply = ardy_strip_tool_syntax($block['text']); break; }
         }
         break;
     }

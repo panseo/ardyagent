@@ -8,6 +8,7 @@ require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-gcal.php';
 require_once __DIR__ . '/ardy-net.php';
+require_once __DIR__ . '/ardy-sanitize.php';
 
 date_default_timezone_set('Europe/Rome');
 
@@ -346,6 +347,10 @@ for ($i = 0; $i < $maxIterations; $i++) {
 
     $messages[] = ['role' => 'user', 'content' => $toolResults];
 }
+
+// Rete di sicurezza: rimuovi eventuale sintassi tool sbrodolata come testo
+// prima di restituire la risposta al cliente.
+$finalReply = ardy_strip_tool_syntax($finalReply);
 
 if (empty($finalReply)) {
     $finalReply = 'Mi scuso, non sono riuscito a elaborare la risposta. Riprova!';
