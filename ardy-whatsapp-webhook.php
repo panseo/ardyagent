@@ -82,6 +82,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $from       = $message['from'] ?? '';          // Numero mittente (senza +)
     $msgType    = $message['type'] ?? 'text';      // text, image, audio, etc.
     $msgText    = $message['text']['body'] ?? '';   // Testo del messaggio
+    // Immagini: Meta NON manda i byte, solo un media id + eventuale didascalia.
+    // Inoltriamo l'id a n8n → l'agente scaricherà la foto via Cloud API (WA_TOKEN).
+    $mediaId    = '';
+    $mediaMime  = '';
+    $caption    = '';
+    if ($msgType === 'image') {
+        $mediaId   = $message['image']['id']        ?? '';
+        $mediaMime = $message['image']['mime_type'] ?? '';
+        $caption   = $message['image']['caption']   ?? '';
+    }
     $msgId      = $message['id'] ?? '';
     $timestamp  = $message['timestamp'] ?? '';
     $contactName = $contact['profile']['name'] ?? 'Sconosciuto';
@@ -113,6 +123,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'message_id'     => $msgId,
         'timestamp'      => $timestamp,
         'phone_number_id' => $phoneNumId,
+        'media_id'       => $mediaId,
+        'media_mime'     => $mediaMime,
+        'caption'        => $caption,
     ];
 
     $ch = curl_init($n8nWebhookUrl);

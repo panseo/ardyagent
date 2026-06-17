@@ -51,6 +51,11 @@ $messages  = is_array($in['messages'] ?? null) ? $in['messages'] : [];
 $sessionId = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string) ($in['session_id'] ?? ''));
 $cliente   = is_array($in['cliente'] ?? null) ? $in['cliente'] : [];
 $phone     = preg_replace('/\D+/', '', (string) ($in['phone'] ?? ''));   // numero WhatsApp del mittente
+$mediaId   = trim((string) ($in['media_id'] ?? ''));                     // id foto WhatsApp (se presente)
+// Cartella di storage foto = quella della scheda. Per un lead nuovo (senza
+// scheda ancora) usiamo l'id deterministico dal telefono: combacia con quello
+// che genererà ardy-wa-crea-scheda.php → le foto si agganciano alla scheda.
+$cardSession = $sessionId !== '' ? $sessionId : ($phone !== '' ? 'wa-' . substr(md5($phone), 0, 16) : '');
 
 // Trascrizione leggibile della conversazione (per la notifica a Michela), dai
 // messaggi in ingresso PRIMA che il loop li arricchisca con i blocchi tool.
@@ -164,6 +169,41 @@ function waEnsureCodiceCol(PDO $db): void {
     $done = true;
 }
 
+// Scarica una foto WhatsApp via Cloud API: media id → url firmato → byte.
+// Richiede WA_TOKEN (Bearer). Ritorna [bytes, mime] oppure null.
+function waScaricaMediaWhatsApp(string $mediaId): ?array {
+    if (!defined('WA_TOKEN') || WA_TOKEN === '') {
+        error_log('ARDY WA-AGENT MEDIA: WA_TOKEN mancante');
+        return null;
+    }
+    // 1) media id → metadati (url firmato, breve durata)
+    $ch = curl_init('https://graph.facebook.com/v21.0/' . urlencode($mediaId));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT,        20);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . WA_TOKEN]);
+    $res = curl_exec($ch);
+    curl_close($ch);
+    $meta = json_decode((string) $res, true);
+    $url  = is_array($meta) ? ($meta['url'] ?? '') : '';
+    if ($url === '') {
+        error_log('ARDY WA-AGENT MEDIA: url mancante per ' . $mediaId . ' res=' . substr((string) $res, 0, 200));
+        return null;
+    }
+    // 2) scarica i byte (stesso Bearer richiesto anche sull'url CDN)
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT,        30);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . WA_TOKEN]);
+    $bytes = curl_exec($ch);
+    $code  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    if ($code !== 200 || !is_string($bytes) || strlen($bytes) < 12) {
+        error_log('ARDY WA-AGENT MEDIA: download fallito HTTP ' . $code);
+        return null;
+    }
+    return [$bytes, (string) ($meta['mime_type'] ?? '')];
+}
+
 // Colonne sopralluogo sulla tabella clienti (idempotente) — come ardy-proxy.php.
 function waEnsureSopralluogoCols(PDO $db): void {
     static $done = false;
@@ -244,6 +284,44 @@ $tools = [
         ],
     ],
 ];
+
+// -----------------------------------------------------------
+// FOTO IN ARRIVO DA WHATSAPP: scarica, valida, comprime, salva su scheda
+// (visibile in dashboard) e attaccala al messaggio così Sole la "vede" e valuta.
+// -----------------------------------------------------------
+if ($mediaId !== '') {
+    $media = waScaricaMediaWhatsApp($mediaId);
+    if ($media) {
+        $bytes    = $media[0];
+        $allowed  = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        $realMime = (new finfo(FILEINFO_MIME_TYPE))->buffer($bytes);   // tipo reale, non dichiarato
+        if (in_array($realMime, $allowed, true)) {
+            $bytes = ardyCompressImage($bytes, $realMime);             // stessa compressione del sito
+
+            // Salva nella cartella della scheda → compare in dashboard.
+            if ($cardSession !== '' && defined('ARDY_UPLOAD_DIR')) {
+                $dir = rtrim(ARDY_UPLOAD_DIR, '/') . '/' . $cardSession . '/';
+                if (is_dir($dir) || @mkdir($dir, 0755, true) || is_dir($dir)) {
+                    $ext = $realMime === 'image/png' ? 'png' : ($realMime === 'image/webp' ? 'webp' : ($realMime === 'image/gif' ? 'gif' : 'jpg'));
+                    $fp  = $dir . date('Ymd_His') . '_' . substr(md5($mediaId), 0, 8) . '.' . $ext;
+                    @file_put_contents($fp, $bytes);
+                }
+            }
+
+            // Attacca la foto all'ULTIMO messaggio utente (formato a blocchi).
+            for ($i = count($messages) - 1; $i >= 0; $i--) {
+                if (($messages[$i]['role'] ?? '') === 'user') {
+                    $txt = is_string($messages[$i]['content'] ?? null) ? $messages[$i]['content'] : '';
+                    $messages[$i]['content'] = [
+                        ['type' => 'image', 'source' => ['type' => 'base64', 'media_type' => $realMime, 'data' => base64_encode($bytes)]],
+                        ['type' => 'text',  'text' => $txt !== '' ? $txt : 'Il cliente ha inviato questa foto del mobile.'],
+                    ];
+                    break;
+                }
+            }
+        }
+    }
+}
 
 // -----------------------------------------------------------
 // LOOP AGENTICO (identico al sito, ridotto ai tool calendario)
@@ -565,6 +643,13 @@ if ($leadCreated || $bookingMade || $rescheduled) {
         $mail = waNewMailer();
         $mail->setFrom('noreply@ardy-lab.it', 'Ardy AI');
         $mail->addAddress(ARDY_MAIL_MICHELA);
+        // Allega le foto inviate dal cliente su WhatsApp (cartella della scheda).
+        if ($cardSession !== '' && defined('ARDY_UPLOAD_DIR')) {
+            $cd = rtrim(ARDY_UPLOAD_DIR, '/') . '/' . $cardSession . '/';
+            if (is_dir($cd)) {
+                foreach (glob($cd . '*') as $f) { if (is_file($f)) $mail->addAttachment($f); }
+            }
+        }
         $mail->Subject = ($isMove ? '📅 Sopralluogo SPOSTATO (WhatsApp) — ' : '📋 Nuovo lead da Sole (WhatsApp) — ') . date('d/m/Y H:i');
         $mail->Body    = $body;
         $mail->send();
