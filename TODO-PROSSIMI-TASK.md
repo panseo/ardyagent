@@ -158,6 +158,25 @@ Credenziali separate (`.htpasswd` con utenti `michela` + `andrea`) + secondo num
 riconosce entrambi come staff e prompt parametrizzato sul nome → cache prompt separate.
 Sole chiama ciascuno per nome. Reset password: `htpasswd -B <path> <utente>` (mai `-c`).
 
+### 👥 Accesso "dipendente" con permessi limitati (ruoli) — DA FARE
+Quando Ardy avrà un dipendente: creare un accesso con permessi ristretti. Decisione presa
+(17/06): **il dipendente (`staff`) può SOLO fare preventivi + schede cliente** (e le fasi di
+lavorazione collegate); **tutto il resto è admin-only**.
+
+Architettura: l'auth è Basic Auth (`.htpasswd` + `.htaccess` con `Require valid-user` → oggi
+tutto-o-niente). `ardyAuthUser()` (`ardy-auth.php`) **già restituisce lo username** → manca solo
+lo strato ruoli. 3 mosse:
+1. **Mappa utente→ruolo** in `ardy-config.php` (non in repo), es.
+   `define('ARDY_RUOLI', ['michela'=>'admin','andrea'=>'admin','dipendente'=>'staff']);`
+2. **Muro backend** (la parte che conta): in `ardy-auth.php` aggiungere `ardyRole()` +
+   `ardyRequireRole('admin')`, e metterlo in cima a OGNI endpoint admin-only — CRM, stats,
+   solleciti, grazie-consegna, outreach, email-finder, elimina-cliente, import-preventivi,
+   import-scheda-pdf, dossier, gcal. ⚠️ Con Basic Auth il realm è unico: il confine vero è il
+   check PHP su ogni endpoint, non l'`.htaccess`. Se ne manca uno, è un buco.
+3. **Cosmesi frontend**: endpoint `/me` che ritorna il ruolo → la dashboard
+   (`ardy-michela-app.html`) nasconde i bottoni admin per lo `staff` (UX, non sicurezza).
+Nuovo utente Basic Auth: aggiungere riga al `.htpasswd` (`htpasswd -B <path> dipendente`, mai `-c`).
+
 ### 📱 ~~UX scheda mobile (sopralluogo)~~ ✅ LIVE (16/06/2026)
 Field-test fatto oggi durante il primo sopralluogo vero. In `ardy-michela-app.html`:
 - Textarea "Note" 6 righe + bottone **⛶ Espandi** → modale a tutto schermo (`#noteEditorOverlay`).
