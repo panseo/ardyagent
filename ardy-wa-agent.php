@@ -25,6 +25,12 @@ require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-gcal.php';
 require_once __DIR__ . '/ardy-sanitize.php';
 require_once __DIR__ . '/ardy-notifica-michela.php';
+require_once __DIR__ . '/ardy-email.php';
+require_once __DIR__ . '/phpmailer/src/PHPMailer.php';
+require_once __DIR__ . '/phpmailer/src/SMTP.php';
+require_once __DIR__ . '/phpmailer/src/Exception.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
 
 header('Content-Type: application/json');
 
@@ -45,6 +51,24 @@ $messages  = is_array($in['messages'] ?? null) ? $in['messages'] : [];
 $sessionId = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string) ($in['session_id'] ?? ''));
 $cliente   = is_array($in['cliente'] ?? null) ? $in['cliente'] : [];
 $phone     = preg_replace('/\D+/', '', (string) ($in['phone'] ?? ''));   // numero WhatsApp del mittente
+
+// Trascrizione leggibile della conversazione (per la notifica a Michela), dai
+// messaggi in ingresso PRIMA che il loop li arricchisca con i blocchi tool.
+$transcript = '';
+foreach ($messages as $mm) {
+    if (isset($mm['role']) && is_string($mm['content'] ?? null) && $mm['content'] !== '') {
+        $lab = strtoupper((string) $mm['role']) === 'USER' ? 'CLIENTE' : 'SOLE';
+        $transcript .= $lab . ': ' . $mm['content'] . "\n\n";
+    }
+}
+
+// Dati lead per le email (default dal contesto lookup; aggiornati se Sole salva la scheda).
+$leadNome    = trim((string) ($cliente['nome']  ?? ''));
+$leadZona    = trim((string) ($cliente['zona']  ?? ''));
+$leadEmail   = trim((string) ($cliente['email'] ?? ''));
+$leadCreated = false;     // true se è stata creata una scheda NUOVA in questo giro
+$accessCode  = null;      // codice di accesso da inviare al lead via email
+$accessEmail = null;      // email a cui inviare il codice
 
 if ($system === '' || empty($messages)) {
     echo json_encode(['success' => false, 'reply' => 'Scusa, ora non riesco a rispondere. Ti ricontatto a breve.']);
@@ -93,6 +117,51 @@ function waCallAnthropic(array $messages, string $system, array $tools, string $
         return ['error' => 'curl', 'message' => $err];
     }
     return json_decode($response, true) ?? ['error' => 'json'];
+}
+
+// PHPMailer preconfigurato su Brevo (stesse impostazioni di ardy-proxy.php).
+function waNewMailer(): PHPMailer {
+    $m = new PHPMailer(true);
+    $m->isSMTP();
+    $m->Host       = 'smtp-relay.brevo.com';
+    $m->SMTPAuth   = true;
+    $m->Username   = ARDY_SMTP_USER;
+    $m->Password   = ARDY_SMTP_PASSWORD;
+    $m->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+    $m->Port       = 587;
+    $m->CharSet    = 'UTF-8';
+    return $m;
+}
+
+// Codice di accesso ARD-XXXX-XXXX (alfabeto senza caratteri ambigui) — come ardy-proxy.php.
+function waGeneraCodiceAccesso(): string {
+    $alpha = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    $n = strlen($alpha);
+    $out = '';
+    for ($i = 0; $i < 8; $i++) {
+        $out .= $alpha[random_int(0, $n - 1)];
+        if ($i === 3) $out .= '-';
+    }
+    return 'ARD-' . $out;
+}
+
+// Colonne codice accesso sulla tabella clienti (idempotente) — come ardy-proxy.php.
+function waEnsureCodiceCol(PDO $db): void {
+    static $done = false;
+    if ($done) return;
+    try {
+        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'codice_accesso'")->fetch()) {
+            $db->exec("ALTER TABLE clienti ADD COLUMN codice_accesso VARCHAR(20) NULL");
+            try { $db->exec("CREATE INDEX idx_codice_accesso ON clienti (codice_accesso)"); }
+            catch (PDOException $e) { /* indice già presente */ }
+        }
+        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'codice_email_inviato'")->fetch()) {
+            $db->exec("ALTER TABLE clienti ADD COLUMN codice_email_inviato DATETIME NULL");
+        }
+    } catch (PDOException $e) {
+        error_log('ARDY WA-AGENT ENSURE CODICE: ' . $e->getMessage());
+    }
+    $done = true;
 }
 
 // Colonne sopralluogo sulla tabella clienti (idempotente) — come ardy-proxy.php.
@@ -295,6 +364,49 @@ while ($iteration < $maxIterations) {
             if (is_array($r) && !empty($r['success'])) {
                 // Aggancia la scheda alla conversazione: una prenotazione successiva si attacca qui.
                 if (!empty($r['session_id'])) $sessionId = $r['session_id'];
+                $leadCreated = !empty($r['created']);
+                // Aggiorna i dati lead per le email con quanto raccolto da Sole.
+                $nm = trim(($toolInput['nome'] ?? '') . ' ' . ($toolInput['cognome'] ?? ''));
+                if ($nm !== '') $leadNome = $nm;
+                if (!empty($toolInput['zona'])) $leadZona = trim((string) $toolInput['zona']);
+                $em = trim((string) ($toolInput['email'] ?? ''));
+                if ($em !== '' && filter_var($em, FILTER_VALIDATE_EMAIL)) $leadEmail = $em;
+
+                // Codice di accesso: generato UNA volta per scheda. Col codice il cliente,
+                // tornando sulla WEBCHAT, potrà chiedere lo stato del lavoro. Prepara l'invio
+                // email di benvenuto (spedita dopo la risposta, vedi in fondo).
+                if ($sessionId !== '') {
+                    try {
+                        $db = ardyDB();
+                        waEnsureCodiceCol($db);
+                        $sel = $db->prepare("SELECT codice_accesso, codice_email_inviato, email FROM clienti WHERE session_id = :sid LIMIT 1");
+                        $sel->execute([':sid' => $sessionId]);
+                        $row        = $sel->fetch(PDO::FETCH_ASSOC) ?: [];
+                        $codice     = trim((string) ($row['codice_accesso'] ?? ''));
+                        $giaInviata = !empty($row['codice_email_inviato']);
+                        if ($codice === '') {
+                            for ($t = 0; $t < 5; $t++) {
+                                $cand = waGeneraCodiceAccesso();
+                                $chk  = $db->prepare("SELECT 1 FROM clienti WHERE codice_accesso = :c LIMIT 1");
+                                $chk->execute([':c' => $cand]);
+                                if (!$chk->fetchColumn()) { $codice = $cand; break; }
+                            }
+                            if ($codice !== '') {
+                                $db->prepare("UPDATE clienti SET codice_accesso = :c, updated_at = NOW() WHERE session_id = :sid")
+                                   ->execute([':c' => $codice, ':sid' => $sessionId]);
+                            }
+                        }
+                        if ($codice !== '' && !$giaInviata) {
+                            $emailLead = $leadEmail !== '' ? $leadEmail : trim((string) ($row['email'] ?? ''));
+                            if ($emailLead !== '' && filter_var($emailLead, FILTER_VALIDATE_EMAIL)) {
+                                $accessCode  = $codice;
+                                $accessEmail = $emailLead;
+                            }
+                        }
+                    } catch (PDOException $e) {
+                        error_log('ARDY WA-AGENT CODICE ACCESSO: ' . $e->getMessage());
+                    }
+                }
                 $toolResult = 'Scheda cliente salvata nel CRM. Prosegui con naturalezza, NON elencare i dati al cliente.';
             } else {
                 $toolResult = 'Non sono riuscita a salvare la scheda adesso. Prosegui comunque la conversazione; se serve, di\' che Michela la registra.';
@@ -336,18 +448,122 @@ if ($bookingEventId && $bookingWhen instanceof DateTime && $sessionId !== '') {
     }
 }
 
-// Avvisa Michela del nuovo sopralluogo fissato via WhatsApp (dedupe su evento).
-if ($bookingMade && $bookingWhen instanceof DateTime) {
-    $nomeCli = trim((string) ($cliente['nome'] ?? '')) ?: 'un cliente';
-    $zona    = trim((string) ($cliente['zona'] ?? ''));
-    $quando  = $bookingWhen->format('d/m/Y') . ' alle ' . $bookingWhen->format('H:i');
-    $testo   = "📅 Nuovo sopralluogo fissato da Sole su WhatsApp:\n" . $nomeCli
-             . ($zona !== '' ? " · {$zona}" : '') . "\n🗓 {$quando}";
-    notificaMichela($testo, 'wa-sopr:' . ($bookingEventId ?: md5($testo)));
-}
-
+// ── Rispondi SUBITO a n8n: notifiche ed email qui sotto NON devono ritardare
+//    il messaggio al cliente (chiudiamo la richiesta HTTP e proseguiamo). ──
 echo json_encode([
     'success' => true,
     'reply'   => $reply,
     'booking' => $bookingMade ? ['when' => $bookingWhen->format('c')] : null,
 ]);
+if (function_exists('fastcgi_finish_request')) { fastcgi_finish_request(); }
+
+// -----------------------------------------------------------
+// SIDE-EFFECTS POST-RISPOSTA: WhatsApp a Michela + email (come il sito).
+// -----------------------------------------------------------
+
+// 1) Avvisa Michela su WhatsApp del nuovo sopralluogo (dedupe su evento).
+if ($bookingMade && $bookingWhen instanceof DateTime) {
+    $nomeCli = $leadNome ?: 'un cliente';
+    $quando  = $bookingWhen->format('d/m/Y') . ' alle ' . $bookingWhen->format('H:i');
+    $testo   = "📅 Nuovo sopralluogo fissato da Sole su WhatsApp:\n" . $nomeCli
+             . ($leadZona !== '' ? " · {$leadZona}" : '') . "\n🗓 {$quando}";
+    notificaMichela($testo, 'wa-sopr:' . ($bookingEventId ?: md5($testo)));
+}
+
+// 2) NOTIFICA EMAIL A MICHELA — nuovo lead salvato o sopralluogo fissato.
+if ($leadCreated || $bookingMade) {
+    try {
+        $body  = "Nuovo contatto da Sole su WhatsApp\n" . str_repeat('─', 40) . "\n\n";
+        $body .= "DATA:      " . date('d/m/Y H:i') . "\n";
+        $body .= "NOME:      " . ($leadNome ?: '—') . "\n";
+        $body .= "TELEFONO:  " . ($phone !== '' ? '+' . $phone : '—') . "\n";
+        $body .= "EMAIL:     " . ($leadEmail ?: 'non fornita') . "\n";
+        $body .= "ZONA:      " . ($leadZona ?: '—') . "\n";
+        if ($bookingMade && $bookingWhen instanceof DateTime) {
+            $body .= "SOPRALLUOGO: " . $bookingWhen->format('d/m/Y H:i') . "\n";
+        }
+        $body .= "\n" . str_repeat('─', 40) . "\nCONVERSAZIONE\n" . str_repeat('─', 40) . "\n\n" . $transcript;
+
+        $mail = waNewMailer();
+        $mail->setFrom('noreply@ardy-lab.it', 'Ardy AI');
+        $mail->addAddress(ARDY_MAIL_MICHELA);
+        $mail->Subject = '📋 Nuovo lead da Sole (WhatsApp) — ' . date('d/m/Y H:i');
+        $mail->Body    = $body;
+        $mail->send();
+    } catch (\Throwable $e) {
+        error_log('ARDY WA-AGENT MAIL MICHELA: ' . $e->getMessage());
+    }
+}
+
+// 3) CONFERMA SOPRALLUOGO AL CLIENTE (se prenotato e email disponibile).
+if ($bookingMade && $bookingWhen instanceof DateTime && $leadEmail && filter_var($leadEmail, FILTER_VALIDATE_EMAIL)) {
+    $giorni = ['Monday'=>'lunedì','Tuesday'=>'martedì','Wednesday'=>'mercoledì','Thursday'=>'giovedì','Friday'=>'venerdì','Saturday'=>'sabato','Sunday'=>'domenica'];
+    $mesi   = ['January'=>'gennaio','February'=>'febbraio','March'=>'marzo','April'=>'aprile','May'=>'maggio','June'=>'giugno','July'=>'luglio','August'=>'agosto','September'=>'settembre','October'=>'ottobre','November'=>'novembre','December'=>'dicembre'];
+    $gg     = $giorni[$bookingWhen->format('l')] ?? '';
+    $mm     = $mesi[$bookingWhen->format('F')] ?? '';
+    $quando = trim(ucfirst($gg) . ' ' . $bookingWhen->format('j') . ' ' . $mm . ' ' . $bookingWhen->format('Y') . ' alle ' . $bookingWhen->format('H:i'));
+    try {
+        $mailC = waNewMailer();
+        $mailC->setFrom('noreply@ardy-lab.it', 'Ardy Lab');
+        $mailC->addAddress($leadEmail);
+        $mailC->Subject = '✅ Sopralluogo Ardy Lab — ' . $quando;
+        $mailC->isHTML(true);
+        $mailC->Body = '
+<div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:32px;color:#333;">
+  ' . ardy_email_logo_cid($mailC) . '
+  <p style="color:#999;font-size:13px;margin-bottom:24px;">Conferma sopralluogo</p>
+  <p style="font-size:15px;line-height:1.7;">Ciao,<br>abbiamo fissato il tuo sopralluogo. Ecco il riepilogo:</p>
+  <div style="border-left:3px solid #c8a96e;padding:12px 20px;background:#fafaf8;margin:20px 0;font-size:16px;">
+    <strong>' . htmlspecialchars($quando) . '</strong>
+  </div>
+  <p style="font-size:15px;line-height:1.7;">Per qualsiasi modifica o domanda puoi rispondere a questa email oppure chiamarci al <strong>351 967 7973</strong>. A presto!</p>
+  <p style="margin-top:32px;font-size:12px;color:#bbb;">Ardy Lab — Restauro e laccatura mobili · Roma</p>
+</div>';
+        $mailC->send();
+    } catch (\Throwable $e) {
+        error_log('ARDY WA-AGENT CONFERMA CLIENTE: ' . $e->getMessage());
+    }
+}
+
+// 4) EMAIL BENVENUTO + CODICE DI ACCESSO AL LEAD (solo alla prima generazione).
+if ($accessCode && $accessEmail && filter_var($accessEmail, FILTER_VALIDATE_EMAIL)) {
+    try {
+        $mailK = waNewMailer();
+        $mailK->setFrom('noreply@ardy-lab.it', 'Ardy Lab');
+        $mailK->addAddress($accessEmail);
+        $mailK->Subject = 'Benvenuto in Ardy Lab 🌿 — e il tuo codice personale';
+        $mailK->isHTML(true);
+        $logoTag = ardy_email_logo_cid($mailK);
+        $mailK->Body = '
+<div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:32px;color:#333;">
+  ' . $logoTag . '
+  <p style="color:#999;font-size:13px;margin-bottom:24px;">Benvenuto</p>
+  <p style="font-size:15px;line-height:1.7;">Ciao, e benvenuto in Ardy Lab! 🌿</p>
+  <p style="font-size:15px;line-height:1.7;">In chat hai appena conosciuto <strong>Sole</strong>, la nostra assistente: sì, è proprio lei che ti ha risposto. Perché da noi non ci limitiamo a restaurare i tuoi mobili — ti seguiamo con un customer care di nuova generazione, sempre a portata di mano: crediamo di essere tra i primi in Italia a offrirlo così.</p>
+  <p style="font-size:15px;line-height:1.7;">E per renderti tutto semplice, da oggi hai un <strong>codice personale</strong> Ardy Lab:</p>
+  <div style="border-left:3px solid #c8a96e;padding:16px 24px;background:#fafaf8;margin:20px 0;font-size:24px;letter-spacing:2px;font-family:monospace;">
+    <strong>' . htmlspecialchars($accessCode) . '</strong>
+  </div>
+  <p style="font-size:15px;line-height:1.7;"><strong>A cosa serve.</strong> Quando vuoi un aggiornamento, torna sulla nostra chat — <a href="https://ardy-lab.it/ardy-agent/" style="color:#c8a96e;">ardy-lab.it/ardy-agent</a> — e comunica questo codice a Sole: ti dirà subito a che punto è il tuo lavoro, la data del sopralluogo e i prossimi passi — senza dover rispiegare nulla da capo.</p>
+  <div style="border-radius:8px;background:#fbf8f2;padding:16px 20px;margin:20px 0;font-size:14px;line-height:1.6;color:#555;">
+    🔒 <strong>È la tua chiave personale.</strong> Protegge i tuoi dati: solo chi possiede il codice può consultare lo stato della tua pratica.<br>
+    Per questo non lo pubblichiamo e non lo condividiamo con nessuno — tienilo per te, come faresti con un PIN.
+  </div>
+  <p style="font-size:15px;line-height:1.7;">💬 <strong>Preferisci WhatsApp?</strong> Trovi Sole anche lì: scrivile al <strong>+39 379 375 6437</strong> e continui la conversazione come in chat — anche solo per sapere come procede il tuo lavoro.</p>
+  <p style="margin:8px 0 4px;"><a href="https://wa.me/393793756437" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;font-family:sans-serif;font-size:14px;font-weight:600;padding:11px 22px;border-radius:6px;">Apri la chat WhatsApp</a></p>
+  <p style="font-size:15px;line-height:1.7;margin-top:24px;">Conserva pure questa email: il tuo codice lo ritrovi quando vuoi. E per qualsiasi cosa ti basta rispondere qui — ti leggiamo sempre. A presto! 🌿</p>
+  <p style="margin-top:32px;font-size:12px;color:#bbb;">Ardy Lab — Restauro e laccatura mobili · Roma</p>
+</div>';
+        $mailK->send();
+        // Segna l'invio così non si ripete ai salvataggi successivi della stessa scheda.
+        try {
+            $db = ardyDB();
+            $db->prepare("UPDATE clienti SET codice_email_inviato = NOW() WHERE session_id = :sid")
+               ->execute([':sid' => $sessionId]);
+        } catch (PDOException $e) {
+            error_log('ARDY WA-AGENT CODICE EMAIL FLAG: ' . $e->getMessage());
+        }
+    } catch (\Throwable $e) {
+        error_log('ARDY WA-AGENT CODICE EMAIL: ' . $e->getMessage());
+    }
+}
