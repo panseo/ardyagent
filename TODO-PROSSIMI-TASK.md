@@ -122,9 +122,15 @@ Riusa il token di `ardy-gcal-token.json`.
       `ardy-gcal-auth.php` (17/06). **AZIONE MANUALE**: aprire `ardy-gcal-auth.php` nel
       browser e completare il consenso Google per rigenerare il token con il nuovo scope
       (il token attuale ha solo calendar+gmail → va rifatto).
-- [ ] ⚠️ **Confermare che `localPosts` (post/aggiornamenti) sia ancora pubblicabile via
-      API**: Google ha deprecato/limitato i post via API in alcune aree → verificare prima
-      di costruire il resto, per non sbloccare la quota e scoprire l'endpoint indisponibile.
+- [x] ✅ **Confermato (ricerca 17/06): i post via API funzionano ancora nel 2026.**
+      `accounts.locations.localPosts.create` è ATTIVO e non deprecato (solo
+      `localPosts.reportInsights`/statistiche è stato dismesso nel 2023 → ora le metriche
+      stanno nella Performance API). ⚠️ **MA** l'endpoint dei post vive ancora sul host
+      **legacy** `https://mybusiness.googleapis.com/v4/accounts/{id}/locations/{id}/localPosts`,
+      che NON compare nella library della console (non è tra le 4 API "moderne" già abilitate)
+      ed è **proprio quello sotto access-gate/quota** → è il muro su cui si fermava il nodo
+      n8n. Il codice/n8n dovrà puntare a `mybusiness.googleapis.com/v4`, NON alle API nuove.
+      Conclusione: **sbloccare la quota è la strada giusta, il task è fattibile.**
 
 **Quando sbloccato**: completare il nodo n8n / endpoint PHP per creare il `localPost`
 (media foto fase + testo) alla pubblicazione di una fase lavorazione.
