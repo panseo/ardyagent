@@ -85,6 +85,48 @@ il layout/CSS del PDF, **bumpa `PDF_CACHE_VER`** per invalidare le cache esisten
 
 ---
 
+## 🌐 GOOGLE BUSINESS PROFILE — post automatici delle fasi (BLOCCATO su quota Google)
+**Obiettivo**: pubblicare in automatico i post delle fasi di lavorazione sul profilo
+Google Business **Ardy di Michela Panella** (Via Joyce 4, Roma — già **Verificata** ✅).
+Stesso account Google Cloud usato per Calendar/Gmail.
+
+**Dove siamo bloccati**: il nodo n8n è già stato creato, ma si ferma **sulla chiamata API**.
+Causa quasi certa: la **Business Profile API** parte con **quota = 0** e richiede un
+**form di richiesta accesso** approvato manualmente da Google (NON basta abilitarla in
+Cloud Console). Richiesta inviata da ~20gg, nessuna risposta via email.
+
+> ⚠️ Google **non ha un endpoint** per interrogare lo stato della pratica. Si verifica solo:
+> (a) Cloud Console → *Business Profile API → Quotas* (se limite passa da 0 → approvata),
+> (b) con una chiamata reale all'API.
+
+**Strumento di verifica pronto**: `ardy-gbp-check.php` (dietro Basic Auth) → apre
+`https://ardyagent.ardy-lab.it/ardy-gbp-check.php` e dice: ✅ quota sbloccata /
+⛔ quota a zero (429) / ⚠️ manca scope `business.manage` / 403 API non abilitata.
+Riusa il token di `ardy-gcal-token.json`.
+
+**Checklist per sbloccare / verificare:**
+- [ ] Aprire `ardy-gbp-check.php` → leggere l'esito (può rivelare che la quota è già
+      stata alzata in silenzio, senza email).
+- [ ] In Cloud Console: API & Services → **Business Profile API** + *My Business Account
+      Management API* + *Business Information API* = **Enabled** e **Quotas > 0**.
+- [ ] Controllare la **email** dell'account Google che ha mandato la richiesta (anche
+      SPAM): se Google ha chiesto chiarimenti e non si è risposto, la pratica resta ferma.
+- [ ] Verificare di aver compilato il **form di accesso dedicato** (collegato al
+      **Project Number**, non al Project ID), non la generica "richiesta aumento quota".
+- [ ] Se >2 settimane senza risposta: **ri-sottomettere** il form o aprire ticket al
+      supporto Business Profile.
+- [ ] Aggiungere scope `https://www.googleapis.com/auth/business.manage` in
+      `ardy-gcal-auth.php` e **ri-autorizzare** (consenso) per ottenere un token valido
+      per l'API (oggi il token ha solo calendar+gmail).
+- [ ] ⚠️ **Confermare che `localPosts` (post/aggiornamenti) sia ancora pubblicabile via
+      API**: Google ha deprecato/limitato i post via API in alcune aree → verificare prima
+      di costruire il resto, per non sbloccare la quota e scoprire l'endpoint indisponibile.
+
+**Quando sbloccato**: completare il nodo n8n / endpoint PHP per creare il `localPost`
+(media foto fase + testo) alla pubblicazione di una fase lavorazione.
+
+---
+
 ## 🚧 BLOCCHI ESTERNI (azioni di Michela su Meta, non codice)
 - ✅ **Carta di credito su Meta inserita (15/06/2026)** → sbloccati i messaggi business→cliente fuori dalle 24h.
 - ✅ **Template Meta tutti APPROVATI (15/06/2026)**: `ringraziamento_consegna` (Marketing, 1 var),
