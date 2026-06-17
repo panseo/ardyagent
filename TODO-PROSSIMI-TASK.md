@@ -69,6 +69,13 @@ il layout/CSS del PDF, **bumpa `PDF_CACHE_VER`** per invalidare le cache esisten
 ---
 
 ## ⏳ DA VERIFICARE DAL VIVO / AZIONI MANUALI
+- **🆕 Anteprima Instagram + gestione foto del post** (implementato 17/06, da testare dal vivo):
+  nel pannello social (e sui post in attesa) bottone **👁 Anteprima Instagram** = mockup formato IG
+  (1:1, carosello con frecce/puntini, caption sotto "ardy_lab"). Nel composer: **➕ Aggiungi foto**
+  (carica su WP Media Library via `ardy-social-foto.php` → URL pubblico, quello che serve a IG) e
+  **✕** su ogni miniatura per rimuoverla. Test: aggiungi/togli foto, apri anteprima, poi pubblica.
+  NB: l'add-foto nel composer; nelle bozze in attesa per ora c'è anteprima ed editor testo (add/del
+  foto nelle bozze = eventuale estensione futura).
 - **🆕 Bozze social sul server** (implementato 17/06, da testare dal vivo): i post "🕒 salva per
   dopo" ora vivono in DB (`ardy-social-bozze.php`, tabella `social_bozze`) invece che nel
   localStorage del browser → visibili da ogni dispositivo e da entrambi gli utenti. Si possono

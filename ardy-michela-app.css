@@ -695,6 +695,11 @@
   .lav-foto-count { font-family:'DM Mono',monospace; font-size:11px; color:var(--accent); letter-spacing:1px; min-height:16px; margin-bottom:8px; }
   .lav-preview { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
   .lav-preview img { width:80px; height:80px; object-fit:cover; border-radius:4px; border:1px solid var(--border); }
+  /* Galleria foto del composer social: ogni foto con la ✕ per rimuoverla */
+  .social-imgs { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 2px; }
+  .social-img { position:relative; width:80px; height:80px; }
+  .social-img img { width:80px; height:80px; object-fit:cover; border-radius:4px; border:1px solid var(--border); display:block; }
+  .social-img-del { position:absolute; top:-7px; right:-7px; width:20px; height:20px; border-radius:50%; border:none; background:#c0392b; color:#fff; font-size:11px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
   .btn-pubblica { background:var(--accent); color:#0e0e0e; border:none; padding:12px 28px; border-radius:4px; font-family:'DM Mono',monospace; font-size:11px; letter-spacing:1px; font-weight:500; cursor:pointer; transition:all 0.2s; width:100%; }
   .btn-pubblica:hover { background:#d4b87a; }
   .btn-pubblica:disabled { opacity:0.5; cursor:not-allowed; }

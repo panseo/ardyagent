@@ -371,7 +371,12 @@
                 <div id="socialPanelIcons" class="social-dest" style="margin:2px 0 8px;"></div>
                 <p style="font-size:12px;color:var(--text-dim);margin:0 0 10px;">Rivedi e modifica il testo. Niente esce su Facebook/Instagram finché non premi tu.</p>
                 <textarea class="lav-textarea" id="socialText" style="min-height:150px;"></textarea>
-                <div class="lav-preview" id="socialThumbs"></div>
+                <div class="social-imgs" id="socialThumbs"></div>
+                <input type="file" id="socialImgInput" accept="image/*" multiple style="display:none;" onchange="handleSocialImgAdd(event)">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                  <button class="btn-secondary" style="flex:1 1 130px;" onclick="document.getElementById('socialImgInput').click()">➕ Aggiungi foto</button>
+                  <button class="btn-secondary" style="flex:1 1 130px;" onclick="apriAnteprimaIg()">👁 Anteprima Instagram</button>
+                </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
                   <button class="btn-pubblica" style="flex:2 1 140px;" onclick="pubblicaSocialOra()">📲 PUBBLICA ORA</button>
                   <button class="btn-secondary" style="flex:1 1 110px;" onclick="salvaSocialDopo()">🕒 SALVA PER DOPO</button>
@@ -490,6 +495,7 @@ const LAVORAZIONE_URL = BASE_URL + '/ardy-pubblica-lavorazione.php';
 const FASI_BOZZA_URL  = BASE_URL + '/ardy-fasi-bozza-api.php';
 const SOCIAL_URL      = BASE_URL + '/ardy-pubblica-social.php';
 const SOCIAL_BOZZE_URL = BASE_URL + '/ardy-social-bozze.php';
+const SOCIAL_FOTO_URL  = BASE_URL + '/ardy-social-foto.php';
 const EMAIL_CLIENTE_URL = BASE_URL + '/ardy-email-cliente-api.php';
 const REEL_URL        = BASE_URL + '/ardy-crea-reel.php';
 const FAQ_URL         = BASE_URL + '/ardy-crea-faq.php';
@@ -2409,11 +2415,116 @@ function mostraPannelloSocial(data) {
     piattaforme:  (Array.isArray(data.piattaforme) && data.piattaforme.length) ? data.piattaforme : ['facebook','instagram'],
   };
   document.getElementById('socialText').value = pendingSocial.testo_social;
-  document.getElementById('socialThumbs').innerHTML =
-    pendingSocial.immagini.map(u => `<img src="${safeUrl(u)}">`).join('');
+  renderSocialComposerImgs();
   const iconsEl = document.getElementById('socialPanelIcons');
   if (iconsEl) iconsEl.innerHTML = socialDestHtml('panel', pendingSocial.piattaforme);
   document.getElementById('socialPanel').style.display = 'block';
+}
+
+// Galleria del composer: ogni foto con la ✕ per rimuoverla.
+function renderSocialComposerImgs() {
+  const wrap = document.getElementById('socialThumbs');
+  if (!wrap) return;
+  const imgs = (pendingSocial && pendingSocial.immagini) || [];
+  wrap.innerHTML = imgs.map((u, i) => `
+    <div class="social-img">
+      <img src="${safeUrl(u)}" alt="">
+      <button class="social-img-del" title="Rimuovi foto" onclick="eliminaSocialImg(${i})">✕</button>
+    </div>`).join('');
+}
+
+function eliminaSocialImg(idx) {
+  if (!pendingSocial || !Array.isArray(pendingSocial.immagini)) return;
+  pendingSocial.immagini.splice(idx, 1);
+  renderSocialComposerImgs();
+}
+
+// Aggiunge una o più foto al post: le carica sul server (URL pubblico, serve a IG)
+// e le accoda alle immagini del post in composizione.
+async function handleSocialImgAdd(event) {
+  const files = Array.from(event.target.files || []);
+  event.target.value = ''; // permette di riaggiungere lo stesso file
+  if (!pendingSocial) return;
+  for (const file of files) {
+    showToast('⏳ Carico la foto…', 'success');
+    try {
+      const base64 = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload  = e => res(e.target.result.split(',')[1]);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+      const resp = await fetch(SOCIAL_FOTO_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ immagine: base64 })
+      });
+      const d = await resp.json();
+      if (d && d.success && d.url) {
+        pendingSocial.immagini.push(d.url);
+        renderSocialComposerImgs();
+      } else {
+        showToast('⚠ ' + ((d && d.error) || 'Foto non caricata'), 'error');
+      }
+    } catch(e) { showToast('⚠ Errore caricamento foto', 'error'); }
+  }
+}
+
+// ─── ANTEPRIMA INSTAGRAM ──────────────────────────────────
+let igPreviewImgs = [];
+let igPreviewIdx  = 0;
+
+function apriAnteprimaIg() {
+  if (!pendingSocial) return;
+  igPreviewImgs = Array.isArray(pendingSocial.immagini) ? pendingSocial.immagini.slice() : [];
+  igPreviewIdx  = 0;
+  document.getElementById('igCaption').textContent = document.getElementById('socialText').value || '';
+  renderIgPreview();
+  document.getElementById('igPreviewOverlay').classList.add('open');
+}
+
+// Anteprima IG di un post in attesa: usa le foto della bozza e il testo
+// (eventualmente quello modificato nell'editor aperto).
+function apriAnteprimaIgPending(id) {
+  const item = socialPendingCache.find(p => p.id === id);
+  if (!item) return;
+  igPreviewImgs = Array.isArray(item.immagini) ? item.immagini.slice() : [];
+  igPreviewIdx  = 0;
+  const ta = document.getElementById('pendText_' + id);
+  document.getElementById('igCaption').textContent = (ta ? ta.value : item.testo_social) || '';
+  renderIgPreview();
+  document.getElementById('igPreviewOverlay').classList.add('open');
+}
+
+function chiudiAnteprimaIg() {
+  document.getElementById('igPreviewOverlay').classList.remove('open');
+}
+
+function igNav(dir) {
+  if (!igPreviewImgs.length) return;
+  igPreviewIdx = (igPreviewIdx + dir + igPreviewImgs.length) % igPreviewImgs.length;
+  renderIgPreview();
+}
+
+function renderIgPreview() {
+  const img   = document.getElementById('igImg');
+  const noImg = document.getElementById('igNoImg');
+  const prev  = document.getElementById('igPrev');
+  const next  = document.getElementById('igNext');
+  const dots  = document.getElementById('igDots');
+  const n = igPreviewImgs.length;
+  if (!n) {
+    img.style.display = 'none'; noImg.style.display = 'block';
+    prev.style.display = next.style.display = 'none'; dots.innerHTML = '';
+    return;
+  }
+  noImg.style.display = 'none';
+  img.style.display = 'block';
+  img.src = safeUrl(igPreviewImgs[igPreviewIdx]);
+  const multi = n > 1;
+  prev.style.display = next.style.display = multi ? 'block' : 'none';
+  dots.innerHTML = multi
+    ? igPreviewImgs.map((_, i) => `<span style="width:6px;height:6px;border-radius:50%;background:${i===igPreviewIdx?'#fff':'rgba(255,255,255,.5)'};"></span>`).join('')
+    : '';
 }
 
 async function inviaSocial(payload) {
@@ -2529,9 +2640,10 @@ function renderSocialPending() {
         <div style="font-size:11px;color:var(--text-dim);margin-top:6px;">${escHtml(p.data || '')}</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
-        <button class="btn-secondary" style="flex:1 1 90px;" onclick="togglePendingEdit('${escHtml(p.id)}')">✏ Modifica</button>
+        <button class="btn-secondary" style="flex:1 1 80px;" onclick="togglePendingEdit('${escHtml(p.id)}')">✏ Modifica</button>
+        <button class="btn-secondary" style="flex:1 1 80px;" onclick="apriAnteprimaIgPending('${escHtml(p.id)}')">👁 Anteprima</button>
         <button class="btn-pubblica" style="flex:1 1 90px;" onclick="pubblicaPending('${escHtml(p.id)}')">📲 Pubblica</button>
-        <button class="btn-secondary" style="flex:0 1 60px;" onclick="eliminaPending('${escHtml(p.id)}')">🗑</button>
+        <button class="btn-secondary" style="flex:0 1 50px;" onclick="eliminaPending('${escHtml(p.id)}')">🗑</button>
       </div>
       <div id="pendEdit_${escHtml(p.id)}" style="display:none;margin-top:8px;">
         <textarea class="lav-textarea" id="pendText_${escHtml(p.id)}" style="min-height:120px;">${escHtml(p.testo_social || '')}</textarea>
@@ -4069,6 +4181,37 @@ async function archiviaPersi() {
     <div class="modal-lg-actions">
       <button class="btn-cancel" onclick="closeNoteEditor()">ANNULLA</button>
       <button class="btn-save" onclick="saveNoteEditor()">✓ APPLICA</button>
+    </div>
+  </div>
+</div>
+
+<!-- ANTEPRIMA INSTAGRAM DEL POST -->
+<div class="modal-overlay" id="igPreviewOverlay" onclick="if(event.target===this)chiudiAnteprimaIg()">
+  <div onclick="event.stopPropagation()" style="width:min(420px,94vw);background:#fff;color:#262626;border-radius:12px;overflow:hidden;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;">
+    <!-- header -->
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;">
+      <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(45deg,#f09433,#dc2743,#bc1888);flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;">A</div>
+      <div style="font-weight:600;font-size:14px;">ardy_lab</div>
+      <div style="margin-left:auto;color:#262626;font-size:18px;line-height:1;">⋯</div>
+    </div>
+    <!-- immagine (carosello) -->
+    <div id="igImgWrap" style="position:relative;width:100%;aspect-ratio:1/1;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+      <img id="igImg" style="width:100%;height:100%;object-fit:cover;display:none;" alt="">
+      <div id="igNoImg" style="color:#aaa;font-size:13px;padding:20px;text-align:center;">Nessuna foto nel post</div>
+      <button id="igPrev" onclick="igNav(-1)" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);border:none;background:rgba(0,0,0,.45);color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;display:none;">‹</button>
+      <button id="igNext" onclick="igNav(1)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);border:none;background:rgba(0,0,0,.45);color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;display:none;">›</button>
+      <div id="igDots" style="position:absolute;bottom:8px;left:0;right:0;display:flex;gap:5px;justify-content:center;"></div>
+    </div>
+    <!-- azioni -->
+    <div style="display:flex;align-items:center;gap:14px;padding:10px 14px 4px;font-size:22px;line-height:1;">
+      <span>♡</span><span>💬</span><span>➤</span><span style="margin-left:auto;">🔖</span>
+    </div>
+    <!-- caption -->
+    <div style="padding:4px 14px 16px;font-size:14px;line-height:1.5;max-height:240px;overflow:auto;">
+      <span style="font-weight:600;">ardy_lab</span> <span id="igCaption" style="white-space:pre-wrap;"></span>
+    </div>
+    <div style="padding:0 14px 14px;text-align:right;">
+      <button class="btn-secondary" onclick="chiudiAnteprimaIg()">Chiudi</button>
     </div>
   </div>
 </div>
