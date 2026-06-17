@@ -48,10 +48,15 @@ curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_TIMEOUT,        30);
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER,     ['Authorization: Bearer ' . $token]);
-$resp     = curl_exec($ch);
+curl_setopt($ch, CURLOPT_HEADER,         true); // includi header nella risposta
+$raw      = curl_exec($ch);
 $err      = curl_error($ch);
 $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$hdrSize  = (int)curl_getinfo($ch, CURLINFO_HEADER_SIZE);
 curl_close($ch);
+
+$rawHeaders = substr((string)$raw, 0, $hdrSize);
+$resp       = substr((string)$raw, $hdrSize);
 
 if ($err) {
     echo "<div class='box err'><b>❌ Errore di rete:</b> " . h($err) . "</div></body></html>";
@@ -101,7 +106,12 @@ if ($httpCode === 200) {
 echo "<h2 style='font-size:15px'>Dettaglio risposta</h2>";
 echo "<p class='muted'>HTTP <b>$httpCode</b>" . ($status ? " · status <b>" . h($status) . "</b>" : "")
    . ($reason ? " · reason <b>" . h($reason) . "</b>" : "") . "</p>";
-echo "<pre>" . h(json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) . "</pre>";
+$body = is_array($data)
+    ? json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+    : ($resp !== '' ? $resp : '(corpo vuoto)');
+echo "<pre>" . h($body) . "</pre>";
+echo "<p class='muted'>Header risposta:</p>";
+echo "<pre>" . h(trim($rawHeaders) ?: '(nessun header)') . "</pre>";
 
 echo "<hr><p class='muted'>Per abilitare lo scope la prima volta: in <code>ardy-gcal-auth.php</code> "
    . "aggiungi <code>https://www.googleapis.com/auth/business.manage</code> all'array degli scope, "
