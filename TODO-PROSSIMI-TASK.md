@@ -69,6 +69,17 @@ il layout/CSS del PDF, **bumpa `PDF_CACHE_VER`** per invalidare le cache esisten
 ---
 
 ## ⏳ DA VERIFICARE DAL VIVO / AZIONI MANUALI
+- **🆕 Bozze social sul server** (implementato 17/06, da testare dal vivo): i post "🕒 salva per
+  dopo" ora vivono in DB (`ardy-social-bozze.php`, tabella `social_bozze`) invece che nel
+  localStorage del browser → visibili da ogni dispositivo e da entrambi gli utenti. Si possono
+  **modificare** (💾 Salva modifica), **eliminare** (🗑) e **pubblicare sui singoli social**
+  (checkbox FB/IG per ogni post). Migrazione una-tantum: all'avvio le bozze rimaste nel vecchio
+  localStorage vengono caricate sul server e il locale svuotato. Test: salva per dopo su un
+  dispositivo → ricompare su un altro; modifica/elimina/pubblica.
+- **🆕 Fix date che si azzeravano** (implementato 17/06, da testare dal vivo): `saveLead` non
+  invia più `inizio_lavoro`/`fine_lavoro_prevista` quando i campi sono vuoti → un salvataggio non
+  può più azzerare una data già in DB (clobbering da tab/dispositivo non aggiornato). Test:
+  imposta date, cambia stato a COMPLETATO e salva → le date restano.
 - **UX "Modifica" su Preventivo (allegato)** (deployato 16/06/2026, testato dal vivo — lasciato così, da
   rivedere con calma): il bottone "✏️ Modifica" apre correttamente il mini-form precompilato (oggetto,
   numero, AGGIORNA) invece del generatore a voci — bug risolto. Ma Michela si aspettava di vedere anche

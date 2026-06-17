@@ -489,6 +489,7 @@ const AI_URL          = BASE_URL + '/ardy-proxy.php';
 const LAVORAZIONE_URL = BASE_URL + '/ardy-pubblica-lavorazione.php';
 const FASI_BOZZA_URL  = BASE_URL + '/ardy-fasi-bozza-api.php';
 const SOCIAL_URL      = BASE_URL + '/ardy-pubblica-social.php';
+const SOCIAL_BOZZE_URL = BASE_URL + '/ardy-social-bozze.php';
 const EMAIL_CLIENTE_URL = BASE_URL + '/ardy-email-cliente-api.php';
 const REEL_URL        = BASE_URL + '/ardy-crea-reel.php';
 const FAQ_URL         = BASE_URL + '/ardy-crea-faq.php';
@@ -581,7 +582,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const input = document.getElementById(id);
     if (input) input.addEventListener('change', handleSchedaFotoUpload);
   });
-  renderSocialPending();
+  // Bozze social: migra eventuali residui dal vecchio localStorage, poi allinea dal server.
+  migraSocialPendingLocale().then(syncSocialPending);
   libLoadRemote();
 });
 
@@ -937,7 +939,7 @@ function aggiornaSezioniVisibili(stato) {
     document.getElementById('lavFotoCount').textContent    = '';
     document.getElementById('lavVideoCount').textContent   = '';
     pendingSocial = null;
-    renderSocialPending();
+    syncSocialPending(); // allinea dal server (bozze viste da ogni dispositivo)
     caricaFasiPubblicate(currentLead.Session_ID ?? '');
     caricaFasiBozza(currentLead.Session_ID ?? '');
     faseBozzaIdInCorso = null;
@@ -1038,9 +1040,15 @@ async function saveLead() {
     zona:           document.getElementById('dZona').value.trim(),
     budget:         document.getElementById('dBudget').value.trim(),
     indirizzo:      document.getElementById('dIndirizzo').value.trim(),
-    inizio_lavoro:        document.getElementById('dInizioLavoro').value,
-    fine_lavoro_prevista: document.getElementById('dFineLavoroPrevista').value,
   };
+
+  // Anti-clobber date: invia inizio/fine SOLO se valorizzate. Così un salvataggio
+  // non può azzerare una data già in DB quando i campi risultano vuoti (es. scheda
+  // aperta su un altro dispositivo/tab prima che la data fosse inserita).
+  const vIniSave = document.getElementById('dInizioLavoro').value;
+  const vFinSave = document.getElementById('dFineLavoroPrevista').value;
+  if (vIniSave) payload.inizio_lavoro        = vIniSave;
+  if (vFinSave) payload.fine_lavoro_prevista = vFinSave;
 
   try {
     const res  = await fetch(UPDATE_URL, {
@@ -1074,8 +1082,9 @@ async function saveLead() {
           Zona: payload.zona,
           Budget: payload.budget,
           Indirizzo: payload.indirizzo,
-          Inizio_lavoro: payload.inizio_lavoro,
-          Fine_lavoro_prevista: payload.fine_lavoro_prevista,
+          // Aggiorna in memoria solo le date effettivamente inviate (vedi anti-clobber)
+          ...('inizio_lavoro'        in payload ? { Inizio_lavoro: payload.inizio_lavoro } : {}),
+          ...('fine_lavoro_prevista' in payload ? { Fine_lavoro_prevista: payload.fine_lavoro_prevista } : {}),
         });
         currentLead = allLeads[idx];
       }
@@ -2433,17 +2442,44 @@ async function pubblicaSocialOra() {
   } catch(e) { showToast('⚠ Errore di rete', 'error'); }
 }
 
-function salvaSocialDopo() {
+// Cache in memoria dei post in attesa: la verità è sul server (ardy-social-bozze.php),
+// così sono visibili da ogni dispositivo/utente. La cache serve solo per render
+// e letture sincrone; ogni scrittura va anche al server.
+let socialPendingCache = [];
+
+// Allinea la cache dal server e ridisegna. Chiamata all'avvio e all'apertura scheda.
+async function syncSocialPending() {
+  try {
+    const r = await fetch(SOCIAL_BOZZE_URL);
+    const d = await r.json();
+    if (d && d.success && Array.isArray(d.bozze)) socialPendingCache = d.bozze;
+  } catch(e) { /* rete giù: tieni la cache attuale */ }
+  renderSocialPending();
+}
+
+async function salvaSocialDopo() {
   if (!pendingSocial) return;
   const testo = document.getElementById('socialText').value.trim();
   const piattaforme = getSelectedPlatforms('panel');
-  const list = caricaSocialPending();
-  list.push({ ...pendingSocial, testo_social: testo, piattaforme, id: 'sp_' + Date.now(), data: new Date().toLocaleString('it-IT') });
-  salvaSocialPendingList(list);
+  const item = {
+    ...pendingSocial, testo_social: testo, piattaforme,
+    id: 'sp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    session_id: (currentLead && currentLead.Session_ID) || '',
+    data: new Date().toLocaleString('it-IT')
+  };
+  socialPendingCache.push(item);          // ottimistico: mostra subito
+  renderSocialPending();
   document.getElementById('socialPanel').style.display = 'none';
   pendingSocial = null;
-  renderSocialPending();
-  showToast('🕒 Salvato. Lo pubblichi quando vuoi.', 'success');
+  try {
+    const r = await fetch(SOCIAL_BOZZE_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ azione: 'salva', bozza: item })
+    });
+    const d = await r.json();
+    if (d && d.success) showToast('🕒 Salvato. Lo ritrovi da ogni dispositivo.', 'success');
+    else showToast('⚠ Non salvato sul server (riprova)', 'error');
+  } catch(e) { showToast('⚠ Errore di rete: bozza non salvata sul server', 'error'); }
 }
 
 function annullaSocial() {
@@ -2451,12 +2487,25 @@ function annullaSocial() {
   pendingSocial = null;
 }
 
-function caricaSocialPending() {
-  try { return JSON.parse(localStorage.getItem(SOCIAL_PENDING_KEY) || '[]'); }
-  catch(e) { return []; }
-}
-function salvaSocialPendingList(list) {
-  localStorage.setItem(SOCIAL_PENDING_KEY, JSON.stringify(list));
+// Lettura sincrona dalla cache (per editor/pubblicazione).
+function caricaSocialPending() { return socialPendingCache; }
+
+// Migrazione una-tantum: porta sul server le bozze rimaste nel vecchio localStorage
+// (così il post "salvato per dopo" su quel dispositivo non va perso).
+async function migraSocialPendingLocale() {
+  let vecchie = [];
+  try { vecchie = JSON.parse(localStorage.getItem(SOCIAL_PENDING_KEY) || '[]'); } catch(e) { vecchie = []; }
+  if (!Array.isArray(vecchie) || !vecchie.length) return;
+  for (const b of vecchie) {
+    if (!b || !b.id) b.id = 'sp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+    try {
+      await fetch(SOCIAL_BOZZE_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ azione: 'salva', bozza: b })
+      });
+    } catch(e) { return; } // rete giù: NON svuotare il locale, riproveremo
+  }
+  localStorage.removeItem(SOCIAL_PENDING_KEY); // migrate completato
 }
 
 function renderSocialPending() {
@@ -2487,6 +2536,7 @@ function renderSocialPending() {
       <div id="pendEdit_${escHtml(p.id)}" style="display:none;margin-top:8px;">
         <textarea class="lav-textarea" id="pendText_${escHtml(p.id)}" style="min-height:120px;">${escHtml(p.testo_social || '')}</textarea>
         ${thumbs}
+        <button class="btn-secondary" style="margin-top:8px;width:100%;" onclick="salvaModificaPending('${escHtml(p.id)}')">💾 Salva modifica</button>
       </div>
     </div>`;
   }).join('');
@@ -2507,18 +2557,43 @@ function toggleNuovaFase() {
   el.style.display = (el.style.display === 'block') ? 'none' : 'block';
 }
 
+// Salva sul server le modifiche (testo + social selezionati) a una bozza, senza pubblicarla.
+async function salvaModificaPending(id) {
+  const item = socialPendingCache.find(p => p.id === id);
+  if (!item) return;
+  const ta = document.getElementById('pendText_' + id);
+  if (ta) item.testo_social = ta.value.trim();
+  item.piattaforme = getSelectedPlatforms(id);
+  try {
+    const r = await fetch(SOCIAL_BOZZE_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ azione: 'salva', bozza: item })
+    });
+    const d = await r.json();
+    if (d && d.success) { renderSocialPending(); showToast('💾 Modifica salvata', 'success'); }
+    else showToast('⚠ Modifica non salvata', 'error');
+  } catch(e) { showToast('⚠ Errore di rete', 'error'); }
+}
+
 async function pubblicaPending(id) {
   const item = caricaSocialPending().find(p => p.id === id);
   if (!item) return;
   const ta = document.getElementById('pendText_' + id);
   const testo = (ta ? ta.value : item.testo_social).trim();
   if (!testo) { showToast('⚠ Il testo è vuoto', 'error'); return; }
-  const piattaforme = getSelectedPlatforms(id);
+  const piattaforme = getSelectedPlatforms(id); // pubblica sui social scelti per QUESTO post
+  if (!piattaforme.length) { showToast('⚠ Scegli almeno un social', 'error'); return; }
   try {
     const data = await inviaSocial({ ...item, testo_social: testo, piattaforme });
     if (data.success) {
-      salvaSocialPendingList(caricaSocialPending().filter(p => p.id !== id));
+      socialPendingCache = socialPendingCache.filter(p => p.id !== id);
       renderSocialPending();
+      try {
+        await fetch(SOCIAL_BOZZE_URL, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ azione: 'elimina', id })
+        });
+      } catch(e) { /* pubblicato comunque: la bozza verrà ripulita al prossimo sync */ }
       showToast('✓ Pubblicato su ' + platLabel(data.piattaforme || piattaforme), 'success');
     } else {
       showToast('⚠ ' + (data.error || 'Errore social'), 'error');
@@ -2526,10 +2601,16 @@ async function pubblicaPending(id) {
   } catch(e) { showToast('⚠ Errore di rete', 'error'); }
 }
 
-function eliminaPending(id) {
+async function eliminaPending(id) {
   if (!confirm('Eliminare questo post in attesa?')) return;
-  salvaSocialPendingList(caricaSocialPending().filter(p => p.id !== id));
+  socialPendingCache = socialPendingCache.filter(p => p.id !== id);
   renderSocialPending();
+  try {
+    await fetch(SOCIAL_BOZZE_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ azione: 'elimina', id })
+    });
+  } catch(e) { showToast('⚠ Rete giù: riprova a eliminare', 'error'); }
 }
 
 // ══════════════════════════════════════════════════════════
