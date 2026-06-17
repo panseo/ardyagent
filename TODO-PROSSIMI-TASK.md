@@ -24,6 +24,14 @@
 ## ▶️ STATO (17/06/2026)
 CRM in attività piena, **multi-utente** (Michela + Andrea). Focus 17/06: rendere Sole
 **completa su WhatsApp** (canale obbligato) verso clienti e staff.
+- ✅ **Piano B — tool veri su WhatsApp lato cliente** LIVE (17/06): nuovo cervello PHP
+  `ardy-wa-agent.php` con loop agentico (come il sito). Sole sui clienti WhatsApp ora LEGGE la
+  disponibilità del calendario, FISSA il sopralluogo su conferma (guardia anti-doppione +
+  persistenza scheda + notifica Michela) e SALVA la scheda lead (`ardy-wa-crea-scheda.php`,
+  con numero WhatsApp in automatico se manca il telefono). n8n declassato a tubo: instrada
+  `titolare`→Claude diretto (intoccato), clienti→agente. Tool ancora SOLO-web: `cerca_cliente`,
+  codice accesso, `sposta_appuntamento`. Rollback = rimettere il blocco vecchio nel nodo n8n.
+  Workflow versionato (segreti rimossi) in `n8n/ardy-whatsapp-workflow.json`.
 - ✅ **Multi-utente Andrea** LIVE (16/06): credenziali separate `.htpasswd` + `WA_ANDREA_NUMBER` in `ardy-config.php`. Stessi permessi di Michela (dashboard + Sole su WhatsApp che lo chiama "Andrea"). Cache prompt separate per i due.
 - ✅ **Root dominio** apre direttamente la dashboard (16/06): `https://ardyagent.ardy-lab.it` → dashboard (prima serviva `/ardy-michela-app.html`).
 - ✅ **UX scheda mobile (sopralluogo)** (16/06): Note ingrandite + bottone **⛶ Espandi** (editor a tutto schermo), **Dati anagrafici** e **Azioni cliente** dentro toggle collassabili (chiusi di default su mobile), Session ID nascosta.
