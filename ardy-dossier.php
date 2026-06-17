@@ -141,9 +141,12 @@ function ardy_genera_dossier(PDO $db, string $sessionId, bool $perCliente = fals
     } catch (PDOException $e) { error_log('ARDY DOSSIER preventivi: ' . $e->getMessage()); }
 
     // 3) Fasi di lavorazione (la "prova" del lavoro svolto)
+    // Per la versione cliente (perCliente) si mostrano SOLO le fasi pubblicate:
+    // le bozze non devono mai arrivare al cliente (coerente col widget pubblico).
     try {
+        $soloPubblicate = $perCliente ? " AND COALESCE(stato,'pubblicata') = 'pubblicata'" : "";
         $qf = $db->prepare("SELECT fase_nome, fase_tipo, testo_generato, testo_breve, created_at
-                            FROM fasi WHERE session_id = :sid ORDER BY created_at ASC");
+                            FROM fasi WHERE session_id = :sid" . $soloPubblicate . " ORDER BY created_at ASC");
         $qf->execute([':sid' => $sid]);
         $fasi = $qf->fetchAll(PDO::FETCH_ASSOC);
         if ($fasi) {

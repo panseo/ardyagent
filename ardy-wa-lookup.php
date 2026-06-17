@@ -560,6 +560,7 @@ if ($hasLavorazione) {
     try {
         $f = $db->prepare("SELECT fase_nome, testo_generato, created_at
                              FROM fasi WHERE session_id = :sid
+                              AND COALESCE(stato,'pubblicata') = 'pubblicata'
                          ORDER BY id DESC LIMIT 1");
         $f->execute([':sid' => $row['session_id']]);
         $ultimaFase = $f->fetch(PDO::FETCH_ASSOC) ?: null;

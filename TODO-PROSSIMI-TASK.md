@@ -32,6 +32,12 @@ CRM in attività piena, ora anche **multi-utente** (Michela + Andrea). Primo
   Letto da Sole: blocco "📦 NOTE CONSEGNA" nel riepilogo titolare + nel dossier interno
   (mai client-safe). File: ardy-michela-app.html/.css, ardy-update-lead.php, ardy-crm-api.php,
   ardy-dossier.php, ardy-wa-lookup.php.
+- ✅ **Sole completa su WhatsApp (clienti + staff)** (17/06): (a) lato CLIENTE, Sole può dare
+  il quadro COMPLETO della lavorazione (tutte le fasi pubblicate dal dossier, non solo l'ultima);
+  istruzione `cliente_lavorazione` aggiornata. (b) **Bug privacy risolto**: il dossier per-cliente
+  e `ultima_fase` ora filtrano SOLO le fasi pubblicate (le bozze non arrivano più al cliente).
+  (c) lato STAFF, Sole ha già: conversazioni 48h, clienti attivi con stato, fasi con nome, note
+  consegna — tutto letto dal vivo dal CRM ad ogni messaggio.
 Prossimi task per priorità: foto-cliente nelle fasi (rimandata) · briefing del mattino · backlog performance/sicurezza.
 
 ---
