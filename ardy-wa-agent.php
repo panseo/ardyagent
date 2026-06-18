@@ -23,6 +23,7 @@ date_default_timezone_set('Europe/Rome');
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-gcal.php';
+require_once __DIR__ . '/ardy-net.php';       // ardyCompressImage() per le foto WhatsApp
 require_once __DIR__ . '/ardy-sanitize.php';
 require_once __DIR__ . '/ardy-notifica-michela.php';
 require_once __DIR__ . '/ardy-email.php';
