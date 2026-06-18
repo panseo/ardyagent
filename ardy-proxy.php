@@ -238,6 +238,14 @@ if ($conoscenza !== false && $conoscenza !== '') {
     $system .= "\n\n---\n" . $conoscenza;
 }
 
+// Conoscenza APPRESA dalle fasi di lavoro reali (autoapprendimento, blocco DB
+// separato, curato/approvato da Michela). Resta dentro il blocco system cacheato.
+require_once __DIR__ . '/ardy-conoscenza-appresa.php';
+$appresa = ardy_conoscenza_appresa_blocco(ardyDB());
+if ($appresa !== '') {
+    $system .= "\n\n---\n" . $appresa;
+}
+
 // -----------------------------------------------------------
 // STRUMENTI PER CLAUDE
 // -----------------------------------------------------------

@@ -526,7 +526,17 @@ function ardy_wa_system_prompt(string $mode, ?array $cliente): string {
             . "così Michela ha tutto per fare un preventivo.\n";
     }
 
-    $doc = $base . ($conoscenza !== '' ? "\n\n---\n" . $conoscenza : '');
+    // Conoscenza APPRESA dalle fasi reali (autoapprendimento): come la conoscenza
+    // di bottega, solo lato cliente. Blocco DB separato curato/approvato da Michela.
+    $appresa = '';
+    try {
+        require_once __DIR__ . '/ardy-conoscenza-appresa.php';
+        $appresa = ardy_conoscenza_appresa_blocco(ardyDB());
+    } catch (Throwable $e) { error_log('ARDY WA conoscenza appresa: ' . $e->getMessage()); }
+
+    $doc = $base
+        . ($conoscenza !== '' ? "\n\n---\n" . $conoscenza : '')
+        . ($appresa    !== '' ? "\n\n---\n" . $appresa    : '');
     return $wrap . $ctx . "\n" . $doc;
 }
 

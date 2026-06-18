@@ -208,6 +208,21 @@ guida `ardy-gbp-post.md`. Scope `business.manage` aggiunto in `ardy-gcal-auth.ph
 
 ## 📋 TASK DA SVILUPPARE (aperti)
 
+### 🧠 ~~Autoapprendimento di Sole dalle fasi di lavoro~~ ✅ FATTO (18/06 bis, da testare dal vivo)
+Sole impara dai lavori veri. In dashboard, bottone **📚 CONOSCENZA** (⚙︎ Strumenti) → modale:
+si selezionano le **fasi pubblicate**, **🧠 Distilla** chiama Claude che estrae conoscenza di
+bottega **generica e anonimizzata** (no nomi/indirizzi/prezzi/pezzi identificabili; dati fase
+delimitati come non-istruzioni = anti prompt-injection). Michela rivede/corregge la proposta e
+**salva** → entra in Sole. Storage **blocco DB separato** (`conoscenza_appresa`, attiva/modifica/
+elimina), distinto da `ardy-conoscenza-restauro.txt`. Iniezione nel `system_static` cacheato sia
+web (`ardy-proxy.php`) sia WhatsApp lato cliente (`ardy-wa-lookup.php`). Endpoint dietro Basic Auth.
+**Da testare dal vivo:** (a) seleziona 1-2 fasi → 🧠 Distilla → la proposta NON contiene dati cliente;
+(b) salva → compare tra i blocchi attivi; (c) in chat (web/WA) Sole usa il linguaggio appreso senza
+citare clienti; (d) disattiva/elimina un blocco → Sole se ne dimentica al messaggio successivo.
+**Scelte fatte:** cosa impara = tecniche generalizzate anonime (v1, espandibile a casi-esempio anonimi);
+aggiornamento = manuale on-demand con selezione fasi; storage = blocco DB separato.
+
+
 ### 🚚 Trasporti — aggiungere il WhatsApp ai 2 messaggi (oggi solo email)
 Il flusso consegne/ritiri è LIVE **solo via email** (18/06): messaggio **"è pronto"** automatico al
 passaggio a COMPLETATO + messaggio con la **data** dalla "giornata Trasporti" in dashboard

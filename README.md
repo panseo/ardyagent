@@ -42,6 +42,7 @@ ardyagent.ardy-lab.it/
 ├── ardy-crm-api.php           # API CRM interna
 ├── ardy-dossier.php           # Dossier cliente in Markdown (clienti+preventivi+fasi+chat WA+chat web) per Sole/Michela
 ├── ardy-web-memoria.php       # Libreria: persistenza chat web (tabella web_messaggi) — usata da proxy e dossier
+├── ardy-conoscenza-appresa.php # Autoapprendimento di Sole: distilla conoscenza anonima dalle fasi (tabella conoscenza_appresa) — libreria + endpoint dashboard
 ├── ardy-grazie-consegna.php   # Ringraziamento alla consegna: email (Brevo) + WhatsApp (template) — recensione/social/newsletter
 ├── ardy-trasporti.php         # Consegne/ritiri: email "è pronto" (→COMPLETATO) + giornata Trasporti (libreria + endpoint dashboard)
 ├── ardy-import-preventivi.php # Import temporaneo preventivi storici da CSV (migrazione una-tantum)
@@ -713,6 +714,11 @@ permette il deploy push-button da cPanel (richiede Jailed Shell).
 ---
 
 ## 📝 Note sessioni
+
+**Giugno 2026 — Sessione 18/06 bis (autoapprendimento di Sole dalle fasi)**
+- **Conoscenza appresa dai lavori** (`ardy-conoscenza-appresa.php`): Michela seleziona dalle fasi pubblicate, preme **🧠 Distilla** → Claude estrae conoscenza di bottega **generica e anonimizzata** (tecniche/materiali/accorgimenti, niente nomi/indirizzi/prezzi/pezzi identificabili; dati fase delimitati come non-istruzioni = anti prompt-injection). Michela rivede/corregge la proposta e **salva**: solo allora entra in Sole. Storage in **blocco DB separato** (tabella `conoscenza_appresa`, attiva/disattiva/modifica/elimina) — distinto da `ardy-conoscenza-restauro.txt`.
+- **Iniezione**: il blocco attivo finisce nel `system_static` cacheato di Sole accanto alla conoscenza di bottega, sia su web (`ardy-proxy.php`) sia su WhatsApp lato cliente (`ardy-wa-lookup.php`). Il path caldo della chat non fa DDL (la tabella la crea l'endpoint dashboard al primo uso).
+- **Dashboard**: bottone **📚 CONOSCENZA** (in ⚙︎ Strumenti) → modale con selezione fasi + proposta editabile + gestione blocchi appresi. Endpoint dietro Basic Auth (`.htaccess`).
 
 **Giugno 2026 — Sessione 18/06 (email cliente complete, avviso fine chat, consegne/ritiri)**
 - **Email avanzamento lavorazione** arricchita: spiega al cliente cosa può fare nella pagina (segue fasi/foto), codice personale sempre presente (con fallback all'email di benvenuto), link social.

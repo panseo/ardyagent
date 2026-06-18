@@ -44,6 +44,7 @@
           <button class="btn-nuovo-cliente" onclick="openMorosi()" style="flex:1;text-align:center;background:none;border:1px solid #8b3e3e;color:#d98a8a;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">💸 MOROSI</button>
           <button class="btn-nuovo-cliente" onclick="openTrasporti()" title="Giornata Trasporti: assegna i clienti COMPLETATO a una data di consegna/ritiro e avvisali" style="flex:1;text-align:center;background:none;border:1px solid #3e8b6f;color:#8ed9bc;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">🚚 TRASPORTI</button>
           <button class="btn-nuovo-cliente" onclick="openImportPdf()" style="flex:1;text-align:center;background:none;border:1px solid #3e6f8b;color:#8ec0d9;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">📥 PDF</button>
+          <button class="btn-nuovo-cliente" onclick="openConoscenza()" title="Conoscenza di Sole: fai imparare a Sole le tecniche dai lavori reali (fasi di lavorazione), in forma anonima" style="flex:1;text-align:center;background:none;border:1px solid #6f5e8b;color:#b8a8d9;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">📚 CONOSCENZA</button>
           <button class="btn-nuovo-cliente" onclick="archiviaPersi()" title="Sposta in una cartella di quarantena le foto e i reel dei clienti PERSI, così puoi cancellarli a mano dal server e liberare spazio. Non cancella nulla." style="flex:1;text-align:center;background:none;border:1px solid #6f6f6f;color:#aaa;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">🧹 LIBERA SPAZIO</button>
           <button class="btn-nuovo-cliente" onclick="openCestino()" title="Clienti spostati nel cestino — ripristinabili per 30 giorni" style="flex:1;text-align:center;background:none;border:1px solid #6f3e3e;color:#c87070;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">🗑 CESTINO</button>
         </div>
@@ -5046,6 +5047,49 @@ async function archiviaPersi() {
   </div>
 </div>
 
+<!-- ══ CONOSCENZA DI SOLE — autoapprendimento dalle fasi ══ -->
+<div class="modal-overlay" id="conoscenzaOverlay" onclick="if(event.target===this)closeConoscenza()">
+  <div class="modal-lg" style="width:820px" onclick="event.stopPropagation()">
+    <div class="modal-lg-head">
+      <h3>📚 CONOSCENZA DI SOLE — IMPARA DAI LAVORI</h3>
+      <button class="modal-lg-close" onclick="closeConoscenza()">✕</button>
+    </div>
+    <div class="modal-lg-body">
+      <p style="font-size:11px;color:#999;margin:0 0 12px;line-height:1.6;">
+        Spunta le <b>fasi di lavorazione</b> da cui vuoi che Sole impari, poi premi
+        <b>🧠 Distilla</b>: Claude estrae una conoscenza di bottega <b>generica e anonima</b>
+        (tecniche, materiali, accorgimenti) — niente nomi cliente, indirizzi o prezzi.
+        Rivedi e correggi la proposta, poi <b>💾 Salva</b>: solo allora entra nella testa di Sole
+        (web + WhatsApp). I blocchi salvati li gestisci qui sotto.
+      </p>
+
+      <h4 style="color:#b8a8d9;font-size:12px;margin:6px 0 8px;border-bottom:1px solid #3a3340;padding-bottom:4px;">1 · Fasi da cui imparare</h4>
+      <div id="cnFasiList" style="max-height:240px;overflow:auto;border:1px solid #2a2a2a;border-radius:4px;padding:4px 8px;"><div class="storico-empty">CARICAMENTO...</div></div>
+      <div style="margin:10px 0;">
+        <button class="btn-save" id="cnBtnDistilla" onclick="cnDistilla()">🧠 Distilla conoscenza dalle fasi selezionate</button>
+      </div>
+
+      <div id="cnProposta" style="display:none;border-top:1px solid #3a3340;padding-top:12px;margin-top:6px;">
+        <h4 style="color:#b8a8d9;font-size:12px;margin:0 0 8px;">2 · Proposta (rivedi e correggi prima di salvare)</h4>
+        <div class="dark-field" style="margin:0 0 8px;">
+          <label>Titolo (facoltativo, es. "Sverniciatura e finiture a gommalacca")</label>
+          <input type="text" id="cnTitolo" placeholder="Titolo del blocco">
+        </div>
+        <textarea id="cnContenuto" style="width:100%;min-height:180px;background:#1a1a1a;border:1px solid #444;color:#e8e4dc;border-radius:4px;padding:10px;font-family:'DM Mono',monospace;font-size:12px;line-height:1.6;resize:vertical;"></textarea>
+        <div style="margin-top:10px;display:flex;gap:10px;">
+          <button class="btn-save" onclick="cnSalva()">💾 Salva nella conoscenza di Sole</button>
+          <button class="btn-cancel" onclick="document.getElementById('cnProposta').style.display='none'">Annulla</button>
+        </div>
+      </div>
+
+      <h4 style="color:#b8a8d9;font-size:12px;margin:18px 0 8px;border-bottom:1px solid #3a3340;padding-bottom:4px;">Conoscenza appresa (attiva su Sole)</h4>
+      <div id="cnBlocchiList"><div class="storico-empty">CARICAMENTO...</div></div>
+
+      <div id="cn-result" style="display:none;margin-top:12px;padding:10px 14px;border-radius:4px;font-family:'DM Mono',monospace;font-size:11px;"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════════════════
 // PROFORMA — LOGIC
@@ -5762,6 +5806,183 @@ async function trConferma() {
       trCarica();
     } else trMsg(out.error || 'Errore.', false);
   } catch (e) { trMsg('Errore di rete.', false); }
+}
+
+// ══════════════════════════════════════════════════════════
+// CONOSCENZA DI SOLE — autoapprendimento dalle fasi
+// ══════════════════════════════════════════════════════════
+const CONOSCENZA_URL = BASE_URL + '/ardy-conoscenza-appresa.php';
+let cnFasi = [];
+let cnOrigineSel = [];
+
+function openConoscenza() {
+  document.getElementById('conoscenzaOverlay').classList.add('open');
+  document.getElementById('cnProposta').style.display = 'none';
+  cnCaricaFasi();
+  cnCaricaBlocchi();
+}
+function closeConoscenza() {
+  document.getElementById('conoscenzaOverlay').classList.remove('open');
+}
+
+function cnMsg(testo, ok) {
+  const r = document.getElementById('cn-result');
+  r.style.display = 'block';
+  r.textContent = testo;
+  r.style.background = ok ? '#16361f' : '#3a1818';
+  r.style.color = ok ? '#7fe0a0' : '#e08080';
+  setTimeout(() => { r.style.display = 'none'; }, 7000);
+}
+
+async function cnCaricaFasi() {
+  const list = document.getElementById('cnFasiList');
+  list.innerHTML = '<div class="storico-empty">CARICAMENTO...</div>';
+  try {
+    const res  = await fetch(CONOSCENZA_URL + '?mode=lista_fasi');
+    const data = await res.json();
+    cnFasi = (data && data.items) ? data.items : [];
+    cnRenderFasi();
+  } catch (e) {
+    list.innerHTML = '<div class="storico-empty">Errore di caricamento.</div>';
+  }
+}
+
+function cnRenderFasi() {
+  const list = document.getElementById('cnFasiList');
+  if (!cnFasi.length) {
+    list.innerHTML = '<div class="storico-empty">Nessuna fase pubblicata da cui imparare.</div>';
+    return;
+  }
+  list.innerHTML = cnFasi.map(f => {
+    const cliente = f.cliente ? escHtml(f.cliente) : '(cliente)';
+    const mobile  = f.mobile ? ` · ${escHtml(f.mobile)}` : '';
+    const foto    = f.n_foto ? ` 📷${f.n_foto}` : '';
+    const data    = f.created_at ? escHtml(String(f.created_at).slice(0, 10)) : '';
+    const est     = f.estratto ? `<div style="color:#888;font-size:10px;margin-top:2px;">${escHtml(f.estratto)}</div>` : '';
+    return `<label style="display:flex;align-items:flex-start;gap:8px;padding:7px 4px;border-bottom:1px solid #232323;cursor:pointer;">
+      <input type="checkbox" class="cn-fase-check" value="${f.id}" style="width:15px;height:15px;margin-top:2px;">
+      <div style="flex:1;min-width:0;">
+        <div style="color:#e8e4dc;font-size:12px;">${escHtml(f.fase_nome || '(senza nome)')} <span style="color:#7d6f9c;">— ${cliente}${mobile}${foto}</span></div>
+        ${est}
+      </div>
+      <span style="color:#666;font-size:10px;white-space:nowrap;">${data}</span>
+    </label>`;
+  }).join('');
+}
+
+function cnSelezionate() {
+  return Array.from(document.querySelectorAll('#cnFasiList .cn-fase-check:checked')).map(c => parseInt(c.value, 10));
+}
+
+async function cnDistilla() {
+  const ids = cnSelezionate();
+  if (!ids.length) { cnMsg('Spunta almeno una fase da cui imparare.', false); return; }
+  const btn = document.getElementById('cnBtnDistilla');
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = '🧠 Sto distillando…';
+  try {
+    const res = await fetch(CONOSCENZA_URL, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ mode:'distilla', fase_ids: ids }) });
+    const out = await res.json();
+    if (!out.success) { cnMsg(out.error || 'Errore nella distillazione.', false); return; }
+    if (out.vuoto || !out.proposta) {
+      cnMsg('Da queste fasi non è emersa conoscenza nuova e generalizzabile. Prova con fasi più descrittive.', false);
+      return;
+    }
+    cnOrigineSel = out.origine || ids;
+    document.getElementById('cnTitolo').value = '';
+    document.getElementById('cnContenuto').value = out.proposta;
+    document.getElementById('cnProposta').style.display = 'block';
+    document.getElementById('cnProposta').scrollIntoView({ behavior:'smooth', block:'nearest' });
+  } catch (e) {
+    cnMsg('Errore di rete.', false);
+  } finally {
+    btn.disabled = false; btn.textContent = orig;
+  }
+}
+
+async function cnSalva() {
+  const contenuto = document.getElementById('cnContenuto').value.trim();
+  const titolo    = document.getElementById('cnTitolo').value.trim();
+  if (!contenuto) { cnMsg('Il contenuto è vuoto.', false); return; }
+  try {
+    const res = await fetch(CONOSCENZA_URL, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ mode:'salva', titolo, contenuto, origine_fasi: cnOrigineSel }) });
+    const out = await res.json();
+    if (out.success) {
+      cnMsg('Salvato ✓ Sole ha imparato.', true);
+      document.getElementById('cnProposta').style.display = 'none';
+      document.querySelectorAll('#cnFasiList .cn-fase-check:checked').forEach(c => c.checked = false);
+      cnCaricaBlocchi();
+    } else cnMsg(out.error || 'Errore.', false);
+  } catch (e) { cnMsg('Errore di rete.', false); }
+}
+
+async function cnCaricaBlocchi() {
+  const list = document.getElementById('cnBlocchiList');
+  list.innerHTML = '<div class="storico-empty">CARICAMENTO...</div>';
+  try {
+    const res  = await fetch(CONOSCENZA_URL + '?mode=lista');
+    const data = await res.json();
+    const items = (data && data.items) ? data.items : [];
+    if (!items.length) { list.innerHTML = '<div class="storico-empty">Nessuna conoscenza appresa ancora.</div>'; return; }
+    list.innerHTML = items.map(b => {
+      const tit = b.titolo ? escHtml(b.titolo) : '(senza titolo)';
+      const stato = b.attiva
+        ? '<span style="color:#7fe0a0;">attiva ✓</span>'
+        : '<span style="color:#999;">disattivata</span>';
+      const data = b.created_at ? escHtml(String(b.created_at).slice(0, 10)) : '';
+      return `<div style="border-bottom:1px solid #2a2a2a;padding:8px 4px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="flex:1;min-width:0;color:#e8e4dc;font-size:12px;">${tit} <span style="color:#666;font-size:10px;">· ${data}</span></div>
+          <div style="font-size:11px;white-space:nowrap;">${stato}</div>
+        </div>
+        <div style="color:#aaa;font-size:11px;line-height:1.5;margin-top:4px;white-space:pre-wrap;max-height:90px;overflow:auto;">${escHtml(b.contenuto || '')}</div>
+        <div style="margin-top:6px;display:flex;gap:8px;">
+          <button class="btn-secondary" style="font-size:10px;padding:3px 8px;" onclick="cnToggle(${b.id}, ${b.attiva ? 0 : 1})">${b.attiva ? 'Disattiva' : 'Riattiva'}</button>
+          <button class="btn-secondary" style="font-size:10px;padding:3px 8px;" onclick="cnModifica(${b.id})">✎ Modifica</button>
+          <button class="btn-secondary" style="font-size:10px;padding:3px 8px;color:#e08080;border-color:#8b3e3e;" onclick="cnElimina(${b.id})">🗑 Elimina</button>
+        </div>
+      </div>`;
+    }).join('');
+    cnBlocchiCache = items;
+  } catch (e) {
+    list.innerHTML = '<div class="storico-empty">Errore di caricamento.</div>';
+  }
+}
+let cnBlocchiCache = [];
+
+async function cnToggle(id, attiva) {
+  try {
+    const res = await fetch(CONOSCENZA_URL, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ mode:'toggle', id, attiva }) });
+    const out = await res.json();
+    if (out.success) cnCaricaBlocchi(); else cnMsg(out.error || 'Errore.', false);
+  } catch (e) { cnMsg('Errore di rete.', false); }
+}
+
+function cnModifica(id) {
+  const b = cnBlocchiCache.find(x => x.id === id);
+  if (!b) return;
+  const nuovoTit = prompt('Titolo del blocco:', b.titolo || '');
+  if (nuovoTit === null) return;
+  const nuovo = prompt('Contenuto della conoscenza:', b.contenuto || '');
+  if (nuovo === null || !nuovo.trim()) return;
+  fetch(CONOSCENZA_URL, { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ mode:'modifica', id, titolo: nuovoTit, contenuto: nuovo }) })
+    .then(r => r.json())
+    .then(out => { if (out.success) cnCaricaBlocchi(); else cnMsg(out.error || 'Errore.', false); })
+    .catch(() => cnMsg('Errore di rete.', false));
+}
+
+async function cnElimina(id) {
+  if (!confirm('Eliminare questo blocco di conoscenza? Sole se ne dimenticherà.')) return;
+  try {
+    const res = await fetch(CONOSCENZA_URL, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ mode:'elimina', id }) });
+    const out = await res.json();
+    if (out.success) cnCaricaBlocchi(); else cnMsg(out.error || 'Errore.', false);
+  } catch (e) { cnMsg('Errore di rete.', false); }
 }
 </script>
 </body>
