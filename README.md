@@ -67,6 +67,7 @@ ardyagent.ardy-lab.it/
 ├── GUIDA-MICHELA.md           # Guida d'uso dashboard (versione testo)
 ├── MANUALE-SOLE.md            # Mansionario dell'assistente AI Sole (canali, mansioni, regole)
 ├── ardy-notifica-michela.php  # Notifiche WhatsApp a Michela (Sole "segretaria") — libreria + endpoint n8n
+├── ardy-chiusura-sessioni.php # Cron orario: notifica Michela alla "chiusura" chat (inattive >1h, web+WA)
 ├── ardy-solleciti.php         # Solleciti clienti morosi (4 livelli) + invio WA/email — "segretaria antipatica"
 ├── ardy-solleciti-system.txt  # Prompt AI "segretaria antipatica" per i solleciti
 ├── ardy-unsubscribe.php       # Gestione unsubscribe email
@@ -396,6 +397,29 @@ Modulo per gestire chi non paga. Pulsante **💸 MOROSI** in sidebar → modale 
 Riusa `WA_TOKEN` / `WA_PHONE_NUMBER_ID`. Per scrivere al moroso fuori dalla finestra 24h
 serve un **template Meta approvato**: `define('WA_TEMPLATE_SOLLECITO', '...')` (body 1 var `{{1}}`).
 Senza template, l'invio WA libero funziona solo se il cliente ha scritto nelle ultime 24h.
+
+## ⏰ Job pianificati (cron)
+
+### Notifica a Michela a chiusura chat — `ardy-chiusura-sessioni.php`
+Le chat cliente↔Sole non hanno un evento di "chiusura": questo job considera
+**chiusa** una conversazione ferma da **>1 ora** (su `web_messaggi` e `wa_messaggi`,
+solo sessioni attive nelle ultime 24h) e manda a Michela una notifica WhatsApp con
+i dati essenziali (nome, contatto, canale, n° messaggi, stato CRM, ultimo messaggio).
+Una sola notifica per sessione, grazie al dedupe di `notificaMichela()`
+(chiave `chat-chiusa:<canale>:<id>:<ultimo_msg>`). Soglie regolabili con le costanti
+`ARDY_CHIUSURA_IDLE_MIN` (60) e `ARDY_CHIUSURA_LOOKBACK_H` (24) in cima al file.
+
+Da CLI salta il controllo del segreto; via HTTP è protetto da `WA_LOOKUP_SECRET`
+(`?secret=` o header `X-Ardy-Secret`). Richiede la config WhatsApp di
+`ardy-notifica-michela.php` (incl. `WA_TEMPLATE_NOTIFICA` per scrivere fuori dalle 24h).
+
+**Cron (ogni ora, come utente del sito):**
+```cron
+0 * * * * /opt/cpanel/ea-php83/root/usr/bin/php /home/micoperibg/public_html/ardyagent.ardy-lab.it/ardy-chiusura-sessioni.php >/dev/null 2>&1
+```
+Installazione: `sudo -u micoperibg crontab -e` (o append non interattivo). Test a mano:
+`sudo -u micoperibg /opt/cpanel/ea-php83/root/usr/bin/php .../ardy-chiusura-sessioni.php`
+→ stampa `{"success":true,"esaminate":N,"inviate":M}`.
 
 ## 🖥 Dashboard Michela (ardy-michela-app.html)
 
