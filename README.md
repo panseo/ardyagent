@@ -714,6 +714,12 @@ permette il deploy push-button da cPanel (richiede Jailed Shell).
 
 ## 📝 Note sessioni
 
+**Giugno 2026 — Sessione 18/06 (email cliente complete, avviso fine chat, consegne/ritiri)**
+- **Email avanzamento lavorazione** arricchita: spiega al cliente cosa può fare nella pagina (segue fasi/foto), codice personale sempre presente (con fallback all'email di benvenuto), link social.
+- **Footer cliente condiviso** (codice + WhatsApp + social) centralizzato in `ardy-email.php` (`ardy_email_footer_cliente()` + helper) e applicato a **tutte** le email da Sole: benvenuto (`ardy-proxy.php`/`ardy-wa-agent.php`), lavorazione, ringraziamento, email libera (`ardy-email-cliente-api.php`, ora HTML), solleciti (`ardy-solleciti.php`, social solo livelli 1-2).
+- **Avviso a fine chat** (`ardy-chiusura-sessioni.php`): cron orario che notifica Michela su WhatsApp quando una conversazione (web/WA) resta ferma >1h, con dati essenziali. Dedupe via `notificaMichela`. Cron `0 * * * *` come utente del sito.
+- **Consegne/ritiri** (`ardy-trasporti.php`): email **"è pronto"** automatica alla transizione → COMPLETATO (guard `trasporto_pronto_at`) + **giornata Trasporti** in dashboard (bottone 🚚 TRASPORTI: assegni i COMPLETATO a una data e li avvisi via email, guard `trasporto_avviso_data`). Nuove colonne `trasporto_data/_pronto_at/_avviso_data`. Solo email per ora; WhatsApp predisposto (servono template Meta).
+
 **Giugno 2026 — Sessione 17/06 (ha risposto, bozze social sul server, anteprima IG + foto, fix date)**
 - **Indicatore 💬 ha risposto** in lista: badge sui clienti che hanno scritto (WA/sito) nelle ultime
   48h e non ancora "letti". `ardy-crm-api.php` calcola il flag con 2 query aggregate; marker

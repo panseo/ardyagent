@@ -168,6 +168,9 @@ Su **WhatsApp** (lato cliente) Sole usa lo stesso set di strumenti del sito — 
 | Post automatici su Google Business Profile (in attesa accesso Google) | `ardy-gbp.php`, `ardy-gbp-post.php`, `ardy-gbp-check.php` |
 | Notifiche WhatsApp a Michela | `ardy-notifica-michela.php` |
 | Avviso a fine chat (cron orario) | `ardy-chiusura-sessioni.php` |
+| Email "è pronto" (→COMPLETATO) + giornata Trasporti (consegne/ritiri) | `ardy-trasporti.php` |
+| Ringraziamento alla consegna (→CONSEGNATO) | `ardy-grazie-consegna.php` |
+| Footer cliente condiviso (codice + WhatsApp + social) nelle email | `ardy-email.php` |
 | Solleciti morosi ("segretaria amministrativa") | `ardy-solleciti.php`, `ardy-solleciti-system.txt` |
 | Testi fasi / comunicazioni / social / reel | `ardy-pubblica-lavorazione.php`, `ardy-crea-reel.php` |
 
