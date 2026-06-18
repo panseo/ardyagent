@@ -385,6 +385,18 @@ sopralluogo, oppure un cliente segnala un reclamo, un problema di pagamento o un
 particolare, Sole ti manda **un messaggio WhatsApp di riepilogo**, come una segretaria.
 Gli avvisi arrivano sempre, anche se non hai scritto a Sole di recente.
 
+💡 **Avviso a fine chiacchierata.** Quando un cliente smette di scrivere a Sole (sul sito o
+su WhatsApp) e la conversazione resta ferma per oltre **un'ora**, ti arriva su WhatsApp un
+**riassunto della chat conclusa**: nome, contatto, canale, quanti messaggi, stato del cliente
+e orario dell'ultimo messaggio. Una sola notifica per conversazione — così sai sempre con chi
+ha parlato Sole, anche senza aprire la dashboard.
+
+💡 **Email ai clienti più complete.** Tutte le email che partono da Sole (benvenuto,
+aggiornamento lavorazione, ringraziamento, email scritte da te, solleciti) portano ora in fondo
+il **codice personale** del cliente, il **contatto WhatsApp** di Sole e i **link ai social**.
+L'email di avanzamento lavorazione spiega anche al cliente **cosa può fare** nella pagina del suo
+mobile (seguire le fasi, vedere le foto).
+
 ---
 
 ## 💸 13. Clienti che non pagano (Morosi)

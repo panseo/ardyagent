@@ -83,7 +83,8 @@ Dopo la consegna, Sole risponde **da sola** alle domande su come pulire, mantene
 Come una segretaria, Sole avvisa Michela su WhatsApp quando succede qualcosa di rilevante:
 - un **lead** è stato salvato;
 - un **sopralluogo** è stato fissato;
-- un cliente segnala un **reclamo**, un **problema di pagamento**, una **richiesta di modifica** o una **richiesta fuori standard**.
+- un cliente segnala un **reclamo**, un **problema di pagamento**, una **richiesta di modifica** o una **richiesta fuori standard**;
+- una **conversazione con un cliente si è conclusa** — quando una chat (sito o WhatsApp) resta ferma per oltre **un'ora**, parte un **riassunto della chat chiusa** (nome, contatto, canale, n° messaggi, stato cliente, ultimo messaggio). Una sola notifica per conversazione. Job automatico orario (`ardy-chiusura-sessioni.php`).
 
 > Le notifiche arrivano sempre, anche se Michela non ha scritto di recente (modello WhatsApp approvato attivo).
 
@@ -166,6 +167,7 @@ Su **WhatsApp** (lato cliente) Sole usa lo stesso set di strumenti del sito — 
 | Dossier cliente (contesto per Sole) — fasi solo pubblicate lato cliente | `ardy-dossier.php` |
 | Post automatici su Google Business Profile (in attesa accesso Google) | `ardy-gbp.php`, `ardy-gbp-post.php`, `ardy-gbp-check.php` |
 | Notifiche WhatsApp a Michela | `ardy-notifica-michela.php` |
+| Avviso a fine chat (cron orario) | `ardy-chiusura-sessioni.php` |
 | Solleciti morosi ("segretaria amministrativa") | `ardy-solleciti.php`, `ardy-solleciti-system.txt` |
 | Testi fasi / comunicazioni / social / reel | `ardy-pubblica-lavorazione.php`, `ardy-crea-reel.php` |
 
