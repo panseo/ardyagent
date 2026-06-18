@@ -265,7 +265,8 @@ e **parte l'email al cliente**. Finché resta in bozza, invece, il cliente **non
 
 ### Post social in attesa
 Se hai scelto "Salva per dopo", i post messi da parte compaiono nel riquadro
-**"🕒 Post social in attesa"** (in fondo alla sezione lavorazione), come **elenco compatto**:
+**"🕒 Post social in attesa"** (in fondo alla sezione lavorazione) **dentro la scheda del cliente
+da cui li hai creati** — ogni cliente vede solo i propri, come **elenco compatto**:
 per ognuno vedi 📲, il titolo, le **icone dei social** (Facebook, Instagram; Google grigio = non
 ancora attivo) e la data. Per ciascuno puoi:
 - **✏ Modifica** → cambi il **testo** e gestisci le **foto** (➕ Aggiungi foto / ✕ togli foto), poi **💾 Salva modifica**
@@ -275,7 +276,8 @@ ancora attivo) e la data. Per ciascuno puoi:
 
 ✅ *I post "in attesa" sono salvati **sul server**, non più solo nel browser: li ritrovi da
 **qualsiasi dispositivo** (telefono e computer) e li vede anche Andrea. Se modifichi testo o foto, la
-modifica resta salvata anche se chiudi e riapri.*
+modifica resta salvata anche se chiudi e riapri. Restano **legati al cliente** da cui li hai creati
+(non compaiono sugli altri).*
 
 💡 *Da telefono funziona benissimo: sei in laboratorio, scatti, pubblichi (o rimandi).*
 
