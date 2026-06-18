@@ -30,7 +30,11 @@ ardyagent.ardy-lab.it/
 ├── ardy-chat-corsi.js         # Chat in "modalità corso" /ardy-agent/?corso= (servita dal server; in WPCode solo loader)
 ├── ardy-widget-lavorazione.js # Widget chat contestuale per pagine lavorazione
 ├── ardy-verify-client.php     # Verifica identità cliente (telefono + wp_post_id)
-├── ardy-whatsapp-webhook.php  # Webhook WhatsApp Cloud API
+├── ardy-whatsapp-webhook.php  # Webhook WhatsApp Cloud API (estrae anche il media id delle foto inviate)
+├── ardy-wa-agent.php          # Cervello WhatsApp lato cliente: loop agentico con tool calendario/lead/sposta + email + ricezione/valutazione foto
+├── ardy-wa-crea-scheda.php    # Crea la scheda lead nel CRM da WhatsApp (usa il numero WA se manca il telefono)
+├── ardy-sanitize.php          # Rete anti-sbrodolatura: ripulisce eventuale sintassi tool trapelata come testo
+├── ardy-fasi-bozza-api.php    # API bozze fasi di lavorazione; `mode:'salva'` = bozza completa con foto (salva senza pubblicare)
 ├── ardy-save-lead.php         # Salva lead dal chatbot nel DB
 ├── ardy-update-lead.php       # Aggiorna dati lead dalla dashboard
 ├── ardy-db.php                # Connessione DB condivisa
@@ -425,6 +429,12 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
   pubblicate** (sola lettura: titolo + data) caricato da `ardy-get-fasi.php`
 - **Pubblicazione fasi** con foto (scatta dal telefono o galleria) sotto il bottone collassabile
   **🔨 Crea e pubblica nuova fase**; la prima foto diventa l'**immagine in evidenza** del post
+- **💾 Salva in bozza** delle fasi ("scatta ora, pubblica la sera"): nel form della fase il pulsante
+  **💾 SALVA IN BOZZA** apre/salva una fase con due righe di testo e fino a **6 foto** **senza**
+  pubblicare né notificare il cliente (`ardy-fasi-bozza-api.php`, `mode:'salva'`). La sera si riapre
+  con **✎ Modifica e pubblica**: **tornano nel form anche foto e video**, si rifinisce nome/note e si
+  preme PUBBLICA (testo AI + pagina + notifica cliente, come prima). Nella lista bozze c'è il badge
+  **📷N/🎥N**; finché è bozza il cliente non vede nulla
 - **Pubblicazione social manuale**: dopo la fase, pannello per rivedere/modificare il post (*pubblica
   ora / salva per dopo / non pubblicare*). **Selezione per singolo social**: le icone FB/IG sono toggle
   (default entrambi, deselezionabili fino a uno solo; Google disattivo) → il campo `piattaforme` viaggia
@@ -450,14 +460,42 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
 
 ---
 
-## 📱 WhatsApp (in costruzione)
+## 📱 WhatsApp (ATTIVO — Piano B)
 
 ### Stato attuale
 - App **ArdyagentWA** creata su Meta Developers
 - Business Portfolio verificato
 - Webhook configurato: `https://ardyagent.ardy-lab.it/ardy-whatsapp-webhook.php`
 - Token verifica: `ardy_wa_verify_2026`
-- Numero Sole (+39 379 375 6437) registrato 
+- Numero Sole (+39 379 375 6437) registrato
+
+### Piano B LIVE — Sole ha strumenti VERI sui clienti
+Sui clienti (NON sullo staff) Sole gira con lo **stesso loop agentico del sito** (file
+`ardy-wa-agent.php`) e può davvero:
+- **leggere la disponibilità** del calendario Google e **fissare il sopralluogo** su conferma
+  (guardia anti-doppione, persiste la scheda, notifica Michela);
+- **salvare il lead nel CRM** (`ardy-wa-crea-scheda.php`); se il cliente non lascia il telefono
+  usa in automatico il suo **numero WhatsApp**;
+- **spostare un appuntamento già fissato** (tool `sposta_appuntamento`), identificandolo dal numero
+  WhatsApp del mittente (un cliente può spostare **solo il PROPRIO** appuntamento);
+- inviare le **email** come il sito: notifica a Michela, conferma del sopralluogo al cliente,
+  email di benvenuto col **codice di accesso** al lead.
+
+Lo **staff** (Michela/Andrea) resta sul flusso n8n esistente (nessun tool). Una **rete di sicurezza**
+(`ardy-sanitize.php`) ripulisce eventuale sintassi tool che trapelasse come testo.
+
+### Ricezione FOTO LIVE
+Se il cliente manda una **foto del mobile** su WhatsApp, Sole la **riceve come immagine, la guarda
+e la valuta** (commenta cosa vede, fa domande su misure/stato/materiale). La foto viene **salvata
+nella scheda del cliente** (compare in dashboard) e **allegata all'email** di notifica a Michela.
+Catena: `ardy-whatsapp-webhook.php` estrae il media id → n8n lo inoltra → `ardy-wa-agent.php`
+scarica da Meta, comprime, salva e allega.
+
+### Regola "il numero è l'identità"
+Su WhatsApp il riconoscimento è **sempre** legato al numero con cui il cliente scrive (lo stesso
+da cui chiama). Sole **non** registra un numero diverso da quello WhatsApp. Se il cliente vuole
+usare un altro numero o un altro dispositivo, usa la **chat del sito**
+(`https://ardy-lab.it/ardy-agent/`) con il suo **codice personale**.
 
 ### Architettura 
 ```

@@ -34,6 +34,14 @@ Michela**: Sole prepara tutto e le passa la palla.
 
 Su WhatsApp Sole **ricorda** la conversazione: non devi rispiegare tutto da capo ogni volta.
 
+📷 **Mandale una foto del mobile su WhatsApp:** Sole la **guarda e te la commenta** — ti dice cosa
+nota e ti fa qualche domanda (misure, stato, materiale) per aiutarti meglio.
+
+📱 **Scrivile dal numero che usi di solito.** Su WhatsApp Sole ti riconosce dal **tuo numero**: usa
+quello con cui ci chiami abitualmente. Se preferisci usare **un altro numero o un altro dispositivo**,
+nessun problema: entra nella **chat del sito** ([ardy-lab.it/ardy-agent](https://ardy-lab.it/ardy-agent/))
+e usa il tuo **codice personale** (vedi sotto).
+
 ---
 
 ## Come iniziare (nuovo contatto)
@@ -80,6 +88,10 @@ Durante il lavoro ti teniamo aggiornato in due modi:
 Puoi anche chiedere a Sole, in qualsiasi momento, *"a che punto siamo?"*: con il tuo
 codice ti riepiloga la situazione. Per **prenotare una visita in laboratorio** te la
 fissa lei (di norma entro pochi giorni).
+
+📅 **Il sopralluogo lo gestisci anche da WhatsApp.** Sole può **fissare** il sopralluogo e, se ti
+serve, **spostarlo** a un altro giorno: scrivile e ci pensa lei (puoi spostare solo il tuo
+appuntamento).
 
 ---
 

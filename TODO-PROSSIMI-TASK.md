@@ -208,6 +208,15 @@ guida `ardy-gbp-post.md`. Scope `business.manage` aggiunto in `ardy-gcal-auth.ph
 
 ## 📋 TASK DA SVILUPPARE (aperti)
 
+### 🎨 Adottare temi/layout da "Claude Design" — ANALISI PRONTA (da decidere)
+Voglio usare i layout di Claude Design. **Analisi completa di fattibilità/rischi/procedura** in
+**`ANALISI-CLAUDE-DESIGN.md`**. In sintesi: il dashboard ha già i design-token (`:root` in
+`ardy-michela-app.css`) ma **363 `style="…"` inline** scavalcano qualsiasi tema → vero blocco.
+Procedura snella: **Fase 0** (migrare inline→classi + ampliare i token, su branch) → poi dare a Claude
+un "contratto" (token + classi + vincoli) e farsi restituire **un solo `theme.css` drop-in**, provato
+su **staging** dietro Basic Auth. Fattibilità: dashboard **alta**, widget webchat **media**, sito
+WordPress/Divi **bassa** (solo CSS override). Superficie pilota consigliata: **dashboard**.
+
 ### 🗂️ ~~Bozze fasi di lavorazione CON foto~~ ✅ FATTO (18/06, da testare dal vivo)
 **Esigenza (Michela, 18/06):** mentre lavora apre una nuova fase, scrive due righe, allega fino a
 **6 foto** della fase e **salva in bozza** — senza pubblicare né notificare. La sera, con calma,

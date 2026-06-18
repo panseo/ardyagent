@@ -242,6 +242,27 @@ quello che vuoi, poi premi Pubblica.
 **Su quali social esce.** Le icone **Facebook / Instagram** sono interruttori: accendi solo quelli su
 cui vuoi pubblicare *quel* post (puoi anche fare solo Instagram, o solo Facebook).
 
+### 💾 Salvare in bozza (scatta ora, pubblica la sera)
+Sei in laboratorio, scatti le foto della fase ma non hai tempo di rifinire il testo? **Salvala in
+bozza** e finisci con calma la sera.
+
+**Sul momento:**
+1. Apri **🔨 Crea e pubblica nuova fase**, scrivi il nome (es. "Stuccatura") e **due righe** veloci
+2. Allega le **foto** (fino a **6**) — scattate sul momento o dalla galleria
+3. Premi **💾 SALVA IN BOZZA**
+
+👉 Così **non pubblichi niente e il cliente non riceve nessuna email**: è solo un appunto tuo,
+salvato al sicuro. Nella lista delle bozze accanto a ognuna vedi un badge **📷** col numero di foto
+(e **🎥** se hai messo dei video), così sai a colpo d'occhio cosa contiene.
+
+**La sera (o quando vuoi):**
+1. Riapri la bozza con **✎ Modifica e pubblica**
+2. Nel modulo **tornano anche le foto e i video** che avevi messo — non devi ricaricare niente
+3. Sistemi il nome e le note, poi premi **PUBBLICA** come al solito
+
+Da qui in poi è tutto come una fase normale: l'AI scrive il testo, si aggiorna la pagina del lavoro
+e **parte l'email al cliente**. Finché resta in bozza, invece, il cliente **non vede nulla**.
+
 ### Post social in attesa
 Se hai scelto "Salva per dopo", i post messi da parte compaiono nel riquadro
 **"🕒 Post social in attesa"** (in fondo alla sezione lavorazione), come **elenco compatto**:
@@ -452,6 +473,11 @@ Da qui il lead ha **due strade**, entrambe funzionano:
   riprende da dove ha lasciato.
 
 In entrambi i casi il lead **non deve rispiegare tutto da capo**.
+
+💡 **Sole ora lavora davvero sui clienti via WhatsApp.** Oltre a rispondere, **fissa e sposta i
+sopralluoghi** (legge il tuo calendario e ti avvisa) e **salva i nuovi lead** nel CRM. E se un cliente
+le manda la **foto del mobile** su WhatsApp, lei la **guarda e la valuta**: la foto finisce
+automaticamente nella **scheda del cliente** e **allegata all'email** di avviso che ricevi tu.
 
 ---
 

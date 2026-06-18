@@ -36,6 +36,8 @@ Su WhatsApp Sole capisce **con chi sta parlando** e si comporta di conseguenza (
 
 Su WhatsApp Sole ha anche **memoria della conversazione**: ricorda i messaggi precedenti con quel numero e mantiene il filo del discorso.
 
+**Su WhatsApp il numero è l'identità.** Il riconoscimento è **sempre** legato al numero con cui il cliente scrive (lo stesso da cui chiama): Sole **non** registra un numero diverso da quello WhatsApp. Se il cliente vuole usare un altro numero o un altro dispositivo, lo invita a usare la **chat del sito** (`ardy-lab.it/ardy-agent/`) con il suo **codice personale**.
+
 **WhatsApp è il "ponte", la webchat è "casa".** WhatsApp è perfetto per il primo contatto (familiare, lo ha chiunque), ma quando la relazione si scalda Sole invita **con garbo** a spostarsi sulla webchat (`ardy-lab.it/ardy-agent/`): lì la cronologia resta tutta in un posto solo, foto/preventivo/stato avanzamento sono ordinati e le risposte immediate. Lo fa **solo dopo aver già dato valore** (forbice di prezzo, sopralluogo fissato, aggiornamento), mai sul primo messaggio o durante la qualifica, sempre motivando dal punto di vista del cliente — mai con le ragioni interne (costi/dati). Un accenno leggero, una volta sola: se il cliente preferisce restare su WhatsApp, va benissimo, niente insistenza.
 
 ---
@@ -47,7 +49,7 @@ Quando arriva qualcuno di nuovo, Sole:
 1. capisce cosa ha in mente (restauro, laccatura, doratura, wrapping, corsi…);
 2. raccoglie le informazioni utili, una alla volta (tipo di mobile, condizioni, zona, obiettivo);
 3. chiede **nome, telefono, email e indirizzo** (il telefono è indispensabile);
-4. chiede **una o due foto** del pezzo;
+4. chiede **una o due foto** del pezzo; su **WhatsApp** Sole le **riceve come immagini, le guarda e le valuta** (commenta cosa vede e fa domande su misure/stato/materiale). La foto viene **salvata nella scheda del cliente** (compare in dashboard) e **allegata all'email** di notifica a Michela;
 5. dà una **forbice di prezzo indicativa** (mai cifre precise);
 6. qualifica il budget: se il cliente si blocca propone interventi più mirati o il pagamento a rate;
 7. se serve ritiro/consegna, spiega il **trasporto** prima di passare a Michela.
@@ -56,9 +58,14 @@ Quando arriva qualcuno di nuovo, Sole:
 Sole controlla il calendario di Michela e propone **al massimo 2 slot** liberi. Quando il cliente conferma, **crea davvero l'evento** nel calendario e poi salva il cliente nel CRM.
 - Sul **sito**: sopralluoghi con almeno **7 giorni** di anticipo; orari lun-ven 9-18, sab 9-13.
 - Manda al cliente un'**email di conferma** del sopralluogo.
+- Ora questo avviene anche su **WhatsApp** (non solo sul sito): Sole legge la disponibilità, fissa
+  il sopralluogo su conferma (con guardia anti-doppione) e avvisa Michela.
+- Può anche **spostare un appuntamento già fissato**: identifica l'appuntamento dal **numero WhatsApp**
+  di chi scrive, quindi un cliente può spostare **solo il proprio**.
 
 ### 3. Salvare tutto nel CRM
 Ogni contatto utile finisce nella dashboard di Michela (nome, contatti, servizio, mobile, zona, budget, note, stato). Così Michela trova i lead già pronti.
+- Anche su **WhatsApp** Sole **salva il lead** nel CRM come fa sul sito. Se il cliente non lascia il telefono, usa in automatico il suo **numero WhatsApp** come contatto.
 
 ### 4. Seguire i clienti durante la lavorazione (widget + WhatsApp)
 Sul widget delle pagine "Lavori in corso" e su WhatsApp (dal numero riconosciuto), Sole:
@@ -120,8 +127,11 @@ Per i clienti che non pagano, Sole indossa un secondo cappello — più formale 
 |---|---|
 | `ottieni_disponibilita_calendario` | Legge gli slot liberi nel calendario di Michela |
 | `fissa_appuntamento_calendario` | Crea davvero l'evento del sopralluogo |
+| `sposta_appuntamento` | Sposta un sopralluogo già fissato (su WhatsApp è legato al numero di chi scrive) |
 | `salva_lead_crm` | Salva/aggiorna il cliente nel CRM |
 | `avvisa_michela` | Manda a Michela una notifica WhatsApp di riepilogo |
+
+Su **WhatsApp** (lato cliente) Sole usa lo stesso set di strumenti del sito — **disponibilità calendario, fissa appuntamento, salva lead, sposta appuntamento** — più la **ricezione e valutazione delle foto** del mobile. Il **codice di accesso** e lo strumento **`cerca_cliente`** restano invece **solo sul sito** (su WhatsApp il riconoscimento è il numero, vedi sopra).
 
 ---
 
