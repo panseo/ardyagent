@@ -208,18 +208,12 @@ guida `ardy-gbp-post.md`. Scope `business.manage` aggiunto in `ardy-gcal-auth.ph
 
 ## 📋 TASK DA SVILUPPARE (aperti)
 
-### 🗂️ Bozze fasi di lavorazione CON foto (salva sul momento, pubblica la sera) — DA FARE
+### 🗂️ ~~Bozze fasi di lavorazione CON foto~~ ✅ FATTO (18/06, da testare dal vivo)
 **Esigenza (Michela, 18/06):** mentre lavora apre una nuova fase, scrive due righe, allega fino a
 **6 foto** della fase e **salva in bozza** — senza pubblicare né notificare. La sera, con calma,
 rivede le foto, rifinisce il prompt/note e **pubblica** (testo AI + pagina + notifica cliente).
 
-**Stato attuale (verificato 18/06):** il sistema bozze esiste (`stato='bozza'` su `fasi`) ma salva
-SOLO nome + `testo_breve` + prezzo — **non foto né video**. Oggi le foto vivono solo nel browser
-(`lavImmagini`, base64) e si caricano solo al "PUBBLICA". Non c'è un pulsante "Salva in bozza" nel
-form: le bozze nascono solo dai template di libreria (`mode='genera'`). `modificaFaseBozza()`
-ricarica nome/note/prezzo ma **non** le foto.
-
-**Disegno (3 file, nessuna regressione sul publish):**
+**Implementato (3 file, nessuna regressione sul publish):**
 1. **`ardy-fasi-bozza-api.php`** — nuovo `mode:'salva'` = upsert di UNA bozza completa:
    - input: `session_id`, `id` (opz., per update), `fase_nome`, `testo_breve`, `prezzo`,
      `immagini` (base64, ≤6), `video_urls`;
@@ -237,10 +231,17 @@ ricarica nome/note/prezzo ma **non** le foto.
    **pulire la cartella temporanea** `fasi-bozza/{id}` (le foto definitive le mette già lui su WP).
    Resto del publish invariato → email/WhatsApp/social intatti.
 
-**Perché così:** il "PUBBLICA" non cambia comportamento (riceve sempre base64 dal form); si aggiunge
-solo la persistenza nelle bozze + il ricarico. Il widget pubblico mostra già solo `stato='pubblicata'`,
-quindi finché è bozza il cliente non vede nulla. Decisione UX da confermare al via: includere anche i
-**video** nelle bozze (il form già li ha) — proposta: sì.
+Il "PUBBLICA" non cambia comportamento (riceve sempre base64 dal form): si aggiunge solo la persistenza
+nelle bozze + il ricarico. Il widget pubblico mostra già solo `stato='pubblicata'`, quindi finché è
+bozza il cliente non vede nulla.
+
+**Riflessione PARCHEGGIATA — video nelle bozze:** i video sono già su WP a monte (sono URL), quindi
+vengono conservati/ricaricati "gratis"; ma il flusso veloce di bozza nasce per le **foto**. Da valutare
+con calma se il video ha senso in questo flusso "scatta e salva" o se tenerlo solo alla pubblicazione.
+
+**Da testare dal vivo:** (a) nome+note+foto → 💾 SALVA IN BOZZA → compare in lista col badge 📷;
+(b) "✎ Modifica e pubblica" → foto/video tornano nel form; (c) PUBBLICA → esce dalle bozze, compare
+tra le pubblicate, cliente notificato e foto sulla pagina WP; (d) cartella `fasi-bozza/{id}` ripulita.
 
 ### 📷 ~~Gestione foto anche nelle bozze social in attesa~~ ✅ FATTO (17/06, da testare dal vivo)
 Nell'editor "✏ Modifica" di un post in attesa ora ci sono **➕ Aggiungi foto** e **✕** su ogni

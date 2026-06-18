@@ -358,6 +358,16 @@ try {
     error_log('ARDY SALVA FASE ERROR: ' . $e->getMessage());
 }
 
+// Pubblicata una bozza: pulisce la cartella temporanea delle sue foto
+// (ora sono su WP e in foto_urls definitivo). Niente file orfani su disco.
+if ($faseId && defined('ARDY_UPLOAD_DIR')) {
+    $bozzaDir = rtrim(ARDY_UPLOAD_DIR, '/') . '/' . $cleanSession . '/fasi-bozza/' . (int) $faseId . '/';
+    if (is_dir($bozzaDir)) {
+        foreach (glob($bozzaDir . '*') as $f) { if (is_file($f)) @unlink($f); }
+        @rmdir($bozzaDir);
+    }
+}
+
 // -----------------------------------------------------------
 // 11b. AGGIORNA CRM
 // -----------------------------------------------------------

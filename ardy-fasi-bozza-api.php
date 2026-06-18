@@ -7,13 +7,19 @@
 // modifica e pubblica una per una dal pannello Lavorazione.
 //
 //   GET  ?session_id=...         → lista bozze del cliente (in ordine)
+//   GET  ?session_id=...&id=..&file=..  → serve una foto di bozza (anteprima/ricarico nel form)
 //   POST {mode:'genera', ...}        → crea N bozze dai template di libreria scelti
 //   POST {mode:'genera_custom', ...} → crea N bozze da voci libere (es. lette da un
 //                                       preventivo PDF esterno con ardy-estrai-preventivo-pdf.php)
+//   POST {mode:'salva', ...}     → upsert di UNA bozza completa (nome, note, prezzo, FOTO, video):
+//                                  "salva sul momento, pubblica la sera". Le foto sono persistite
+//                                  su disco (ARDY_UPLOAD_DIR/<session>/fasi-bozza/<id>/); al publish
+//                                  vengono ricaricate nel form e ardy-pubblica-lavorazione le porta su WP.
 //   POST {mode:'delete', id}     → elimina una bozza (solo se stato='bozza')
 // -----------------------------------------------------------
 
 require_once __DIR__ . '/ardy-db.php';
+require_once __DIR__ . '/ardy-net.php';   // ardyCompressImage + ardyHardenUploadDir per le foto di bozza
 
 header('Access-Control-Allow-Origin: https://ardyagent.ardy-lab.it');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
@@ -21,6 +27,31 @@ header('Access-Control-Allow-Headers: Content-Type');
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
+
+// Cartella delle foto di UNA bozza (per cliente + id fase).
+function ardyBozzaFotoDir(string $sessionId, int $id): string {
+    $clean = preg_replace('/[^a-zA-Z0-9_\-]/', '', $sessionId);
+    return rtrim(ARDY_UPLOAD_DIR, '/') . '/' . $clean . '/fasi-bozza/' . $id . '/';
+}
+
+// GET con ?file= → serve una foto di bozza da disco (anteprima + ricarico nel form).
+// Dietro Basic Auth (.htaccess). basename() evita path traversal.
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['file'])) {
+    $session = preg_replace('/[^a-zA-Z0-9_\-]/', '', $_GET['session_id'] ?? '');
+    $id      = (int) ($_GET['id'] ?? 0);
+    $file    = basename((string) $_GET['file']);
+    if ($session === '' || $id <= 0 || $file === '') { http_response_code(400); exit(); }
+    $path = ardyBozzaFotoDir($session, $id) . $file;
+    if (!is_file($path)) { http_response_code(404); exit(); }
+    $allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    $mime = (new finfo(FILEINFO_MIME_TYPE))->file($path);
+    if (!in_array($mime, $allowed, true)) { http_response_code(403); exit(); }
+    header('Content-Type: ' . $mime);
+    header('Content-Length: ' . filesize($path));
+    header('Cache-Control: private, max-age=3600');
+    readfile($path);
+    exit();
+}
 
 // Inserisce N bozze (nome + testo_breve) per un cliente, in coda all'ordine
 // esistente. Condiviso dai modi 'genera' (da libreria) e 'genera_custom'
@@ -71,7 +102,7 @@ try {
         $sessionId = preg_replace('/[^a-zA-Z0-9_\-]/', '', $_GET['session_id'] ?? '');
         if ($sessionId === '') { echo json_encode([]); exit(); }
         $stmt = $db->prepare(
-            "SELECT id, fase_nome, testo_breve, ordine, prezzo, created_at FROM fasi
+            "SELECT id, fase_nome, testo_breve, ordine, prezzo, foto_urls, video_urls, created_at FROM fasi
              WHERE session_id = ? AND stato = 'bozza' ORDER BY ordine ASC, created_at ASC"
         );
         $stmt->execute([$sessionId]);
@@ -131,13 +162,107 @@ try {
         exit();
     }
 
+    if ($mode === 'salva') {
+        // Upsert di UNA bozza completa: "salva sul momento, pubblica la sera".
+        $sessionId = preg_replace('/[^a-zA-Z0-9_\-]/', '', $input['session_id'] ?? '');
+        if ($sessionId === '') { echo json_encode(['success' => false, 'error' => 'session mancante']); exit(); }
+        $faseNome  = trim((string) ($input['fase_nome']   ?? ''));
+        $breve     = trim((string) ($input['testo_breve'] ?? ''));
+        $prezzo    = ardyParseImportoFase($input['prezzo'] ?? null);
+        $id        = (int) ($input['id'] ?? 0);
+        $immagini  = is_array($input['immagini']   ?? null) ? array_values($input['immagini'])   : [];
+        $videoUrls = is_array($input['video_urls'] ?? null) ? array_values($input['video_urls']) : [];
+        if ($faseNome === '' && $breve === '') {
+            echo json_encode(['success' => false, 'error' => 'Servono almeno il nome fase o due righe di note']);
+            exit();
+        }
+
+        // Riga bozza: aggiorna se già esiste (e ancora bozza), altrimenti creane una in coda.
+        if ($id > 0) {
+            $chk = $db->prepare("SELECT stato FROM fasi WHERE id = ? AND session_id = ?");
+            $chk->execute([$id, $sessionId]);
+            $st = $chk->fetchColumn();
+            if ($st === false)     { echo json_encode(['success' => false, 'error' => 'bozza non trovata']); exit(); }
+            if ($st !== 'bozza')   { echo json_encode(['success' => false, 'error' => 'fase già pubblicata']); exit(); }
+        } else {
+            $stOrd = $db->prepare("SELECT COALESCE(MAX(ordine),0) FROM fasi WHERE session_id = ?");
+            $stOrd->execute([$sessionId]);
+            $ordine = (int) $stOrd->fetchColumn() + 1;
+            $db->prepare(
+                "INSERT INTO fasi (session_id, fase_nome, fase_tipo, testo_breve, testo_generato, foto_urls, video_urls, stato, ordine, prezzo)
+                 VALUES (:sid, :nome, 'fase', :breve, '', '[]', '[]', 'bozza', :ordine, :prezzo)"
+            )->execute([':sid' => $sessionId, ':nome' => $faseNome, ':breve' => $breve, ':ordine' => $ordine, ':prezzo' => $prezzo]);
+            $id = (int) $db->lastInsertId();
+        }
+
+        // Foto su disco: la lista inviata è quella DEFINITIVA → riscriviamo da zero
+        // (così aggiunte e rimozioni dalla sera sono gestite in modo uniforme).
+        $dir = ardyBozzaFotoDir($sessionId, $id);
+        if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
+            echo json_encode(['success' => false, 'error' => 'cartella non creabile']);
+            exit();
+        }
+        ardyHardenUploadDir(rtrim(ARDY_UPLOAD_DIR, '/'));   // niente esecuzione script tra gli upload
+        foreach (glob($dir . '*') as $f) { if (is_file($f)) @unlink($f); }
+
+        $allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        $maxByte = 12 * 1024 * 1024;
+        $fotoFiles = [];
+        foreach (array_slice($immagini, 0, 6) as $idx => $b64) {   // max 6 foto in bozza
+            if (!is_string($b64) || $b64 === '') continue;
+            $raw = base64_decode($b64, true);
+            if ($raw === false || strlen($raw) < 12 || strlen($raw) > $maxByte) continue;
+            $mime = (new finfo(FILEINFO_MIME_TYPE))->buffer($raw);
+            if (!in_array($mime, $allowed, true)) continue;
+            $raw = ardyCompressImage($raw, $mime);
+            $ext = $mime === 'image/png' ? 'png' : ($mime === 'image/webp' ? 'webp' : ($mime === 'image/gif' ? 'gif' : 'jpg'));
+            $fname = 'f' . $idx . '_' . uniqid() . '.' . $ext;
+            if (file_put_contents($dir . $fname, $raw) !== false) $fotoFiles[] = $fname;
+        }
+
+        // Video: già caricati su WP a monte (sono URL) → li conserviamo come sono.
+        $videoClean = [];
+        foreach ($videoUrls as $u) {
+            $u = trim((string) $u);
+            if ($u !== '' && filter_var($u, FILTER_VALIDATE_URL)) $videoClean[] = $u;
+        }
+
+        $db->prepare(
+            "UPDATE fasi SET fase_nome = :nome, testo_breve = :breve, prezzo = :prezzo,
+                foto_urls = :foto, video_urls = :video, stato = 'bozza'
+             WHERE id = :id AND session_id = :sid"
+        )->execute([
+            ':nome'  => $faseNome,
+            ':breve' => $breve,
+            ':prezzo' => $prezzo,
+            ':foto'  => json_encode($fotoFiles),
+            ':video' => json_encode($videoClean),
+            ':id'    => $id,
+            ':sid'   => $sessionId,
+        ]);
+
+        echo json_encode(['success' => true, 'id' => $id, 'foto' => $fotoFiles, 'video_urls' => $videoClean]);
+        exit();
+    }
+
     if ($mode === 'delete') {
         $id = (int) ($input['id'] ?? 0);
         if (!$id) {
             echo json_encode(['success' => false, 'error' => 'id mancante']);
             exit();
         }
+        // Recupera la sessione PRIMA di eliminare, per ripulire la cartella foto.
+        $sg = $db->prepare("SELECT session_id FROM fasi WHERE id = ? AND stato = 'bozza'");
+        $sg->execute([$id]);
+        $sid = (string) $sg->fetchColumn();
         $db->prepare("DELETE FROM fasi WHERE id = ? AND stato = 'bozza'")->execute([$id]);
+        if ($sid !== '') {
+            $dir = ardyBozzaFotoDir($sid, $id);
+            if (is_dir($dir)) {
+                foreach (glob($dir . '*') as $f) { if (is_file($f)) @unlink($f); }
+                @rmdir($dir);
+            }
+        }
         echo json_encode(['success' => true]);
         exit();
     }

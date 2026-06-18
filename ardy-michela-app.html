@@ -349,6 +349,9 @@
               <div class="lav-foto-count" id="lavVideoCount"></div>
               <div class="lav-preview" id="lavPreview"></div>
               <div class="lav-preview" id="lavVideoPreview"></div>
+              <button class="btn-secondary" id="btnSalvaBozza" onclick="salvaFaseBozza()" style="width:100%;margin-bottom:10px;">
+                💾 SALVA IN BOZZA (pubblichi dopo)
+              </button>
               <button class="btn-pubblica" id="btnPubblica" onclick="pubblicaFase('fase')">
                 ✦ PUBBLICA FASE + NOTIFICA CLIENTE
               </button>
@@ -1849,20 +1852,25 @@ async function caricaFasiBozza(sessionId) {
     const bozze = await r.json();
     if (!Array.isArray(bozze) || !bozze.length) return;
     fasiBozzaCache = bozze;
-    cont.innerHTML = bozze.map(b => `
+    cont.innerHTML = bozze.map(b => {
+      let nFoto = 0; try { nFoto = (JSON.parse(b.foto_urls || '[]') || []).length; } catch (e) { nFoto = 0; }
+      let nVideo = 0; try { nVideo = (JSON.parse(b.video_urls || '[]') || []).length; } catch (e) { nVideo = 0; }
+      const media = (nFoto ? ` <span style="color:var(--text-dim);">📷${nFoto}</span>` : '') + (nVideo ? ` <span style="color:var(--text-dim);">🎥${nVideo}</span>` : '');
+      return `
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px dashed var(--border);border-radius:6px;padding:8px 10px;margin-bottom:6px;">
-        <span style="font-size:13px;">${escHtml(b.fase_nome)}${b.prezzo ? ` <span style="color:var(--text-dim);">— € ${parseFloat(b.prezzo).toLocaleString('it-IT', {minimumFractionDigits:2})}</span>` : ''}</span>
+        <span style="font-size:13px;">${escHtml(b.fase_nome)}${b.prezzo ? ` <span style="color:var(--text-dim);">— € ${parseFloat(b.prezzo).toLocaleString('it-IT', {minimumFractionDigits:2})}</span>` : ''}${media}</span>
         <span style="display:flex;gap:6px;flex-shrink:0;">
           <button type="button" class="lib-btn-edit" onclick="modificaFaseBozza(${b.id})">✎ Modifica e pubblica</button>
           <button type="button" class="lib-btn-del" onclick="eliminaFaseBozza(${b.id})" title="Elimina">✕</button>
         </span>
       </div>
-    `).join('');
+    `;
+    }).join('');
     wrap.style.display = 'block';
   } catch (e) { /* lista facoltativa: in caso di errore resta nascosta */ }
 }
 
-function modificaFaseBozza(id) {
+async function modificaFaseBozza(id) {
   const b = fasiBozzaCache.find(x => x.id === id);
   if (!b) return;
   faseBozzaIdInCorso = b.id;
@@ -1872,7 +1880,96 @@ function modificaFaseBozza(id) {
   const body = document.getElementById('nuovaFaseBody');
   if (body) body.style.display = 'block';
   document.getElementById('lavFase').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  showToast('✎ Bozza caricata nel form: modifica e premi PUBBLICA', '');
+
+  // Ricarica le FOTO e i VIDEO salvati nella bozza, così premendo PUBBLICA partono con tutto.
+  const sessionId = currentLead && currentLead.Session_ID;
+  const preview = document.getElementById('lavPreview');
+  preview.innerHTML = ''; lavImmagini = [];
+  const vprev = document.getElementById('lavVideoPreview');
+  vprev.innerHTML = ''; lavVideoUrls = [];
+
+  let foto = [];  try { foto  = JSON.parse(b.foto_urls  || '[]') || []; } catch (e) { foto  = []; }
+  let video = []; try { video = JSON.parse(b.video_urls || '[]') || []; } catch (e) { video = []; }
+
+  for (const fname of foto) {
+    try {
+      const url = FASI_BOZZA_URL + '?session_id=' + encodeURIComponent(sessionId) + '&id=' + id + '&file=' + encodeURIComponent(fname);
+      const r = await fetch(url);
+      if (!r.ok) continue;
+      const blob = await r.blob();
+      const dataUrl = await new Promise(res => {
+        const fr = new FileReader();
+        fr.onload  = () => res(fr.result);
+        fr.onerror = () => res(null);
+        fr.readAsDataURL(blob);
+      });
+      if (!dataUrl) continue;
+      lavImmagini.push(dataUrl.split(',')[1]);
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      preview.appendChild(img);
+    } catch (e) { /* salta la foto non caricabile */ }
+  }
+  aggiornaContatoreFoto();
+
+  for (const vurl of video) {
+    lavVideoUrls.push(vurl);
+    const v = document.createElement('video');
+    v.src = vurl; v.controls = true; v.preload = 'metadata'; v.playsInline = true;
+    v.style.cssText = 'max-width:140px;border-radius:6px;margin:4px;';
+    vprev.appendChild(v);
+  }
+  aggiornaContatoreVideo();
+
+  showToast('✎ Bozza caricata (foto e video inclusi): rivedi e premi PUBBLICA', '');
+}
+
+// "Salva sul momento, pubblica la sera": persiste la fase come BOZZA (nome, note,
+// prezzo, foto, video) SENZA pubblicare né notificare il cliente.
+async function salvaFaseBozza() {
+  const sessionId = currentLead && currentLead.Session_ID;
+  if (!sessionId) { showToast('⚠ Seleziona prima una scheda valida', 'error'); return; }
+  const fase   = document.getElementById('lavFase').value.trim();
+  const note   = document.getElementById('lavNote').value.trim();
+  const prezzo = document.getElementById('lavPrezzo').value.trim();
+  if (!fase && !note) { showToast('⚠ Scrivi almeno il nome fase o due righe di note', 'error'); return; }
+  let imgs = lavImmagini;
+  if (imgs.length > 6) { showToast('⚠ Max 6 foto in bozza: tengo le prime 6', 'error'); imgs = imgs.slice(0, 6); }
+
+  const btn = document.getElementById('btnSalvaBozza');
+  const lbl = btn.textContent; btn.disabled = true; btn.textContent = '⏳ Salvo…';
+  try {
+    const res = await fetch(FASI_BOZZA_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mode:        'salva',
+        session_id:  sessionId,
+        id:          faseBozzaIdInCorso || null,
+        fase_nome:   fase,
+        testo_breve: note,
+        prezzo:      prezzo,
+        immagini:    imgs,
+        video_urls:  lavVideoUrls,
+      })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'errore');
+    showToast('💾 Fase salvata in bozza', 'success');
+    // Pulisci il form per la fase successiva (la bozza resta salvata sul server)
+    faseBozzaIdInCorso = null;
+    document.getElementById('lavFase').value  = '';
+    document.getElementById('lavNote').value  = '';
+    document.getElementById('lavPrezzo').value = '';
+    document.getElementById('lavPreview').innerHTML = '';
+    lavImmagini = []; aggiornaContatoreFoto();
+    document.getElementById('lavVideoPreview').innerHTML = '';
+    lavVideoUrls = []; aggiornaContatoreVideo();
+    caricaFasiBozza(sessionId);
+  } catch (e) {
+    showToast('⚠ Errore salvataggio bozza: ' + e.message, 'error');
+  }
+  btn.disabled = false; btn.textContent = lbl;
 }
 
 async function eliminaFaseBozza(id) {
