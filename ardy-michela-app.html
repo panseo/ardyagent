@@ -2657,8 +2657,11 @@ let socialPendingCache = [];
 
 // Allinea la cache dal server e ridisegna. Chiamata all'avvio e all'apertura scheda.
 async function syncSocialPending() {
+  // I post in attesa sono per-cliente: chiediamo solo quelli della scheda aperta.
+  const sid = (currentLead && currentLead.Session_ID) || '';
+  if (!sid) { socialPendingCache = []; renderSocialPending(); return; }
   try {
-    const r = await fetch(SOCIAL_BOZZE_URL);
+    const r = await fetch(SOCIAL_BOZZE_URL + '?session_id=' + encodeURIComponent(sid));
     const d = await r.json();
     if (d && d.success && Array.isArray(d.bozze)) socialPendingCache = d.bozze;
   } catch(e) { /* rete giù: tieni la cache attuale */ }

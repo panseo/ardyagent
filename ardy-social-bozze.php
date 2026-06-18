@@ -41,8 +41,21 @@ try {
     );
 
     // ── LETTURA ────────────────────────────────────────────
+    // Filtra per session_id: i post in attesa appartengono al cliente da cui
+    // sono stati creati (la sezione "Post social in attesa" sta nella sua scheda).
+    // Senza session_id non si restituisce nulla, così non compaiono su TUTTI i
+    // clienti (era il bug: la lista non era filtrata).
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-        $rows = $db->query("SELECT id, payload FROM social_bozze ORDER BY created_at ASC")->fetchAll();
+        $sid = isset($_GET['session_id'])
+            ? substr(preg_replace('/[^a-zA-Z0-9_\-]/', '', (string) $_GET['session_id']), 0, 120)
+            : '';
+        if ($sid === '') {
+            echo json_encode(['success' => true, 'bozze' => []]);
+            exit();
+        }
+        $stmt = $db->prepare("SELECT id, payload FROM social_bozze WHERE session_id = :sid ORDER BY created_at ASC");
+        $stmt->execute([':sid' => $sid]);
+        $rows = $stmt->fetchAll();
         $bozze = [];
         foreach ($rows as $r) {
             $obj = json_decode((string) $r['payload'], true);
