@@ -566,8 +566,17 @@ function inviaEmailCliente(string $email, string $nome, string $mobile, string $
     $kicker    = $isComunicazione ? 'Comunicazione importante' : 'Aggiornamento lavorazione';
     $ctaLabel  = $isComunicazione ? 'Leggi sulla pagina della lavorazione →' : 'Vedi la lavorazione completa →';
     $saluto    = trim($nome) !== '' ? 'Ciao ' . htmlspecialchars($nome) . ',' : 'Ciao,';
-    // Blocco "chat personale": solo se il cliente ha un codice
-    $bloccoChat = '';
+
+    // "Come funziona la pagina": spiega al cliente cosa può fare con il link.
+    // Per le comunicazioni straordinarie il taglio è diverso (deve leggere/approvare),
+    // per le fasi normali invita a seguire l'avanzamento e le foto.
+    $comeFunziona = $isComunicazione
+        ? '
+  <p style="font-size:14px;line-height:1.7;color:#555;margin:18px 0 0;">Apri la pagina della lavorazione qui sopra per leggere tutti i dettagli. Se serve una tua conferma per procedere, ti basta <strong>rispondere a questa email</strong> o scrivere a Sole in chat: ti ricontattiamo noi.</p>'
+        : '
+  <p style="font-size:14px;line-height:1.7;color:#555;margin:18px 0 0;"><strong>Cosa trovi nella pagina.</strong> Aprendo il link qui sopra segui l\'avanzamento del tuo mobile passo dopo passo: aggiungiamo le <strong>foto</strong> e una descrizione a ogni fase completata, così puoi vedere come procede il lavoro comodamente da casa. La pagina resta tua e si aggiorna da sola a ogni passaggio.</p>';
+
+    // Blocco "chat personale": mostra il codice se disponibile, altrimenti invita comunque alla chat.
     if ($codice !== '') {
         $bloccoChat = '
   <div style="border-radius:8px;background:#fbf8f2;padding:16px 20px;margin:24px 0;font-size:14px;line-height:1.6;color:#555;">
@@ -575,7 +584,22 @@ function inviaEmailCliente(string $email, string $nome, string $mobile, string $
     <div style="font-family:monospace;font-size:18px;letter-spacing:2px;color:#333;margin:10px 0;"><strong>' . htmlspecialchars($codice) . '</strong></div>
     Con questo ti riconosce subito e ti aggiorna sul tuo mobile — senza ricominciare da capo. Lo trovi anche nell\'email di benvenuto.
   </div>';
+    } else {
+        $bloccoChat = '
+  <div style="border-radius:8px;background:#fbf8f2;padding:16px 20px;margin:24px 0;font-size:14px;line-height:1.6;color:#555;">
+    💬 <strong>La tua chat personale.</strong> Per qualsiasi domanda o per sapere a che punto siamo, scrivi a Sole nella <a href="https://ardy-lab.it/ardy-agent/" style="color:#c8a96e;">chat di Ardy Lab</a>: indicale il <strong>codice personale</strong> che hai ricevuto nell\'email di benvenuto e ti riconosce subito, senza ricominciare da capo.
+  </div>';
     }
+
+    // Link ai social (gli stessi usati nell'email di ringraziamento), con override da config.
+    $igUrl = defined('GRAZIE_IG_URL') && GRAZIE_IG_URL !== '' ? GRAZIE_IG_URL : 'https://www.instagram.com/ardy.lab/';
+    $fbUrl = defined('GRAZIE_FB_URL') && GRAZIE_FB_URL !== '' ? GRAZIE_FB_URL : 'https://www.facebook.com/376551605541671';
+    $bloccoSocial = '
+  <p style="font-size:14px;line-height:1.7;color:#555;margin-top:24px;">Ci trovi anche sui social, dove raccontiamo le lavorazioni passo passo:</p>
+  <p style="font-size:14px;line-height:1.7;color:#555;margin:6px 0 0;">
+    👉 <a href="' . htmlspecialchars($igUrl) . '" style="color:' . $accent . ';">Instagram</a> &nbsp;·&nbsp;
+    👉 <a href="' . htmlspecialchars($fbUrl) . '" style="color:' . $accent . ';">Facebook</a>
+  </p>';
     try {
         $mail = new PHPMailer(true);
         $mail->isSMTP();
@@ -606,7 +630,9 @@ function inviaEmailCliente(string $email, string $nome, string $mobile, string $
   <a href="' . htmlspecialchars($link) . '" style="background:' . $accent . ';color:#fff;padding:12px 24px;text-decoration:none;border-radius:4px;font-family:sans-serif;font-size:14px;">
     ' . htmlspecialchars($ctaLabel) . '
   </a>
+  ' . $comeFunziona . '
   ' . $bloccoChat . '
+  ' . $bloccoSocial . '
   <p style="font-size:14px;line-height:1.7;color:#555;margin-top:28px;">Grazie di cuore per la fiducia: ogni fase la curiamo come se il mobile fosse nostro. A presto 🌿</p>
   <p style="margin-top:24px;font-size:12px;color:#bbb;">Ardy Lab — Restauro e laccatura mobili · Roma</p>
 </div>';
