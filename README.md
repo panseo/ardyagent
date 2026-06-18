@@ -43,6 +43,7 @@ ardyagent.ardy-lab.it/
 ├── ardy-dossier.php           # Dossier cliente in Markdown (clienti+preventivi+fasi+chat WA+chat web) per Sole/Michela
 ├── ardy-web-memoria.php       # Libreria: persistenza chat web (tabella web_messaggi) — usata da proxy e dossier
 ├── ardy-grazie-consegna.php   # Ringraziamento alla consegna: email (Brevo) + WhatsApp (template) — recensione/social/newsletter
+├── ardy-trasporti.php         # Consegne/ritiri: email "è pronto" (→COMPLETATO) + giornata Trasporti (libreria + endpoint dashboard)
 ├── ardy-import-preventivi.php # Import temporaneo preventivi storici da CSV (migrazione una-tantum)
 ├── ardy-import-scheda-pdf.php # Importa una scheda cliente da un PDF (estrazione AI) → dashboard
 ├── ardy-template-scheda-cliente.html # Modello PDF "Scheda Cliente" (etichette fisse, fillable)

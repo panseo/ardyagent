@@ -98,6 +98,20 @@ try {
         }
     }
 
+    // Transizione → COMPLETATO: avvisa il cliente che il mobile è pronto (email),
+    // una sola volta (guard interno su trasporto_pronto_at). La data di consegna
+    // arriverà poi dalla "giornata Trasporti" in dashboard.
+    if (array_key_exists('stato', $input)
+        && strtoupper((string) $input['stato']) === 'COMPLETATO'
+        && $statoVecchio !== 'COMPLETATO') {
+        try {
+            require_once __DIR__ . '/ardy-trasporti.php';
+            ardy_invia_pronto($db, $sessionId);
+        } catch (Throwable $e) {
+            error_log('ARDY UPDATE LEAD pronto: ' . $e->getMessage());
+        }
+    }
+
     echo json_encode(['success' => true]);
 
 } catch (PDOException $e) {

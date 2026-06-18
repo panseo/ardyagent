@@ -42,6 +42,7 @@
         </div>
         <div id="strumentiPanel" style="display:none;gap:5px;margin-top:5px;flex-wrap:wrap;">
           <button class="btn-nuovo-cliente" onclick="openMorosi()" style="flex:1;text-align:center;background:none;border:1px solid #8b3e3e;color:#d98a8a;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">💸 MOROSI</button>
+          <button class="btn-nuovo-cliente" onclick="openTrasporti()" title="Giornata Trasporti: assegna i clienti COMPLETATO a una data di consegna/ritiro e avvisali" style="flex:1;text-align:center;background:none;border:1px solid #3e8b6f;color:#8ed9bc;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">🚚 TRASPORTI</button>
           <button class="btn-nuovo-cliente" onclick="openImportPdf()" style="flex:1;text-align:center;background:none;border:1px solid #3e6f8b;color:#8ec0d9;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">📥 PDF</button>
           <button class="btn-nuovo-cliente" onclick="archiviaPersi()" title="Sposta in una cartella di quarantena le foto e i reel dei clienti PERSI, così puoi cancellarli a mano dal server e liberare spazio. Non cancella nulla." style="flex:1;text-align:center;background:none;border:1px solid #6f6f6f;color:#aaa;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">🧹 LIBERA SPAZIO</button>
           <button class="btn-nuovo-cliente" onclick="openCestino()" title="Clienti spostati nel cestino — ripristinabili per 30 giorni" style="flex:1;text-align:center;background:none;border:1px solid #6f3e3e;color:#c87070;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">🗑 CESTINO</button>
@@ -5014,6 +5015,37 @@ async function archiviaPersi() {
   </div>
 </div>
 
+<!-- ══ GIORNATA TRASPORTI ══ -->
+<div class="modal-overlay" id="trasportiOverlay" onclick="if(event.target===this)closeTrasporti()">
+  <div class="modal-lg" style="width:760px" onclick="event.stopPropagation()">
+    <div class="modal-lg-head">
+      <h3>🚚 GIORNATA TRASPORTI — CONSEGNE / RITIRI</h3>
+      <button class="modal-lg-close" onclick="closeTrasporti()">✕</button>
+    </div>
+    <div class="modal-lg-body">
+      <p style="font-size:11px;color:#999;margin:0 0 12px;line-height:1.6;">
+        Qui trovi i clienti in stato <b>COMPLETATO</b> (mobile pronto in bottega). Scegli la
+        <b>data della giornata Trasporti</b>, spunta i clienti da consegnare/ritirare quel giorno e
+        premi <b>Assegna</b>. Quando il giro è definito, premi <b>Conferma e avvisa</b>: ogni cliente
+        di quella data riceve l'email con il giorno della consegna (una volta sola).
+      </p>
+
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px;">
+        <div class="dark-field" style="margin:0;">
+          <label>Data giornata Trasporti</label>
+          <input type="date" id="tr-data">
+        </div>
+        <button class="btn-save" onclick="trAssegna()">📅 Assegna i selezionati</button>
+        <button class="btn-cancel" onclick="trConferma()" style="color:#8ed9bc;border-color:#3e8b6f;">📣 Conferma e avvisa</button>
+      </div>
+
+      <div id="trasportiList"><div class="storico-empty">CARICAMENTO...</div></div>
+
+      <div id="tr-result" style="display:none;margin-top:12px;padding:10px 14px;border-radius:4px;font-family:'DM Mono',monospace;font-size:11px;"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════════════════
 // PROFORMA — LOGIC
@@ -5624,5 +5656,113 @@ async function moInvia() {
     <div id="cestinoBody" style="overflow-y:auto;flex:1;"></div>
   </div>
 </div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// GIORNATA TRASPORTI — consegne/ritiri dei clienti COMPLETATO
+// ══════════════════════════════════════════════════════════
+const TRASPORTI_URL = BASE_URL + '/ardy-trasporti.php';
+let trItems = [];
+
+function openTrasporti() {
+  document.getElementById('trasportiOverlay').classList.add('open');
+  trCarica();
+}
+function closeTrasporti() {
+  document.getElementById('trasportiOverlay').classList.remove('open');
+}
+
+function trMsg(testo, ok) {
+  const r = document.getElementById('tr-result');
+  r.style.display = 'block';
+  r.textContent = testo;
+  r.style.background = ok ? '#16361f' : '#3a1818';
+  r.style.color = ok ? '#7fe0a0' : '#e08080';
+  setTimeout(() => { r.style.display = 'none'; }, 6000);
+}
+
+async function trCarica() {
+  const list = document.getElementById('trasportiList');
+  list.innerHTML = '<div class="storico-empty">CARICAMENTO...</div>';
+  try {
+    const res  = await fetch(TRASPORTI_URL + '?mode=lista');
+    const data = await res.json();
+    trItems = (data && data.items) ? data.items : [];
+    trRender();
+  } catch (e) {
+    list.innerHTML = '<div class="storico-empty">Errore di caricamento.</div>';
+  }
+}
+
+function trRender() {
+  const list = document.getElementById('trasportiList');
+  if (!trItems.length) {
+    list.innerHTML = '<div class="storico-empty">Nessun cliente in stato COMPLETATO al momento.</div>';
+    return;
+  }
+  list.innerHTML = trItems.map(it => {
+    const nome   = `${it.nome ?? ''} ${it.cognome ?? ''}`.trim() || '(senza nome)';
+    const mobile = it.mobile ? ` — ${escHtml(it.mobile)}` : '';
+    const email  = it.email ? escHtml(it.email) : '<span style="color:#c87070;">nessuna email</span>';
+    let stato = '<span style="color:#888;">da pianificare</span>';
+    if (it.trasporto_data) {
+      const badge = it.avvisato
+        ? `<span style="color:#7fe0a0;">📅 ${escHtml(it.trasporto_data)} · avvisato ✓</span>`
+        : `<span style="color:#e0b070;">📅 ${escHtml(it.trasporto_data)} · da avvisare</span>`;
+      stato = `${badge} <button onclick="trRimuovi('${escHtml(it.session_id)}')" title="Togli dalla giornata" style="background:none;border:none;color:#c87070;cursor:pointer;font-size:12px;">✕</button>`;
+    }
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 6px;border-bottom:1px solid #2a2a2a;">
+      <input type="checkbox" class="tr-check" value="${escHtml(it.session_id)}" style="width:16px;height:16px;">
+      <div style="flex:1;min-width:0;">
+        <div style="color:#e8e4dc;font-size:13px;">${escHtml(nome)}${mobile}</div>
+        <div style="color:#888;font-size:11px;">${email}</div>
+      </div>
+      <div style="font-size:11px;white-space:nowrap;">${stato}</div>
+    </div>`;
+  }).join('');
+}
+
+function trSelezionati() {
+  return Array.from(document.querySelectorAll('#trasportiList .tr-check:checked')).map(c => c.value);
+}
+
+async function trAssegna() {
+  const data = document.getElementById('tr-data').value;
+  if (!data) { trMsg('Scegli prima la data della giornata Trasporti.', false); return; }
+  const sessions = trSelezionati();
+  if (!sessions.length) { trMsg('Spunta almeno un cliente da assegnare.', false); return; }
+  try {
+    const res  = await fetch(TRASPORTI_URL, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ mode:'assegna', data, sessions }) });
+    const out = await res.json();
+    if (out.success) { trMsg(`${out.assegnati} cliente/i assegnati al ${data}.`, true); trCarica(); }
+    else trMsg(out.error || 'Errore.', false);
+  } catch (e) { trMsg('Errore di rete.', false); }
+}
+
+async function trRimuovi(session) {
+  try {
+    const res = await fetch(TRASPORTI_URL, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ mode:'rimuovi', session }) });
+    const out = await res.json();
+    if (out.success) trCarica(); else trMsg(out.error || 'Errore.', false);
+  } catch (e) { trMsg('Errore di rete.', false); }
+}
+
+async function trConferma() {
+  const data = document.getElementById('tr-data').value;
+  if (!data) { trMsg('Scegli la data della giornata Trasporti da confermare.', false); return; }
+  if (!confirm(`Avviso via email tutti i clienti assegnati al ${data}. Procedo?`)) return;
+  try {
+    const res  = await fetch(TRASPORTI_URL, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ mode:'conferma', data }) });
+    const out = await res.json();
+    if (out.success) {
+      trMsg(`Avvisati ${out.inviate} su ${out.totali} clienti del ${data}` + (out.gia_avvisati ? ` (${out.gia_avvisati} già avvisati).` : '.'), true);
+      trCarica();
+    } else trMsg(out.error || 'Errore.', false);
+  } catch (e) { trMsg('Errore di rete.', false); }
+}
+</script>
 </body>
 </html>

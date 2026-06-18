@@ -208,6 +208,14 @@ guida `ardy-gbp-post.md`. Scope `business.manage` aggiunto in `ardy-gcal-auth.ph
 
 ## 📋 TASK DA SVILUPPARE (aperti)
 
+### 🚚 Trasporti — aggiungere il WhatsApp ai 2 messaggi (oggi solo email)
+Il flusso consegne/ritiri è LIVE **solo via email** (18/06): messaggio **"è pronto"** automatico al
+passaggio a COMPLETATO + messaggio con la **data** dalla "giornata Trasporti" in dashboard
+(`ardy-trasporti.php`). Manca il **WhatsApp**: come per fasi/grazie servono **2 template Meta approvati**
+(es. `WA_TEMPLATE_PRONTO` 1 var, `WA_TEMPLATE_TRASPORTO` 2 var: mobile + data). Una volta approvati,
+agganciare l'invio WA in `ardy_invia_pronto()` e `ardy_invia_avviso_trasporto()` (punti già predisposti)
+e definire le costanti in `ardy-config.php`. (priorità media)
+
 ### 📲 Template WhatsApp avanzamento fase — aggiungere codice/social (lato Meta)
 Il messaggio WhatsApp di avanzamento lavorazione usa il **template Meta `WA_TEMPLATE_FASI`** a 4
 variabili (nome · mobile · fase · link): codice personale, social e spiegazione **non** si possono

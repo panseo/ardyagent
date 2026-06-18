@@ -74,7 +74,7 @@ di adesso; **cliccalo** per aprire i bottoni e sceglierne un altro (poi ricordat
 | **PREVENTIVO** | Gli hai mandato (o stai facendo) un preventivo |
 | **ACCONTO** | Ha pagato l'acconto → il lavoro parte! |
 | **IN LAVORAZIONE** | Il lavoro è in corso in laboratorio |
-| **COMPLETATO** | Lavoro finito in bottega, da consegnare al cliente |
+| **COMPLETATO** | Lavoro finito in bottega, da consegnare al cliente (scatta l'email "il tuo mobile è pronto") |
 | **CONSEGNATO** | Consegnato al cliente (scatta il ringraziamento) |
 | **STANDBY** | In pausa, da risentire più avanti |
 | **PERSO** | Trattativa chiusa senza accordo |
@@ -396,6 +396,12 @@ aggiornamento lavorazione, ringraziamento, email scritte da te, solleciti) porta
 il **codice personale** del cliente, il **contatto WhatsApp** di Sole e i **link ai social**.
 L'email di avanzamento lavorazione spiega anche al cliente **cosa può fare** nella pagina del suo
 mobile (seguire le fasi, vedere le foto).
+
+🚚 **Giornata Trasporti (consegne/ritiri).** Quando metti un cliente su **COMPLETATO** (mobile
+pronto), gli parte in automatico l'email **"il tuo mobile è pronto"**. Poi dal bottone **🚚 TRASPORTI**
+scegli una **data**, ci assegni i clienti pronti e premi **Conferma e avvisa**: ognuno riceve l'email
+con il **giorno della consegna/ritiro**. Ogni avviso parte una volta sola. *(Per ora solo email; il
+WhatsApp si aggiungerà più avanti.)*
 
 ---
 
