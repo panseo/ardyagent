@@ -716,6 +716,7 @@ if ($accessCode && $accessEmail && filter_var($accessEmail, FILTER_VALIDATE_EMAI
   </div>
   <p style="font-size:15px;line-height:1.7;">💬 <strong>Preferisci WhatsApp?</strong> Trovi Sole anche lì: scrivile al <strong>+39 379 375 6437</strong> e continui la conversazione come in chat — anche solo per sapere come procede il tuo lavoro.</p>
   <p style="margin:8px 0 4px;"><a href="https://wa.me/393793756437" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;font-family:sans-serif;font-size:14px;font-weight:600;padding:11px 22px;border-radius:6px;">Apri la chat WhatsApp</a></p>
+  ' . ardy_email_social_links() . '
   <p style="font-size:15px;line-height:1.7;margin-top:24px;">Conserva pure questa email: il tuo codice lo ritrovi quando vuoi. E per qualsiasi cosa ti basta rispondere qui — ti leggiamo sempre. A presto! 🌿</p>
   <p style="margin-top:32px;font-size:12px;color:#bbb;">Ardy Lab — Restauro e laccatura mobili · Roma</p>
 </div>';

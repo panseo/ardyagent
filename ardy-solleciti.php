@@ -25,6 +25,7 @@ date_default_timezone_set('Europe/Rome');
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-auth.php';
+require_once __DIR__ . '/ardy-email.php';
 require_once __DIR__ . '/phpmailer/src/PHPMailer.php';
 require_once __DIR__ . '/phpmailer/src/SMTP.php';
 require_once __DIR__ . '/phpmailer/src/Exception.php';
@@ -375,7 +376,7 @@ function sollecito_invia_whatsapp(string $telefono, string $testo): bool {
 // -----------------------------------------------------------
 // Helper: invio email sollecito (con eventuale allegato PDF preventivo)
 // -----------------------------------------------------------
-function sollecito_invia_email(string $email, string $nome, int $livello, string $testo, ?string $pdfPath): bool {
+function sollecito_invia_email(string $email, string $nome, int $livello, string $testo, ?string $pdfPath, string $codice = ''): bool {
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return false;
     $oggetti = [
         1 => 'Promemoria pagamento — Ardy Lab',
@@ -394,9 +395,23 @@ function sollecito_invia_email(string $email, string $nome, int $livello, string
         $mail->Port       = 587;
         $mail->CharSet    = 'UTF-8';
         $mail->setFrom('noreply@ardy-lab.it', 'Ardy Lab');
+        $mail->addReplyTo('ardy.documenti@gmail.com', 'Ardy Lab — Michela');
         $mail->addAddress($email, $nome);
         $mail->Subject = $oggetti[$livello] ?? 'Sollecito di pagamento — Ardy Lab';
-        $mail->Body    = $testo;
+        // Email HTML con logo + footer cliente: codice e WhatsApp sempre (utili per
+        // risolvere il pagamento); i social solo sui livelli morbidi (1-2), per non
+        // metterli sotto un sollecito formale.
+        $footer = ardy_email_codice_block($codice) . ardy_email_whatsapp_block()
+                . ($livello <= 2 ? ardy_email_social_links() : '');
+        $mail->isHTML(true);
+        $mail->Body = '
+<div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:32px;color:#333;">
+  ' . ardy_email_logo_cid($mail) . '
+  <div style="font-size:15px;line-height:1.7;color:#333;">' . nl2br(htmlspecialchars($testo)) . '</div>
+  ' . $footer . '
+  <p style="margin-top:32px;font-size:12px;color:#bbb;">Ardy Lab — Restauro e laccatura mobili · Roma</p>
+</div>';
+        $mail->AltBody = $testo;
         if ($pdfPath && is_file($pdfPath)) {
             $mail->addAttachment($pdfPath);
         }
@@ -584,8 +599,16 @@ try {
                         }
                     } catch (PDOException $e) { /* non bloccante */ }
                 }
+                $codiceCli = '';
+                if (!empty($caso['session_id'])) {
+                    try {
+                        $cc = $db->prepare("SELECT codice_accesso FROM clienti WHERE session_id = :sid LIMIT 1");
+                        $cc->execute([':sid' => $caso['session_id']]);
+                        $codiceCli = trim((string) ($cc->fetchColumn() ?: ''));
+                    } catch (PDOException $e) { /* non bloccante */ }
+                }
                 $esito['email'] = !empty($caso['email'])
-                    ? sollecito_invia_email($caso['email'], $caso['nome_cliente'], $livello, $testo, $pdfPath)
+                    ? sollecito_invia_email($caso['email'], $caso['nome_cliente'], $livello, $testo, $pdfPath, $codiceCli)
                     : false;
             }
 

@@ -64,7 +64,9 @@ function ardy_grazie_email($cli) {
   <p style="font-size:15px;line-height:1.8;color:#444;margin:0 0 16px;">grazie di cuore per averci affidato il tuo lavoro' . ($mobile !== '' ? ' (<strong>' . htmlspecialchars($mobile) . '</strong>)' : '') . '. Per noi ogni mobile è un piccolo pezzo di storia da curare, e siamo felici di avertelo riconsegnato come merita.</p>
   <p style="font-size:15px;line-height:1.8;color:#444;margin:0 0 8px;">Se ti sei trovato bene, ci aiuteresti tantissimo con una <strong>recensione su Google</strong>: poche righe fanno una grande differenza per una bottega artigiana come la nostra.</p>
   ' . $bottoneReview . '
-  <p style="font-size:15px;line-height:1.8;color:#444;margin:0 0 8px;">Ci trovi anche sui social, dove raccontiamo le lavorazioni passo passo:</p>
+  ' . ardy_email_codice_block(trim((string) ($cli['codice_accesso'] ?? ''))) . '
+  ' . ardy_email_whatsapp_block() . '
+  <p style="font-size:15px;line-height:1.8;color:#444;margin:18px 0 8px;">Ci trovi anche sui social, dove raccontiamo le lavorazioni passo passo:</p>
   <p style="font-size:15px;line-height:1.8;color:#444;margin:0 0 18px;">
     👉 <a href="' . htmlspecialchars($ig) . '" style="color:#c8a96e;">Instagram</a> &nbsp;·&nbsp;
     👉 <a href="' . htmlspecialchars($fb) . '" style="color:#c8a96e;">Facebook</a>
@@ -169,7 +171,7 @@ function ardy_invia_grazie_consegna(PDO $db, string $sessionId, bool $force = fa
     try { $db->exec("ALTER TABLE clienti ADD COLUMN consegnato_grazie_at DATETIME NULL"); }
     catch (PDOException $e) { /* già presente */ }
 
-    $q = $db->prepare("SELECT nome, cognome, email, telefono, mobile, consegnato_grazie_at FROM clienti WHERE session_id = :sid LIMIT 1");
+    $q = $db->prepare("SELECT nome, cognome, email, telefono, mobile, codice_accesso, consegnato_grazie_at FROM clienti WHERE session_id = :sid LIMIT 1");
     $q->execute([':sid' => $sid]);
     $cli = $q->fetch(PDO::FETCH_ASSOC);
     if (!$cli) return $out;

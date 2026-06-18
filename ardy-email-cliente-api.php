@@ -24,6 +24,7 @@
 
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
+require_once __DIR__ . '/ardy-email.php';
 require_once __DIR__ . '/phpmailer/src/PHPMailer.php';
 require_once __DIR__ . '/phpmailer/src/SMTP.php';
 require_once __DIR__ . '/phpmailer/src/Exception.php';
@@ -117,7 +118,7 @@ function ardyRisolviAllegato(?array $pdfFile, string $preventivoFile, ?array $bo
 }
 
 /** Spedisce l'email al cliente via SMTP Brevo (PHPMailer). Ritorna true/false. */
-function ardyInviaEmailCliente(string $to, string $nome, string $oggetto, string $testo, ?string $pdfPath): bool {
+function ardyInviaEmailCliente(string $to, string $nome, string $oggetto, string $testo, ?string $pdfPath, string $codice = ''): bool {
     if (!filter_var($to, FILTER_VALIDATE_EMAIL)) return false;
     try {
         $mail = new PHPMailer(true);
@@ -130,9 +131,20 @@ function ardyInviaEmailCliente(string $to, string $nome, string $oggetto, string
         $mail->Port       = 587;
         $mail->CharSet    = 'UTF-8';
         $mail->setFrom('noreply@ardy-lab.it', 'Ardy Lab');
+        $mail->addReplyTo('ardy.documenti@gmail.com', 'Ardy Lab — Michela');
         $mail->addAddress($to, $nome);
         $mail->Subject = $oggetto !== '' ? $oggetto : 'Ardy Lab';
-        $mail->Body    = $testo;
+        // Email HTML con logo in cima e footer cliente (codice + WhatsApp + social) in fondo,
+        // coerente con le altre email da Sole. Il testo (scritto/generato) è plain → lo proteggo.
+        $mail->isHTML(true);
+        $mail->Body = '
+<div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:32px;color:#333;">
+  ' . ardy_email_logo_cid($mail) . '
+  <div style="font-size:15px;line-height:1.7;color:#333;">' . nl2br(htmlspecialchars($testo)) . '</div>
+  ' . ardy_email_footer_cliente($codice) . '
+  <p style="margin-top:32px;font-size:12px;color:#bbb;">Ardy Lab — Restauro e laccatura mobili · Roma</p>
+</div>';
+        $mail->AltBody = $testo;
         if ($pdfPath && is_file($pdfPath)) {
             $mail->addAttachment($pdfPath);
         }
@@ -199,12 +211,13 @@ try {
                 echo json_encode(['success' => false, 'error' => 'Indirizzo email del cliente mancante']);
                 exit();
             }
-            $st = $db->prepare("SELECT nome, cognome FROM clienti WHERE session_id = ? LIMIT 1");
+            $st = $db->prepare("SELECT nome, cognome, codice_accesso FROM clienti WHERE session_id = ? LIMIT 1");
             $st->execute([$sessionId]);
-            $cli  = $st->fetch();
-            $nome = $cli ? trim(($cli['nome'] ?? '') . ' ' . ($cli['cognome'] ?? '')) : '';
+            $cli    = $st->fetch();
+            $nome   = $cli ? trim(($cli['nome'] ?? '') . ' ' . ($cli['cognome'] ?? '')) : '';
+            $codice = $cli ? trim((string) ($cli['codice_accesso'] ?? '')) : '';
 
-            $ok = ardyInviaEmailCliente($destinatario, $nome, $oggetto, $testo, $allegatoPath);
+            $ok = ardyInviaEmailCliente($destinatario, $nome, $oggetto, $testo, $allegatoPath, $codice);
             if (!$ok) {
                 echo json_encode(['success' => false, 'error' => 'Invio non riuscito']);
                 exit();

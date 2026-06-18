@@ -47,4 +47,59 @@ function ardy_email_logo_cid($mail, int $h = 48): string {
     return ardy_email_logo_fallback();
 }
 
+// -----------------------------------------------------------
+// Footer cliente condiviso: codice personale + WhatsApp + social.
+// Va incluso in TUTTE le email che il cliente riceve da Sole, così che in
+// ogni messaggio ritrovi il suo codice, come scriverci e dove seguirci.
+// Restituisce HTML inline (usabile sia con PHPMailer sia con Brevo HTTP API).
+// -----------------------------------------------------------
+
+// Numero WhatsApp pubblico di Sole (overridabile da config).
+function ardy_email_wa_number(): string {
+    return defined('ARDY_WA_PUBLIC_NUMBER') && ARDY_WA_PUBLIC_NUMBER !== '' ? ARDY_WA_PUBLIC_NUMBER : '393793756437';
+}
+
+// Blocco "chat personale" con il codice; se il codice manca rimanda a quello
+// ricevuto nell'email di benvenuto (così il blocco c'è sempre).
+function ardy_email_codice_block(string $codice = ''): string {
+    if (trim($codice) !== '') {
+        return '
+  <div style="border-radius:8px;background:#fbf8f2;padding:16px 20px;margin:24px 0;font-size:14px;line-height:1.6;color:#555;">
+    💬 <strong>La tua chat personale.</strong> Per qualsiasi domanda o per sapere a che punto siamo, scrivi a Sole nella <a href="https://ardy-lab.it/ardy-agent/" style="color:#c8a96e;">chat di Ardy Lab</a> e indicale il tuo codice personale:
+    <div style="font-family:monospace;font-size:18px;letter-spacing:2px;color:#333;margin:10px 0;"><strong>' . htmlspecialchars($codice) . '</strong></div>
+    Con questo ti riconosce subito e ti aggiorna sul tuo mobile — senza ricominciare da capo. Lo trovi anche nell\'email di benvenuto.
+  </div>';
+    }
+    return '
+  <div style="border-radius:8px;background:#fbf8f2;padding:16px 20px;margin:24px 0;font-size:14px;line-height:1.6;color:#555;">
+    💬 <strong>La tua chat personale.</strong> Per qualsiasi domanda o per sapere a che punto siamo, scrivi a Sole nella <a href="https://ardy-lab.it/ardy-agent/" style="color:#c8a96e;">chat di Ardy Lab</a>: indicale il <strong>codice personale</strong> che hai ricevuto nell\'email di benvenuto e ti riconosce subito, senza ricominciare da capo.
+  </div>';
+}
+
+// Blocco WhatsApp (testo + pulsante) verso il numero di Sole.
+function ardy_email_whatsapp_block(): string {
+    $n = ardy_email_wa_number();
+    return '
+  <p style="font-size:14px;line-height:1.7;color:#555;margin-top:18px;">💬 <strong>Preferisci WhatsApp?</strong> Trovi Sole anche lì: scrivile al <strong>+39 379 375 6437</strong> e continui la conversazione come in chat.</p>
+  <p style="margin:8px 0 0;"><a href="https://wa.me/' . htmlspecialchars($n) . '" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;font-family:sans-serif;font-size:14px;font-weight:600;padding:11px 22px;border-radius:6px;">Apri la chat WhatsApp</a></p>';
+}
+
+// Link social (Instagram/Facebook), con override da config (gli stessi
+// dell'email di ringraziamento).
+function ardy_email_social_links(string $accent = '#c8a96e'): string {
+    $ig = defined('GRAZIE_IG_URL') && GRAZIE_IG_URL !== '' ? GRAZIE_IG_URL : 'https://www.instagram.com/ardy.lab/';
+    $fb = defined('GRAZIE_FB_URL') && GRAZIE_FB_URL !== '' ? GRAZIE_FB_URL : 'https://www.facebook.com/376551605541671';
+    return '
+  <p style="font-size:14px;line-height:1.7;color:#555;margin-top:24px;">Ci trovi anche sui social, dove raccontiamo le lavorazioni passo passo:</p>
+  <p style="font-size:14px;line-height:1.7;color:#555;margin:6px 0 0;">
+    👉 <a href="' . htmlspecialchars($ig) . '" style="color:' . $accent . ';">Instagram</a> &nbsp;·&nbsp;
+    👉 <a href="' . htmlspecialchars($fb) . '" style="color:' . $accent . ';">Facebook</a>
+  </p>';
+}
+
+// Footer cliente completo: codice + WhatsApp + social. Da inserire prima della firma.
+function ardy_email_footer_cliente(string $codice = '', string $accent = '#c8a96e'): string {
+    return ardy_email_codice_block($codice) . ardy_email_whatsapp_block() . ardy_email_social_links($accent);
+}
+
 }
