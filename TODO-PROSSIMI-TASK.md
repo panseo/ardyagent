@@ -66,6 +66,19 @@ CRM in attività piena, **multi-utente** (Michela + Andrea). Focus 17/06: render
 - ✅ **Git**: `main` riallineato alla lineage attiva (root `98b352f`); vecchia lineage orfana
   (`b49606b`) da non rifondere (vedi NOTE OPERATIVE). Cleanup dei vecchi branch `claude/*` da fare a mano.
 
+**Interventi 18/06 (fatti + deployati + testati):**
+- ✅ **Ricezione foto su WhatsApp (Piano B foto)** LIVE: il cliente manda una foto del mobile → Sole
+  la **scarica da Meta** (media id → URL firmato → byte, via `WA_TOKEN`), la **vede e valuta**, e la
+  **salva nella cartella della scheda** → compare in dashboard + allegata all'email a Michela.
+  (`ardy-whatsapp-webhook.php` estrae `media_id/mime/caption`; n8n li inoltra; `ardy-wa-agent.php`
+  scarica/comprime/allega). **Fix chiave**: l'agente non includeva `ardy-net.php` → `ardyCompressImage()`
+  era undefined → Fatal error a runtime (Sole diceva "vedo solo testo"/"non vedo immagini"). Risolto col
+  `require_once ardy-net.php`. Testato dal vivo: foto salvata in dashboard ✅.
+- ✅ **Regola identità numero su WhatsApp** (solo prompt, niente codice): su WhatsApp il numero di
+  riconoscimento è SEMPRE quello con cui il cliente scrive; Sole non registra un numero diverso (per un
+  altro numero/dispositivo → webchat + codice). Evita schede orfane e tiene saldo il riconoscimento
+  automatico (lookup per `telefono_last9` del numero WhatsApp). (`ardy-whatsapp-system.txt`)
+
 Prossimi task per priorità: accesso "dipendente" (permessi limitati) · programmazione data/ora post social (cron/n8n) · briefing del mattino · backlog performance/sicurezza.
 
 ---
@@ -194,6 +207,40 @@ guida `ardy-gbp-post.md`. Scope `business.manage` aggiunto in `ardy-gcal-auth.ph
 ---
 
 ## 📋 TASK DA SVILUPPARE (aperti)
+
+### 🗂️ Bozze fasi di lavorazione CON foto (salva sul momento, pubblica la sera) — DA FARE
+**Esigenza (Michela, 18/06):** mentre lavora apre una nuova fase, scrive due righe, allega fino a
+**6 foto** della fase e **salva in bozza** — senza pubblicare né notificare. La sera, con calma,
+rivede le foto, rifinisce il prompt/note e **pubblica** (testo AI + pagina + notifica cliente).
+
+**Stato attuale (verificato 18/06):** il sistema bozze esiste (`stato='bozza'` su `fasi`) ma salva
+SOLO nome + `testo_breve` + prezzo — **non foto né video**. Oggi le foto vivono solo nel browser
+(`lavImmagini`, base64) e si caricano solo al "PUBBLICA". Non c'è un pulsante "Salva in bozza" nel
+form: le bozze nascono solo dai template di libreria (`mode='genera'`). `modificaFaseBozza()`
+ricarica nome/note/prezzo ma **non** le foto.
+
+**Disegno (3 file, nessuna regressione sul publish):**
+1. **`ardy-fasi-bozza-api.php`** — nuovo `mode:'salva'` = upsert di UNA bozza completa:
+   - input: `session_id`, `id` (opz., per update), `fase_nome`, `testo_breve`, `prezzo`,
+     `immagini` (base64, ≤6), `video_urls`;
+   - persiste le foto su disco in cartella dedicata `ARDY_UPLOAD_DIR/{session}/fasi-bozza/{id}/`
+     con le stesse regole del publish (MIME jpeg/png/webp, max size, `ardyCompressImage`),
+     mette gli URL in `foto_urls`; merge con le foto già presenti;
+   - `id` presente + `stato='bozza'` → UPDATE; assente → INSERT (calcola `ordine` come oggi);
+   - GET lista: aggiungere `testo_breve`, `foto_urls`, `video_urls` ai campi tornati.
+2. **`ardy-michela-app.html`** (dashboard):
+   - nuovo pulsante **💾 SALVA IN BOZZA** accanto a "PUBBLICA";
+   - `modificaFaseBozza()` ricarica anche **foto/video** nel form (foto come anteprime + reimmesse
+     in `lavImmagini` ri-fetchandole come base64, same-origin → poi il PUBBLICA parte identico a oggi);
+   - aggiornare i contatori foto/video.
+3. **`ardy-pubblica-lavorazione.php`** — alla pubblicazione di una bozza (`fase_id` presente),
+   **pulire la cartella temporanea** `fasi-bozza/{id}` (le foto definitive le mette già lui su WP).
+   Resto del publish invariato → email/WhatsApp/social intatti.
+
+**Perché così:** il "PUBBLICA" non cambia comportamento (riceve sempre base64 dal form); si aggiunge
+solo la persistenza nelle bozze + il ricarico. Il widget pubblico mostra già solo `stato='pubblicata'`,
+quindi finché è bozza il cliente non vede nulla. Decisione UX da confermare al via: includere anche i
+**video** nelle bozze (il form già li ha) — proposta: sì.
 
 ### 📷 ~~Gestione foto anche nelle bozze social in attesa~~ ✅ FATTO (17/06, da testare dal vivo)
 Nell'editor "✏ Modifica" di un post in attesa ora ci sono **➕ Aggiungi foto** e **✕** su ogni
