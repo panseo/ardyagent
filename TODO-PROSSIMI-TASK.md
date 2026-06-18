@@ -208,6 +208,14 @@ guida `ardy-gbp-post.md`. Scope `business.manage` aggiunto in `ardy-gcal-auth.ph
 
 ## 📋 TASK DA SVILUPPARE (aperti)
 
+### 📲 Template WhatsApp avanzamento fase — aggiungere codice/social (lato Meta)
+Il messaggio WhatsApp di avanzamento lavorazione usa il **template Meta `WA_TEMPLATE_FASI`** a 4
+variabili (nome · mobile · fase · link): codice personale, social e spiegazione **non** si possono
+aggiungere dal codice PHP. Per averli anche su WhatsApp va **modificato il template su Meta Business
+Manager** (nuove variabili o testo fisso nel body/footer) e rifatto **approvare**, poi allineare i
+parametri in `inviaWhatsAppCliente()` (`ardy-pubblica-lavorazione.php`). Oggi quei dati ci sono già
+nell'**email** di avanzamento e nella **pagina lavorazione** linkata. (priorità bassa)
+
 ### 🎨 Adottare temi/layout da "Claude Design" — ANALISI PRONTA (da decidere)
 Voglio usare i layout di Claude Design. **Analisi completa di fattibilità/rischi/procedura** in
 **`ANALISI-CLAUDE-DESIGN.md`**. In sintesi: il dashboard ha già i design-token (`:root` in
