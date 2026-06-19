@@ -5,19 +5,13 @@
 
 ---
 
-## 🔴 PRIORITÀ ALTA — SICUREZZA (da fare al più presto)
+## ✅ ~~PRIORITÀ ALTA — SICUREZZA~~ FATTO (19/06/2026)
 
-- 🔑 **Ruotare le chiavi sensibili esposte in chiaro** (17/06): l'export del workflow n8n WhatsApp
-  conteneva in chiaro, nel nodo Code, **Token Meta/WhatsApp**, **API key Anthropic** e
-  **`WA_LOOKUP_SECRET`**. Quel file è uscito dall'infrastruttura (chat + Download locale).
-  **Azioni:**
-  1. Rigenerare il **token Meta** (Meta for Developers → app WhatsApp) e aggiornarlo nel nodo n8n.
-  2. Rigenerare la **API key Anthropic** (console.anthropic.com) e aggiornarla nel nodo n8n.
-  3. Valutare la rotazione di `WA_LOOKUP_SECRET` (in `ardy-config.php` + nel nodo n8n, devono
-     restare allineati).
-  4. **Hardening futuro**: spostare questi segreti dal codice del nodo alle *Credentials*/variabili
-     d'ambiente di n8n, così non finiscono più negli export. (priorità media)
-  > Nota: la copia versionata in `n8n/ardy-whatsapp-workflow.json` è già **ripulita** (placeholder).
+- ✅ **Chiavi sensibili ruotate** (19/06): Token Meta/WhatsApp, API key Anthropic e
+  `WA_LOOKUP_SECRET` rigenerati e aggiornati in `ardy-config.php` + nodo n8n. Verificato
+  dal vivo su WhatsApp — Sole risponde correttamente con tutte e tre le nuove chiavi.
+  - **Hardening futuro** ancora aperto: spostare i segreti dal codice del nodo alle
+    *Credentials*/variabili d'ambiente di n8n (così non finiscono più negli export). (priorità media)
 
 ---
 
