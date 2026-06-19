@@ -167,6 +167,32 @@ supporto Docker in csf per non spezzare il bridge interno dei container ai resta
 `https://n8n.ardy-lab.it` e mandare un messaggio WhatsApp di prova a Sole (il ramo WA passa da n8n).
 Se Sole risponde, il bridge Docker è intatto.
 
+### ✅ Soluzione Docker VERIFICATA (19/06, csf v16.20 cPanel)
+Topologia reale: n8n_app è sul bridge **`br-b118407a7c22`** (rete `n8n_default`, **`172.18.0.0/16`**,
+gw .1, container .2), **non** su `docker0` (172.17, DOWN/inutilizzato). Pubblicazione `127.0.0.1:5678`.
+
+Servono **DUE** cose, perché coprono due percorsi diversi:
+1. **`DOCKER=1` puntato sul bridge giusto** → copre il FORWARD (egress del container verso Internet:
+   API Claude/Meta, chiamate ai `.php`):
+   ```
+   DOCKER = "1"
+   DOCKER_DEVICE   = "br-b118407a7c22"
+   DOCKER_NETWORK4 = "172.18.0.0/16"
+   DOCKER_NETWORK6 = ""
+   ```
+2. **`ETH_DEVICE_SKIP = "br-b118407a7c22"`** → copre il percorso **OUTPUT locale**. Poiché n8n è
+   pubblicato su `127.0.0.1`, Docker usa **docker-proxy**: un processo dell'host (UID 0) che si connette
+   a `172.18.0.2:5678`. Questo è traffico OUTPUT, **non** FORWARD → l'integrazione `DOCKER=1` da sola
+   **non lo copre** e `TCP_OUT` lo droppa (`*TCP_OUT Blocked* OUT=br-b118... DST=172.18.0.2 DPT=5678`).
+   Escludendo il bridge dal filtraggio locale, l'hop docker-proxy→container passa.
+
+Esito verificato: n8n `HTTP=200` stabile, nessun nuovo blocco `172.18` nel `dmesg` dopo il reload.
+
+> ⚠️ **Fragilità da ricordare**: `br-b118407a7c22` è derivato dall'ID della rete Docker. Se la rete
+> `n8n_default` viene **ricreata** (`docker network rm/create`, o un `docker compose down/up` che la
+> rifà), il nome bridge **cambia** → aggiornare `DOCKER_DEVICE` ed `ETH_DEVICE_SKIP`. Da annotare nelle
+> NOTE OPERATIVE. Alternativa più robusta se capitasse spesso: regole su subnet via `csfpost.sh`.
+
 ---
 
 ## 3-ter. Interazioni con la sicurezza esistente (conflitti / complementarità)
