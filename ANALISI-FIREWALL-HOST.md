@@ -101,6 +101,48 @@ chiusa alla cieca): `22` (SSH — **attivo, va tenuto aperto**), `80/443` (Apach
 
 ---
 
+## 2-bis. Foto della superficie — RILEVATA il 19/06/2026 (via SSH root)
+`ss -tlnp` / `ss -ulnp` / `docker ps` sul VPS. Stato di partenza reale:
+
+**✅ A posto — privati su localhost (nessuna azione):**
+| Servizio | Bind | Note |
+|---|---|---|
+| MariaDB | `127.0.0.1:3306` | DB app — **non esposto** ✅ |
+| n8n (docker-proxy) | `127.0.0.1:5678` | container `n8n_app` `127.0.0.1:5678->5678/tcp` — **non esposto** ✅ |
+| Redis | `127.0.0.1` / `[::1]:6379` | **non esposto** ✅ |
+| cPHulkd | `127.0.0.1:579` | brute-force protection cPanel (già attiva) |
+| chronyd (NTP) | `127.0.0.1:323` | localhost |
+| pdns control | `127.0.0.1:953` | localhost |
+
+`firewalld` = **disabled** (confermato) · `csf` = **assente** (da installare).
+
+**🌐 Esposti su `0.0.0.0`/`[::]` (la superficie da governare con csf):**
+- **Legittimi da tenere aperti**: `22` (SSH), `80`/`443` (Apache), `2082/2083` (cPanel),
+  `2086/2087` (WHM), `2095/2096` (webmail), `2077/2078/2079/2080/2091` (cpdavd WebDAV/CalDAV),
+  `25/465/587` (exim SMTP), `110/143/993/995` (dovecot POP/IMAP), `4190` (managesieve), `53` (PowerDNS).
+- **⚠️ Da CHIUDERE — `111` (rpcbind, TCP+UDP)**: portmapper, serve solo a NFS. Inutile qui e noto
+  vettore di amplificazione DDoS. csf non lo whitelista (→ chiuso); meglio anche disabilitare il
+  servizio: `systemctl disable --now rpcbind rpcbind.socket` (verificare prima che NFS non sia in uso).
+- **❓ Da DECIDERE — stack mail (25,110,143,465,587,993,995,4190)**: la posta è su **Aruba** (MX) e
+  l'invio via **Brevo**, quindi questo host probabilmente **non riceve mail** da fuori → porte
+  chiudibili. Confermare che nessun account/flow usi la mail locale prima di chiuderle. In dubbio:
+  tenerle aperte (default cPanel) e stringere dopo.
+- **❓ Da valutare — `53` (PowerDNS)**: i NS autoritativi sono **Cloudflare**; il pdns locale forse non
+  serve pubblico. Non urgente (autoritativo, non resolver aperto). Tenere per ora.
+
+**Config csf risultante (stato di partenza consigliato):**
+```
+# /etc/csf/csf.conf
+TCP_IN  = "22,25,53,80,110,143,443,465,587,993,995,2077,2078,2079,2080,2082,2083,2086,2087,2091,2095,2096,4190"
+UDP_IN  = "53"
+# TCP_OUT/UDP_OUT: lasciare permissivi all'inizio (Sole fa molte chiamate in uscita:
+#   API Claude, Meta, Brevo SMTP, Cloudflare, git, docker pull). L'egress filtering
+#   e' una rifinitura successiva, da fare testando che Sole non smetta di funzionare.
+```
+> Se in futuro si chiudono mail/DNS, togliere i relativi numeri da TCP_IN/UDP_IN.
+
+---
+
 ## 3. Il nodo tecnico: csf **e** Docker insieme (senza rompersi a vicenda)
 Docker scrive da sé le sue regole iptables (chain `DOCKER`, `DOCKER-USER`, NAT). Il rischio è che csf,
 quando (ri)applica le sue regole, **flushi** le chain e spezzi il networking dei container già attivi
@@ -146,8 +188,11 @@ perl /usr/local/csf/bin/csftest.pl
 # C) PRIMA di andare LIVE: restare in TESTING (default a install) ed editare la config
 #    /etc/csf/csf.conf  →  punti chiave:
 #    - TESTING = "1"            (resta in test: csf si auto-disattiva ogni 5 min → niente lockout)
-#    - TCP_IN / TCP_OUT        (aprire SOLO le porte viste al §2: 22,80,443,2086,2087,2083,2096,... )
+#    - TCP_IN = "22,25,53,80,110,143,443,465,587,993,995,2077,2078,2079,2080,2082,2083,2086,2087,2091,2095,2096,4190"
+#                              (valori reali dal §2-bis; ESCLUSA la 111/rpcbind)
 #                              ⚠️ NON dimenticare la 22 (SSH) o ti chiudi fuori al primo csf -r
+#    - UDP_IN = "53"           (DNS; chronyd NTP e' su localhost)
+#    - TCP_OUT/UDP_OUT permissivi all'inizio (vedi §2-bis: Sole fa molte chiamate in uscita)
 #    - abilitare il supporto Docker (opzione nativa se presente nella versione, vedi §3)
 #    - LF_DAEMON = "1"         (LFD: rileva i brute-force; coordinare/sostituire Fail2ban — NON
 #                               tenerli entrambi a bannare le stesse cose o si pestano i piedi)
