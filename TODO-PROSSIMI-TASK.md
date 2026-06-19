@@ -92,10 +92,21 @@ notturno (nftables salito a `el9_8`, firewalld fermo a `el9_7`) il daemon Docker
 firewalld attivo: `failed to create NAT chain DOCKER: COMMAND_FAILED: INVALID_IPV: 'ipv4' is not a
 valid backend or is unavailable` (la passthrough di firewalld è rotta dal disallineamento versioni;
 `dnf update firewalld` = "Nothing to do", nessuna fix nei repo). Soluzione applicata: `systemctl stop
-firewalld && systemctl disable firewalld` + Docker gestisce da sé le sue regole iptables. Docker e
-containerd sono `enabled` → ripartono al boot. **Se Docker non parte dopo un reboot/aggiornamento**,
+firewalld && systemctl disable firewalld`. **Se Docker non parte dopo un reboot/aggiornamento**,
 verificare che firewalld non sia tornato su (`systemctl is-enabled firewalld` deve dare `disabled`).
-Decisione firewall host ancora aperta → vedi task "Firewall host (csf)" più sotto.
+
+**✅ FIREWALL HOST = csf LIVE (19/06/2026).** Il firewall host definitivo è **`cpanel-csf` v16.20**
+(fork cPanel; il vecchio ConfigServer ha chiuso 31/08/2025 → installare SOLO via `yum install
+cpanel-csf`, mai il tarball). `firewalld` resta `disabled` di proposito; **csf non ne dipende**.
+Config + decisioni + runbook completo in **`ANALISI-FIREWALL-HOST.md`**. Punti critici da ricordare:
+- **Docker/n8n**: csf è configurato con `DOCKER=1` + `DOCKER_DEVICE/NETWORK4` sul bridge **reale**
+  `br-b118407a7c22` (172.18.0.0/16) **e** `ETH_DEVICE_SKIP="br-b118407a7c22"` (l'hop docker-proxy→
+  container è OUTPUT, non coperto da DOCKER=1). ⚠️ Se la rete `n8n_default` viene **ricreata**, il nome
+  bridge cambia → aggiornare quei 2 valori e `csf -r`.
+- **Cloudflare**: i range CF sono in `csf.allow` (solo ardy-lab.it passa da CF) → mai bannare CF.
+- **Fail2ban DISABILITATO** (rimpiazzato da LFD di csf). **rpcbind** disabilitato (111 chiuso).
+- Egress (`TCP_OUT/UDP_OUT`) lasciato **aperto** per ora → tightening è un follow-up (occhio alla
+  porta SMTP di Brevo prima di chiudere). Follow-up: `mod_remoteip` + opzione Cerber per l'IP reale.
 
 **Deploy sul server** (da root):
 ```
@@ -233,13 +244,19 @@ contengono solo `$env.WA_TOKEN` — un riferimento, mai il valore.
 costanti nel nodo Code con `$env.NOME`; (3) aggiornare il file versionato
 `n8n/ardy-whatsapp-node-completo.js` e il JSON del workflow. ~15 min.
 
-### 🔥 Firewall host — decidere il sostituto di firewalld (priorità media/sicurezza)
-firewalld è disabilitato dal 19/06 (incompatibile con Docker, vedi NOTE OPERATIVE). Per ora l'host
-è coperto da OVH Anti-DDoS + Fail2ban + ModSecurity, e n8n è solo su `127.0.0.1`. Da decidere il
-firewall host definitivo. Opzioni: (1) lasciare così (Docker gestisce iptables; più semplice);
-(2) **installare csf** (ConfigServer Firewall, lo standard su cPanel/WHM, convive con Docker) — racc.;
-(3) tentare il rientro di firewalld con downgrade di nftables a `el9_7` (rischioso, dipendenze el9_8).
-Prima di decidere: verificare quali porte host sono esposte (es. `ss -tlnp`) e che MySQL sia su localhost.
+### 🔥 ~~Firewall host — sostituto di firewalld~~ ✅ FATTO/LIVE (19/06/2026)
+**csf (`cpanel-csf` v16.20) installato e LIVE.** Scelta = opzione 2 (csf), motivata e documentata in
+**`ANALISI-FIREWALL-HOST.md`** (decisione + foto superficie + runbook + esito + follow-up). firewalld
+resta `disabled` di proposito (csf non ne dipende). Fail2ban disabilitato (LFD lo rimpiazza), rpcbind
+off, range Cloudflare whitelistati, Docker/n8n risolto (DOCKER=1 + ETH_DEVICE_SKIP sul bridge reale).
+Dettagli operativi nelle NOTE OPERATIVE sopra.
+
+**Follow-up rimasti (non bloccanti):** (1) ✅ `mod_remoteip` — **già attivo e auto-gestito da cPanel**
+(`cloudflare.conf`), verificato dal vivo: i domlog di ardy-lab.it mostrano l'IP reale, non Cloudflare.
+Resta solo da confermare in WP-admin che **Cerber** mostri IP reali (default REMOTE_ADDR, già corretto).
+(2) **egress tightening** (`TCP_OUT/UDP_OUT` oggi aperti → restringere testando le uscite di Sole,
+occhio alla porta SMTP Brevo); (3) `RESTRICT_SYSLOG="3"` in csf.conf. **Server gemello**: stessa
+procedura RPM (il tarball ConfigServer è morto dal 31/08/2025).
 
 
 ### 🧠 ~~Autoapprendimento di Sole dalle fasi di lavoro~~ ✅ FATTO (18/06 bis, da testare dal vivo)

@@ -549,8 +549,10 @@ usare un altro numero o un altro dispositivo, usa la **chat del sito**
 
 ## ⚙️ Configurazione server
 
-**VPS:** OVH AlmaLinux — gestito via WHM/cPanel
-**Accesso:** Solo WHM — SSH e FTP disabilitati per sicurezza
+**VPS:** OVH AlmaLinux 9 — gestito via WHM/cPanel
+**Accesso:** WHM + **SSH come root (autenticazione a CHIAVE, no password)**. FTP disabilitato.
+**Firewall host:** `cpanel-csf` v16.20 (fork cPanel) **LIVE** dal 19/06/2026 (firewalld resta disabled,
+csf non ne dipende). Fail2ban rimpiazzato da LFD. Dettagli in `ANALISI-FIREWALL-HOST.md`.
 **PHP:** In PHP-FPM (web) sono disabilitate `exec`, `shell_exec`, `system` ma **`proc_open` è attiva** → per i PDF si usa mPDF; per FFmpeg (reel) si usa `proc_open` (vedi `ardy-crea-reel.php`)
 **FFmpeg:** build statico in `/usr/local/bin/ffmpeg` (johnvansickle 7.0.2). Il filtro `drawtext` NON è incluso → i testi del reel si disegnano con **GD/FreeType** (font `dejavu-sans-fonts`)
 **Composer:** Installato in `/home/micoperibg/public_html/ardyagent.ardy-lab.it/`
