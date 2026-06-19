@@ -37,22 +37,12 @@ function libreriaDefaults(): array {
     ];
 }
 
-// Crea la tabella se non esiste e, alla prima creazione, inserisce i default.
+// La tabella è creata da ardy-migrate.php. Qui inseriamo i default una sola
+// volta, se la tabella è ancora vuota (DML, non DDL).
 function ensureLibreriaTable(PDO $db): void {
-    $existed = (bool) $db->query("SHOW TABLES LIKE 'libreria_fasi'")->fetch();
+    $vuota = (int) $db->query("SELECT COUNT(*) FROM `libreria_fasi`")->fetchColumn() === 0;
 
-    $db->exec("
-        CREATE TABLE IF NOT EXISTS `libreria_fasi` (
-            `id`         VARCHAR(64) NOT NULL PRIMARY KEY,
-            `nome`       VARCHAR(255) NOT NULL,
-            `cat`        VARCHAR(64)  NOT NULL DEFAULT 'Altro',
-            `descr`      TEXT,
-            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
-
-    if (!$existed) {
+    if ($vuota) {
         $stmt = $db->prepare(
             "INSERT INTO `libreria_fasi` (`id`, `nome`, `cat`, `descr`) VALUES (?, ?, ?, ?)"
         );

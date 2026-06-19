@@ -464,12 +464,7 @@ $editPayload = [
 ];
 $vociJson    = json_encode($editPayload);
 $db          = dbConnect();
-// Garantisce una sola volta che voci_json regga il payload (immagini base64).
-$ltMarker = PDF_OUTPUT_DIR . '.voci_longtext';
-if (!file_exists($ltMarker)) {
-    @$db->query("ALTER TABLE preventivi MODIFY voci_json LONGTEXT");
-    @file_put_contents($ltMarker, '1');
-}
+// voci_json è LONGTEXT (regge i payload con immagini base64): migrazione in ardy-migrate.php.
 $stato = 'bozza';
 
 // Modifica di una bozza esistente: si AGGIORNA la stessa riga (per id), non se ne

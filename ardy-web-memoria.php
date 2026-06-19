@@ -17,19 +17,7 @@
 if (!function_exists('ardy_web_ensure_table')) {
 
 function ardy_web_ensure_table(PDO $db): void {
-    static $done = false;
-    if ($done) return;
-    $db->exec(
-        "CREATE TABLE IF NOT EXISTS web_messaggi (
-            id BIGINT AUTO_INCREMENT PRIMARY KEY,
-            session_id VARCHAR(64) NOT NULL,
-            role VARCHAR(16) NOT NULL,
-            content MEDIUMTEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_session (session_id, id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
-    );
-    $done = true;
+    // no-op: tabella web_messaggi creata da ardy-migrate.php
 }
 
 function ardy_web_clean_session($s): string {

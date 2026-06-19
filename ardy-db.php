@@ -21,19 +21,10 @@ function ardyDB(): PDO {
     return $pdo;
 }
 
-// Migrazione idempotente: garantisce le colonne 'stato' ('bozza'|'pubblicata')
-// e 'ordine' sulla tabella fasi, usate per le fasi pre-compilate dai template
-// di libreria (generate dal box note del sopralluogo) prima della pubblicazione.
+// Le colonne 'stato', 'ordine' e 'prezzo' su fasi sono create da ardy-migrate.php
+// (al deploy). Funzione mantenuta come no-op per non rompere i call site.
 function ardyEnsureFasiStatoOrdine(PDO $db): void {
-    if (!$db->query("SHOW COLUMNS FROM fasi LIKE 'stato'")->fetch()) {
-        $db->exec("ALTER TABLE fasi ADD COLUMN stato VARCHAR(20) NOT NULL DEFAULT 'pubblicata' AFTER fase_tipo");
-    }
-    if (!$db->query("SHOW COLUMNS FROM fasi LIKE 'ordine'")->fetch()) {
-        $db->exec("ALTER TABLE fasi ADD COLUMN ordine INT NULL AFTER stato");
-    }
-    if (!$db->query("SHOW COLUMNS FROM fasi LIKE 'prezzo'")->fetch()) {
-        $db->exec("ALTER TABLE fasi ADD COLUMN prezzo DECIMAL(10,2) NULL AFTER ordine");
-    }
+    // no-op: DDL centralizzato in ardy-migrate.php
 }
 
 /** Ultime 9 cifre numeriche di un telefono (ignora +/spazi/trattini), o stringa vuota. */
@@ -42,19 +33,9 @@ function ardyTelefonoLast9(string $tel): string {
     return substr($digits, -9);
 }
 
-// Migrazione idempotente: colonna 'telefono_last9' (+ indice) sulla tabella clienti.
-// La ricerca per numero (lookup WhatsApp, sposta appuntamento) usava
-// REPLACE(...) LIKE '%...' sulla colonna telefono, full-scan ad ogni richiesta.
-// Questa colonna calcolata permette un match esatto e indicizzato.
+// La colonna 'telefono_last9' (+ indice + backfill) su clienti è creata da
+// ardy-migrate.php (al deploy). Funzione mantenuta come no-op.
+// La ricerca per numero usa un match esatto e indicizzato su questa colonna.
 function ardyEnsureTelefonoLast9(PDO $db): void {
-    if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'telefono_last9'")->fetch()) {
-        $db->exec("ALTER TABLE clienti ADD COLUMN telefono_last9 VARCHAR(9) NULL AFTER telefono");
-        $db->exec("CREATE INDEX idx_clienti_telefono_last9 ON clienti (telefono_last9)");
-        // Backfill una tantum: eseguito solo qui, non ad ogni richiesta.
-        $db->exec(
-            "UPDATE clienti
-                SET telefono_last9 = RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(telefono,' ',''),'+',''),'-',''),'.',''), 9)
-              WHERE telefono IS NOT NULL AND telefono <> ''"
-        );
-    }
+    // no-op: DDL centralizzato in ardy-migrate.php
 }

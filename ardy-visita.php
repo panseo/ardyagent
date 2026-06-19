@@ -23,15 +23,7 @@ $unique = !empty($input['unique']) ? 1 : 0;
 
 try {
     $db = ardyDB();
-    $db->exec("
-        CREATE TABLE IF NOT EXISTS `visite_pagina` (
-            `pagina` VARCHAR(64) NOT NULL,
-            `giorno` DATE NOT NULL,
-            `visite` INT NOT NULL DEFAULT 0,
-            `unici`  INT NOT NULL DEFAULT 0,
-            PRIMARY KEY (`pagina`, `giorno`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
+    // Tabella visite_pagina creata da ardy-migrate.php.
     $st = $db->prepare("
         INSERT INTO `visite_pagina` (`pagina`, `giorno`, `visite`, `unici`)
         VALUES (:p, CURDATE(), 1, :u)

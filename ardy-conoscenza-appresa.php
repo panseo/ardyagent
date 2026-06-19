@@ -33,20 +33,10 @@ require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
 
 // -----------------------------------------------------------
-// Migrazione idempotente: tabella dei blocchi appresi.
+// La tabella conoscenza_appresa è creata da ardy-migrate.php (al deploy).
 // -----------------------------------------------------------
 function ardy_ca_ensure_table(PDO $db): void {
-    $db->exec(
-        "CREATE TABLE IF NOT EXISTS `conoscenza_appresa` (
-            `id`           INT AUTO_INCREMENT PRIMARY KEY,
-            `titolo`       VARCHAR(200) NOT NULL DEFAULT '',
-            `contenuto`    MEDIUMTEXT NOT NULL,
-            `attiva`       TINYINT(1) NOT NULL DEFAULT 1,
-            `origine_fasi` TEXT NULL,
-            `created_at`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            `updated_at`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
-    );
+    // no-op: DDL centralizzato in ardy-migrate.php
 }
 
 // -----------------------------------------------------------

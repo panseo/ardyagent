@@ -237,11 +237,8 @@ function azionePubblica(PDO $db, string $sessionId, string $mobile, $faq, int $w
     }
     $postLink = get_permalink($wpPostId);
 
-    // Segna l'avvenuta pubblicazione FAQ sul CRM (colonna idempotente).
+    // Segna l'avvenuta pubblicazione FAQ sul CRM (colonna creata da ardy-migrate.php).
     try {
-        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'faq_pubblicata_at'")->fetch()) {
-            $db->exec("ALTER TABLE clienti ADD COLUMN faq_pubblicata_at DATETIME NULL");
-        }
         $db->prepare("UPDATE clienti SET faq_pubblicata_at = NOW(), updated_at = NOW() WHERE session_id = :sid")
            ->execute([':sid' => $sessionId]);
     } catch (PDOException $e) {
