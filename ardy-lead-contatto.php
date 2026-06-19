@@ -172,10 +172,6 @@ if ($err || $code >= 300) {
 
 // ── Salva timestamp primo contatto sulla scheda ──
 try {
-    // Colonna auto-creata se assente
-    try { $db->exec("ALTER TABLE clienti ADD COLUMN primo_contatto_wa_at DATETIME NULL"); }
-    catch (PDOException $e) { /* già presente */ }
-
     $db->prepare("UPDATE clienti SET primo_contatto_wa_at = NOW(), updated_at = NOW() WHERE session_id = :sid")
        ->execute([':sid' => $sessionId]);
 } catch (PDOException $e) {

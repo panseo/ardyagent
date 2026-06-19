@@ -35,24 +35,9 @@ require_once __DIR__ . '/phpmailer/src/Exception.php';
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-// -----------------------------------------------------------
-// Migrazione idempotente: colonne per la logistica di consegna/ritiro.
-// -----------------------------------------------------------
 if (!function_exists('ardy_trasporti_ensure_cols')) {
 function ardy_trasporti_ensure_cols(PDO $db): void {
-    try {
-        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'trasporto_data'")->fetch()) {
-            $db->exec("ALTER TABLE clienti ADD COLUMN trasporto_data DATE NULL");
-        }
-        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'trasporto_pronto_at'")->fetch()) {
-            $db->exec("ALTER TABLE clienti ADD COLUMN trasporto_pronto_at DATETIME NULL");
-        }
-        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'trasporto_avviso_data'")->fetch()) {
-            $db->exec("ALTER TABLE clienti ADD COLUMN trasporto_avviso_data DATE NULL");
-        }
-    } catch (PDOException $e) {
-        error_log('ARDY TRASPORTI ENSURE COLS: ' . $e->getMessage());
-    }
+    // colonne garantite da ardy-migrate.php
 }
 }
 

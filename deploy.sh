@@ -37,3 +37,7 @@ rsync -av \
   "$SRC" "$DEPLOYPATH"
 
 echo "Deploy completato."
+
+echo "Migrazione schema DB..."
+php "$DEPLOYPATH/ardy-migrate.php"
+echo "Migrazione completata."

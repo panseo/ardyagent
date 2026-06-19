@@ -24,22 +24,6 @@ if (empty($sessionId)) {
 try {
     $db = ardyDB();
 
-    // Colonne lavorazione (idempotente): date inizio/fine prevista del lavoro.
-    try {
-        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'inizio_lavoro'")->fetch()) {
-            $db->exec("ALTER TABLE clienti ADD COLUMN inizio_lavoro DATE NULL");
-        }
-        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'fine_lavoro_prevista'")->fetch()) {
-            $db->exec("ALTER TABLE clienti ADD COLUMN fine_lavoro_prevista DATE NULL");
-        }
-        // Note consegna: promemoria operativo per la consegna (materiali mancanti,
-        // bulloni, accordi logistici…). Editabile in dashboard, letto da Sole.
-        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'note_consegna'")->fetch()) {
-            $db->exec("ALTER TABLE clienti ADD COLUMN note_consegna TEXT NULL");
-        }
-    } catch (PDOException $e) {
-        error_log('ARDY UPDATE LEAD ENSURE COLS: ' . $e->getMessage());
-    }
 
     $fields = [
         'nome', 'cognome', 'telefono', 'email',

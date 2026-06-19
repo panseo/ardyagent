@@ -311,16 +311,6 @@ if (!$isComunicazione && defined('WA_TEMPLATE_FASI') && WA_TEMPLATE_FASI !== '')
 // -----------------------------------------------------------
 try {
     $db = ardyDB();
-    // Migrazione idempotente: assicura la colonna video_urls sulla tabella fasi.
-    $hasCol = $db->query("SHOW COLUMNS FROM fasi LIKE 'video_urls'")->fetch();
-    if (!$hasCol) {
-        $db->exec("ALTER TABLE fasi ADD COLUMN video_urls TEXT NULL AFTER foto_urls");
-    }
-    // Migrazione idempotente: colonna fase_tipo ('fase' | 'comunicazione')
-    $hasTipo = $db->query("SHOW COLUMNS FROM fasi LIKE 'fase_tipo'")->fetch();
-    if (!$hasTipo) {
-        $db->exec("ALTER TABLE fasi ADD COLUMN fase_tipo VARCHAR(20) NOT NULL DEFAULT 'fase' AFTER fase_nome");
-    }
     ardyEnsureFasiStatoOrdine($db);
 
     if ($faseId) {
@@ -526,11 +516,6 @@ function ardy_codice_per_sessione(PDO $db, string $sessionId): string {
     $sessionId = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string) $sessionId);
     if ($sessionId === '') return '';
     try {
-        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'codice_accesso'")->fetch()) {
-            $db->exec("ALTER TABLE clienti ADD COLUMN codice_accesso VARCHAR(20) NULL");
-            try { $db->exec("CREATE INDEX idx_codice_accesso ON clienti (codice_accesso)"); }
-            catch (PDOException $e) { /* indice già presente */ }
-        }
         $sel = $db->prepare("SELECT codice_accesso FROM clienti WHERE session_id = :sid LIMIT 1");
         $sel->execute([':sid' => $sessionId]);
         $codice = trim((string) $sel->fetchColumn());

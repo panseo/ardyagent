@@ -391,19 +391,7 @@ function callAnthropic(array $messages, string $system, array $tools, string $ap
 //   sopralluogo_at = data/ora dell'appuntamento · gcal_event_id = id evento Google
 // -----------------------------------------------------------
 function ardy_ensure_sopralluogo_cols(PDO $db): void {
-    static $done = false;
-    if ($done) return;
-    try {
-        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'gcal_event_id'")->fetch()) {
-            $db->exec("ALTER TABLE clienti ADD COLUMN gcal_event_id VARCHAR(128) NULL");
-        }
-        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'sopralluogo_at'")->fetch()) {
-            $db->exec("ALTER TABLE clienti ADD COLUMN sopralluogo_at DATETIME NULL");
-        }
-    } catch (PDOException $e) {
-        error_log('ARDY ENSURE COLS ERROR: ' . $e->getMessage());
-    }
-    $done = true;
+    // colonne garantite da ardy-migrate.php
 }
 
 // -----------------------------------------------------------
@@ -414,22 +402,7 @@ function ardy_ensure_sopralluogo_cols(PDO $db): void {
 //   legato a UNA scheda → niente ricerca per nome/telefono, niente PII di terzi.
 // -----------------------------------------------------------
 function ardy_ensure_codice_col(PDO $db): void {
-    static $done = false;
-    if ($done) return;
-    try {
-        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'codice_accesso'")->fetch()) {
-            $db->exec("ALTER TABLE clienti ADD COLUMN codice_accesso VARCHAR(20) NULL");
-            // il lookup matcha esattamente su questa colonna → indice
-            try { $db->exec("CREATE INDEX idx_codice_accesso ON clienti (codice_accesso)"); }
-            catch (PDOException $e) { /* indice già presente: ignora */ }
-        }
-        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'codice_email_inviato'")->fetch()) {
-            // quando il codice è stato inviato al cliente via email (anti doppio invio)
-            $db->exec("ALTER TABLE clienti ADD COLUMN codice_email_inviato DATETIME NULL");
-        }
-    } catch (PDOException $e) {
-        error_log('ARDY ENSURE CODICE COL ERROR: ' . $e->getMessage());
-    }
+    // colonne garantite da ardy-migrate.php
     $done = true;
 }
 
