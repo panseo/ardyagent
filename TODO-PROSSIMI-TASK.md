@@ -233,13 +233,22 @@ contengono solo `$env.WA_TOKEN` — un riferimento, mai il valore.
 costanti nel nodo Code con `$env.NOME`; (3) aggiornare il file versionato
 `n8n/ardy-whatsapp-node-completo.js` e il JSON del workflow. ~15 min.
 
-### 🔥 Firewall host — decidere il sostituto di firewalld (priorità media/sicurezza)
+### 🔥 Firewall host — decidere il sostituto di firewalld (priorità media/sicurezza) — ANALISI PRONTA
 firewalld è disabilitato dal 19/06 (incompatibile con Docker, vedi NOTE OPERATIVE). Per ora l'host
 è coperto da OVH Anti-DDoS + Fail2ban + ModSecurity, e n8n è solo su `127.0.0.1`. Da decidere il
 firewall host definitivo. Opzioni: (1) lasciare così (Docker gestisce iptables; più semplice);
 (2) **installare csf** (ConfigServer Firewall, lo standard su cPanel/WHM, convive con Docker) — racc.;
 (3) tentare il rientro di firewalld con downgrade di nftables a `el9_7` (rischioso, dipendenze el9_8).
 Prima di decidere: verificare quali porte host sono esposte (es. `ss -tlnp`) e che MySQL sia su localhost.
+
+**Analisi completa di decisione/rischi/runbook in `ANALISI-FIREWALL-HOST.md`.** In sintesi:
+raccomandata l'**opzione 2 (csf)** — è nativa per cPanel/WHM, è un firewall di stato con brute-force
+integrato (LFD) e **non dipende da firewalld/nftables-daemon** (quindi non ricade nel bug che ci ha
+fatto disabilitare firewalld). Opzione 1 = stato-ponte accettabile; opzione 3 = da scartare.
+**Prerequisito #1**: fotografare la superficie esposta in WHM Terminal (`ss -tlnp`, MySQL su
+localhost, `docker ps`) PRIMA di installare. Nodo tecnico: csf+Docker convivono via chain
+`DOCKER-USER`/opzioni native csf — ma qui n8n è su `127.0.0.1` quindi rischio minimo. Tutto manuale
+su WHM (SSH disabilitato), non c'è codice nel repo da toccare.
 
 
 ### 🧠 ~~Autoapprendimento di Sole dalle fasi di lavoro~~ ✅ FATTO (18/06 bis, da testare dal vivo)
