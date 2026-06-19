@@ -61,16 +61,6 @@ function ardy_map_cliente(array $r, bool $withDeletedAt = false, bool $haFasi = 
 try {
     $db   = ardyDB();
 
-    // Assicura che la colonna deleted_at esista (DDL idempotente)
-    try { $db->exec("ALTER TABLE clienti ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL"); }
-    catch (PDOException $e) { /* già presente */ }
-
-    // Marker "conversazione vista in dashboard": quando Michela/Andrea apre la chat
-    // di un cliente (ardy-conversazioni.php) si salva NOW() qui; il badge "ha
-    // risposto" si spegne se non ci sono messaggi del cliente più recenti.
-    try { $db->exec("ALTER TABLE clienti ADD COLUMN conversazione_letta_at DATETIME NULL DEFAULT NULL"); }
-    catch (PDOException $e) { /* già presente */ }
-
     // ── Vista Cestino ──────────────────────────────────────
     if (($_GET['vista'] ?? '') === 'cestino') {
         $rows = $db->query(

@@ -151,23 +151,8 @@ function waGeneraCodiceAccesso(): string {
     return 'ARD-' . $out;
 }
 
-// Colonne codice accesso sulla tabella clienti (idempotente) — come ardy-proxy.php.
 function waEnsureCodiceCol(PDO $db): void {
-    static $done = false;
-    if ($done) return;
-    try {
-        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'codice_accesso'")->fetch()) {
-            $db->exec("ALTER TABLE clienti ADD COLUMN codice_accesso VARCHAR(20) NULL");
-            try { $db->exec("CREATE INDEX idx_codice_accesso ON clienti (codice_accesso)"); }
-            catch (PDOException $e) { /* indice già presente */ }
-        }
-        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'codice_email_inviato'")->fetch()) {
-            $db->exec("ALTER TABLE clienti ADD COLUMN codice_email_inviato DATETIME NULL");
-        }
-    } catch (PDOException $e) {
-        error_log('ARDY WA-AGENT ENSURE CODICE: ' . $e->getMessage());
-    }
-    $done = true;
+    // colonne garantite da ardy-migrate.php
 }
 
 // Scarica una foto WhatsApp via Cloud API: media id → url firmato → byte.
@@ -205,21 +190,8 @@ function waScaricaMediaWhatsApp(string $mediaId): ?array {
     return [$bytes, (string) ($meta['mime_type'] ?? '')];
 }
 
-// Colonne sopralluogo sulla tabella clienti (idempotente) — come ardy-proxy.php.
 function waEnsureSopralluogoCols(PDO $db): void {
-    static $done = false;
-    if ($done) return;
-    try {
-        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'gcal_event_id'")->fetch()) {
-            $db->exec("ALTER TABLE clienti ADD COLUMN gcal_event_id VARCHAR(128) NULL");
-        }
-        if (!$db->query("SHOW COLUMNS FROM clienti LIKE 'sopralluogo_at'")->fetch()) {
-            $db->exec("ALTER TABLE clienti ADD COLUMN sopralluogo_at DATETIME NULL");
-        }
-    } catch (PDOException $e) {
-        error_log('ARDY WA-AGENT ENSURE COLS: ' . $e->getMessage());
-    }
-    $done = true;
+    // colonne garantite da ardy-migrate.php
 }
 
 // -----------------------------------------------------------

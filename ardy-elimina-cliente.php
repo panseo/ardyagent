@@ -95,10 +95,8 @@ if ($sessionId === '') {
     exit();
 }
 
-// Assicura che la colonna deleted_at esista (one-shot idempotente)
 function ardy_ensure_deleted_at($db) {
-    try { $db->exec("ALTER TABLE clienti ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL"); }
-    catch (PDOException $e) { /* già presente */ }
+    // colonna garantita da ardy-migrate.php
 }
 
 // Purge opportunistica: hard-delete max 5 record scaduti (>30 giorni nel cestino).
@@ -193,10 +191,7 @@ if ($azione === 'libera_spazio') {
 
         $res = ardy_elimina_file_sessione($sessionId);
 
-        // Segna la data dell'archiviazione foto (colonna auto-creata se manca)
-        try {
-            $db->exec("ALTER TABLE clienti ADD COLUMN foto_archiviate_at DATETIME NULL");
-        } catch (PDOException $e) { /* colonna già presente */ }
+        // Segna la data dell'archiviazione foto
         try {
             $up = $db->prepare("UPDATE clienti SET foto_archiviate_at = NOW() WHERE session_id = :sid");
             $up->execute([':sid' => $sessionId]);

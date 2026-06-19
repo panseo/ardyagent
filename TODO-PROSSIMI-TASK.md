@@ -5,19 +5,12 @@
 
 ---
 
-## 🔴 PRIORITÀ ALTA — SICUREZZA (da fare al più presto)
+## ✅ ~~PRIORITÀ ALTA — SICUREZZA~~ FATTO (19/06/2026)
 
-- 🔑 **Ruotare le chiavi sensibili esposte in chiaro** (17/06): l'export del workflow n8n WhatsApp
-  conteneva in chiaro, nel nodo Code, **Token Meta/WhatsApp**, **API key Anthropic** e
-  **`WA_LOOKUP_SECRET`**. Quel file è uscito dall'infrastruttura (chat + Download locale).
-  **Azioni:**
-  1. Rigenerare il **token Meta** (Meta for Developers → app WhatsApp) e aggiornarlo nel nodo n8n.
-  2. Rigenerare la **API key Anthropic** (console.anthropic.com) e aggiornarla nel nodo n8n.
-  3. Valutare la rotazione di `WA_LOOKUP_SECRET` (in `ardy-config.php` + nel nodo n8n, devono
-     restare allineati).
-  4. **Hardening futuro**: spostare questi segreti dal codice del nodo alle *Credentials*/variabili
-     d'ambiente di n8n, così non finiscono più negli export. (priorità media)
-  > Nota: la copia versionata in `n8n/ardy-whatsapp-workflow.json` è già **ripulita** (placeholder).
+- ✅ **Chiavi sensibili ruotate** (19/06): Token Meta/WhatsApp, API key Anthropic e
+  `WA_LOOKUP_SECRET` rigenerati e aggiornati in `ardy-config.php` + nodo n8n. Verificato
+  dal vivo su WhatsApp — Sole risponde correttamente con tutte e tre le nuove chiavi.
+  - **Hardening futuro** → vedi task dedicato sotto (priorità media).
 
 ---
 
@@ -226,6 +219,15 @@ guida `ardy-gbp-post.md`. Scope `business.manage` aggiunto in `ardy-gcal-auth.ph
 ---
 
 ## 📋 TASK DA SVILUPPARE (aperti)
+
+### 🔐 Hardening n8n — segreti in variabili d'ambiente (priorità media)
+Oggi `WA_TOKEN`, `ANTHROPIC_KEY` e `WA_LOOKUP_SECRET` stanno nel codice del nodo Code → escono
+in chiaro negli export del workflow (causa del task sicurezza del 17/06). Soluzione: spostarli
+nelle variabili d'ambiente di n8n (`$env.NOME`) definite nel `.env` sul server. Così gli export
+contengono solo `$env.WA_TOKEN` — un riferimento, mai il valore.
+**Lavoro:** (1) aggiungere 3 righe al `.env` di n8n sul server via SSH; (2) sostituire le 3
+costanti nel nodo Code con `$env.NOME`; (3) aggiornare il file versionato
+`n8n/ardy-whatsapp-node-completo.js` e il JSON del workflow. ~15 min.
 
 ### 🔥 Firewall host — decidere il sostituto di firewalld (priorità media/sicurezza)
 firewalld è disabilitato dal 19/06 (incompatibile con Docker, vedi NOTE OPERATIVE). Per ora l'host

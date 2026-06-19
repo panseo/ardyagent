@@ -167,10 +167,6 @@ function ardy_invia_grazie_consegna(PDO $db, string $sessionId, bool $force = fa
     $sid = preg_replace('/[^a-zA-Z0-9_\-]/', '', $sessionId);
     if ($sid === '') return $out;
 
-    // Colonna guard (idempotente)
-    try { $db->exec("ALTER TABLE clienti ADD COLUMN consegnato_grazie_at DATETIME NULL"); }
-    catch (PDOException $e) { /* già presente */ }
-
     $q = $db->prepare("SELECT nome, cognome, email, telefono, mobile, codice_accesso, consegnato_grazie_at FROM clienti WHERE session_id = :sid LIMIT 1");
     $q->execute([':sid' => $sid]);
     $cli = $q->fetch(PDO::FETCH_ASSOC);
