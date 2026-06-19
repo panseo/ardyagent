@@ -221,10 +221,10 @@ id (VARCHAR, 'sp_...'), session_id, payload (JSON: testo, immagini[], piattaform
         ↓ Nodo Code JS → Facebook Graph API (pagina Ardy)
         ↓ Nodo Code JS → Instagram API (ardy.lab)
 
-[WhatsApp — In costruzione]
+[WhatsApp]
         ↓ ardy-whatsapp-webhook.php (riceve messaggi)
         ↓ n8n (elaborazione)
-        ↓ Richiede SIM dedicata per Cloud API
+        ↓ SIM dedicata per Cloud API
 ```
 
 ---
