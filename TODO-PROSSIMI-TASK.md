@@ -10,8 +10,7 @@
 - ✅ **Chiavi sensibili ruotate** (19/06): Token Meta/WhatsApp, API key Anthropic e
   `WA_LOOKUP_SECRET` rigenerati e aggiornati in `ardy-config.php` + nodo n8n. Verificato
   dal vivo su WhatsApp — Sole risponde correttamente con tutte e tre le nuove chiavi.
-  - **Hardening futuro** ancora aperto: spostare i segreti dal codice del nodo alle
-    *Credentials*/variabili d'ambiente di n8n (così non finiscono più negli export). (priorità media)
+  - **Hardening futuro** → vedi task dedicato sotto (priorità media).
 
 ---
 
@@ -220,6 +219,15 @@ guida `ardy-gbp-post.md`. Scope `business.manage` aggiunto in `ardy-gcal-auth.ph
 ---
 
 ## 📋 TASK DA SVILUPPARE (aperti)
+
+### 🔐 Hardening n8n — segreti in variabili d'ambiente (priorità media)
+Oggi `WA_TOKEN`, `ANTHROPIC_KEY` e `WA_LOOKUP_SECRET` stanno nel codice del nodo Code → escono
+in chiaro negli export del workflow (causa del task sicurezza del 17/06). Soluzione: spostarli
+nelle variabili d'ambiente di n8n (`$env.NOME`) definite nel `.env` sul server. Così gli export
+contengono solo `$env.WA_TOKEN` — un riferimento, mai il valore.
+**Lavoro:** (1) aggiungere 3 righe al `.env` di n8n sul server via SSH; (2) sostituire le 3
+costanti nel nodo Code con `$env.NOME`; (3) aggiornare il file versionato
+`n8n/ardy-whatsapp-node-completo.js` e il JSON del workflow. ~15 min.
 
 ### 🔥 Firewall host — decidere il sostituto di firewalld (priorità media/sicurezza)
 firewalld è disabilitato dal 19/06 (incompatibile con Docker, vedi NOTE OPERATIVE). Per ora l'host
