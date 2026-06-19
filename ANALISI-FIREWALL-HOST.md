@@ -118,11 +118,12 @@ chiusa alla cieca): `22` (SSH — **attivo, va tenuto aperto**), `80/443` (Apach
 
 **🌐 Esposti su `0.0.0.0`/`[::]` (la superficie da governare con csf):**
 - **Legittimi da tenere aperti**: `22` (SSH), `80`/`443` (Apache), `2082/2083` (cPanel),
-  `2086/2087` (WHM), `2095/2096` (webmail), `2077/2078/2079/2080/2091` (cpdavd WebDAV/CalDAV),
-  `25/465/587` (exim SMTP), `110/143/993/995` (dovecot POP/IMAP), `4190` (managesieve), `53` (PowerDNS).
+  `2086/2087` (WHM), `2095/2096` (webmail UI), `2077/2078/2079/2080/2091` (cpdavd WebDAV/CalDAV),
+  `53` (PowerDNS).
 - **⚠️ Da CHIUDERE — `111` (rpcbind, TCP+UDP)**: portmapper, serve solo a NFS. Inutile qui e noto
-  vettore di amplificazione DDoS. csf non lo whitelista (→ chiuso); meglio anche disabilitare il
-  servizio: `systemctl disable --now rpcbind rpcbind.socket` (verificare prima che NFS non sia in uso).
+  vettore di amplificazione DDoS. **NFS verificato NON in uso** (19/06: nessun mount nfs reale —
+  `rpc_pipefs` è solo plumbing kernel; `rpcinfo -p` mostra solo il portmapper, nessun servizio NFS).
+  → `systemctl disable --now rpcbind rpcbind.socket` + csf non lo whitelista.
 - **✅ DECISO — chiudere lo stack mail (25,110,143,465,587,993,995,4190)**: la posta è tutta su
   **Aruba** (MX) + invio via **Brevo**; questo host non riceve mail da fuori. Le porte protocollo mail
   si chiudono (exim resta vivo per la consegna locale/outbound su loopback, che csf consente sempre).
@@ -168,19 +169,23 @@ Se Sole risponde, il bridge Docker è intatto.
 
 ---
 
-## 4. Runbook csf (proposta, da eseguire in WHM Terminal — NON ancora eseguito)
+## 4. Runbook csf (RPM cPanel — NON ancora eseguito)
 > Esecuzione su server (via SSH come root o WHM Terminal), non da questo repo. Procedere **solo dopo**
 > la foto del §2 e fuori dagli orari di punta. csf ha anche un'interfaccia in WHM (Plugins →
 > ConfigServer Security & Firewall) per il dopo.
 
+> ⚠️ **IMPORTANTE — il vecchio metodo tarball è MORTO.** ConfigServer (Way to the Web Ltd) ha chiuso
+> il **31/08/2025**: `download.configserver.com` non risolve più e il classico
+> `wget .../csf.tgz && sh install.sh` (quello di tutte le guide online) **fallisce in DNS**. Dal
+> **25/02/2026 cPanel mantiene un fork ufficiale** (`github.com/cpanel/cpanel-csf`, GPLv3) distribuito
+> come **RPM `cpanel-csf`** nei repo cPanel. Su questo server (AlmaLinux + cPanel) si installa così:
+
 ```bash
-# A) Installazione (metodo ufficiale ConfigServer)
-cd /usr/src
-wget https://download.configserver.com/csf.tgz
-tar -xzf csf.tgz
-cd csf
-sh install.sh
-# WHM rileva csf come plugin automaticamente.
+# A) Installazione (metodo cPanel 2026 — RPM, niente tarball)
+dnf info cpanel-csf            # verifica disponibilita nei repo (dry-run, non installa)
+yum install cpanel-csf         # installa il fork cPanel; richiede cPanel presente (lo e')
+#   NB: l'RPM dipende da cpanel-perl; fallisce di proposito se cPanel non e' rilevato.
+#   WHM rileva csf come plugin automaticamente e si auto-aggiorna dai mirror cPanel.
 
 # B) Test compatibilità iptables/moduli kernel
 perl /usr/local/csf/bin/csftest.pl
