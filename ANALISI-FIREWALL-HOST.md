@@ -333,8 +333,12 @@ Difese coesistenti: OVH Anti-DDoS (edge) · ModSecurity (L7) · cPHulk (login cP
 WP Cerber (app). **Fail2ban rimosso** (rimpiazzato da LFD).
 
 **Follow-up rimasti (non bloccanti):**
-- [ ] **mod_remoteip + opzione Cerber "dietro Cloudflare"** → IP reale del visitatore su ardy-lab.it
-      (così ModSec/Cerber/LFD bannano l'attaccante vero, non Cloudflare). Vedi §3-ter.
+- [x] **mod_remoteip** → ✅ già attivo e **auto-gestito da cPanel** (`/etc/apache2/conf.d/includes/
+      cloudflare.conf`, rigenerato di notte dai range CF ufficiali; `RemoteIPHeader CF-Connecting-IP`
+      + 22 range CF fidati). **Verificato dal vivo** (19/06): i domlog di ardy-lab.it mostrano l'IP
+      reale del visitatore, **nessun IP Cloudflare** → Apache/PHP/ModSec/LFD vedono l'attaccante vero.
+      Resta solo da confermare in WP-admin che **Cerber** mostri IP reali nell'Activity (default
+      `REMOTE_ADDR`, già corretto da mod_remoteip → non fargli leggere lui `CF-Connecting-IP`).
 - [ ] **Egress tightening**: da `1:65535` a una lista mirata, testando le uscite di Sole (verificare
       la **porta SMTP di Brevo** — 587/465/2525 — prima di chiudere).
 - [ ] **`RESTRICT_SYSLOG = "3"`** in csf.conf (csf avvisa che è disabilitato; evita log-injection che

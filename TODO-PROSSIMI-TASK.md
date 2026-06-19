@@ -251,10 +251,12 @@ resta `disabled` di proposito (csf non ne dipende). Fail2ban disabilitato (LFD l
 off, range Cloudflare whitelistati, Docker/n8n risolto (DOCKER=1 + ETH_DEVICE_SKIP sul bridge reale).
 Dettagli operativi nelle NOTE OPERATIVE sopra.
 
-**Follow-up rimasti (non bloccanti):** (1) `mod_remoteip` + opzione Cerber "dietro Cloudflare" → IP
-reale del visitatore su ardy-lab.it; (2) **egress tightening** (`TCP_OUT/UDP_OUT` oggi aperti →
-restringere testando le uscite di Sole, occhio alla porta SMTP Brevo); (3) `RESTRICT_SYSLOG="3"` in
-csf.conf. **Server gemello**: stessa procedura RPM (il tarball ConfigServer è morto dal 31/08/2025).
+**Follow-up rimasti (non bloccanti):** (1) ✅ `mod_remoteip` — **già attivo e auto-gestito da cPanel**
+(`cloudflare.conf`), verificato dal vivo: i domlog di ardy-lab.it mostrano l'IP reale, non Cloudflare.
+Resta solo da confermare in WP-admin che **Cerber** mostri IP reali (default REMOTE_ADDR, già corretto).
+(2) **egress tightening** (`TCP_OUT/UDP_OUT` oggi aperti → restringere testando le uscite di Sole,
+occhio alla porta SMTP Brevo); (3) `RESTRICT_SYSLOG="3"` in csf.conf. **Server gemello**: stessa
+procedura RPM (il tarball ConfigServer è morto dal 31/08/2025).
 
 
 ### 🧠 ~~Autoapprendimento di Sole dalle fasi di lavoro~~ ✅ FATTO (18/06 bis, da testare dal vivo)
