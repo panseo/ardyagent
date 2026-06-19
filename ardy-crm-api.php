@@ -13,6 +13,16 @@ header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
 
+// Colonne effettivamente lette dalla dashboard (vedi ardy_map_cliente) +
+// quelle usate nella logica (deleted_at, conversazione_letta_at). Evita il
+// SELECT * che trasferiva anche colonne inutili (gcal_event_id, sopralluogo_at,
+// trasporto_*, telefono_last9, ecc.).
+const ARDY_CLIENTI_COLS =
+    "session_id, nome, cognome, telefono, email, servizio, mobile, zona, budget, "
+  . "indirizzo, stato, note, note_consegna, data_followup, inizio_lavoro, "
+  . "fine_lavoro_prevista, wp_post_id, wp_post_link, foto_archiviate_at, "
+  . "faq_pubblicata_at, created_at, updated_at, deleted_at, conversazione_letta_at";
+
 function ardy_map_cliente(array $r, bool $withDeletedAt = false, bool $haFasi = false, bool $haRisposto = false, string $ultimoMsgAt = ''): array {
     $out = [
         'Session_ID'    => $r['session_id']    ?? '',
@@ -64,7 +74,7 @@ try {
     // ── Vista Cestino ──────────────────────────────────────
     if (($_GET['vista'] ?? '') === 'cestino') {
         $rows = $db->query(
-            "SELECT * FROM clienti WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC"
+            "SELECT " . ARDY_CLIENTI_COLS . " FROM clienti WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC"
         )->fetchAll();
         echo json_encode(array_map(fn($r) => ardy_map_cliente($r, true), $rows));
         exit();
@@ -106,7 +116,7 @@ try {
     } catch (PDOException $e) { /* tabella assente: nessun messaggio WhatsApp */ }
 
     $rows = $db->query(
-        "SELECT * FROM clienti WHERE deleted_at IS NULL ORDER BY updated_at DESC"
+        "SELECT " . ARDY_CLIENTI_COLS . " FROM clienti WHERE deleted_at IS NULL ORDER BY updated_at DESC"
     )->fetchAll();
     echo json_encode(array_map(function ($r) use ($fasiMap, $webMsgMap, $waMsgMap) {
         // Ultimo messaggio del cliente = il più recente tra canale web e WhatsApp.

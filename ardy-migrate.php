@@ -41,6 +41,12 @@ function colExists(PDO $db, string $table, string $col): bool {
     return (bool) $db->query("SHOW COLUMNS FROM `$table` LIKE '$col'")->fetch();
 }
 
+function indexExists(PDO $db, string $table, string $index): bool {
+    $st = $db->prepare("SHOW INDEX FROM `$table` WHERE Key_name = ?");
+    $st->execute([$index]);
+    return (bool) $st->fetch();
+}
+
 echo "=== Ardy Migrate ===\n";
 
 // ── TABELLE ──────────────────────────────────────────────────────────────────
@@ -222,6 +228,16 @@ foreach ($fasiCols as $col => $sql) {
     } else {
         echo "  skip fasi.$col\n"; $skip++;
     }
+}
+
+// ── INDICI ───────────────────────────────────────────────────────────────────
+
+// Lista clienti in dashboard: WHERE deleted_at IS NULL ORDER BY updated_at DESC
+// (e la vista Cestino: WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC).
+if (!indexExists($pdo, 'clienti', 'idx_clienti_deleted_updated')) {
+    ddl($pdo, "CREATE INDEX idx_clienti_deleted_updated ON clienti (deleted_at, updated_at)", "INDEX clienti.deleted_updated");
+} else {
+    echo "  skip INDEX clienti.deleted_updated\n"; $skip++;
 }
 
 // ── preventivi.voci_json → LONGTEXT (una tantum, via file marker) ─────────────
