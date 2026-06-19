@@ -301,17 +301,47 @@ stato con default-deny e protezione brute-force integrata, e (c) **non ripropone
 firewalld/nftables che ci ha costretti al `disable`. L'opzione 1 resta lo stato-ponte accettabile fin
 qui; l'opzione 3 è da scartare (rischiosa e temporanea).
 
-Checklist operativa (via SSH come root o WHM Terminal, fuori dagli orari di punta):
-- [ ] **§2 — Foto della superficie**: `ss -tlnp`, `ss -ulnp`, conferma MySQL su localhost,
-      `docker ps` sulle porte pubblicate. Incollare l'output qui sotto come allegato.
-- [ ] (Se MySQL su `0.0.0.0`) → `bind-address=127.0.0.1`, riavvio MySQL, riverifica.
-- [ ] **§4 A-B** — Installare csf + `csftest.pl` (resta in `TESTING=1`).
-- [ ] Configurare `TCP_IN/TCP_OUT` con SOLO le porte viste al §2; abilitare supporto Docker (§3).
-- [ ] Verificare accesso WHM in nuova scheda → `TESTING=0` → `csf -r`.
-- [ ] **§3** — `docker start n8n_app` + test WhatsApp/n8n end-to-end.
-- [ ] Decidere Fail2ban vs LFD e documentarlo.
-- [ ] Aggiornare NOTE OPERATIVE nel TODO: da "firewalld disabilitato, decisione aperta" a
-      "csf attivo, firewalld resta disabled di proposito".
+Checklist operativa — **ESEGUITA il 19/06/2026** (via SSH root):
+- [x] **§2 — Foto della superficie**: MariaDB/n8n/Redis su localhost ✅; rpcbind(111) esposto → chiuso.
+- [x] MySQL già su `127.0.0.1` (nessun intervento bind-address necessario).
+- [x] **§4 A-B** — Installato `cpanel-csf` v16.20 (RPM cPanel); `csftest` → "csf should function".
+- [x] `TCP_IN` mail-chiusa applicato; egress aperto (tightening = follow-up); supporto Docker (§3) risolto.
+- [x] Whitelist Cloudflare (ardy-lab.it) + IP admin in `csf.allow`.
+- [x] `rpcbind` disabilitato (`systemctl disable --now`), 111 non più in ascolto.
+- [x] `TESTING=0` → `csf -r` → **LIVE**, `lfd active`. Accesso SSH/WHM verificato da seconda sessione.
+- [x] **§3** — Docker OK: n8n `HTTP=200` stabile, nessun blocco `172.18` residuo.
+- [x] Fail2ban → `systemctl disable --now fail2ban` (LFD unico banner host-based).
+- [x] NOTE OPERATIVE del TODO aggiornate: "csf LIVE, firewalld resta disabled di proposito".
 
-> Nota: nessuna di queste azioni è nel repo (sono config di host) e da qui non c'è accesso SSH al
-> server. Questo documento è la **decisione + il runbook**; l'esecuzione è manuale su WHM, da Michela/Andrea.
+---
+
+## 7. ESITO — csf LIVE (19/06/2026) ✅
+csf **v16.20 (fork cPanel)** attivo e operativo, `lfd` running, firewalld resta `disabled` di proposito.
+
+**Config finale applicata** (`/etc/csf/csf.conf`):
+```
+TESTING = "0"
+TCP_IN  = "22,53,80,443,2077,2078,2079,2080,2082,2083,2086,2087,2091,2095,2096"
+UDP_IN  = "53"
+TCP_OUT = "1:65535"   # egress aperto (tightening = follow-up)
+UDP_OUT = "1:65535"
+DOCKER = "1" · DOCKER_DEVICE = "br-b118407a7c22" · DOCKER_NETWORK4 = "172.18.0.0/16" · DOCKER_NETWORK6 = ""
+ETH_DEVICE_SKIP = "br-b118407a7c22"   # OUTPUT docker-proxy→container (vedi §3)
+```
+`csf.allow`: range Cloudflare (14 v4 + 6 v6) + IP admin. `rpcbind` disabilitato.
+Difese coesistenti: OVH Anti-DDoS (edge) · ModSecurity (L7) · cPHulk (login cPanel) · **LFD** (host) ·
+WP Cerber (app). **Fail2ban rimosso** (rimpiazzato da LFD).
+
+**Follow-up rimasti (non bloccanti):**
+- [ ] **mod_remoteip + opzione Cerber "dietro Cloudflare"** → IP reale del visitatore su ardy-lab.it
+      (così ModSec/Cerber/LFD bannano l'attaccante vero, non Cloudflare). Vedi §3-ter.
+- [ ] **Egress tightening**: da `1:65535` a una lista mirata, testando le uscite di Sole (verificare
+      la **porta SMTP di Brevo** — 587/465/2525 — prima di chiudere).
+- [ ] **`RESTRICT_SYSLOG = "3"`** in csf.conf (csf avvisa che è disabilitato; evita log-injection che
+      falserebbe i ban LFD).
+- [ ] (Eventuale) valutare se chiudere anche `53` pubblico se nessun dominio è servito dal pdns locale.
+
+> ⚠️ **Fragilità bridge n8n**: se la rete Docker `n8n_default` viene ricreata, il nome `br-b118407a7c22`
+> cambia → aggiornare `DOCKER_DEVICE` ed `ETH_DEVICE_SKIP` e `csf -r` (vedi §3). Da tenere a mente.
+>
+> **Server gemello**: stessa procedura RPM (`yum install cpanel-csf`) — il vecchio tarball è morto.
