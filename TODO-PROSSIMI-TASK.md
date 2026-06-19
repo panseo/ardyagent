@@ -101,6 +101,10 @@ Decisione firewall host ancora aperta → vedi task "Firewall host (csf)" più s
 ```
 runuser -u micoperibg -- bash -c 'cd ~/repositories/ardyagent && git pull origin main && ./deploy.sh'
 ```
+**⚠️ Schema DB = `ardy-migrate.php`** (eseguito da `deploy.sh` dopo l'rsync). È l'**unico** posto dove
+si creano/alterano tabelle e colonne: niente più DDL negli endpoint (giravano ad ogni request HTTP).
+Idempotente e rieseguibile (IF NOT EXISTS + try/catch su 1050/1060 + `colExists`/`indexExists`).
+**Nuova tabella o colonna → aggiungerla qui**, non con `SHOW COLUMNS`/`ALTER` inline nell'endpoint.
 
 **Log errori/eventi PHP** (debug + verifica prompt caching):
 ```
@@ -411,24 +415,27 @@ a "Sole" quando si tocca lo snippet in WPCode.
 
 ---
 
-## 🔒 BACKLOG SICUREZZA (priorità bassa)
+## 🔒 ~~BACKLOG SICUREZZA~~ ✅ FATTO (19/06/2026, deployato)
 > Difesa infrastrutturale già presente (OVH Anti-DDoS, Fail2ban, ModSecurity WAF, mod_hulk).
-- **OAuth Google senza `state`** (`ardy-gcal-auth.php`): aggiungere `state` casuale verificato.
-- **`get_stats` SQL** (`ardy-outreach-api.php`): query con interpolazione (da array interno) → parametrizzare.
-- **`mode=download` preventivo**: serve qualsiasi PDF a chi è dietro Basic Auth (no ownership). Basso rischio.
-- **Prompt injection caption reel** (`ardy-crea-reel.php`, `generaCaptionReel`): `$mobile` (e nomi
-  fase) interpolati grezzi nel prompt a Claude. Rischio basso — endpoint dietro Basic Auth (di fatto solo
-  Michela), `$mobile` arriva dal DB e la caption è **rivista a mano** prima di pubblicare. Hardening
-  (difesa in profondità): delimitare i dati non fidati con tag (es. `<dati_cliente>…</dati_cliente>`) +
-  istruzione a trattarli come dati, non istruzioni. ~10 righe.
+- ✅ **OAuth Google `state` anti-CSRF** (`ardy-gcal-auth.php`): `state` casuale in sessione,
+  verificato con `hash_equals` al callback.
+- ✅ **`get_stats` SQL parametrizzato** (`ardy-outreach-api.php`): prepared statement con `:cat`.
+- ✅ **`mode=download` preventivo con ownership check** (`ardy-preventivo.php`): verifica in DB che
+  il PDF appartenga a un preventivo prima di servirlo (403 altrimenti).
+- ✅ **Prompt injection caption reel** (`ardy-crea-reel.php`, `generaCaptionReel`): dati lavoro
+  delimitati con `<dati_lavoro>…</dati_lavoro>` + istruzione a trattarli come riferimento, non istruzioni.
 
 ---
 
 ## ⚡ BACKLOG PERFORMANCE
-### Alto impatto / basso sforzo (aperti)
-- **DDL su ogni request** (`SHOW COLUMNS`/`ALTER`/`CREATE TABLE IF NOT EXISTS` in vari endpoint):
-  spostare in una migrazione one-shot, togliere dal path di richiesta.
-- **`ardy-crm-api.php`**: `SELECT *` su `clienti` senza `LIMIT` → solo colonne usate + paginazione + indice.
+### ~~Alto impatto / basso sforzo~~ ✅ FATTO (19/06/2026, deployato)
+- ✅ **DDL fuori dal path di richiesta**: tutti i `SHOW COLUMNS`/`ALTER`/`CREATE TABLE IF NOT EXISTS`
+  centralizzati in **`ardy-migrate.php`** (eseguito una volta al deploy da `deploy.sh`). Nessun DDL
+  gira più su request HTTP; le funzioni `ensure*` negli endpoint sono no-op. Migrazione idempotente
+  (IF NOT EXISTS + try/catch su 1050/1060, `colExists`/`indexExists`).
+- ✅ **`ardy-crm-api.php`**: i due `SELECT *` su `clienti` ora selezionano solo le colonne usate
+  (costante `ARDY_CLIENTI_COLS`) + indice composito `idx_clienti_deleted_updated` su
+  `(deleted_at, updated_at)`. Paginazione non necessaria allo stato attuale (volumi bassi).
 
 ### Da pianificare / decisi
 - **Reel async (`ardy-crea-reel.php`) — priorità media**. Oggi monta il video in **sincrono** dentro

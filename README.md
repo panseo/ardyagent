@@ -66,7 +66,7 @@ ardyagent.ardy-lab.it/
 ├── ardy-reel-template-api.php # API libreria template di stile reel (DB)
 ├── ardy-lista-musica.php      # Elenca le tracce in assets/reel-music/
 ├── ardy-guida-michela.html    # Guida d'uso dashboard (HTML stampabile) — linkata dalla dashboard
-├── GUIDA-MICHELA.md           # Guida d'uso dashboard (versione testo)
+├── ardy-migrate.php           # Migrazione schema DB (idempotente) — UNICO posto con DDL, girato da deploy.sh
 ├── MANUALE-SOLE.md            # Mansionario dell'assistente AI Sole (canali, mansioni, regole)
 ├── ardy-notifica-michela.php  # Notifiche WhatsApp a Michela (Sole "segretaria") — libreria + endpoint n8n
 ├── ardy-chiusura-sessioni.php # Cron orario: notifica Michela alla "chiusura" chat (inattive >1h, web+WA)
@@ -93,6 +93,10 @@ ardyagent.ardy-lab.it/
 
 **Database:** `micoperibg_ardyagent`
 
+> **Schema gestito da `ardy-migrate.php`** (girato da `deploy.sh` al deploy). Tutte le tabelle e
+> colonne elencate qui sotto sono create/alterate lì, una volta sola — non più con DDL inline ad ogni
+> request HTTP. Migrazione idempotente. Nuova tabella/colonna → aggiungerla a `ardy-migrate.php`.
+
 ### Tabelle principali
 
 #### `clienti`
@@ -104,10 +108,10 @@ servizio, mobile, zona, budget, indirizzo, stato, note,
 data_followup, wp_post_id, wp_post_link, ip_address,
 sopralluogo_at (data/ora reale del sopralluogo), gcal_event_id (id evento Google Calendar)
 ```
-> `sopralluogo_at` + `gcal_event_id` (auto-creati) salvano la data vera dell'appuntamento e
+> `sopralluogo_at` + `gcal_event_id` salvano la data vera dell'appuntamento e
 > l'id dell'evento: servono per mostrare le date corrette nei riepiloghi e per **spostare** i sopralluoghi.
 
-Altre colonne (auto-aggiunte, idempotenti): `inizio_lavoro`, `fine_lavoro_prevista` (date dell'intero
+Altre colonne (gestite da `ardy-migrate.php`): `inizio_lavoro`, `fine_lavoro_prevista` (date dell'intero
 lavoro → pallini in lista), `note_consegna` (promemoria consegna), `deleted_at` (cestino soft-delete),
 `conversazione_letta_at` (marker "conversazione vista": quando Michela/Andrea apre la chat del cliente
 si salva NOW() → spegne il badge **💬 ha risposto** finché il cliente non riscrive).
@@ -136,7 +140,7 @@ foto_urls (JSON), video_urls (JSON), created_at
 > al cliente prima di procedere) dalle normali fasi di avanzamento. Le comunicazioni non entrano nel reel.
 
 #### `solleciti_pagamento`
-Casi di clienti morosi gestiti dalla "segretaria antipatica". Auto-creata al primo avvio.
+Casi di clienti morosi gestiti dalla "segretaria antipatica".
 
 ```
 id, session_id, telefono, nome_cliente, email, importo_dovuto, data_scadenza,
@@ -146,7 +150,7 @@ stato (APERTO/PAGATO/DIFFIDA/ARCHIVIATO), preventivo_ref, note_interne, created_
 
 #### `libreria_fasi`
 Libreria di frasi/fasi riutilizzabili nei preventivi. **Condivisa tra dispositivi**
-(prima era in localStorage). Auto-creata e popolata con 12 default al primo avvio.
+(prima era in localStorage). Popolata con 12 default alla prima lettura se la tabella è vuota.
 
 ```
 id (VARCHAR), nome, cat, descr, created_at, updated_at
@@ -154,7 +158,7 @@ id (VARCHAR), nome, cat, descr, created_at, updated_at
 
 #### `reel_template`
 Libreria di **template di stile** per il reel (durate, slide attive, musica).
-Auto-creata e popolata con 4 preset (Classico, Veloce, Cinematico, Solo foto).
+Popolata con 4 preset (Classico, Veloce, Cinematico, Solo foto) alla prima lettura se la tabella è vuota.
 
 ```
 id (VARCHAR), nome, sec_foto, sec_titolo, sec_finale,
@@ -164,7 +168,7 @@ mostra_titolo, mostra_didascalie, mostra_finale, musica_default, created_at, upd
 #### `social_bozze`
 Post social messi in attesa con "🕒 Salva per dopo". **Persistiti in DB** (prima vivevano solo nel
 localStorage del browser → si perdevano cambiando dispositivo). Gestiti da `ardy-social-bozze.php`,
-visibili da ogni dispositivo e da entrambi gli utenti. Auto-creata al primo avvio.
+visibili da ogni dispositivo e da entrambi gli utenti.
 
 ```
 id (VARCHAR, 'sp_...'), session_id, payload (JSON: testo, immagini[], piattaforme[], fase, mobile…), created_at
@@ -631,6 +635,13 @@ in repo (`ardy-config.php`, `ardy-gcal-token.json`, `ardy-uploads/`, `preventivi
 `reels/`, `vendor/`, `ardy-rate-limit/`) restano intatti. In alternativa, `.cpanel.yml`
 permette il deploy push-button da cPanel (richiede Jailed Shell).
 
+**Migrazioni schema DB:** dopo l'rsync, `deploy.sh` esegue **`ardy-migrate.php`** — l'**unico**
+posto dove si creano/alterano tabelle e colonne. Prima ogni endpoint faceva DDL
+(`SHOW COLUMNS`/`ALTER`/`CREATE TABLE IF NOT EXISTS`) ad ogni request HTTP; ora gira tutto una
+volta sola al deploy. È idempotente (IF NOT EXISTS + try/catch su 1050/1060 + `colExists`/`indexExists`),
+quindi rieseguirlo è sicuro. **Nuova tabella o colonna → aggiungerla a `ardy-migrate.php`**, mai
+inline negli endpoint.
+
 ---
 
 ## 📦 Dipendenze
@@ -715,9 +726,16 @@ permette il deploy push-button da cPanel (richiede Jailed Shell).
 
 ## 📝 Note sessioni
 
+**Giugno 2026 — Sessione 19/06 (rotazione chiavi, backlog sicurezza, migrazione DDL, indice clienti)**
+- **Chiavi sensibili ruotate**: Token Meta/WhatsApp, API key Anthropic e `WA_LOOKUP_SECRET` rigenerati (erano trapelati in un export del workflow n8n) e aggiornati in `ardy-config.php` + nodo n8n. Verificato dal vivo su WhatsApp.
+- **Backlog sicurezza chiuso** (4 fix): `state` anti-CSRF nell'OAuth Google (`ardy-gcal-auth.php`); query `get_stats` parametrizzata (`ardy-outreach-api.php`); ownership check sul download PDF preventivo (`ardy-preventivo.php`); delimitatori anti prompt-injection nella caption reel (`ardy-crea-reel.php`).
+- **DDL fuori dal path HTTP** (`ardy-migrate.php`): tutti i `CREATE TABLE`/`ALTER`/`SHOW COLUMNS` che giravano ad **ogni richiesta** in ~20 endpoint sono centralizzati in un'unica migrazione idempotente, eseguita da `deploy.sh` al deploy. Le funzioni `ensure*` negli endpoint sono ora no-op; il seeding default di `libreria_fasi`/`reel_template` resta (DML), condizionato su tabella vuota.
+- **Lista clienti più leggera** (`ardy-crm-api.php`): i due `SELECT *` su `clienti` ora prendono solo le colonne usate (`ARDY_CLIENTI_COLS`) + indice composito `idx_clienti_deleted_updated` su `(deleted_at, updated_at)`.
+- **Pulizia repo**: rimosso `GUIDA-MICHELA.md` (duplicato di `ardy-guida-michela.html`).
+
 **Giugno 2026 — Sessione 18/06 bis (autoapprendimento di Sole dalle fasi)**
 - **Conoscenza appresa dai lavori** (`ardy-conoscenza-appresa.php`): Michela seleziona dalle fasi pubblicate, preme **🧠 Distilla** → Claude estrae conoscenza di bottega **generica e anonimizzata** (tecniche/materiali/accorgimenti, niente nomi/indirizzi/prezzi/pezzi identificabili; dati fase delimitati come non-istruzioni = anti prompt-injection). Michela rivede/corregge la proposta e **salva**: solo allora entra in Sole. Storage in **blocco DB separato** (tabella `conoscenza_appresa`, attiva/disattiva/modifica/elimina) — distinto da `ardy-conoscenza-restauro.txt`.
-- **Iniezione**: il blocco attivo finisce nel `system_static` cacheato di Sole accanto alla conoscenza di bottega, sia su web (`ardy-proxy.php`) sia su WhatsApp lato cliente (`ardy-wa-lookup.php`). Il path caldo della chat non fa DDL (la tabella la crea l'endpoint dashboard al primo uso).
+- **Iniezione**: il blocco attivo finisce nel `system_static` cacheato di Sole accanto alla conoscenza di bottega, sia su web (`ardy-proxy.php`) sia su WhatsApp lato cliente (`ardy-wa-lookup.php`). Il path caldo della chat non fa DDL (la tabella `conoscenza_appresa` è creata da `ardy-migrate.php` al deploy).
 - **Dashboard**: bottone **📚 CONOSCENZA** (in ⚙︎ Strumenti) → modale con selezione fasi + proposta editabile + gestione blocchi appresi. Endpoint dietro Basic Auth (`.htaccess`).
 
 **Giugno 2026 — Sessione 18/06 (email cliente complete, avviso fine chat, consegne/ritiri)**
