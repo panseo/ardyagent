@@ -27,7 +27,7 @@
 | Vincolo | Conseguenza per il firewall |
 |---|---|
 | **WHM/cPanel** in uso | csf è *progettato* per cPanel: config di default già cPanel-aware (porte 2082-2087, 2095-2096, ecc.). Forte argomento pro-csf. |
-| **SSH e FTP DISABILITATI** (solo WHM) | (a) Niente regole in entrata per la 22 da gestire. (b) **Tutti i comandi qui sotto vanno eseguiti dal WHM Terminal** (Home → Server Configuration → Terminal), non via SSH. (c) Attenzione a non bloccarsi fuori da WHM (porte 2086/2087): csf le whiteliste di default, ma **verificare** prima di alzare il firewall. |
+| **SSH attivo come root, auth a chiave** + WHM | (a) **Due canali di accesso indipendenti** (SSH e WHM) → se uno si blocca alzando il firewall, l'altro resta come rete di sicurezza: il rischio di lockout totale crolla. (b) I comandi qui sotto si possono lanciare via **SSH** (o WHM Terminal). (c) **La porta 22 entra nella superficie**: va messa in `TCP_IN` di csf (e idealmente whitelistata sul tuo IP), altrimenti il primo `csf -r` ti chiude fuori da SSH. Stesso per 2086/2087 (WHM, già in default cPanel). (d) **Login solo a chiave** (niente password): il brute-force password su SSH è impossibile → il ruolo di LFD/Fail2ban su SSH è marginale; consigliato comunque confermare `PasswordAuthentication no` in `sshd_config`. |
 | **Docker** (n8n) gestisce le sue regole iptables | Il firewall host NON deve azzerare le chain di Docker a ogni restart. È il nodo tecnico centrale (vedi §3). |
 | **n8n bindato su `127.0.0.1:5678`** | n8n **non è pubblicamente esposto** a prescindere dal firewall: Docker non pubblica una porta su `0.0.0.0`, quindi non crea regola NAT pubblica. Superficie n8n ≈ nulla già oggi. |
 | **nftables `el9_8` vs firewalld `el9_7`** | È la causa-radice del problema firewalld. csf usa **iptables(-legacy/nft) direttamente**, non il daemon firewalld → aggira il disallineamento. |
@@ -64,8 +64,8 @@
 ---
 
 ## 2. Prerequisito: fotografare la superficie ESPOSTA (fare PRIMA di tutto)
-Questi comandi vanno lanciati in **WHM Terminal** (root). Servono a sapere cosa proteggere e a
-configurare csf con le porte giuste (niente lockout, niente porte aperte di troppo).
+Questi comandi vanno lanciati come **root** (via SSH o WHM Terminal). Servono a sapere cosa proteggere
+e a configurare csf con le porte giuste (niente lockout, niente porte aperte di troppo).
 
 ```bash
 # 1) Porte TCP in ascolto + processo che le tiene (la "foto" della superficie)
@@ -90,7 +90,8 @@ test -e /etc/csf/csf.conf && echo "csf presente" || echo "csf assente"
 ```
 
 **Cosa cercare nell'output di `ss -tlnp`** (porte tipiche di un host cPanel — ognuna va capita, non
-chiusa alla cieca): `80/443` (Apache), `2086/2087` (WHM), `2082/2083` (cPanel), `2095/2096`
+chiusa alla cieca): `22` (SSH — **attivo, va tenuto aperto**), `80/443` (Apache), `2086/2087` (WHM),
+`2082/2083` (cPanel), `2095/2096`
 (webmail), `2077/2078` (WebDAV), `25/465/587/110/995/143/993` (mail, se l'host fa mail — qui la mail
 è su Aruba, quindi probabilmente **non** servono aperte), `53` (DNS se è nameserver), `3306` (MySQL —
 **deve** essere solo localhost). Tutto ciò che ascolta su `0.0.0.0` e non riconosciamo è un campanello.
@@ -125,8 +126,9 @@ Se Sole risponde, il bridge Docker è intatto.
 ---
 
 ## 4. Runbook csf (proposta, da eseguire in WHM Terminal — NON ancora eseguito)
-> Esecuzione su server, non da questo repo. Procedere **solo dopo** la foto del §2 e fuori dagli orari
-> di punta. csf ha un'interfaccia in WHM (Plugins → ConfigServer Security & Firewall) per il dopo.
+> Esecuzione su server (via SSH come root o WHM Terminal), non da questo repo. Procedere **solo dopo**
+> la foto del §2 e fuori dagli orari di punta. csf ha anche un'interfaccia in WHM (Plugins →
+> ConfigServer Security & Firewall) per il dopo.
 
 ```bash
 # A) Installazione (metodo ufficiale ConfigServer)
@@ -144,7 +146,8 @@ perl /usr/local/csf/bin/csftest.pl
 # C) PRIMA di andare LIVE: restare in TESTING (default a install) ed editare la config
 #    /etc/csf/csf.conf  →  punti chiave:
 #    - TESTING = "1"            (resta in test: csf si auto-disattiva ogni 5 min → niente lockout)
-#    - TCP_IN / TCP_OUT        (aprire SOLO le porte viste al §2: 80,443,2086,2087,2083,2096,... )
+#    - TCP_IN / TCP_OUT        (aprire SOLO le porte viste al §2: 22,80,443,2086,2087,2083,2096,... )
+#                              ⚠️ NON dimenticare la 22 (SSH) o ti chiudi fuori al primo csf -r
 #    - abilitare il supporto Docker (opzione nativa se presente nella versione, vedi §3)
 #    - LF_DAEMON = "1"         (LFD: rileva i brute-force; coordinare/sostituire Fail2ban — NON
 #                               tenerli entrambi a bannare le stesse cose o si pestano i piedi)
@@ -176,7 +179,7 @@ log Apache/ModSecurity). Documentare la scelta finale per non averli a combatter
 ## 5. Rischi e mitigazioni
 | Rischio | Impatto | Mitigazione |
 |---|---|---|
-| **Auto-lockout da WHM** alzando csf | Alto (SSH è off → WHM è l'unica via) | Modalità `TESTING=1` (auto-off ogni 5 min); verificare 2086/2087 in TCP_IN; nuova scheda browser per testare prima di togliere TESTING; tenere a portata la console OVH/KVM come ultima rete di sicurezza |
+| **Auto-lockout** alzando csf | Medio (due canali: SSH **e** WHM → ridondanza) | Mettere **22 + 2086/2087** in TCP_IN; modalità `TESTING=1` (auto-off ogni 5 min); tenere aperta una sessione SSH/WHM già autenticata mentre si testa in una NUOVA; console OVH/KVM come ultima rete di sicurezza |
 | **csf flusha le chain Docker** → n8n offline | Medio (basso qui: n8n su 127.0.0.1) | Abilitare supporto Docker in csf (§3) o `csfpost.sh`; test `docker start n8n_app` + WhatsApp dopo ogni `csf -r` |
 | **Doppio ban** Fail2ban + LFD | Medio | Scegliere chi banna cosa (§4); non sovrapporre i jail |
 | **Porte chiuse di troppo** (mail/cPanel) → servizio rotto | Medio | Aprire solo ciò che è in `ss -tlnp` (§2); cambiare una cosa per volta e verificare |
@@ -191,7 +194,7 @@ stato con default-deny e protezione brute-force integrata, e (c) **non ripropone
 firewalld/nftables che ci ha costretti al `disable`. L'opzione 1 resta lo stato-ponte accettabile fin
 qui; l'opzione 3 è da scartare (rischiosa e temporanea).
 
-Checklist operativa (da eseguire in WHM Terminal, fuori dagli orari di punta):
+Checklist operativa (via SSH come root o WHM Terminal, fuori dagli orari di punta):
 - [ ] **§2 — Foto della superficie**: `ss -tlnp`, `ss -ulnp`, conferma MySQL su localhost,
       `docker ps` sulle porte pubblicate. Incollare l'output qui sotto come allegato.
 - [ ] (Se MySQL su `0.0.0.0`) → `bind-address=127.0.0.1`, riavvio MySQL, riverifica.
