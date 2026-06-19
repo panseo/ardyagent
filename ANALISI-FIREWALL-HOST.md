@@ -169,6 +169,36 @@ Se Sole risponde, il bridge Docker è intatto.
 
 ---
 
+## 3-ter. Interazioni con la sicurezza esistente (conflitti / complementarità)
+L'host ha già più strati. csf si inserisce **senza conflitti** con quasi tutti — operano a livelli
+diversi — con **un solo conflitto vero** (Fail2ban) e **un rischio operativo** (Cloudflare real-IP).
+
+| Strato | Layer | Rapporto con csf | Verdetto |
+|---|---|---|---|
+| OVH Anti-DDoS | Edge di rete (a monte) | Flood volumetrici a monte; csf a valle | ✅ Complementare |
+| ModSecurity | L7 (WAF Apache) | csf è L3/L4; LFD può leggere i log ModSec per bannare i recidivi | ✅ Complementare/sinergico |
+| cPHulk | App (login cPanel/WHM/FTP/mail) | Overlap parziale con LFD, chain separate | ⚠️ Overlap, non conflitto |
+| **Fail2ban** | Host (scan log → ban iptables) | **Stesso compito di LFD**, stesso iptables | 🔴 **Conflitto → disabilitare** |
+| WP Cerber | App (dentro WordPress/PHP) | Bana a livello app/.htaccess, non iptables | ✅ Nessun conflitto diretto |
+
+**Decisioni prese (19/06):**
+- **Fail2ban → DISABILITARE** una volta che LFD è operativo (LFD unico banner host-based; standard cPanel).
+- **cPHulk + ModSecurity + OVH Anti-DDoS → restano** (layer diversi). cPHulk possiede i ban dei login
+  cPanel, LFD il resto. Non sovrapporre gli stessi log.
+
+**🔴 Rischio Cloudflare real-IP — circoscritto a `ardy-lab.it`:** solo `ardy-lab.it` è dietro proxy
+Cloudflare (arancione); gli altri domini del server (`micoperibg.eu` = hostname, `omnialga.com`,
+`micoperi.com`, `micoperibg.com`) arrivano **diretti** con IP reale. Per il traffico di ardy-lab.it
+l'host vede gli **IP di Cloudflare** su 80/443. Senza mitigazione, csf/LFD potrebbero bannare un IP CF
+→ **ardy-lab.it giù per tutti**, e gli attaccanti veri restano nascosti. WordPress+Cerber girano su
+**questo** server, quindi anche Cerber è coinvolto. Mitigazioni (da applicare):
+1. **Whitelist dei range IP Cloudflare in `/etc/csf/csf.allow`** → csf/LFD non bannano mai CF.
+2. **`mod_remoteip`** (EA4) per ripristinare l'IP reale del visitatore (`CF-Connecting-IP`/XFF) sui
+   log Apache di ardy-lab.it → ModSec/Cerber/LFD agiscono sull'attaccante vero.
+3. **Cerber**: attivare l'opzione "dietro reverse proxy / Cloudflare" così legge `CF-Connecting-IP`.
+
+---
+
 ## 4. Runbook csf (RPM cPanel — NON ancora eseguito)
 > Esecuzione su server (via SSH come root o WHM Terminal), non da questo repo. Procedere **solo dopo**
 > la foto del §2 e fuori dagli orari di punta. csf ha anche un'interfaccia in WHM (Plugins →
