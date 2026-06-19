@@ -120,15 +120,16 @@ try {
         case 'get_stats':
             $cats = ['antiquari','mercatini','interior_designer','bb'];
             $out  = [];
+            $stmtStats = $db->prepare("SELECT
+                COUNT(*) as totale,
+                SUM(CASE WHEN stato='da_contattare'  THEN 1 ELSE 0 END) as da_fare,
+                SUM(CASE WHEN stato='inviato'        THEN 1 ELSE 0 END) as inviati,
+                SUM(CASE WHEN stato='risposto'       THEN 1 ELSE 0 END) as risposto,
+                SUM(CASE WHEN stato='partner'        THEN 1 ELSE 0 END) as partner
+                FROM outreach_contatti WHERE categoria = :cat");
             foreach ($cats as $cat) {
-                $row = $db->query("SELECT
-                    COUNT(*) as totale,
-                    SUM(CASE WHEN stato='da_contattare'  THEN 1 ELSE 0 END) as da_fare,
-                    SUM(CASE WHEN stato='inviato'        THEN 1 ELSE 0 END) as inviati,
-                    SUM(CASE WHEN stato='risposto'       THEN 1 ELSE 0 END) as risposto,
-                    SUM(CASE WHEN stato='partner'        THEN 1 ELSE 0 END) as partner
-                    FROM outreach_contatti WHERE categoria='$cat'")->fetch();
-                $out[$cat] = $row;
+                $stmtStats->execute([':cat' => $cat]);
+                $out[$cat] = $stmtStats->fetch();
             }
             echo json_encode($out);
             break;
