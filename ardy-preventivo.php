@@ -158,6 +158,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             echo json_encode(['error' => 'File non trovato']);
             exit;
         }
+        // Verifica che il file corrisponda a un preventivo reale in DB (no file arbitrari)
+        $db   = dbConnect();
+        $chk  = $db->prepare("SELECT id FROM preventivi WHERE file_pdf = ? LIMIT 1");
+        $chk->bind_param('s', $file);
+        $chk->execute();
+        if (!$chk->get_result()->fetch_assoc()) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Accesso non consentito']);
+            exit;
+        }
         header('Content-Type: application/pdf');
         header('Content-Disposition: attachment; filename="' . $file . '"');
         header('Content-Length: ' . filesize($path));
