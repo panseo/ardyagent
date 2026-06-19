@@ -8,15 +8,7 @@ date_default_timezone_set('Europe/Rome');
 header('Content-Type: text/html; charset=utf-8');
 
 $db = ardyDB();
-$db->exec("
-    CREATE TABLE IF NOT EXISTS `visite_pagina` (
-        `pagina` VARCHAR(64) NOT NULL,
-        `giorno` DATE NOT NULL,
-        `visite` INT NOT NULL DEFAULT 0,
-        `unici`  INT NOT NULL DEFAULT 0,
-        PRIMARY KEY (`pagina`, `giorno`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-");
+// Tabella visite_pagina creata da ardy-migrate.php.
 
 // Etichette leggibili per le pagine note
 $labels = ['chat-lead' => 'Chat lead — "Parla subito con Sole"'];

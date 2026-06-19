@@ -191,6 +191,7 @@ $clientiCols = [
     'trasporto_pronto_at'     => "ALTER TABLE clienti ADD COLUMN trasporto_pronto_at DATETIME NULL",
     'trasporto_avviso_data'   => "ALTER TABLE clienti ADD COLUMN trasporto_avviso_data DATE NULL",
     'faq_pubblicata_at'       => "ALTER TABLE clienti ADD COLUMN faq_pubblicata_at DATETIME NULL",
+    'foto_archiviate_at'      => "ALTER TABLE clienti ADD COLUMN foto_archiviate_at DATETIME NULL",
     'telefono_last9'          => "ALTER TABLE clienti ADD COLUMN telefono_last9 VARCHAR(9) NULL AFTER telefono",
 ];
 foreach ($clientiCols as $col => $sql) {

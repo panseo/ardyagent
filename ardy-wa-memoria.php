@@ -30,18 +30,9 @@ $MAX_HISTORY = 20; // quante righe di storico recuperare (10 scambi circa)
 
 try {
     $db = ardyDB();
-    $db->exec(
-        "CREATE TABLE IF NOT EXISTS wa_messaggi (
-            id BIGINT AUTO_INCREMENT PRIMARY KEY,
-            phone VARCHAR(32) NOT NULL,
-            role VARCHAR(16) NOT NULL,
-            content MEDIUMTEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_phone (phone, id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
-    );
+    // Tabella wa_messaggi creata da ardy-migrate.php.
 } catch (PDOException $e) {
-    error_log('ARDY WA MEMORIA TABLE ERROR: ' . $e->getMessage());
+    error_log('ARDY WA MEMORIA DB ERROR: ' . $e->getMessage());
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'errore database']);
     exit();

@@ -25,36 +25,7 @@ $action = $input['action'] ?? ($_GET['action'] ?? '');
 try {
     $db = ardyDB();
 
-    // Crea tabelle se non esistono
-    $db->exec("CREATE TABLE IF NOT EXISTS `outreach_contatti` (
-        `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-        `nome` VARCHAR(200) NOT NULL,
-        `referente` VARCHAR(100) DEFAULT NULL,
-        `categoria` VARCHAR(50) NOT NULL DEFAULT 'antiquari',
-        `email` VARCHAR(191) DEFAULT NULL,
-        `telefono` VARCHAR(50) DEFAULT NULL,
-        `sito` VARCHAR(500) DEFAULT NULL,
-        `indirizzo` VARCHAR(400) DEFAULT NULL,
-        `stato` VARCHAR(50) NOT NULL DEFAULT 'da_contattare',
-        `note` TEXT DEFAULT NULL,
-        `data_contatto` DATE DEFAULT NULL,
-        `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        PRIMARY KEY (`id`),
-        KEY `idx_categoria` (`categoria`),
-        KEY `idx_stato` (`stato`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-
-    $db->exec("CREATE TABLE IF NOT EXISTS `outreach_template` (
-        `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-        `nome` VARCHAR(100) NOT NULL,
-        `categoria` VARCHAR(50) DEFAULT NULL,
-        `oggetto` VARCHAR(200) NOT NULL,
-        `corpo` TEXT NOT NULL,
-        `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        PRIMARY KEY (`id`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    // Tabelle outreach_contatti e outreach_template create da ardy-migrate.php.
 
     switch ($action) {
 

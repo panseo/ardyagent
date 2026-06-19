@@ -27,24 +27,11 @@ function reelTemplateDefaults(): array {
     ];
 }
 
+// La tabella è creata da ardy-migrate.php. Qui inseriamo i default una sola
+// volta, se la tabella è ancora vuota (DML, non DDL).
 function ensureReelTemplateTable(PDO $db): void {
-    $existed = (bool) $db->query("SHOW TABLES LIKE 'reel_template'")->fetch();
-    $db->exec("
-        CREATE TABLE IF NOT EXISTS `reel_template` (
-            `id`                VARCHAR(64) NOT NULL PRIMARY KEY,
-            `nome`              VARCHAR(120) NOT NULL,
-            `sec_foto`          DECIMAL(4,2) NOT NULL DEFAULT 2.50,
-            `sec_titolo`        DECIMAL(4,2) NOT NULL DEFAULT 3.50,
-            `sec_finale`        DECIMAL(4,2) NOT NULL DEFAULT 4.00,
-            `mostra_titolo`     TINYINT(1) NOT NULL DEFAULT 1,
-            `mostra_didascalie` TINYINT(1) NOT NULL DEFAULT 1,
-            `mostra_finale`     TINYINT(1) NOT NULL DEFAULT 1,
-            `musica_default`    VARCHAR(120) NOT NULL DEFAULT 'nessuna',
-            `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            `updated_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
-    if (!$existed) {
+    $vuota = (int) $db->query("SELECT COUNT(*) FROM `reel_template`")->fetchColumn() === 0;
+    if ($vuota) {
         $stmt = $db->prepare(
             "INSERT INTO `reel_template`
              (`id`,`nome`,`sec_foto`,`sec_titolo`,`sec_finale`,`mostra_titolo`,`mostra_didascalie`,`mostra_finale`,`musica_default`)

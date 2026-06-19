@@ -29,16 +29,8 @@ require_once __DIR__ . '/ardy-db.php';
 try {
     $db = ardyDB();
 
-    // Tabella idempotente. payload = oggetto bozza completo (testo, immagini,
-    // piattaforme, fase, ecc.) serializzato in JSON.
-    $db->exec(
-        "CREATE TABLE IF NOT EXISTS social_bozze (
-            id         VARCHAR(40)  NOT NULL PRIMARY KEY,
-            session_id VARCHAR(120) NULL,
-            payload    MEDIUMTEXT   NOT NULL,
-            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
-         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
-    );
+    // Tabella social_bozze creata da ardy-migrate.php.
+    // payload = oggetto bozza completo (testo, immagini, piattaforme, fase) in JSON.
 
     // ── LETTURA ────────────────────────────────────────────
     // Filtra per session_id: i post in attesa appartengono al cliente da cui

@@ -45,33 +45,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit();
 ardyRequireAuth();
 
 // -----------------------------------------------------------
-// DB + auto-creazione tabella
+// DB (tabella solleciti_pagamento creata da ardy-migrate.php)
 // -----------------------------------------------------------
 try {
     $db = ardyDB();
-    $db->exec(
-        "CREATE TABLE IF NOT EXISTS solleciti_pagamento (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            session_id VARCHAR(64) NULL,
-            telefono VARCHAR(32) NULL,
-            nome_cliente VARCHAR(160) NOT NULL,
-            email VARCHAR(190) NULL,
-            importo_dovuto DECIMAL(10,2) NULL,
-            data_scadenza DATE NULL,
-            numero_sollecito TINYINT NOT NULL DEFAULT 0,
-            data_ultimo_sollecito DATETIME NULL,
-            risposta_cliente TEXT NULL,
-            stato VARCHAR(16) NOT NULL DEFAULT 'APERTO',
-            preventivo_ref TEXT NULL,
-            note_interne TEXT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            INDEX idx_stato (stato),
-            INDEX idx_session (session_id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
-    );
 } catch (PDOException $e) {
-    error_log('ARDY SOLLECITI TABLE ERROR: ' . $e->getMessage());
+    error_log('ARDY SOLLECITI DB ERROR: ' . $e->getMessage());
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'errore database']);
     exit();

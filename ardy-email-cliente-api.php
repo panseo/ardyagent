@@ -38,21 +38,9 @@ header('Content-Type: application/json; charset=utf-8');
 define('PREVENTIVI_PDF_DIR', __DIR__ . '/preventivi_pdf/');
 define('EMAIL_PDF_DIR', __DIR__ . '/email_pdf/');
 
-// Crea la tabella delle bozze email se non esiste (DDL idempotente).
+// La tabella email_bozze è creata da ardy-migrate.php (al deploy).
 function ardyEnsureEmailBozze(PDO $db): void {
-    $db->exec("
-        CREATE TABLE IF NOT EXISTS `email_bozze` (
-            `id`           INT AUTO_INCREMENT PRIMARY KEY,
-            `session_id`   VARCHAR(64)  NOT NULL,
-            `destinatario` VARCHAR(255) NOT NULL DEFAULT '',
-            `oggetto`      VARCHAR(255) NOT NULL DEFAULT '',
-            `testo`        TEXT NOT NULL,
-            `allegato_pdf` VARCHAR(255) NULL,
-            `created_at`   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            `updated_at`   TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            INDEX (session_id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
+    // no-op: DDL centralizzato in ardy-migrate.php
 }
 
 /** Valida e salva in email_pdf/ il file PDF caricato via upload. Ritorna il nome o null. */
