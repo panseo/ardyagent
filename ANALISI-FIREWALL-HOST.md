@@ -123,23 +123,24 @@ chiusa alla cieca): `22` (SSH — **attivo, va tenuto aperto**), `80/443` (Apach
 - **⚠️ Da CHIUDERE — `111` (rpcbind, TCP+UDP)**: portmapper, serve solo a NFS. Inutile qui e noto
   vettore di amplificazione DDoS. csf non lo whitelista (→ chiuso); meglio anche disabilitare il
   servizio: `systemctl disable --now rpcbind rpcbind.socket` (verificare prima che NFS non sia in uso).
-- **❓ Da DECIDERE — stack mail (25,110,143,465,587,993,995,4190)**: la posta è su **Aruba** (MX) e
-  l'invio via **Brevo**, quindi questo host probabilmente **non riceve mail** da fuori → porte
-  chiudibili. Confermare che nessun account/flow usi la mail locale prima di chiuderle. In dubbio:
-  tenerle aperte (default cPanel) e stringere dopo.
+- **✅ DECISO — chiudere lo stack mail (25,110,143,465,587,993,995,4190)**: la posta è tutta su
+  **Aruba** (MX) + invio via **Brevo**; questo host non riceve mail da fuori. Le porte protocollo mail
+  si chiudono (exim resta vivo per la consegna locale/outbound su loopback, che csf consente sempre).
 - **❓ Da valutare — `53` (PowerDNS)**: i NS autoritativi sono **Cloudflare**; il pdns locale forse non
-  serve pubblico. Non urgente (autoritativo, non resolver aperto). Tenere per ora.
+  serve pubblico. Non urgente (autoritativo, non resolver aperto). **Tenuto aperto per ora.**
+- **✅ DECISO — rpcbind (111)**: disabilitare il servizio + lasciarlo chiuso in csf (no NFS in uso).
 
-**Config csf risultante (stato di partenza consigliato):**
+**Config csf risultante (decisa il 19/06):**
 ```
-# /etc/csf/csf.conf
-TCP_IN  = "22,25,53,80,110,143,443,465,587,993,995,2077,2078,2079,2080,2082,2083,2086,2087,2091,2095,2096,4190"
+# /etc/csf/csf.conf  — mail chiusa, 111 esclusa, 53 tenuta
+TCP_IN  = "22,53,80,443,2077,2078,2079,2080,2082,2083,2086,2087,2091,2095,2096"
 UDP_IN  = "53"
 # TCP_OUT/UDP_OUT: lasciare permissivi all'inizio (Sole fa molte chiamate in uscita:
 #   API Claude, Meta, Brevo SMTP, Cloudflare, git, docker pull). L'egress filtering
 #   e' una rifinitura successiva, da fare testando che Sole non smetta di funzionare.
 ```
-> Se in futuro si chiudono mail/DNS, togliere i relativi numeri da TCP_IN/UDP_IN.
+> Webmail UI (2095/2096) e cPanel/WHM (2082-2087) restano aperti: sono i pannelli di controllo, non
+> protocolli mail. Se in futuro si vuole chiudere anche pdns, togliere `53` da TCP_IN/UDP_IN.
 
 ---
 
@@ -188,8 +189,8 @@ perl /usr/local/csf/bin/csftest.pl
 # C) PRIMA di andare LIVE: restare in TESTING (default a install) ed editare la config
 #    /etc/csf/csf.conf  →  punti chiave:
 #    - TESTING = "1"            (resta in test: csf si auto-disattiva ogni 5 min → niente lockout)
-#    - TCP_IN = "22,25,53,80,110,143,443,465,587,993,995,2077,2078,2079,2080,2082,2083,2086,2087,2091,2095,2096,4190"
-#                              (valori reali dal §2-bis; ESCLUSA la 111/rpcbind)
+#    - TCP_IN = "22,53,80,443,2077,2078,2079,2080,2082,2083,2086,2087,2091,2095,2096"
+#                              (decisa 19/06: mail chiusa, 111 esclusa, 53 tenuta)
 #                              ⚠️ NON dimenticare la 22 (SSH) o ti chiudi fuori al primo csf -r
 #    - UDP_IN = "53"           (DNS; chronyd NTP e' su localhost)
 #    - TCP_OUT/UDP_OUT permissivi all'inizio (vedi §2-bis: Sole fa molte chiamate in uscita)
