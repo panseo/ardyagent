@@ -85,6 +85,25 @@ Prossimi task per priorità: accesso "dipendente" (permessi limitati) · program
 
 ## 🔧 NOTE OPERATIVE (servono sempre)
 
+**⚠️ Sole non risponde su WhatsApp ma la webchat sì → è n8n giù.** Il ramo WhatsApp è
+Meta → n8n → `ardy-wa-lookup.php` → Claude; la webchat (`ardy-proxy.php`) NON passa per n8n.
+Check rapido: aprire `https://n8n.ardy-lab.it` (503/523 = giù). Sul server (root via SSH/WHM):
+```
+docker ps | grep -i n8n          # il container è n8n_app, espone SOLO 127.0.0.1:5678
+systemctl is-active docker
+docker start n8n_app             # se è giù ma Docker è su
+```
+
+**⚠️ firewalld DISABILITATO di proposito (19/06/2026) — non riattivarlo.** Dopo un aggiornamento
+notturno (nftables salito a `el9_8`, firewalld fermo a `el9_7`) il daemon Docker non parte più con
+firewalld attivo: `failed to create NAT chain DOCKER: COMMAND_FAILED: INVALID_IPV: 'ipv4' is not a
+valid backend or is unavailable` (la passthrough di firewalld è rotta dal disallineamento versioni;
+`dnf update firewalld` = "Nothing to do", nessuna fix nei repo). Soluzione applicata: `systemctl stop
+firewalld && systemctl disable firewalld` + Docker gestisce da sé le sue regole iptables. Docker e
+containerd sono `enabled` → ripartono al boot. **Se Docker non parte dopo un reboot/aggiornamento**,
+verificare che firewalld non sia tornato su (`systemctl is-enabled firewalld` deve dare `disabled`).
+Decisione firewall host ancora aperta → vedi task "Firewall host (csf)" più sotto.
+
 **Deploy sul server** (da root):
 ```
 runuser -u micoperibg -- bash -c 'cd ~/repositories/ardyagent && git pull origin main && ./deploy.sh'
@@ -207,6 +226,15 @@ guida `ardy-gbp-post.md`. Scope `business.manage` aggiunto in `ardy-gcal-auth.ph
 ---
 
 ## 📋 TASK DA SVILUPPARE (aperti)
+
+### 🔥 Firewall host — decidere il sostituto di firewalld (priorità media/sicurezza)
+firewalld è disabilitato dal 19/06 (incompatibile con Docker, vedi NOTE OPERATIVE). Per ora l'host
+è coperto da OVH Anti-DDoS + Fail2ban + ModSecurity, e n8n è solo su `127.0.0.1`. Da decidere il
+firewall host definitivo. Opzioni: (1) lasciare così (Docker gestisce iptables; più semplice);
+(2) **installare csf** (ConfigServer Firewall, lo standard su cPanel/WHM, convive con Docker) — racc.;
+(3) tentare il rientro di firewalld con downgrade di nftables a `el9_7` (rischioso, dipendenze el9_8).
+Prima di decidere: verificare quali porte host sono esposte (es. `ss -tlnp`) e che MySQL sia su localhost.
+
 
 ### 🧠 ~~Autoapprendimento di Sole dalle fasi di lavoro~~ ✅ FATTO (18/06 bis, da testare dal vivo)
 Sole impara dai lavori veri. In dashboard, bottone **📚 CONOSCENZA** (⚙︎ Strumenti) → modale:
