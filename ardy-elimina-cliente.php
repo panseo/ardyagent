@@ -227,11 +227,28 @@ $deleted = [];
 try {
     $db = ardyDB();
 
-    // 1) Verifica che la scheda esista (evita conferme "a vuoto")
-    $chk = $db->prepare("SELECT 1 FROM clienti WHERE session_id = :sid LIMIT 1");
+    // 1) Verifica che la scheda esista E sia GIÀ NEL CESTINO.
+    //    ── GABBIA DI SICUREZZA (difesa dal caso peggiore) ──────────────────────
+    //    La cancellazione DEFINITIVA è permessa solo su schede già soft-deleted
+    //    (deleted_at IS NOT NULL). Così una singola chiamata — per errore o per
+    //    abuso — non può MAI distruggere all'istante una scheda viva: il massimo
+    //    danno possibile diventa lo spostamento nel Cestino (azione 'cestina'),
+    //    che è reversibile per 30 giorni. Per eliminare davvero servono due passi
+    //    distinti (cestina → elimina dal Cestino), come già fa la dashboard.
+    $chk = $db->prepare("SELECT deleted_at FROM clienti WHERE session_id = :sid LIMIT 1");
     $chk->execute([':sid' => $sessionId]);
-    if (!$chk->fetchColumn()) {
+    $row = $chk->fetch();
+    if ($row === false) {
         echo json_encode(['success' => false, 'error' => 'Nessuna scheda per questa sessione']);
+        exit();
+    }
+    if (empty($row['deleted_at'])) {
+        http_response_code(409);
+        echo json_encode([
+            'success' => false,
+            'error'   => 'La scheda non è nel Cestino. Spostala prima nel Cestino (è reversibile), '
+                       . 'poi potrai eliminarla definitivamente da lì.',
+        ]);
         exit();
     }
 
