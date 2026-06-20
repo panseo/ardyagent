@@ -18,7 +18,8 @@
 // scrive su DB — la conferma campo-per-campo avviene in UI.
 // -----------------------------------------------------------
 
-require_once __DIR__ . '/ardy-net.php'; // ardySafeHttpGet, ardyValidatePublicUrl
+require_once __DIR__ . '/ardy-net.php';    // ardySafeHttpGet, ardyValidatePublicUrl
+require_once __DIR__ . '/ardy-places.php'; // ardyPlacesConfigured, ardyPlacesFindOne
 
 // Campi che l'agente prova a completare (corrispondono a colonne reali del DB).
 const ARDY_ENRICH_FIELDS = ['sito', 'email', 'telefono', 'indirizzo', 'referente'];
@@ -70,6 +71,32 @@ function ardyEnrichContact(array $contact, string $apiKey): array {
             $proposte[$campo] = $val + ['passo' => 'sito'];
         }
         if ($scraped) $log[] = 'Sito visitato: ' . implode(', ', array_keys($scraped)) . ' trovati';
+    }
+
+    // --- 1b) Google Places (se configurato): dato strutturato e affidabile --
+    // Riempie i campi ancora vuoti (sito, telefono, indirizzo) prima di pagare
+    // l'agente Claude. Email e referente non li fornisce → restano a Claude.
+    if (ardyPlacesConfigured()) {
+        $serveQualcosa = false;
+        foreach (['sito', 'telefono', 'indirizzo'] as $f) {
+            if (trim((string)($contact[$f] ?? '')) === '' && !isset($proposte[$f])) { $serveQualcosa = true; break; }
+        }
+        if ($serveQualcosa) {
+            $place = ardyPlacesFindOne((string)($contact['nome'] ?? ''), (string)($contact['indirizzo'] ?? ''));
+            if ($place) {
+                $fonte = $place['maps'] ?: 'Google Maps';
+                foreach (['sito', 'telefono', 'indirizzo'] as $campo) {
+                    if (trim((string)($contact[$campo] ?? '')) !== '') continue; // non sovrascrivere il contatto
+                    if (isset($proposte[$campo])) continue;                       // né il sito ufficiale
+                    $v = trim((string)($place[$campo] ?? ''));
+                    if ($v === '') continue;
+                    $proposte[$campo] = ['valore' => $v, 'fonte' => $fonte, 'confidenza' => 'alta', 'passo' => 'google'];
+                }
+                $log[] = 'Google Maps: ' . $place['nome'] . ' trovato';
+            } else {
+                $log[] = 'Google Maps: nessun match affidabile';
+            }
+        }
     }
 
     // --- 2) Pass agente (web search) per i buchi rimasti -------------------

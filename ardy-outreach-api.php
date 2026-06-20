@@ -8,6 +8,7 @@ require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-auth.php';
 require_once __DIR__ . '/ardy-email.php';
 require_once __DIR__ . '/ardy-enrich.php';
+require_once __DIR__ . '/ardy-places.php';
 
 header('Access-Control-Allow-Origin: https://ardyagent.ardy-lab.it');
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
@@ -341,24 +342,35 @@ try {
             break;
 
         // --------------------------------------------------------
-        // RICERCA AZIENDE IN RETE (OpenStreetMap — Nominatim + Overpass)
-        // Cerca attività per categoria e zona, senza API key.
+        // RICERCA AZIENDE IN RETE — fonte OSM (Nominatim+Overpass, gratis) o
+        // Google Maps (Places API, più completa, a pagamento se configurata).
         // --------------------------------------------------------
         case 'web_search':
             $cat    = $input['categoria'] ?? 'antiquari';
             $citta  = trim($input['citta'] ?? '');
             $raggio = max(1, min(50, (int)($input['raggio'] ?? 10))); // km, 1..50
+            $fonte  = ($input['fonte'] ?? 'osm') === 'google' ? 'google' : 'osm';
             if ($citta === '') { echo json_encode(['success' => false, 'error' => 'Indica una città o zona']); break; }
 
-            // 1) Geocoding della zona
+            // Geocoding della zona (Nominatim, gratis — usato da entrambe le fonti).
             $geo = osmGeocode($citta);
             if (!$geo) { echo json_encode(['success' => false, 'error' => 'Zona non trovata: ' . $citta]); break; }
 
-            // 2) Overpass: attività della categoria entro il raggio
-            $results = osmOverpass($cat, $geo['lat'], $geo['lon'], $raggio * 1000);
+            $avviso = '';
+            if ($fonte === 'google' && !ardyPlacesConfigured()) {
+                // Richiesta Google ma chiave non configurata: ripiego su OSM e avviso.
+                $fonte  = 'osm';
+                $avviso = 'Google Maps non è configurato sul server: uso OpenStreetMap.';
+            }
+
+            if ($fonte === 'google') {
+                $results = ardyPlacesSearch($cat, $geo['lat'], $geo['lon'], $raggio * 1000);
+            } else {
+                $results = osmOverpass($cat, $geo['lat'], $geo['lon'], $raggio * 1000);
+            }
             if ($results === null) { echo json_encode(['success' => false, 'error' => 'Servizio di ricerca non raggiungibile, riprova']); break; }
 
-            // 3) Marca i contatti già presenti (per nome o sito)
+            // Marca i contatti già presenti (per nome o sito).
             $existing = $db->query("SELECT LOWER(nome) AS n, LOWER(COALESCE(sito,'')) AS s FROM outreach_contatti")->fetchAll();
             $exNomi = array_column($existing, 'n');
             $exSiti = array_filter(array_column($existing, 's'));
@@ -369,7 +381,7 @@ try {
             }
             unset($r);
 
-            echo json_encode(['success' => true, 'zona' => $geo['display'], 'count' => count($results), 'results' => $results]);
+            echo json_encode(['success' => true, 'zona' => $geo['display'], 'fonte' => $fonte, 'avviso' => $avviso, 'count' => count($results), 'results' => $results]);
             break;
 
         // --------------------------------------------------------
@@ -378,6 +390,7 @@ try {
         case 'save_leads':
             $leads = $input['leads'] ?? [];
             $cat   = $input['categoria'] ?? 'antiquari';
+            $note  = (($input['fonte'] ?? 'osm') === 'google') ? 'Trovato via Google Maps' : 'Trovato via ricerca OSM';
             if (empty($leads) || !is_array($leads)) { echo json_encode(['success' => false, 'error' => 'Nessun lead da salvare']); break; }
 
             // Set per dedup (nome + sito già in DB)
@@ -399,7 +412,7 @@ try {
                     ':tel'   => ($l['telefono'] ?? '') ?: null,
                     ':sito'  => ($l['sito'] ?? '') ?: null,
                     ':ind'   => ($l['indirizzo'] ?? '') ?: null,
-                    ':note'  => 'Trovato via ricerca OSM',
+                    ':note'  => $note,
                 ]);
                 $exNomi[] = strtolower($nome);
                 if ($sitoL) { $exSiti[] = $sitoL; }

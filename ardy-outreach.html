@@ -375,6 +375,12 @@
             <input class="form-input" id="srcCitta" placeholder="es. Roma, Trastevere..." onkeydown="if(event.key==='Enter')runSearch()">
             <input class="form-input" id="srcRaggio" type="number" min="1" max="50" value="10" title="Raggio in km">
           </div>
+          <div style="display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px;">
+            <select class="form-select" id="srcFonte" title="Fonte dei dati">
+              <option value="osm">Fonte: OpenStreetMap (gratis)</option>
+              <option value="google">Fonte: Google Maps (più completa)</option>
+            </select>
+          </div>
           <button class="btn-send" id="btnRunSearch" onclick="runSearch()" style="margin-top:12px;">🔎 CERCA</button>
         </div>
 
@@ -1054,16 +1060,18 @@ async function runSearch() {
   const categoria = document.getElementById('srcCategoria').value;
   const citta     = document.getElementById('srcCitta').value.trim();
   const raggio    = parseInt(document.getElementById('srcRaggio').value) || 10;
+  const fonte     = document.getElementById('srcFonte').value;
   if (!citta) { toast('Indica una città o zona', 'err'); return; }
   const btn = document.getElementById('btnRunSearch');
   btn.disabled = true; btn.textContent = 'Ricerca in corso...';
   let r;
-  try { r = await api('web_search', { categoria, citta, raggio }); }
+  try { r = await api('web_search', { categoria, citta, raggio, fonte }); }
   catch(e) { r = { success:false, error:'rete' }; }
   btn.disabled = false; btn.textContent = '🔎 CERCA';
   if (!r.success) { toast('Errore: ' + (r.error||'sconosciuto'), 'err'); return; }
+  if (r.avviso) toast(r.avviso, 'err');
   searchResults = r.results || [];
-  renderSearchResults(r.zona);
+  renderSearchResults(r.zona + (r.fonte==='google' ? ' · Google Maps' : ''));
 }
 
 function renderSearchResults(zona) {
@@ -1105,7 +1113,8 @@ async function saveLeads() {
   const categoria = document.getElementById('srcCategoria').value;
   const btn = document.getElementById('btnSaveLeads');
   btn.disabled = true; btn.textContent = 'Salvataggio...';
-  const r = await api('save_leads', { leads, categoria });
+  const fonte = document.getElementById('srcFonte').value;
+  const r = await api('save_leads', { leads, categoria, fonte });
   btn.disabled = false; btn.textContent = '💾 SALVA SELEZIONATI';
   if (r.success) {
     toast(`✓ Salvati: ${r.saved} | Saltati: ${r.skipped}`, 'ok');

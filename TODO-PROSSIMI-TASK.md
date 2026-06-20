@@ -406,28 +406,37 @@ referente), con fonte e confidenza per campo. File: `ardy-enrich.php`, action `e
 - **In blocco**: pulsante ✨ BLOCCO → processa gli incompleti del filtro corrente uno alla volta,
   applica solo i campi vuoti a confidenza **alta/media** (mai sovrascrittura), con barra + log + interrompi.
 
-### 🗺️ Outreach — Fonte Google Maps (Places API) — DA FARE
-**Perché**: Google Maps è la fonte **più completa** per attività locali (telefono, sito, indirizzo,
-orari, recensioni, sito ufficiale). Da affiancare/sostituire a OpenStreetMap nella RICERCA AZIENDE e
-come terzo passo dell'agente Arricchimento quando il sito + web search non bastano.
+### 🗺️ Outreach — Fonte Google Maps (Places API) ✅ CODICE PRONTO — manca solo la chiave (20/06/2026)
+**Stato**: infrastruttura costruita e deployabile. **Degrada in sicurezza**: senza chiave configurata
+l'app resta identica (OSM). Si attiva da sola quando aggiungi la chiave in `ardy-config.php`.
 
-**Come**: Google Maps Platform → **Places API (New)**, chiave API in `ardy-config.php` (lato server,
-mai nel frontend; restringere la chiave per API + IP/referrer). Due usi:
-- *Discovery* (sostituisce Overpass): **Text Search** / **Nearby Search** per categoria + zona.
-- *Arricchimento*: **Place Details** (campi `phone`, `website`, `formattedAddress`, `openingHours`).
+**Cosa fa il codice** (`ardy-places.php`):
+- Usa **Places API (New)** `places:searchText` con **field mask ristretta** (solo i campi che servono:
+  nome, indirizzo, telefono, sito, location, mapsUri) → si paga solo il necessario, niente foto/recensioni.
+- *Discovery*: `web_search` accetta `fonte=google` → selettore in RICERCA AZIENDE (OSM | Google Maps).
+  Geocoding della zona riusato da Nominatim (gratis), poi searchText con `locationBias` a cerchio + paginazione (max 3 pagine ≈ 60 risultati).
+- *Arricchimento*: passo intermedio in `ardy-enrich.php` (dopo lo scraping sito, **prima** di Claude):
+  `ardyPlacesFindOne(nome, indirizzo)` completa sito/telefono/indirizzo con confidenza alta + link Maps.
+  Ha una **guardia anti-omonimi** (match sui token del nome). Così Claude resta solo per email/referente → meno costo.
 
-**Stima costi** (Google Maps Platform, listino USD indicativo — Google cambia spesso, verificare):
-- Text Search / Nearby Search: **~$32 / 1000 chiamate** (≈ $0,032 a chiamata).
-- Place Details con campi contatto (telefono/sito): **~$17–20 / 1000** (≈ $0,02 a chiamata).
-- **Per azienda arricchita** servono in genere 1 search + 1 details → **~$0,05 a contatto**
-  (≈ $5 ogni 100 contatti, ≈ $50 ogni 1000).
-- **Discovery di una zona**: 1–3 chiamate Nearby (fino a 60 risultati) → ~$0,03–0,10 a ricerca,
-  poi i Details solo sui lead che salvi.
-- **Free tier**: Google offre un credito/quota mensile gratuita (storicamente ~$200/mese, ora in
-  migrazione a quote gratuite per-SKU). Per i volumi di Ardy (decine/poche centinaia di contatti)
-  realisticamente si resta **dentro o vicino al gratis**. Da confermare al momento dell'attivazione.
+**⛔ TUA PARTE (richiede te — non automatizzabile da Claude):**
+1. Google Cloud Console → crea/usa un progetto → **abilita "Places API (New)"** e **attiva il billing** (serve carta).
+2. **Credentials → Create API key**. Poi **restringi la chiave**: API restriction = solo Places API (New);
+   Application restriction = IP del server VPS (consigliato per chiave server-side).
+3. In `ardy-config.php` (NON in repo) aggiungi:
+   `define('ARDY_GOOGLE_PLACES_KEY', 'LA_TUA_CHIAVE');`
+4. (Opzionale) Imposta un **budget alert** + **quota giornaliera** su Google Cloud per non avere sorprese.
+5. Deploy + prova: in RICERCA AZIENDE scegli "Google Maps"; in una scheda incompleta premi ✨ ARRICCHISCI
+   (nel log comparirà "Google Maps: … trovato").
 
-**Nota**: tenere OSM come fallback gratuito; Google solo quando serve completezza (costa per chiamata).
+**Stima costi** (listino USD indicativo — Google cambia spesso, verificare al momento):
+- searchText: **~$32 / 1000 chiamate**. L'arricchimento usa **1 sola** chiamata per contatto (i campi
+  arrivano già nel searchText grazie alla field mask, niente Place Details separato) → **~$0,03 a contatto**.
+- Discovery di una zona: 1–3 chiamate (fino a ~60 risultati) → **~$0,03–0,10 a ricerca**.
+- **Free tier**: Google dà una quota/credito mensile gratuito (in migrazione a quote per-SKU). Per i
+  volumi di Ardy (decine/poche centinaia di contatti) realisticamente **dentro o vicino al gratis**.
+
+**Nota**: OSM resta il default gratuito; Google si sceglie quando serve completezza (costa per chiamata).
 INI-PEC resta non automatizzabile (captcha) → eventuale PEC/P.IVA via API a pagamento dedicata, task a sé.
 
 ### 👥 Accesso "dipendente" con permessi limitati (ruoli) — DA FARE
