@@ -577,6 +577,13 @@ function escHtml(s) {
 function safeUrl(u) {
   return /^https?:\/\//i.test(String(u ?? '')) ? String(u) : '#';
 }
+// Sicuro per una stringa JS dentro un attributo HTML, es. onclick="f('${escJs(x)}')".
+// escHtml da solo NON basta: il parser HTML ridecodifica &#39; in ' PRIMA che il JS
+// venga eseguito, riaprendo il rischio di breakout. Qui prima si escapano backslash
+// e apice per il contesto JS, poi si applica l'escape HTML dell'attributo.
+function escJs(s) {
+  return escHtml(String(s ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+}
 
 // ─── INIT ─────────────────────────────────────────────────
 loadLeads();
@@ -1171,8 +1178,8 @@ async function openCestino() {
           ${gg}
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;margin-left:10px;">
-          <button onclick="ripristinaCliente('${escHtml(c.Session_ID)}')" style="background:none;border:1px solid #4caf72;color:#4caf72;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;">↩ Ripristina</button>
-          <button onclick="eliminaDefCestino('${escHtml(c.Session_ID)}','${escHtml(nome)}')" style="background:none;border:1px solid #8b3e3e;color:#c07070;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;">✕ Elimina</button>
+          <button onclick="ripristinaCliente('${escJs(c.Session_ID)}')" style="background:none;border:1px solid #4caf72;color:#4caf72;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;">↩ Ripristina</button>
+          <button onclick="eliminaDefCestino('${escJs(c.Session_ID)}','${escJs(nome)}')" style="background:none;border:1px solid #8b3e3e;color:#c07070;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;">✕ Elimina</button>
         </div>
       </div>`;
     }).join('');

@@ -8,10 +8,8 @@
 if (file_exists(__DIR__ . '/ardy-config.php')) { require_once __DIR__ . '/ardy-config.php'; }
 
 // Token di verifica (deve corrispondere a quello inserito su Meta).
-// Preferisci il valore definito in ardy-config.php; fallback legacy se assente.
-if (!defined('WA_VERIFY_TOKEN')) {
-    define('WA_VERIFY_TOKEN', 'ardy_wa_verify_2026');
-}
+// Va definito in ardy-config.php: niente fallback hardcoded (sarebbe un valore
+// pubblico nel repo, quindi indovinabile). Se manca è un errore di config.
 
 // ── VERIFICA WEBHOOK (GET) ──
 // Meta invia una GET per verificare l'endpoint
@@ -20,7 +18,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $token     = $_GET['hub_verify_token'] ?? '';
     $challenge = $_GET['hub_challenge'] ?? '';
 
-    if ($mode === 'subscribe' && $token === WA_VERIFY_TOKEN) {
+    if (!defined('WA_VERIFY_TOKEN') || WA_VERIFY_TOKEN === '') {
+        error_log('ARDY WA WEBHOOK: WA_VERIFY_TOKEN non configurato in ardy-config.php');
+        http_response_code(500);
+        echo 'Configurazione mancante';
+        exit();
+    }
+
+    if ($mode === 'subscribe' && hash_equals((string) WA_VERIFY_TOKEN, (string) $token)) {
         // Verifica superata — rispondi con il challenge
         http_response_code(200);
         echo $challenge;

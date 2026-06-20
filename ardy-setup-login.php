@@ -99,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$giaConfigurato) {
       <label>Utente</label>
       <input type="text" name="utente" autocomplete="off" placeholder="es. michela" required>
       <label>Password (almeno 8 caratteri)</label>
-      <input type="text" name="password" autocomplete="off" placeholder="scegli una password" required>
+      <input type="password" name="password" autocomplete="new-password" placeholder="scegli una password" required>
       <button type="submit">Crea il login</button>
     </form>
   <?php endif; ?>
