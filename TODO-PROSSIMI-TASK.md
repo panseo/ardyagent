@@ -262,23 +262,23 @@ guida `ardy-gbp-post.md`. Scope `business.manage` aggiunto in `ardy-gcal-auth.ph
 
 ## 📋 TASK DA SVILUPPARE (aperti)
 
-### 🔐 Hardening n8n — segreti in variabili d'ambiente (CODICE FATTO 20/06 — restano i passi sull'host)
+### 🔐 ~~Hardening n8n — segreti in variabili d'ambiente~~ ✅ FATTO/LIVE (20/06/2026)
 I segreti non sono più in chiaro nel codice del nodo: `n8n/ardy-whatsapp-node-completo.js` e il
-JSON del workflow (`n8n/ardy-whatsapp-workflow.json`) ora leggono da `$env.*` con fail-fast se mancano.
-Mappatura nomi variabili d'ambiente → uso:
-- `WA_LOOKUP_SECRET`  = `WA_LOOKUP_SECRET` di `ardy-config.php`
-- `META_WA_TOKEN`     = token Cloud API di Meta
-- `ANTHROPIC_API_KEY` = API key Anthropic
-- (`WA_PHONE_NUMBER_ID` opzionale; fallback hardcoded, non è un segreto)
+JSON del workflow (`n8n/ardy-whatsapp-workflow.json`) leggono da `$env.*` con fail-fast se mancano.
+Testato dal vivo: messaggio WhatsApp a Sole → risposta OK. Export del workflow ora puliti.
 
-**⚠️ AZIONI MANUALI ANCORA DA FARE sull'host n8n (Docker), nell'ORDINE giusto:**
-1. Aggiungere le 3 variabili d'ambiente al `docker-compose.yml` (o `.env`) del container n8n.
-2. **Riavviare n8n** (le env si caricano all'avvio). Verificare che `N8N_BLOCK_ENV_ACCESS_IN_NODE`
-   NON sia a `true` (default = accesso a `$env` consentito).
-3. Aggiornare il nodo Code: incollare il nuovo codice (o re-importare il workflow JSON).
-> Ordine critico: prima le env + restart, poi l'aggiornamento del nodo. Se aggiorni il nodo PRIMA
-> di aver impostato le env, il workflow lancia l'errore di fail-fast e WhatsApp smette di rispondere
-> finché non completi i passi 1-2.
+**Config applicata sull'host n8n** (`/opt/n8n/docker-compose.yml`, blocco `environment:`):
+- `WA_LOOKUP_SECRET`  = `WA_LOOKUP_SECRET` di `ardy-config.php`
+- `META_WA_TOKEN`     = `WA_TOKEN` di `ardy-config.php` (token Cloud API Meta)
+- `ANTHROPIC_API_KEY` = `ARDY_API_KEY` di `ardy-config.php`
+- `N8N_BLOCK_ENV_ACCESS_IN_NODE=false` ← **necessario**: questa versione di n8n di default
+  **blocca** l'accesso a `$env` nei nodi Code (errore "access to env vars denied"). Senza questa
+  riga il workflow va in errore. (`WA_PHONE_NUMBER_ID` opzionale: fallback hardcoded, non segreto.)
+
+> ⚠️ Ordine se si rifà da zero: prima env + `N8N_BLOCK_ENV_ACCESS_IN_NODE=false` + restart
+> (`docker compose up -d` in `/opt/n8n`), poi aggiornare il nodo Code. Se inverti, scatta il
+> fail-fast e Sole non risponde finché non completi env+restart.
+> I segreti restano solo lato server (config + compose, root-only); NON nel workflow esportato.
 
 ### 🔥 ~~Firewall host — sostituto di firewalld~~ ✅ FATTO/LIVE (19/06/2026)
 **csf (`cpanel-csf` v16.20) installato e LIVE.** Scelta = opzione 2 (csf), motivata e documentata in
