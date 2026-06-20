@@ -261,6 +261,7 @@
             <div class="detail-sub" id="detSub">—</div>
           </div>
           <div class="detail-actions">
+            <button class="btn-sm primary" id="btnEnrich" onclick="enrichContact()" title="Cerca in rete i dati mancanti">✨ ARRICCHISCI</button>
             <button class="btn-sm" onclick="saveContact()">SALVA</button>
             <button class="btn-sm danger" onclick="deleteContact()">ELIMINA</button>
           </div>
@@ -481,6 +482,23 @@
   </div>
 </div>
 
+<!-- MODAL ARRICCHIMENTO -->
+<div class="modal-overlay" id="enrichModal">
+  <div class="modal">
+    <div class="modal-title">✨ DATI TROVATI IN RETE</div>
+    <p style="color:var(--text-dim);font-size:12px;font-family:'DM Mono',monospace;margin-bottom:16px;line-height:1.6;">
+      L'agente ha cercato sul sito e in rete. Spunta i campi da applicare: i dati AI possono essere imprecisi, controlla la fonte.
+    </p>
+    <div id="enrichBody">
+      <div style="color:var(--text-dim);font-size:13px;">—</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm" onclick="closeEnrichModal()">ANNULLA</button>
+      <button class="btn-sm primary" id="btnApplyEnrich" onclick="applyEnrichment()">APPLICA SELEZIONATI</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const API = '/ardy-outreach-api.php';
 let allContacts = [];
@@ -669,6 +687,83 @@ async function deleteContact() {
 function closeMobileDetail() {
   document.getElementById('layout').classList.remove('mobile-detail-open');
 }
+
+// ============================================================
+// AGENTE ARRICCHIMENTO
+// ============================================================
+const ENRICH_LABELS = { sito:'SITO', email:'EMAIL', telefono:'TELEFONO', indirizzo:'INDIRIZZO', referente:'REFERENTE' };
+let enrichProposal = {};
+
+async function enrichContact() {
+  if (!currentContact) return;
+  const btn = document.getElementById('btnEnrich');
+  btn.disabled = true; btn.textContent = '🔎 Cerco...';
+  let r;
+  try { r = await api('enrich_contact', { id: currentContact.id }); }
+  catch(e) { r = { success:false, error:'rete' }; }
+  btn.disabled = false; btn.textContent = '✨ ARRICCHISCI';
+  if (!r.success) { toast('Errore: ' + (r.error||'sconosciuto'), 'err'); return; }
+  enrichProposal = r.campi || {};
+  renderEnrichProposal(r.log || []);
+}
+
+function confColor(c) {
+  return c==='alta' ? 'var(--green,#3a8)' : c==='media' ? 'var(--orange,#e90)' : 'var(--text-dim)';
+}
+
+function renderEnrichProposal(log) {
+  const body = document.getElementById('enrichBody');
+  const campi = Object.keys(enrichProposal);
+  const apply = document.getElementById('btnApplyEnrich');
+  if (!campi.length) {
+    body.innerHTML = '<div style="color:var(--text-dim);font-size:13px;line-height:1.6;">Nessun dato nuovo trovato.' +
+      (log.length ? '<br><span style="font-size:11px;">' + log.map(escHtml).join('<br>') + '</span>' : '') + '</div>';
+    apply.style.display = 'none';
+  } else {
+    apply.style.display = '';
+    body.innerHTML = campi.map(f => {
+      const p = enrichProposal[f];
+      const attuale = (p.attuale||'').trim();
+      const fonte = p.fonte ? `<a href="${escHtml(p.fonte.startsWith('http')?p.fonte:'#')}" target="_blank" rel="noopener" style="color:var(--accent,#c8a96e);">${escHtml(p.fonte)}</a>` : '—';
+      return `<label class="check-item" style="align-items:flex-start;">
+        <input type="checkbox" class="enrich-check" data-f="${f}" checked>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;gap:8px;align-items:baseline;">
+            <span class="check-nome">${ENRICH_LABELS[f]||f}</span>
+            <span style="font-size:10px;color:${confColor(p.confidenza)};text-transform:uppercase;">● ${escHtml(p.confidenza||'')}</span>
+          </div>
+          <div style="font-size:13px;color:var(--text,#eee);word-break:break-word;">${escHtml(p.valore)}</div>
+          ${attuale ? `<div style="font-size:11px;color:var(--orange,#e90);">sovrascrive: ${escHtml(attuale)}</div>` : ''}
+          <div style="font-size:10px;color:var(--text-dim);word-break:break-all;margin-top:2px;">fonte: ${fonte}</div>
+        </div>
+      </label>`;
+    }).join('') +
+    (log.length ? `<div style="font-size:10px;color:var(--text-dim);margin-top:10px;line-height:1.5;">${log.map(escHtml).join('<br>')}</div>` : '');
+  }
+  document.getElementById('enrichModal').classList.add('open');
+}
+
+async function applyEnrichment() {
+  const checked = [...document.querySelectorAll('.enrich-check:checked')];
+  if (!checked.length) { closeEnrichModal(); return; }
+  const fields = { id: currentContact.id };
+  checked.forEach(c => { const f = c.dataset.f; fields[f] = enrichProposal[f].valore; });
+  const btn = document.getElementById('btnApplyEnrich');
+  btn.disabled = true; btn.textContent = 'Salvo...';
+  const r = await api('update_contact', fields);
+  btn.disabled = false; btn.textContent = 'APPLICA SELEZIONATI';
+  if (r.success) {
+    Object.assign(currentContact, fields);
+    closeEnrichModal();
+    selectContact(currentContact.id);
+    await loadContacts();
+    toast('✓ Contatto arricchito', 'ok');
+  } else {
+    toast('Errore: ' + (r.error||'sconosciuto'), 'err');
+  }
+}
+
+function closeEnrichModal() { document.getElementById('enrichModal').classList.remove('open'); }
 
 // ============================================================
 // EMAIL COMPOSER
@@ -931,6 +1026,7 @@ function toast(msg, type='ok') {
 }
 
 // Close modals on overlay click
+document.getElementById('enrichModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeEnrichModal(); });
 document.getElementById('addModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeAddModal(); });
 document.getElementById('tplModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeTplModal(); });
 

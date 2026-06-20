@@ -7,6 +7,7 @@ require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-auth.php';
 require_once __DIR__ . '/ardy-email.php';
+require_once __DIR__ . '/ardy-enrich.php';
 
 header('Access-Control-Allow-Origin: https://ardyagent.ardy-lab.it');
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
@@ -405,6 +406,30 @@ try {
                 $saved++;
             }
             echo json_encode(['success' => true, 'saved' => $saved, 'skipped' => $skipped]);
+            break;
+
+        // --------------------------------------------------------
+        // ARRICCHISCI CONTATTO — agente (scraping sito + Claude web search)
+        // Ritorna una PROPOSTA di campi da completare; NON scrive su DB.
+        // --------------------------------------------------------
+        case 'enrich_contact':
+            $id = (int)($input['id'] ?? 0);
+            if (!$id) { echo json_encode(['success' => false, 'error' => 'ID mancante']); break; }
+            $c = $db->prepare("SELECT * FROM outreach_contatti WHERE id=:id");
+            $c->execute([':id' => $id]);
+            $contact = $c->fetch();
+            if (!$contact) { echo json_encode(['success' => false, 'error' => 'Contatto non trovato']); break; }
+
+            $apiKey = defined('ARDY_API_KEY') ? ARDY_API_KEY : '';
+            $res = ardyEnrichContact($contact, $apiKey);
+
+            // Per ogni campo proposto, allega anche il valore attuale (per il diff in UI).
+            $proposte = [];
+            foreach ($res['campi'] as $campo => $info) {
+                $info['attuale'] = $contact[$campo] ?? '';
+                $proposte[$campo] = $info;
+            }
+            echo json_encode(['success' => true, 'id' => $id, 'campi' => $proposte, 'log' => $res['log']]);
             break;
 
         default:
