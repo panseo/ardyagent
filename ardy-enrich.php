@@ -93,6 +93,8 @@ function ardyEnrichContact(array $contact, string $apiKey): array {
                     $proposte[$campo] = ['valore' => $v, 'fonte' => $fonte, 'confidenza' => 'alta', 'passo' => 'google'];
                 }
                 $log[] = 'Google Maps: ' . $place['nome'] . ' trovato';
+            } elseif (ardyPlacesCapHit()) {
+                $log[] = 'Google Maps: tetto giornaliero raggiunto, saltato';
             } else {
                 $log[] = 'Google Maps: nessun match affidabile';
             }

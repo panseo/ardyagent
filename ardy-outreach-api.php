@@ -365,6 +365,12 @@ try {
 
             if ($fonte === 'google') {
                 $results = ardyPlacesSearch($cat, $geo['lat'], $geo['lon'], $raggio * 1000);
+                if ($results === null && ardyPlacesCapHit()) {
+                    // Tetto giornaliero raggiunto: ripiego su OSM, avviso esplicito.
+                    $fonte   = 'osm';
+                    $avviso  = 'Tetto giornaliero Google raggiunto: uso OpenStreetMap.';
+                    $results = osmOverpass($cat, $geo['lat'], $geo['lon'], $raggio * 1000);
+                }
             } else {
                 $results = osmOverpass($cat, $geo['lat'], $geo['lon'], $raggio * 1000);
             }

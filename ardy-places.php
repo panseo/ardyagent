@@ -32,6 +32,67 @@ function ardyPlacesConfigured(): bool {
     return defined('ARDY_GOOGLE_PLACES_KEY') && constant('ARDY_GOOGLE_PLACES_KEY') !== '';
 }
 
+// -----------------------------------------------------------
+// TETTO DI SPESA — limite giornaliero di chiamate (rete di sicurezza lato
+// codice, oltre al budget alert di Google). Ogni chiamata a Places conta 1.
+// Superato il tetto, le chiamate vengono BLOCCATE (niente costo) e l'app
+// degrada: la ricerca ripiega su OSM, l'arricchimento salta il passo Google.
+// Si azzera da solo a mezzanotte (contatore per data). Soglia configurabile in
+// ardy-config.php con: define('ARDY_PLACES_DAILY_CAP', 300);  (default 500)
+// -----------------------------------------------------------
+
+/** Soglia giornaliera di chiamate Places. */
+function ardyPlacesDailyCap(): int {
+    return defined('ARDY_PLACES_DAILY_CAP') ? max(0, (int)constant('ARDY_PLACES_DAILY_CAP')) : 500;
+}
+
+/** File contatore del giorno corrente (per-data), in una cartella scrivibile. */
+function ardyPlacesCounterFile(): string {
+    $dir = defined('ARDY_RATE_LIMIT_DIR') ? constant('ARDY_RATE_LIMIT_DIR') : (sys_get_temp_dir() . '/');
+    if (!is_dir($dir)) @mkdir($dir, 0755, true);
+    return rtrim($dir, '/') . '/places_' . date('Ymd') . '.txt';
+}
+
+/** Flag di processo: true se l'ultima operazione è stata bloccata dal tetto. */
+function ardyPlacesCapHit(?bool $set = null): bool {
+    static $hit = false;
+    if ($set !== null) $hit = $set;
+    return $hit;
+}
+
+/** Chiamate già fatte oggi. */
+function ardyPlacesCountToday(): int {
+    $f = ardyPlacesCounterFile();
+    return is_file($f) ? (int)@file_get_contents($f) : 0;
+}
+
+/**
+ * Prova a "prenotare" una chiamata: incrementa il contatore in modo atomico e
+ * ritorna true se siamo ancora sotto il tetto, false se il tetto è raggiunto
+ * (in tal caso NON incrementa e segnala il cap-hit).
+ */
+function ardyPlacesReserveCall(): bool {
+    $cap = ardyPlacesDailyCap();
+    if ($cap <= 0) return true; // 0 = nessun limite
+    $f = ardyPlacesCounterFile();
+    $fp = @fopen($f, 'c+');
+    if (!$fp) return true; // se non posso scrivere il contatore, non blocco le chiamate
+    @flock($fp, LOCK_EX);
+    $cur = (int)stream_get_contents($fp);
+    if ($cur >= $cap) {
+        @flock($fp, LOCK_UN); @fclose($fp);
+        ardyPlacesCapHit(true);
+        error_log("ARDY PLACES: tetto giornaliero raggiunto ($cur/$cap)");
+        return false;
+    }
+    rewind($fp);
+    ftruncate($fp, 0);
+    fwrite($fp, (string)($cur + 1));
+    fflush($fp);
+    @flock($fp, LOCK_UN); @fclose($fp);
+    return true;
+}
+
 /** Mappa categoria Ardy -> query testuale italiana per Google Places. */
 function ardyPlacesQuery(string $cat): string {
     switch ($cat) {
@@ -171,6 +232,9 @@ function ardyPlacesNameMatch(string $cercato, string $trovato): bool {
 
 /** POST JSON a Google Places con field mask. Ritorna il body o null su errore. */
 function ardyPlacesHttpPost(string $url, array $body): ?string {
+    // Tetto di spesa: se il limite giornaliero è raggiunto, non chiamiamo Google.
+    if (!ardyPlacesReserveCall()) return null;
+
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_POST           => true,

@@ -425,7 +425,14 @@ l'app resta identica (OSM). Si attiva da sola quando aggiungi la chiave in `ardy
    Application restriction = IP del server VPS (consigliato per chiave server-side).
 3. In `ardy-config.php` (NON in repo) aggiungi:
    `define('ARDY_GOOGLE_PLACES_KEY', 'LA_TUA_CHIAVE');`
-4. (Opzionale) Imposta un **budget alert** + **quota giornaliera** su Google Cloud per non avere sorprese.
+4. (Opzionale) Imposta un **budget alert** su Google Cloud per non avere sorprese.
+
+**Rete di sicurezza lato codice (già attiva)**: `ardy-places.php` ha un **tetto giornaliero di chiamate**
+(default **500/giorno**, contatore atomico in `ARDY_RATE_LIMIT_DIR`, si azzera a mezzanotte). Superato il
+tetto, le chiamate vengono **bloccate senza costo**: la ricerca ripiega su OSM (con avviso) e
+l'arricchimento salta il passo Google. Per cambiare la soglia, in `ardy-config.php`:
+`define('ARDY_PLACES_DAILY_CAP', 300);` — metti `0` per togliere il limite. A ~$0,03/chiamata, 500/giorno
+≈ massimo **$15/giorno** anche nello scenario peggiore.
 5. Deploy + prova: in RICERCA AZIENDE scegli "Google Maps"; in una scheda incompleta premi ✨ ARRICCHISCI
    (nel log comparirà "Google Maps: … trovato").
 
