@@ -14,6 +14,29 @@
 
 ---
 
+## ✅ AUDIT DI SICUREZZA COMPLETO — FATTO (20/06/2026)
+
+Audit dell'intero progetto in due giri + verifica live in produzione. Dettagli completi in
+**`SECURITY-AUDIT.md`**. Sintesi:
+
+- ✅ **CRITICO — gap Basic Auth chiuso**: 8 endpoint sensibili dichiaravano (nei commenti) di
+  essere protetti dal `.htaccess` ma **non erano nel blocco `FilesMatch`** → pubblici. Aggiunti
+  tutti: `elimina-cliente` (hard-delete!), `conversazioni` (PII), `email-cliente-api`, `crea-faq`,
+  `fasi-bozza-api`, `allega-preventivo`, `estrai-preventivo-pdf`, `archivia-persi`. Verificato 401
+  in produzione. (Sono chiamati solo via fetch dalla dashboard → coerente con la nota auth sotto.)
+- ✅ **MEDIO — guard "fail-closed"**: `wa-agent`, `chiusura-sessioni`, `lead-monitor`,
+  `notifica-michela` non saltano più il controllo se `WA_LOOKUP_SECRET` manca (prima fail-open).
+- ✅ **MEDIO — stored XSS dashboard**: nome cliente in contesto stringa-JS nei pulsanti del Cestino
+  → nuova helper `escJs()`.
+- ✅ **BASSO — `WA_VERIFY_TOKEN`**: rimosso il fallback hardcoded pubblico; ora da config, confronto
+  `hash_equals`. **Token ruotato** (config server + Meta) il 20/06.
+- ✅ **BASSO — setup-login**: campo password `text` → `password`.
+- ✅ Verificate senza rilievi: SQLi (prepared ovunque), SSRF (`ardy-net.php`), upload (finfo +
+  hardening), command injection (escapeshellarg), JS frontend, snippet WordPress, segreti n8n
+  (placeholder), rate-limit chat, CORS, OAuth state.
+
+---
+
 ## ▶️ STATO (17/06/2026)
 CRM in attività piena, **multi-utente** (Michela + Andrea). Focus 17/06: rendere Sole
 **completa su WhatsApp** (canale obbligato) verso clienti e staff.
@@ -125,6 +148,10 @@ Idempotente e rieseguibile (IF NOT EXISTS + try/catch su 1050/1060 + `colExists`
 
 **Auth endpoint chiamati via fetch**: NON usare `ardyRequireAuth()` (in CGI/FPM l'header
 `Authorization` non arriva a PHP → rifarebbe login). Affidarsi al `.htaccess` (Basic Auth).
+> ⚠️ **CONSEGUENZA (causa del bug critico chiuso il 20/06):** un endpoint "protetto via .htaccess"
+> lo è SOLO se il suo nome è **effettivamente elencato** nel blocco `<FilesMatch ...>` del
+> `.htaccess`. Un commento "Protetto da Basic Auth" NON protegge nulla. **Ogni nuovo endpoint
+> riservato va aggiunto a quella regex** (e va testato con un `curl` senza credenziali: deve dare 401).
 
 **⚠️ Git — lineage di `main` (evita l'errore "unrelated histories")**: la storia BUONA di
 `main` parte dal root-commit **`98b352f`**. Esiste anche una **vecchia lineage orfana** (root
