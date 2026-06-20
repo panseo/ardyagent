@@ -49,7 +49,7 @@ gestione server da terminale · Cloudflare confermato · **Backblaze B2** per me
 | Basic Auth (.htpasswd) | Resta identico (Caddy/Nginx lo supporta) — e su `dash.*` lo affianca **Cloudflare Access** |
 | Cron job | **crontab** di sistema |
 | DNS | Già su **Cloudflare** (nessun cambiamento) |
-| Email caselle | **Nessuna casella attiva letta** (invio via Brevo). ⚠️ **MA esiste un MX** (`10 mx.ardy-lab.it` → vecchio server): alla migrazione va **sostituito con Cloudflare Email Routing** (free, inoltra ciò che arriva su `@ardy-lab.it` verso Proton) **oppure rimosso**, sennò la posta in ingresso rimbalza. Verificare anche **DKIM Brevo** per la recapitabilità (l'SPF attuale `include:spf.webapps.net` non cita Brevo). |
+| Email caselle | **Nessuna casella attiva letta** (invio via Brevo). **Invio OK e autenticato**: DKIM Brevo configurato (`brevo1/brevo2._domainkey` ✅) + DMARC presente (`p=none`) → la migrazione **non tocca l'invio** (vive nei DNS Cloudflare). ⚠️ Resta solo l'**MX in ingresso** (`10 mx.ardy-lab.it` → vecchio server): alla migrazione **sostituire con Cloudflare Email Routing** (inoltro su Proton) **o rimuovere**, sennò la posta entrante rimbalza. |
 | Backup | **Backblaze B2** (media + dump DB automatici) |
 | Deploy | `git pull` + **`deploy.sh`** (già nel repo, da adattare) o GitHub Actions |
 
@@ -103,12 +103,14 @@ Confronto: dedicato €40–250/mese senza vantaggi reali per il tuo carico. cPa
 - [ ] Creare `dash.ardy-lab.it` **proxato** → **Cloudflare Access** (codice email per Michela/Andrea) = **#1 fatto**.
 - [ ] Spostare gli **upload diretti su B2** (così la dashboard può stare dietro Cloudflare senza limite 100 MB).
 - [ ] **Backup automatici** su B2: dump DB giornaliero (cron) + sync media = **#4 fatto**.
-- [ ] **Email/MX**: sostituire l'MX attuale (`mx.ardy-lab.it` → vecchio server) con **Cloudflare Email Routing** (inoltro su Proton) o rimuoverlo; confermare **DKIM Brevo** per l'invio.
+- [ ] **Email/MX**: sostituire l'MX attuale (`mx.ardy-lab.it` → vecchio server) con **Cloudflare Email Routing** (inoltro su Proton) o rimuoverlo. ✅ Invio Brevo già autenticato (DKIM/DMARC verificati) → non serve toccarlo.
 - [ ] Spegnere/dismettere il vecchio VPS.
 
 ### Dati DNS rilevati (20/06, per riferimento)
 - `ardyagent.ardy-lab.it` → IP origine **57.131.47.5** (DNS-only, IP esposto: da valutare se nascondere dietro CF dove non ci sono upload grandi).
 - MX: `10 mx.ardy-lab.it` · SPF: `v=spf1 include:spf.webapps.net ~all` · TXT: brevo-code + 2× google-site-verification.
+- **DKIM Brevo** ✅: `brevo1._domainkey`→`b1.ardy-lab-it.dkim.brevo.com`, `brevo2._domainkey`→`b2...`.
+- **DMARC**: `v=DMARC1; p=none; rua=mailto:rua@dmarc.brevo.com` (solo monitoraggio; in futuro valutare `quarantine`/`reject`).
 - `dash.ardy-lab.it`: **non esistente** → libero per la dashboard dietro Access.
 
 ---
