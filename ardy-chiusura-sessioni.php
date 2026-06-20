@@ -40,14 +40,19 @@ $isCli = (PHP_SAPI === 'cli');
 
 if (!$isCli) {
     header('Content-Type: application/json; charset=utf-8');
-    // Protezione col segreto condiviso (se configurato).
-    if (defined('WA_LOOKUP_SECRET') && WA_LOOKUP_SECRET !== '') {
-        $sent = $_SERVER['HTTP_X_ARDY_SECRET'] ?? ($_GET['secret'] ?? '');
-        if (!hash_equals(WA_LOOKUP_SECRET, (string) $sent)) {
-            http_response_code(403);
-            echo json_encode(['success' => false, 'error' => 'non autorizzato']);
-            exit();
-        }
+    // Protezione col segreto condiviso. Fail-closed: senza segreto configurato
+    // l'endpoint HTTP NON è accessibile (la modalità CLI/cron resta esente).
+    if (!defined('WA_LOOKUP_SECRET') || WA_LOOKUP_SECRET === '') {
+        error_log('ARDY CHIUSURA SESSIONI: WA_LOOKUP_SECRET non configurato — richiesta rifiutata');
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'configurazione mancante']);
+        exit();
+    }
+    $sent = $_SERVER['HTTP_X_ARDY_SECRET'] ?? ($_GET['secret'] ?? '');
+    if (!hash_equals(WA_LOOKUP_SECRET, (string) $sent)) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'non autorizzato']);
+        exit();
     }
 }
 

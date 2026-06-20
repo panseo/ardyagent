@@ -36,13 +36,19 @@ use PHPMailer\PHPMailer\PHPMailer;
 header('Content-Type: application/json');
 
 // ── Auth (stesso segreto condiviso degli altri endpoint WhatsApp) ──
-if (defined('WA_LOOKUP_SECRET') && WA_LOOKUP_SECRET !== '') {
-    $sent = $_SERVER['HTTP_X_ARDY_SECRET'] ?? '';
-    if (!hash_equals(WA_LOOKUP_SECRET, (string) $sent)) {
-        http_response_code(403);
-        echo json_encode(['success' => false, 'error' => 'non autorizzato']);
-        exit();
-    }
+// Fail-closed: senza segreto configurato l'endpoint NON è accessibile (non
+// fidarsi del fatto che il config sia presente). Stesso pattern del webhook.
+if (!defined('WA_LOOKUP_SECRET') || WA_LOOKUP_SECRET === '') {
+    error_log('ARDY WA AGENT: WA_LOOKUP_SECRET non configurato — richiesta rifiutata');
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'configurazione mancante']);
+    exit();
+}
+$sent = $_SERVER['HTTP_X_ARDY_SECRET'] ?? '';
+if (!hash_equals(WA_LOOKUP_SECRET, (string) $sent)) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => 'non autorizzato']);
+    exit();
 }
 
 // ── Input ──

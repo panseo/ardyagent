@@ -161,14 +161,19 @@ if (PHP_SAPI !== 'cli'
 
     header('Content-Type: application/json');
 
-    // Protezione col segreto condiviso (come lookup/memoria)
-    if (defined('WA_LOOKUP_SECRET') && WA_LOOKUP_SECRET !== '') {
-        $sent = $_SERVER['HTTP_X_ARDY_SECRET'] ?? ($_GET['secret'] ?? '');
-        if (!hash_equals(WA_LOOKUP_SECRET, (string) $sent)) {
-            http_response_code(403);
-            echo json_encode(['success' => false, 'error' => 'non autorizzato']);
-            exit();
-        }
+    // Protezione col segreto condiviso (come lookup/memoria). Fail-closed:
+    // senza segreto configurato l'endpoint HTTP NON è accessibile.
+    if (!defined('WA_LOOKUP_SECRET') || WA_LOOKUP_SECRET === '') {
+        error_log('ARDY NOTIFICA MICHELA: WA_LOOKUP_SECRET non configurato — richiesta rifiutata');
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'configurazione mancante']);
+        exit();
+    }
+    $sent = $_SERVER['HTTP_X_ARDY_SECRET'] ?? ($_GET['secret'] ?? '');
+    if (!hash_equals(WA_LOOKUP_SECRET, (string) $sent)) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'non autorizzato']);
+        exit();
     }
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
