@@ -395,6 +395,41 @@ Credenziali separate (`.htpasswd` con utenti `michela` + `andrea`) + secondo num
 riconosce entrambi come staff e prompt parametrizzato sul nome → cache prompt separate.
 Sole chiama ciascuno per nome. Reset password: `htpasswd -B <path> <utente>` (mai `-c`).
 
+### 🔎 Outreach — Agente Arricchimento contatti ✅ LIVE (20/06/2026)
+I contatti dalla ricerca OSM arrivano quasi sempre incompleti (spesso solo nome + indirizzo).
+Aggiunto un agente che completa i campi vuoti in due passi: (1) **deterministico/gratis** — deriva
+il sito dal dominio email + scraping di home/`contatti`/`chi-siamo` per email e telefono (riusa il
+fetch anti-SSRF); (2) **agente Claude + web search** per i buchi rimasti (sito, indirizzo,
+referente), con fonte e confidenza per campo. File: `ardy-enrich.php`, action `enrich_contact` in
+`ardy-outreach-api.php`, UI in `ardy-outreach.html`.
+- **Singolo**: pulsante ✨ ARRICCHISCI → modale, conferma campo-per-campo (puoi accettare anche bassa confidenza).
+- **In blocco**: pulsante ✨ BLOCCO → processa gli incompleti del filtro corrente uno alla volta,
+  applica solo i campi vuoti a confidenza **alta/media** (mai sovrascrittura), con barra + log + interrompi.
+
+### 🗺️ Outreach — Fonte Google Maps (Places API) — DA FARE
+**Perché**: Google Maps è la fonte **più completa** per attività locali (telefono, sito, indirizzo,
+orari, recensioni, sito ufficiale). Da affiancare/sostituire a OpenStreetMap nella RICERCA AZIENDE e
+come terzo passo dell'agente Arricchimento quando il sito + web search non bastano.
+
+**Come**: Google Maps Platform → **Places API (New)**, chiave API in `ardy-config.php` (lato server,
+mai nel frontend; restringere la chiave per API + IP/referrer). Due usi:
+- *Discovery* (sostituisce Overpass): **Text Search** / **Nearby Search** per categoria + zona.
+- *Arricchimento*: **Place Details** (campi `phone`, `website`, `formattedAddress`, `openingHours`).
+
+**Stima costi** (Google Maps Platform, listino USD indicativo — Google cambia spesso, verificare):
+- Text Search / Nearby Search: **~$32 / 1000 chiamate** (≈ $0,032 a chiamata).
+- Place Details con campi contatto (telefono/sito): **~$17–20 / 1000** (≈ $0,02 a chiamata).
+- **Per azienda arricchita** servono in genere 1 search + 1 details → **~$0,05 a contatto**
+  (≈ $5 ogni 100 contatti, ≈ $50 ogni 1000).
+- **Discovery di una zona**: 1–3 chiamate Nearby (fino a 60 risultati) → ~$0,03–0,10 a ricerca,
+  poi i Details solo sui lead che salvi.
+- **Free tier**: Google offre un credito/quota mensile gratuita (storicamente ~$200/mese, ora in
+  migrazione a quote gratuite per-SKU). Per i volumi di Ardy (decine/poche centinaia di contatti)
+  realisticamente si resta **dentro o vicino al gratis**. Da confermare al momento dell'attivazione.
+
+**Nota**: tenere OSM come fallback gratuito; Google solo quando serve completezza (costa per chiamata).
+INI-PEC resta non automatizzabile (captcha) → eventuale PEC/P.IVA via API a pagamento dedicata, task a sé.
+
 ### 👥 Accesso "dipendente" con permessi limitati (ruoli) — DA FARE
 Quando Ardy avrà un dipendente: creare un accesso con permessi ristretti. Decisione presa
 (17/06): **il dipendente (`staff`) può SOLO fare preventivi + schede cliente** (e le fasi di
