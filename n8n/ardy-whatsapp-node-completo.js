@@ -18,12 +18,25 @@ const mediaMime = body.media_mime || '';
 const caption   = body.caption    || '';
 if (!message && mediaId) message = caption || '[foto inviata]';
 
-// 🔧 SOSTITUISCI questi 3 valori
-const SECRET        = '__WA_LOOKUP_SECRET__';   // = WA_LOOKUP_SECRET in ardy-config.php
-const WA_TOKEN      = '__META_WA_TOKEN__';
-const ANTHROPIC_KEY = '__ANTHROPIC_API_KEY__';
-const PHONE_ID      = '1151535311377293';
+// 🔐 Segreti da VARIABILI D'AMBIENTE n8n — MAI in chiaro nel codice del nodo,
+// così non finiscono negli export del workflow. Impostale sull'host n8n (file
+// .env / docker-compose), con QUESTI nomi:
+//   WA_LOOKUP_SECRET   = WA_LOOKUP_SECRET di ardy-config.php
+//   META_WA_TOKEN      = token Cloud API di Meta
+//   ANTHROPIC_API_KEY  = API key Anthropic
+// Richiede che l'accesso a $env nei nodi NON sia bloccato
+// (N8N_BLOCK_ENV_ACCESS_IN_NODE=false — è il default).
+const SECRET        = $env.WA_LOOKUP_SECRET;
+const WA_TOKEN      = $env.META_WA_TOKEN;
+const ANTHROPIC_KEY = $env.ANTHROPIC_API_KEY;
+const PHONE_ID      = $env.WA_PHONE_NUMBER_ID || '1151535311377293'; // non segreto
 const BASE          = 'https://ardyagent.ardy-lab.it';
+
+// Fail-fast: se un segreto manca, fermati con un errore chiaro invece di fare
+// chiamate non autenticate (che i guard fail-closed rifiuterebbero comunque).
+if (!SECRET || !WA_TOKEN || !ANTHROPIC_KEY) {
+  throw new Error("Config n8n mancante: imposta le variabili d'ambiente WA_LOOKUP_SECRET, META_WA_TOKEN e ANTHROPIC_API_KEY sull'host n8n.");
+}
 
 // Solo testo (per ora)
 if (!message) {

@@ -262,14 +262,23 @@ guida `ardy-gbp-post.md`. Scope `business.manage` aggiunto in `ardy-gcal-auth.ph
 
 ## 📋 TASK DA SVILUPPARE (aperti)
 
-### 🔐 Hardening n8n — segreti in variabili d'ambiente (priorità media)
-Oggi `WA_TOKEN`, `ANTHROPIC_KEY` e `WA_LOOKUP_SECRET` stanno nel codice del nodo Code → escono
-in chiaro negli export del workflow (causa del task sicurezza del 17/06). Soluzione: spostarli
-nelle variabili d'ambiente di n8n (`$env.NOME`) definite nel `.env` sul server. Così gli export
-contengono solo `$env.WA_TOKEN` — un riferimento, mai il valore.
-**Lavoro:** (1) aggiungere 3 righe al `.env` di n8n sul server via SSH; (2) sostituire le 3
-costanti nel nodo Code con `$env.NOME`; (3) aggiornare il file versionato
-`n8n/ardy-whatsapp-node-completo.js` e il JSON del workflow. ~15 min.
+### 🔐 Hardening n8n — segreti in variabili d'ambiente (CODICE FATTO 20/06 — restano i passi sull'host)
+I segreti non sono più in chiaro nel codice del nodo: `n8n/ardy-whatsapp-node-completo.js` e il
+JSON del workflow (`n8n/ardy-whatsapp-workflow.json`) ora leggono da `$env.*` con fail-fast se mancano.
+Mappatura nomi variabili d'ambiente → uso:
+- `WA_LOOKUP_SECRET`  = `WA_LOOKUP_SECRET` di `ardy-config.php`
+- `META_WA_TOKEN`     = token Cloud API di Meta
+- `ANTHROPIC_API_KEY` = API key Anthropic
+- (`WA_PHONE_NUMBER_ID` opzionale; fallback hardcoded, non è un segreto)
+
+**⚠️ AZIONI MANUALI ANCORA DA FARE sull'host n8n (Docker), nell'ORDINE giusto:**
+1. Aggiungere le 3 variabili d'ambiente al `docker-compose.yml` (o `.env`) del container n8n.
+2. **Riavviare n8n** (le env si caricano all'avvio). Verificare che `N8N_BLOCK_ENV_ACCESS_IN_NODE`
+   NON sia a `true` (default = accesso a `$env` consentito).
+3. Aggiornare il nodo Code: incollare il nuovo codice (o re-importare il workflow JSON).
+> Ordine critico: prima le env + restart, poi l'aggiornamento del nodo. Se aggiorni il nodo PRIMA
+> di aver impostato le env, il workflow lancia l'errore di fail-fast e WhatsApp smette di rispondere
+> finché non completi i passi 1-2.
 
 ### 🔥 ~~Firewall host — sostituto di firewalld~~ ✅ FATTO/LIVE (19/06/2026)
 **csf (`cpanel-csf` v16.20) installato e LIVE.** Scelta = opzione 2 (csf), motivata e documentata in
