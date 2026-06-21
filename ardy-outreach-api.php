@@ -87,6 +87,18 @@ try {
             echo json_encode(['success' => true]);
             break;
 
+        // Eliminazione in blocco (es. "introvabili" dopo l'arricchimento).
+        case 'delete_contacts':
+            $ids = $input['ids'] ?? [];
+            if (!is_array($ids) || !$ids) { echo json_encode(['success' => false, 'error' => 'Nessun id']); break; }
+            $ids = array_values(array_filter(array_map('intval', $ids), fn($v) => $v > 0));
+            if (!$ids) { echo json_encode(['success' => false, 'error' => 'Id non validi']); break; }
+            $ph = implode(',', array_fill(0, count($ids), '?'));
+            $stmt = $db->prepare("DELETE FROM outreach_contatti WHERE id IN ($ph)");
+            $stmt->execute($ids);
+            echo json_encode(['success' => true, 'deleted' => $stmt->rowCount()]);
+            break;
+
         // --------------------------------------------------------
         // STATISTICHE
         // --------------------------------------------------------

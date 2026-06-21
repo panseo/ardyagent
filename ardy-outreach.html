@@ -66,6 +66,18 @@
   .stato-risposto      { background:#2a2a0a; color:#cc0; }
   .stato-partner       { background:#2a1a0a; color:var(--accent); }
   .stato-non_interessato { background:#2a1a1a; color:#c44; }
+  /* Completezza dati: bordo sinistro della card + indicatori E/T/S */
+  .contact-card { border-left:2px solid transparent; }
+  .contact-card.dc-completo   { border-left-color:var(--green); }
+  .contact-card.dc-parziale   { border-left-color:var(--orange); }
+  .contact-card.dc-no-email   { border-left-color:var(--red); }
+  .data-dots { display:flex; gap:5px; margin-top:6px; }
+  .data-dot { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:.5px; padding:1px 5px; border-radius:2px; border:1px solid var(--border); color:var(--text-dim); opacity:.5; }
+  .data-dot.on { opacity:1; color:#000; }
+  .data-dot.on.d-email { background:var(--green); border-color:var(--green); }
+  .data-dot.on.d-tel   { background:var(--blue);  border-color:var(--blue); }
+  .data-dot.on.d-sito  { background:var(--accent);border-color:var(--accent); }
+  .data-dot.off.d-email { border-color:var(--red); color:var(--red); opacity:.8; }
   .sidebar-bottom { padding:12px 16px; border-top:1px solid var(--border); display:flex; gap:8px; }
   .btn-add { flex:1; background:none; border:1px solid var(--accent); color:var(--accent); font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1px; padding:8px; cursor:pointer; border-radius:2px; transition:.2s; }
   .btn-add:hover { background:var(--accent); color:#000; }
@@ -235,6 +247,8 @@
         <button class="chip" onclick="setFilter('interior_designer')">DESIGNER</button>
         <button class="chip" onclick="setFilter('bb')">B&amp;B</button>
       </div>
+      <button class="btn-add" style="width:100%;margin-top:10px;" onclick="openFilterTool()">▦ FILTRI &amp; AZIONI DATI</button>
+      <div id="dataFilterChip" style="display:none;margin-top:8px;font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);cursor:pointer;" onclick="setDataFilter('')" title="Rimuovi filtro"></div>
     </div>
     <div class="contact-list" id="contactList">
       <div class="empty-list">Caricamento...</div>
@@ -398,6 +412,32 @@
         </div>
 
         <button class="btn-send" id="btnSaveLeads" onclick="saveLeads()" style="display:none">💾 SALVA SELEZIONATI</button>
+      </div>
+    </div>
+
+    <!-- FILTRI & AZIONI DATI -->
+    <div id="viewFiltri" style="display:none">
+      <div class="campaign-panel">
+        <div class="campaign-title">FILTRI &amp; AZIONI DATI</div>
+        <p style="color:var(--text-dim);font-size:12px;font-family:'DM Mono',monospace;margin-bottom:20px;line-height:1.6;">
+          Filtra i contatti per completezza dei dati (priorità: email, telefono, sito).<br>
+          Poi arricchisci in blocco i filtrati, oppure elimina gli introvabili.
+        </p>
+
+        <div class="campaign-section">
+          <div class="campaign-label">MOSTRA NELLA LISTA</div>
+          <div class="filter-row" id="dataFilterButtons" style="gap:8px;"></div>
+        </div>
+
+        <div class="campaign-section">
+          <div class="campaign-label">AZIONI SUI FILTRATI</div>
+          <div class="campaign-summary" style="margin-bottom:12px;">
+            <p>In lista ora: <strong id="filtCount">0</strong> contatti</p>
+            <p style="font-size:11px;color:var(--text-dim);margin-top:4px;" id="filtDesc">—</p>
+          </div>
+          <button class="btn-send" onclick="enrichFiltered()" style="margin-bottom:10px;">✨ ARRICCHISCI I FILTRATI (Google Maps + web)</button>
+          <button class="btn-send" onclick="deleteFiltered()" style="background:var(--red);color:#fff;">🗑 ELIMINA I FILTRATI</button>
+        </div>
       </div>
     </div>
 
@@ -589,12 +629,14 @@ function setMode(m) {
   document.getElementById('viewCampagna').style.display  = m==='campagna'  ? 'block' : 'none';
   document.getElementById('viewRicerca').style.display   = m==='ricerca'   ? 'block' : 'none';
   document.getElementById('viewTemplate').style.display  = m==='template'  ? 'block' : 'none';
+  document.getElementById('viewFiltri').style.display    = m==='filtri'    ? 'block' : 'none';
   ['Contatti','Campagna','Ricerca','Template'].forEach(x => {
     const b = document.getElementById('btnMode'+x);
     if(b) b.classList.toggle('active', m===x.toLowerCase());
   });
   if (m==='campagna') renderCampContacts('');
   if (m==='template') renderTplList();
+  if (m==='filtri')   renderFilterTool();
 }
 
 // ============================================================
@@ -617,18 +659,41 @@ function filterContacts() {
 // inserimento manuale, quindi nome/stato/ecc. non sono fidati (anti-XSS).
 function escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 
+// --- Completezza dati ---------------------------------------------------
+const has = (c,f) => !!String(c?.[f]||'').trim();
+function dataClass(c) {
+  if (!has(c,'email')) return 'dc-no-email';                          // manca l'email (priorità max)
+  if (has(c,'email') && has(c,'telefono') && has(c,'sito')) return 'dc-completo';
+  return 'dc-parziale';
+}
+// Predicato per ciascun filtro dati
+const DATA_FILTERS = {
+  ''             : { label:'Tutti',                test: ()=>true },
+  'no_email'     : { label:'Senza email',          test:c=>!has(c,'email') },
+  'no_tel'       : { label:'Senza telefono',       test:c=>!has(c,'telefono') },
+  'no_email_tel' : { label:'Senza email né tel',   test:c=>!has(c,'email') && !has(c,'telefono') },
+  'no_sito'      : { label:'Senza sito',           test:c=>!has(c,'sito') },
+  'completi'     : { label:'Completi (E+T+S)',     test:c=>has(c,'email')&&has(c,'telefono')&&has(c,'sito') },
+  'incompleti'   : { label:'Incompleti',           test:c=>!(has(c,'email')&&has(c,'telefono')&&has(c,'sito')) },
+};
+let dataFilter = '';
+
 function renderList(q='') {
   const list = document.getElementById('contactList');
   let filtered = allContacts;
   if (q) filtered = filtered.filter(c => c.nome.toLowerCase().includes(q) || (c.email||'').toLowerCase().includes(q));
+  const df = DATA_FILTERS[dataFilter] || DATA_FILTERS[''];
+  filtered = filtered.filter(df.test);
   if (!filtered.length) { list.innerHTML = '<div class="empty-list">Nessun contatto trovato</div>'; return; }
+  const dot = (c,f,lbl,cls) => `<span class="data-dot ${has(c,f)?'on':'off'} ${cls}">${lbl}</span>`;
   list.innerHTML = filtered.map(c => `
-    <div class="contact-card ${currentContact?.id==c.id?'selected':''}" onclick="selectContact(${c.id})">
+    <div class="contact-card ${dataClass(c)} ${currentContact?.id==c.id?'selected':''}" onclick="selectContact(${c.id})">
       <div class="contact-name">${escHtml(c.nome)}</div>
       <div class="contact-meta">
         <span class="contact-cat">${escHtml(c.categoria.replace('_',' '))}</span>
         <span class="stato-badge stato-${escHtml(c.stato)}">${escHtml(c.stato.replace('_',' '))}</span>
       </div>
+      <div class="data-dots">${dot(c,'email','✉ EMAIL','d-email')}${dot(c,'telefono','☎ TEL','d-tel')}${dot(c,'sito','🌐 SITO','d-sito')}</div>
     </div>`).join('');
 }
 
@@ -638,6 +703,7 @@ function renderList(q='') {
 function selectContact(id) {
   currentContact = allContacts.find(c => c.id==id);
   if (!currentContact) return;
+  if (mode!=='contatti') setMode('contatti');
   isDirty = false;
   document.getElementById('emptyState').style.display  = 'none';
   document.getElementById('detailPanel').style.display = 'block';
@@ -805,7 +871,11 @@ async function bulkEnrich() {
   const candidati = allContacts.filter(contactIncompleto);
   if (!candidati.length) { toast('Nessun contatto incompleto in questo filtro', 'ok'); return; }
   if (!confirm(`Arricchire ${candidati.length} contatti incompleti?\nVengono riempiti solo i campi vuoti (confidenza alta/media), senza sovrascrivere nulla.\nPuò richiedere qualche minuto.`)) return;
+  runBulkEnrich(candidati);
+}
 
+async function runBulkEnrich(candidati) {
+  if (bulkRunning) return;
   bulkRunning = true;
   const bar = document.getElementById('bulkProgressBar');
   const status = document.getElementById('bulkStatus');
@@ -864,12 +934,79 @@ async function bulkEnrich() {
   closeBtn.textContent = 'CHIUDI';
   bulkRunning = false;
   await Promise.all([loadContacts(), loadStats()]);
-  if (currentContact) { const fresh = allContacts.find(x => x.id===currentContact.id); if (fresh) { currentContact = fresh; selectContact(fresh.id); } }
+  if (mode==='filtri') renderFilterTool();
+  else if (currentContact) { const fresh = allContacts.find(x => x.id===currentContact.id); if (fresh) { currentContact = fresh; selectContact(fresh.id); } }
 }
 
 function closeBulkModal() {
   if (bulkRunning) { bulkRunning = false; return; } // primo click interrompe il ciclo
   document.getElementById('bulkModal').classList.remove('open');
+}
+
+// ============================================================
+// TOOL FILTRI & AZIONI DATI (pannello centrale)
+// ============================================================
+function openFilterTool() { setMode('filtri'); }
+
+// Contatti attualmente in lista (categoria + ricerca testo + filtro dati).
+function getFilteredContacts() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  let list = allContacts;
+  if (q) list = list.filter(c => c.nome.toLowerCase().includes(q) || (c.email||'').toLowerCase().includes(q));
+  const df = DATA_FILTERS[dataFilter] || DATA_FILTERS[''];
+  return list.filter(df.test);
+}
+
+function renderFilterTool() {
+  const wrap = document.getElementById('dataFilterButtons');
+  wrap.innerHTML = Object.keys(DATA_FILTERS).map(k => {
+    const n = allContacts.filter(DATA_FILTERS[k].test).length;
+    return `<button class="chip ${dataFilter===k?'active':''}" onclick="setDataFilter('${k}')">${DATA_FILTERS[k].label} (${n})</button>`;
+  }).join('');
+  const filt = getFilteredContacts();
+  document.getElementById('filtCount').textContent = filt.length;
+  document.getElementById('filtDesc').textContent =
+    dataFilter ? `Filtro attivo: ${DATA_FILTERS[dataFilter].label}` : 'Nessun filtro dati: tutti i contatti della categoria.';
+}
+
+function setDataFilter(k) {
+  dataFilter = (k in DATA_FILTERS) ? k : '';
+  // Chip indicatore sulla barra sinistra
+  const chip = document.getElementById('dataFilterChip');
+  if (dataFilter) { chip.style.display = 'block'; chip.textContent = '▦ ' + DATA_FILTERS[dataFilter].label + ' ✕'; }
+  else            { chip.style.display = 'none'; }
+  renderList(document.getElementById('searchInput').value.toLowerCase());
+  if (mode==='filtri') renderFilterTool();
+}
+
+async function enrichFiltered() {
+  if (bulkRunning) { toast('Arricchimento già in corso', 'err'); return; }
+  const list = getFilteredContacts();
+  if (!list.length) { toast('Nessun contatto in lista', 'err'); return; }
+  if (!confirm(`Arricchire ${list.length} contatti filtrati?\nUsa Google Maps + web, riempie solo i campi vuoti (confidenza alta/media), senza sovrascrivere.\nConsuma chiamate Google (entro il tetto giornaliero). Può richiedere qualche minuto.`)) return;
+  runBulkEnrich(list);
+}
+
+async function deleteFiltered() {
+  if (!dataFilter) { toast('Scegli prima un filtro (non si elimina su "Tutti")', 'err'); return; }
+  const list = getFilteredContacts();
+  if (!list.length) { toast('Nessun contatto in lista', 'err'); return; }
+  if (!confirm(`ELIMINARE ${list.length} contatti attualmente filtrati?\nOperazione NON reversibile. Usala per togliere gli introvabili dopo l'arricchimento.`)) return;
+  if (!confirm(`Conferma definitiva: cancello ${list.length} contatti?`)) return;
+  const ids = list.map(c => c.id);
+  const r = await api('delete_contacts', { ids });
+  if (r.success) {
+    if (currentContact && ids.includes(currentContact.id)) {
+      currentContact = null;
+      document.getElementById('detailPanel').style.display = 'none';
+      document.getElementById('emptyState').style.display = 'block';
+    }
+    await Promise.all([loadContacts(), loadStats()]);
+    renderFilterTool();
+    toast(`✓ Eliminati: ${r.deleted}`, 'ok');
+  } else {
+    toast('Errore: ' + (r.error||'sconosciuto'), 'err');
+  }
 }
 
 // ============================================================
