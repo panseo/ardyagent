@@ -446,6 +446,20 @@ l'arricchimento salta il passo Google. Per cambiare la soglia, in `ardy-config.p
 **Nota**: OSM resta il default gratuito; Google si sceglie quando serve completezza (costa per chiamata).
 INI-PEC resta non automatizzabile (captcha) → eventuale PEC/P.IVA via API a pagamento dedicata, task a sé.
 
+### 🔌 Outreach — Altre fonti dati (valutazione fatta 21/06) — NOTA
+Verificato: la **maggioranza dei portali aziendali italiani è gated** (login/paywall/anti-bot) perché i dati
+del Registro Imprese sono il loro business — ufficiocamerale, reportaziende, icribis, atoka, cerved, Pagine
+Gialle, INI-PEC. **Niente scraping diretto** (fragile + ToS). Le uniche vie davvero aperte/utili:
+- **VIES** (ec.europa.eu/taxation_customs/vies) — ufficiale UE, **gratis, API senza chiave, no captcha**.
+  Input: **partita IVA** → Output: **ragione sociale + indirizzo ufficiale**. Limite: serve avere già la
+  P.IVA e dà solo nome+indirizzo (non tel/email/PEC). **Da integrare INSIEME al futuro campo Partita IVA**
+  (vedi task PEC/P.IVA): trasforma una P.IVA pescata altrove in dati ufficiali a costo zero.
+- **OpenCorporates** — API con tier gratuito (chiave, uso non commerciale); copertura IT variabile.
+- **Registro Imprese** — "scheda gratuita" (denominazione/sede/stato) indicizzata da Google.
+- I portali gated (Pagine Gialle ecc.) si attingono **già** in modo legittimo via il passo **Claude web
+  search** dell'agente Arricchimento, che legge gli snippet pubblici indicizzati senza bucare il muro.
+**Conclusione**: Google Places + Claude web search coprono il grosso. VIES solo se/quando si aggiunge P.IVA.
+
 ### 👥 Accesso "dipendente" con permessi limitati (ruoli) — DA FARE
 Quando Ardy avrà un dipendente: creare un accesso con permessi ristretti. Decisione presa
 (17/06): **il dipendente (`staff`) può SOLO fare preventivi + schede cliente** (e le fasi di
