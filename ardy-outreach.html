@@ -171,14 +171,28 @@
   .form-textarea { background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:'DM Mono',monospace; font-size:12px; line-height:1.7; padding:10px 12px; width:100%; border-radius:2px; outline:none; resize:vertical; min-height:120px; }
   .modal-footer { display:flex; gap:10px; margin-top:20px; justify-content:flex-end; }
 
+  /* HOME / MENU MOBILE */
+  .home-menu { padding:18px 16px; max-width:640px; margin:0 auto; }
+  .home-title { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:2px; color:var(--text); margin:0; }
+  .home-sub { font-family:'DM Mono',monospace; font-size:11px; letter-spacing:1px; color:var(--text-dim); margin:2px 0 18px; }
+  .home-card { display:flex; gap:14px; align-items:flex-start; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:16px; margin-bottom:12px; cursor:pointer; transition:.15s; }
+  .home-card:hover, .home-card:active { border-color:var(--accent); background:var(--surface2); }
+  .home-ico { font-size:22px; line-height:1.2; width:26px; text-align:center; flex-shrink:0; }
+  .home-card h3 { font-family:'Bebas Neue',sans-serif; letter-spacing:1px; font-size:18px; color:var(--accent); margin:0 0 3px; }
+  .home-card p { font-size:12px; color:var(--text-dim); line-height:1.5; margin:0; }
+  .btn-menu-mobile { display:none; }
+
   /* MOBILE */
   @media (max-width:768px) {
-    .stats-bar { grid-template-columns:repeat(2,1fr); }
-    .layout { grid-template-columns:1fr; position:relative; overflow:hidden; }
-    .sidebar { position:absolute; inset:0; z-index:10; transition:transform .3s; }
-    .main { position:absolute; inset:0; z-index:20; background:var(--bg); transform:translateX(100%); transition:transform .3s; }
-    .mobile-detail-open .sidebar { transform:translateX(-100%); }
-    .mobile-detail-open .main { transform:translateX(0); }
+    header { padding:0 14px; }
+    .header-right .mode-btn { display:none; }     /* nav per-modo: si usa la HOME */
+    .btn-menu-mobile { display:inline-block; }
+    .stats-bar { display:flex; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .stat-cell { min-width:46%; flex:0 0 auto; padding:10px 16px; }
+    .layout { grid-template-columns:1fr; height:auto; min-height:calc(100vh - 56px - 57px); }
+    .sidebar, .main { display:none; }
+    .layout.m-sidebar .sidebar { display:flex; }
+    .layout.m-main .main { display:block; }
     .btn-back-mobile { display:flex !important; }
     .detail-panel, .campaign-panel { padding:20px 16px; }
     .info-grid { grid-template-columns:1fr; }
@@ -201,13 +215,14 @@
 <header>
   <div class="logo">ARDY LAB <span>// OUTREACH</span></div>
   <div class="header-right">
+    <button class="btn-header btn-menu-mobile" onclick="setMode('home')">☰ MENU</button>
     <a href="/ardy-michela-app.html" style="text-decoration:none;">
       <button class="btn-header">← DASHBOARD</button>
     </a>
-    <button class="btn-header" id="btnModeContatti" onclick="setMode('contatti')" class="active">CONTATTI</button>
-    <button class="btn-header" id="btnModeCampagna" onclick="setMode('campagna')">📣 CAMPAGNA</button>
-    <button class="btn-header" id="btnModeRicerca" onclick="setMode('ricerca')">🔎 RICERCA</button>
-    <button class="btn-header" id="btnModeTemplate" onclick="setMode('template')">TEMPLATE</button>
+    <button class="btn-header mode-btn" id="btnModeContatti" onclick="setMode('contatti')">CONTATTI</button>
+    <button class="btn-header mode-btn" id="btnModeCampagna" onclick="setMode('campagna')">📣 CAMPAGNA</button>
+    <button class="btn-header mode-btn" id="btnModeRicerca" onclick="setMode('ricerca')">🔎 RICERCA</button>
+    <button class="btn-header mode-btn" id="btnModeTemplate" onclick="setMode('template')">TEMPLATE</button>
   </div>
 </header>
 
@@ -266,6 +281,38 @@
 
   <!-- MAIN -->
   <div class="main" id="mainPanel">
+
+    <!-- HOME / MENU (mobile) -->
+    <div id="viewHome" style="display:none">
+      <div class="home-menu">
+        <div class="home-title">OUTREACH</div>
+        <div class="home-sub">Scegli cosa vuoi fare</div>
+        <div class="home-card" onclick="setMode('ricerca')">
+          <div class="home-ico">🔎</div>
+          <div><h3>Ricerca aziende</h3><p>Trova nuove attività (OpenStreetMap / Google Maps) e salvale come contatti.</p></div>
+        </div>
+        <div class="home-card" onclick="setMode('contatti')">
+          <div class="home-ico">📇</div>
+          <div><h3>Contatti</h3><p>Sfoglia la lista, apri una scheda e arricchisci i dati mancanti.</p></div>
+        </div>
+        <div class="home-card" onclick="setMode('campagna')">
+          <div class="home-ico">📣</div>
+          <div><h3>Campagna</h3><p>Invia email o genera lettere postali, con anteprima prima di partire.</p></div>
+        </div>
+        <div class="home-card" onclick="openFilterTool()">
+          <div class="home-ico">▦</div>
+          <div><h3>Filtri &amp; Azioni dati</h3><p>Filtra per dati mancanti, poi arricchisci o elimina in blocco.</p></div>
+        </div>
+        <div class="home-card" onclick="setMode('template')">
+          <div class="home-ico">✉</div>
+          <div><h3>Template</h3><p>Crea e modifica i testi delle campagne, anche con l'AI.</p></div>
+        </div>
+        <div class="home-card" onclick="importClients()">
+          <div class="home-ico">⬇</div>
+          <div><h3>Importa clienti CRM</h3><p>Porta i clienti del CRM (con email) tra i contatti outreach.</p></div>
+        </div>
+      </div>
+    </div>
 
     <!-- CONTATTI MODE -->
     <div id="viewContatti">
@@ -649,6 +696,8 @@ async function init() {
   const imp = await api('import_antiquari');
   if (!imp.skipped) toast('✓ Importati ' + imp.imported + ' antiquari', 'ok');
   await Promise.all([loadContacts(), loadTemplates(), loadStats()]);
+  // Mobile: parti dalla Home/menu; desktop: dai Contatti.
+  setMode(window.innerWidth <= 768 ? 'home' : 'contatti');
 }
 
 async function loadStats() {
@@ -698,6 +747,7 @@ async function loadTemplates() {
 // ============================================================
 function setMode(m) {
   mode = m;
+  document.getElementById('viewHome').style.display      = m==='home'      ? 'block' : 'none';
   document.getElementById('viewContatti').style.display  = m==='contatti'  ? 'block' : 'none';
   document.getElementById('viewCampagna').style.display  = m==='campagna'  ? 'block' : 'none';
   document.getElementById('viewRicerca').style.display   = m==='ricerca'   ? 'block' : 'none';
@@ -710,6 +760,16 @@ function setMode(m) {
   if (m==='campagna') filterCampContacts('');
   if (m==='template') renderTplList();
   if (m==='filtri')   renderFilterTool();
+  applyMobilePanel();
+}
+
+// Su mobile mostra UN solo pannello: la lista (sidebar) solo per "Contatti"
+// senza scheda aperta; in tutti gli altri casi il pannello principale.
+function applyMobilePanel() {
+  const layout = document.getElementById('layout');
+  const showSidebar = (mode === 'contatti' && !currentContact);
+  layout.classList.toggle('m-sidebar', showSidebar);
+  layout.classList.toggle('m-main', !showSidebar);
 }
 
 // ============================================================
@@ -798,7 +858,7 @@ function selectContact(id) {
   document.getElementById('editDataContatto').value= currentContact.data_contatto || '';
   renderStatoRow();
   renderList(document.getElementById('searchInput').value.toLowerCase());
-  if (window.innerWidth <= 768) document.getElementById('layout').classList.add('mobile-detail-open');
+  applyMobilePanel(); // su mobile: scheda aperta → mostra il pannello principale
 }
 
 function renderStatoRow() {
@@ -854,7 +914,9 @@ async function deleteContact() {
 }
 
 function closeMobileDetail() {
-  document.getElementById('layout').classList.remove('mobile-detail-open');
+  // Torna alla lista contatti (mobile) senza deselezionare a livello dati.
+  const layout = document.getElementById('layout');
+  layout.classList.add('m-sidebar'); layout.classList.remove('m-main');
 }
 
 // ============================================================

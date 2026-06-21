@@ -471,6 +471,23 @@ Da verificare in dashboard dopo l'allineamento server:
 4. Email outreach: pulsante **Scrivici su WhatsApp** apre la chat di Sole col testo precompilato (invio di prova a un indirizzo proprio).
 5. Ricerca Google Maps: risultati più completi di OSM; salvataggio senza duplicati.
 
+### 🧭 Outreach — ROADMAP (idee 21/06, da progettare) — DA FARE
+Visione raccolta dall'utente, da affrontare dopo il restyling mobile:
+
+1. **Dash transitoria dei lead da campagna** — una campagna genera lead (es. 5 B&B). Devono finire in una
+   **dashboard transitoria** (pipeline) da cui poi: (a) **passano al CRM di Sole** se commissionano un lavoro,
+   oppure (b) entrano in una nuova modalità **"Partner"** (alternativa a "Clienti"). → serve stato/pipeline lead
+   + azioni "promuovi a cliente" / "promuovi a partner".
+2. **Campagne con obiettivi diversi + Sole espone il piano** — es. B&B "Ardy Experience": Sole deve saper
+   **esporre il piano marketing del progetto** a tutti i registrati sul CRM, sia su **WhatsApp** sia su una
+   **pagina dedicata** (webchat + **codice di verifica**, come il codice_accesso cliente esistente).
+3. **Prompt dedicato per campagna** — ogni campagna ha il suo prompt per Sole (contesto/obiettivo), così Sole
+   risponde in linea con quella iniziativa.
+4. **Codice etico AI citato in TUTTE le email/messaggi + nel prompt di Sole** — Ardy usa l'AI con limiti etici:
+   **non aggressione** (verbale e fisica), tutela di **privacy e sicurezza dei dati** (passi fatti e da fare),
+   e l'AI **non potrà mai usare i dati in autonomia per azioni fraudolente** (un atto aggressivo non rientra nei
+   suoi compiti). → aggiungere una riga/codice "regolamento AI" nelle email e aggiornare il system prompt di Sole.
+
 ### 👥 Outreach — Importa clienti da Sole/CRM → contatti outreach — DA FARE
 **Idea utente**: i clienti del CRM (dashboard Sole) **lasciano sempre l'email** → ottima base per l'outreach
 (follow-up, riattivazione, nuove proposte). Serve:
