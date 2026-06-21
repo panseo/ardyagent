@@ -244,6 +244,10 @@ function ardyPlacesHttpPost(string $url, array $body): ?string {
         CURLOPT_CONNECTTIMEOUT => 10,
         CURLOPT_SSL_VERIFYPEER => true,
         CURLOPT_SSL_VERIFYHOST => 2,
+        // Forza l'uscita in IPv4: la chiave è ristretta all'IPv4 pubblico del
+        // server (es. 57.131.47.5); senza questo, su host con IPv6 ballerino la
+        // chiamata potrebbe uscire da un IP non in whitelist → 403 di Google.
+        CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
         CURLOPT_HTTPHEADER     => [
             'Content-Type: application/json',
             'X-Goog-Api-Key: ' . constant('ARDY_GOOGLE_PLACES_KEY'),
