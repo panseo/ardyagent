@@ -454,16 +454,14 @@ INI-PEC resta non automatizzabile (captcha) → eventuale PEC/P.IVA via API a pa
 - **Campagna**: filtri rapidi **✉ Solo con email** (default ON) e **● Solo da contattare** → batch con "Seleziona tutti".
 - Email outreach: **CTA "Scrivici su WhatsApp"** (inbound verso Sole, compliant).
 
-### 🧾 Outreach — Tool "Lettera cartacea" (direct mail) — DA FARE
-**Idea utente**: per i contatti **con telefono + sito ma SENZA email** (non raggiungibili via campagna email),
-generare un **contenuto stampabile** da spedire per **posta** all'indirizzo. Approccio proposto:
-- Filtro dedicato (es. "Senza email, con indirizzo") nel tool dati → poi "📄 Genera lettere".
-- Output: **HTML print-ready A4** (una lettera per pagina, `page-break`), con **carta intestata Ardy Lab**, blocco
-  **indirizzo destinatario** (per finestra busta), corpo = stesso testo della proposta (riusare i template outreach,
-  variante "cartacea" senza link/disiscrizione), firma. Si stampa dal browser (Ctrl+P → PDF) — nessuna dipendenza nuova.
-- Batch: genera tutte le lettere dei contatti filtrati in un unico documento da stampare.
-- Decisioni aperte (da confermare quando si parte): mittente/indirizzo di ritorno, formato busta (finestra sì/no),
-  se includere un **QR/wa.me** o codice per portarli online. Default sensati se l'utente non specifica.
+### ✅ Outreach — Tool "Lettera cartacea" (direct mail) FATTO (21/06)
+Per i contatti **con indirizzo ma senza email** (filtro "Per posta"). Nel tool Filtri & Azioni: selettore template +
+"📄 GENERA LETTERE". Produce **HTML print-ready A4** (una lettera/pagina, `page-break`), carta intestata Ardy Lab
+(logo da URL pubblico), blocco **indirizzo destinatario** posizionato per busta a finestra, corpo dal template scelto
+(`{{nome}}`/`{{azienda}}` sostituiti, dati contatto esc-html), firma + riga contatti. Si apre in nuova scheda e parte
+la stampa (Ctrl+P → PDF). Tutto client-side, nessuna dipendenza. I contatti senza indirizzo vengono saltati.
+- Mittente in `ARDY_MITTENTE` (Via James Joyce 4, 00143 Roma EUR · +39 377 659 5547 · ardy-lab.it).
+- **Possibili migliorie future**: QR (wa.me/sito) sulla lettera; template "cartaceo" dedicato; tuning offset finestra busta.
 
 ### 🧪 Outreach — Test manuali da fare (dopo deploy) — NOTA
 Da verificare in dashboard dopo l'allineamento server:

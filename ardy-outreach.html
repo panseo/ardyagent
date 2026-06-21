@@ -441,6 +441,18 @@
           <button class="btn-send" onclick="enrichFiltered()" style="margin-bottom:10px;">✨ ARRICCHISCI I FILTRATI (Google Maps + web)</button>
           <button class="btn-send" onclick="deleteFiltered()" style="background:var(--red);color:#fff;">🗑 ELIMINA I FILTRATI</button>
         </div>
+
+        <div class="campaign-section">
+          <div class="campaign-label">📄 LETTERE CARTACEE (invio postale)</div>
+          <p style="font-size:11px;color:var(--text-dim);margin-bottom:10px;line-height:1.6;">
+            Per i contatti <strong>con indirizzo</strong> (tip. filtro "Per posta"). Genera lettere A4 pronte da stampare
+            (carta intestata + indirizzo destinatario per busta a finestra). I contatti senza indirizzo vengono saltati.
+          </p>
+          <select class="tpl-select" id="letterTpl" style="margin-bottom:10px;">
+            <option value="">— Testo: seleziona un template —</option>
+          </select>
+          <button class="btn-send" onclick="generateLetters()">📄 GENERA LETTERE (filtrati con indirizzo)</button>
+        </div>
       </div>
     </div>
 
@@ -975,6 +987,14 @@ function renderFilterTool() {
   document.getElementById('filtCount').textContent = filt.length;
   document.getElementById('filtDesc').textContent =
     dataFilter ? `Filtro attivo: ${DATA_FILTERS[dataFilter].label}` : 'Nessun filtro dati: tutti i contatti della categoria.';
+  // Popola il selettore template per le lettere (riusa i template outreach)
+  const sel = document.getElementById('letterTpl');
+  if (sel) {
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— Testo: seleziona un template —</option>' +
+      allTemplates.map(t => `<option value="${t.id}">${escHtml(t.nome)}</option>`).join('');
+    sel.value = cur;
+  }
 }
 
 function setDataFilter(k) {
@@ -1015,6 +1035,80 @@ async function deleteFiltered() {
   } else {
     toast('Errore: ' + (r.error||'sconosciuto'), 'err');
   }
+}
+
+// ============================================================
+// LETTERE CARTACEE (direct mail) — genera HTML A4 pronto-stampa
+// ============================================================
+// Mittente Ardy Lab (carta intestata + indirizzo di ritorno).
+const ARDY_MITTENTE = {
+  nome: 'Ardy Lab', indirizzo: 'Via James Joyce 4', cap: '00143 Roma EUR',
+  tel: '+39 377 659 5547', web: 'ardy-lab.it', logo: 'https://ardyagent.ardy-lab.it/assets/logo.png'
+};
+
+function generateLetters() {
+  // Solo i filtrati CON indirizzo (gli altri non sono spedibili per posta).
+  const all = getFilteredContacts();
+  const list = all.filter(c => has(c,'indirizzo'));
+  if (!list.length) { toast('Nessun contatto con indirizzo nel filtro corrente', 'err'); return; }
+
+  const tplId = document.getElementById('letterTpl').value;
+  const tpl = allTemplates.find(t => String(t.id) === String(tplId));
+  if (!tpl) { toast('Seleziona un template per il testo della lettera', 'err'); return; }
+
+  const saltati = all.length - list.length;
+  if (!confirm(`Generare ${list.length} lettere?` + (saltati ? `\n(${saltati} senza indirizzo verranno saltati)` : '') + `\nSi apre una scheda pronta per la stampa (Ctrl+P → PDF).`)) return;
+
+  const oggi = new Date().toLocaleDateString('it-IT', { day:'numeric', month:'long', year:'numeric' });
+  const corpoTpl = String(tpl.corpo || '');
+
+  const pages = list.map(c => {
+    const nome = c.referente || c.nome || '';
+    let corpo = corpoTpl.replace(/\{\{nome\}\}/g, nome).replace(/\{\{azienda\}\}/g, c.nome || '');
+    corpo = escHtml(corpo).replace(/\n/g, '<br>');
+    return `
+    <div class="letter">
+      <div class="lh">
+        <img src="${ARDY_MITTENTE.logo}" alt="Ardy Lab" class="lh-logo">
+        <div class="lh-info">${escHtml(ARDY_MITTENTE.nome)} · ${escHtml(ARDY_MITTENTE.indirizzo)} · ${escHtml(ARDY_MITTENTE.cap)}<br>${escHtml(ARDY_MITTENTE.web)} · ${escHtml(ARDY_MITTENTE.tel)}</div>
+      </div>
+      <div class="dest">
+        <div class="dest-label">Spett.le</div>
+        <strong>${escHtml(c.nome || '')}</strong><br>
+        ${escHtml(c.indirizzo || '')}
+      </div>
+      <div class="data">Roma, ${escHtml(oggi)}</div>
+      <div class="body">${corpo}</div>
+      <div class="cta">Ci trovi su <strong>${escHtml(ARDY_MITTENTE.web)}</strong> · WhatsApp <strong>${escHtml(ARDY_MITTENTE.tel)}</strong></div>
+    </div>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>Lettere Ardy Lab</title>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Georgia,'Times New Roman',serif; color:#222; background:#eee; }
+  .letter { background:#fff; width:210mm; min-height:297mm; padding:25mm 25mm 20mm; margin:0 auto 10mm; position:relative; }
+  .lh { display:flex; align-items:center; gap:14px; border-bottom:2px solid #c8a96e; padding-bottom:12px; margin-bottom:6mm; }
+  .lh-logo { height:46px; }
+  .lh-info { font-family:Arial,sans-serif; font-size:10px; color:#888; line-height:1.5; }
+  /* Blocco destinatario posizionato per busta a finestra (sinistra) */
+  .dest { margin:18mm 0 10mm 5mm; font-size:13px; line-height:1.5; }
+  .dest-label { font-size:11px; color:#777; }
+  .data { text-align:right; font-size:13px; margin-bottom:8mm; }
+  .body { font-size:13.5px; line-height:1.8; white-space:normal; }
+  .cta { margin-top:14mm; padding-top:8px; border-top:1px solid #ddd; font-family:Arial,sans-serif; font-size:11px; color:#888; }
+  @media print {
+    body { background:#fff; }
+    .letter { margin:0; page-break-after:always; box-shadow:none; }
+    @page { size:A4; margin:0; }
+  }
+</style></head><body>${pages}
+<script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script>
+</body></html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) { toast('Sblocca i popup per generare le lettere', 'err'); return; }
+  w.document.open(); w.document.write(html); w.document.close();
 }
 
 // ============================================================
