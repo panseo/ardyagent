@@ -100,10 +100,55 @@ try {
             break;
 
         // --------------------------------------------------------
+        // IMPORTA CLIENTI DAL CRM → contatti outreach (categoria "clienti")
+        // I clienti lasciano sempre l'email: ottima base per follow-up/riattivazione.
+        // Dedup per email/nome; salta quelli in cestino (deleted_at).
+        // --------------------------------------------------------
+        case 'import_clients':
+            try {
+                $rows = $db->query("SELECT nome, cognome, email, telefono, mobile, indirizzo, zona
+                                    FROM clienti
+                                    WHERE deleted_at IS NULL AND email IS NOT NULL AND email <> ''")->fetchAll();
+            } catch (PDOException $e) {
+                // Fallback se la colonna deleted_at non esiste in questo schema.
+                $rows = $db->query("SELECT nome, cognome, email, telefono, mobile, indirizzo, zona
+                                    FROM clienti WHERE email IS NOT NULL AND email <> ''")->fetchAll();
+            }
+
+            // Dedup contro l'outreach esistente: per email e per nome.
+            $existing = $db->query("SELECT LOWER(COALESCE(email,'')) AS e, LOWER(nome) AS n FROM outreach_contatti")->fetchAll();
+            $exEmail = array_filter(array_column($existing, 'e'));
+            $exNomi  = array_column($existing, 'n');
+
+            $ins = $db->prepare("INSERT INTO outreach_contatti (nome,referente,categoria,email,telefono,indirizzo,stato,note)
+                                 VALUES (:nome,:ref,'clienti',:email,:tel,:ind,'da_contattare','Importato da clienti CRM')");
+            $imported = 0; $skipped = 0;
+            foreach ($rows as $r) {
+                $email = strtolower(trim((string)$r['email']));
+                $nomeFull = trim(trim((string)$r['nome']) . ' ' . trim((string)$r['cognome']));
+                if ($nomeFull === '') { $nomeFull = $email; }
+                $nomeL = strtolower($nomeFull);
+                if (($email && in_array($email, $exEmail, true)) || in_array($nomeL, $exNomi, true)) { $skipped++; continue; }
+                $tel = trim((string)($r['telefono'] ?: ($r['mobile'] ?? '')));
+                $ind = trim((string)($r['indirizzo'] ?: ($r['zona'] ?? '')));
+                $ins->execute([
+                    ':nome'  => $nomeFull,
+                    ':ref'   => $nomeFull,
+                    ':email' => $email,
+                    ':tel'   => $tel ?: null,
+                    ':ind'   => $ind ?: null,
+                ]);
+                $exEmail[] = $email; $exNomi[] = $nomeL;
+                $imported++;
+            }
+            echo json_encode(['success' => true, 'imported' => $imported, 'skipped' => $skipped, 'total' => count($rows)]);
+            break;
+
+        // --------------------------------------------------------
         // STATISTICHE
         // --------------------------------------------------------
         case 'get_stats':
-            $cats = ['antiquari','mercatini','interior_designer','bb'];
+            $cats = ['antiquari','mercatini','interior_designer','bb','clienti'];
             $out  = [];
             $stmtStats = $db->prepare("SELECT
                 COUNT(*) as totale,
