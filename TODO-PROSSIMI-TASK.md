@@ -64,12 +64,9 @@ ristretta per IP del VPS — le chiamate escono in IPv4 forzato). Tetto giornali
 ## 🧭 OUTREACH — ROADMAP (idee 21/06, da progettare)
 La direzione che vogliamo dare allo strumento, da affrontare per prossimi step:
 
-1. ✅ **Dash transitoria dei lead — v1 FATTA (21/06)**. Vista **Pipeline** (mode `pipeline`, header + home):
-   i lead per fase (Risposto in evidenza), click → apre la scheda. Azioni nel dettaglio: **🤝 Partner**
-   (categoria `partner`, parallela a `clienti`) e **⬆ A Cliente** (`promote_client`: crea la scheda nel CRM
-   `clienti` con session_id `otr-…` deterministico + dedup per email, stato LEAD; il lead outreach passa a
-   stato `cliente`). Stato `cliente` + categoria `partner` aggiunti ovunque (stats/chip/select/badge).
-   **Migliorie possibili**: drag&drop tra fasi; campo "valore/nota trattativa"; collegamento alla campagna d'origine.
+1. **Pipeline lead — evoluzioni** (la v1 è live: vista Pipeline + promozione a Cliente/Partner). Idee:
+   drag&drop tra fasi; campo "valore/nota trattativa"; collegamento del lead alla **campagna d'origine**;
+   notifica a Michela quando un lead passa a "Risposto".
 2. **Campagne con obiettivi diversi + Sole espone il piano** — es. B&B "Ardy Experience": Sole deve saper
    **esporre il piano marketing del progetto** a tutti i registrati sul CRM, sia su **WhatsApp** sia su una
    **pagina dedicata** (webchat + **codice di verifica**, come il `codice_accesso` cliente esistente).
