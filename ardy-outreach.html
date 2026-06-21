@@ -337,6 +337,10 @@
             <button class="chip" onclick="filterCampContacts('interior_designer')">DESIGNER</button>
             <button class="chip" onclick="filterCampContacts('bb')">B&amp;B</button>
           </div>
+          <div class="filter-row" style="margin-bottom:10px;">
+            <button class="chip active" id="campChipEmail" onclick="toggleCampEmail()">✉ SOLO CON EMAIL</button>
+            <button class="chip" id="campChipTodo" onclick="toggleCampTodo()">● SOLO DA CONTATTARE</button>
+          </div>
           <div class="select-all-row">
             <button class="btn-select-all" onclick="toggleSelectAll()">Seleziona/deseleziona tutti</button>
           </div>
@@ -633,7 +637,7 @@ function setMode(m) {
     const b = document.getElementById('btnMode'+x);
     if(b) b.classList.toggle('active', m===x.toLowerCase());
   });
-  if (m==='campagna') renderCampContacts('');
+  if (m==='campagna') filterCampContacts('');
   if (m==='template') renderTplList();
   if (m==='filtri')   renderFilterTool();
 }
@@ -672,6 +676,7 @@ const DATA_FILTERS = {
   'no_tel'       : { label:'Senza telefono',       test:c=>!has(c,'telefono') },
   'no_email_tel' : { label:'Senza email né tel',   test:c=>!has(c,'email') && !has(c,'telefono') },
   'no_sito'      : { label:'Senza sito',           test:c=>!has(c,'sito') },
+  'solo_tel'     : { label:'Solo telefono',        test:c=>has(c,'telefono')&&!has(c,'email')&&!has(c,'sito') },
   'completi'     : { label:'Completi (E+T+S)',     test:c=>has(c,'email')&&has(c,'telefono')&&has(c,'sito') },
   'incompleti'   : { label:'Incompleti',           test:c=>!(has(c,'email')&&has(c,'telefono')&&has(c,'sito')) },
 };
@@ -1060,17 +1065,40 @@ function loadCampTemplate() {
   document.getElementById('campOggPreview').textContent = t ? 'Oggetto: ' + t.oggetto : '';
 }
 
+let campContacts = [];      // pool della categoria corrente (caricato dal server)
+let campOnlyEmail = true;   // di default mostra solo i contattabili (con email)
+let campOnlyTodo  = false;  // opzionale: solo "da contattare"
+
 async function filterCampContacts(cat) {
   campFilter = cat;
-  document.querySelectorAll('#viewCampagna .chip').forEach(c => {
+  document.querySelectorAll('#viewCampagna .filter-row:first-of-type .chip').forEach(c => {
     c.classList.toggle('active', c.textContent.trim() === (cat ? cat.replace('_',' ').toUpperCase() : 'TUTTI') || (cat==='' && c.textContent.trim()==='TUTTI'));
   });
-  const contacts = await api('get_contacts', { categoria: cat });
-  renderCampContacts(cat, contacts);
+  campContacts = await api('get_contacts', { categoria: cat });
+  applyCampFilters();
+}
+
+function toggleCampEmail() {
+  campOnlyEmail = !campOnlyEmail;
+  document.getElementById('campChipEmail').classList.toggle('active', campOnlyEmail);
+  applyCampFilters();
+}
+
+function toggleCampTodo() {
+  campOnlyTodo = !campOnlyTodo;
+  document.getElementById('campChipTodo').classList.toggle('active', campOnlyTodo);
+  applyCampFilters();
+}
+
+function applyCampFilters() {
+  let list = campContacts || [];
+  if (campOnlyEmail) list = list.filter(c => String(c.email||'').trim());
+  if (campOnlyTodo)  list = list.filter(c => c.stato === 'da_contattare');
+  renderCampContacts(campFilter, list);
 }
 
 function renderCampContacts(cat, contacts) {
-  if (!contacts) { contacts = allContacts.filter(c => !cat || c.categoria===cat); }
+  if (!contacts) { contacts = (campContacts && campContacts.length) ? campContacts : allContacts.filter(c => !cat || c.categoria===cat); }
   const el = document.getElementById('campContactList');
   if (!contacts.length) { el.innerHTML='<div style="padding:16px;color:var(--text-dim);font-size:13px;">Nessun contatto</div>'; return; }
   el.innerHTML = contacts.map(c => `

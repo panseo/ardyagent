@@ -446,6 +446,33 @@ l'arricchimento salta il passo Google. Per cambiare la soglia, in `ardy-config.p
 **Nota**: OSM resta il default gratuito; Google si sceglie quando serve completezza (costa per chiamata).
 INI-PEC resta non automatizzabile (captcha) → eventuale PEC/P.IVA via API a pagamento dedicata, task a sé.
 
+### ✅ Outreach — Dashboard: completezza, filtri, campagne, WhatsApp (21/06) FATTO
+- Card lista: icone **solo sui dati mancanti** (email rossa, tel arancio, sito grigio); completo = card pulita + bordo verde.
+- Tool centrale **Filtri & Azioni dati** (button su barra sx): filtri per completezza con conteggi + chip filtro attivo;
+  azioni sui filtrati = **arricchimento massivo** (Google+web) ed **eliminazione in blocco** (`delete_contacts`, doppia
+  conferma, vietata su "Tutti"). Filtro **"Solo telefono"** incluso (per cancellare gli "solo tel").
+- **Campagna**: filtri rapidi **✉ Solo con email** (default ON) e **● Solo da contattare** → batch con "Seleziona tutti".
+- Email outreach: **CTA "Scrivici su WhatsApp"** (inbound verso Sole, compliant).
+
+### 🧾 Outreach — Tool "Lettera cartacea" (direct mail) — DA FARE
+**Idea utente**: per i contatti **con telefono + sito ma SENZA email** (non raggiungibili via campagna email),
+generare un **contenuto stampabile** da spedire per **posta** all'indirizzo. Approccio proposto:
+- Filtro dedicato (es. "Senza email, con indirizzo") nel tool dati → poi "📄 Genera lettere".
+- Output: **HTML print-ready A4** (una lettera per pagina, `page-break`), con **carta intestata Ardy Lab**, blocco
+  **indirizzo destinatario** (per finestra busta), corpo = stesso testo della proposta (riusare i template outreach,
+  variante "cartacea" senza link/disiscrizione), firma. Si stampa dal browser (Ctrl+P → PDF) — nessuna dipendenza nuova.
+- Batch: genera tutte le lettere dei contatti filtrati in un unico documento da stampare.
+- Decisioni aperte (da confermare quando si parte): mittente/indirizzo di ritorno, formato busta (finestra sì/no),
+  se includere un **QR/wa.me** o codice per portarli online. Default sensati se l'utente non specifica.
+
+### 🧪 Outreach — Test manuali da fare (dopo deploy) — NOTA
+Da verificare in dashboard dopo l'allineamento server:
+1. Card: icone compaiono solo sui dati mancanti; bordo verde sui completi.
+2. Tool Filtri: conteggi corretti, chip attivo, lista sx si restringe; arricchimento massivo dei filtrati ok; eliminazione filtrati (doppia conferma, bloccata su "Tutti").
+3. Campagna: toggle "Solo con email" / "Solo da contattare" filtrano il pool; "Seleziona tutti" prende solo i contattabili.
+4. Email outreach: pulsante **Scrivici su WhatsApp** apre la chat di Sole col testo precompilato (invio di prova a un indirizzo proprio).
+5. Ricerca Google Maps: risultati più completi di OSM; salvataggio senza duplicati.
+
 ### 🔌 Outreach — Altre fonti dati (valutazione fatta 21/06) — NOTA
 Verificato: la **maggioranza dei portali aziendali italiani è gated** (login/paywall/anti-bot) perché i dati
 del Registro Imprese sono il loro business — ufficiocamerale, reportaziende, icribis, atoka, cerved, Pagine
