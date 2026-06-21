@@ -676,7 +676,8 @@ const DATA_FILTERS = {
   'no_tel'       : { label:'Senza telefono',       test:c=>!has(c,'telefono') },
   'no_email_tel' : { label:'Senza email né tel',   test:c=>!has(c,'email') && !has(c,'telefono') },
   'no_sito'      : { label:'Senza sito',           test:c=>!has(c,'sito') },
-  'solo_tel'     : { label:'Solo telefono',        test:c=>has(c,'telefono')&&!has(c,'email')&&!has(c,'sito') },
+  'posta'        : { label:'Per posta (no email, con indirizzo)', test:c=>!has(c,'email')&&has(c,'indirizzo') },
+  'solo_tel'     : { label:'Solo telefono (eliminabili)', test:c=>has(c,'telefono')&&!has(c,'email')&&!has(c,'sito')&&!has(c,'indirizzo') },
   'completi'     : { label:'Completi (E+T+S)',     test:c=>has(c,'email')&&has(c,'telefono')&&has(c,'sito') },
   'incompleti'   : { label:'Incompleti',           test:c=>!(has(c,'email')&&has(c,'telefono')&&has(c,'sito')) },
 };
