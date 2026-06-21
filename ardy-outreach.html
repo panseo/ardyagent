@@ -19,7 +19,7 @@
   header { background:var(--surface); border-bottom:1px solid var(--border); padding:0 24px; height:56px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
   .logo { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:3px; color:var(--accent); }
   .logo span { color:var(--text-dim); font-family:'DM Mono',monospace; font-size:11px; margin-left:8px; }
-  .header-right { display:flex; gap:10px; align-items:center; }
+  .header-right { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
   .btn-header { background:none; border:1px solid var(--border); color:var(--text-mid); font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1px; padding:6px 14px; cursor:pointer; border-radius:2px; transition:.2s; }
   .btn-header:hover { border-color:var(--accent); color:var(--accent); }
   .btn-header.active { background:var(--accent); color:#000; border-color:var(--accent); }
@@ -98,7 +98,7 @@
   .detail-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; }
   .detail-nome { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:2px; line-height:1; }
   .detail-sub { color:var(--text-dim); font-family:'DM Mono',monospace; font-size:10px; letter-spacing:2px; margin-top:4px; }
-  .detail-actions { display:flex; gap:8px; }
+  .detail-actions { display:flex; gap:8px; flex-wrap:wrap; }
   .btn-sm { background:none; border:1px solid var(--border); color:var(--text-mid); font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1px; padding:7px 14px; cursor:pointer; border-radius:2px; transition:.2s; }
   .btn-sm:hover { border-color:var(--accent); color:var(--accent); }
   .btn-sm.danger:hover { border-color:var(--red); color:var(--red); }
@@ -185,7 +185,8 @@
 
   /* MOBILE */
   @media (max-width:768px) {
-    header { padding:0 14px; }
+    header { padding:10px 14px; height:auto; flex-wrap:wrap; gap:8px; }
+    .logo { flex-basis:100%; }
     .header-right .mode-btn { display:none; }     /* nav per-modo: si usa la HOME */
     .btn-menu-mobile { display:inline-block; }
     .stats-bar { display:flex; overflow-x:auto; -webkit-overflow-scrolling:touch; }
