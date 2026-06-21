@@ -483,6 +483,21 @@ Da verificare in dashboard dopo l'allineamento server:
   servirebbe il suo consenso (come per l'email outreach). Tenere `stato`/categoria distinti dai lead freddi.
 - Aprire categoria/filtro "clienti" e magari template dedicati (riattivazione, cross-sell).
 
+### ✨ Outreach — "Crea con AI": generatore di campagne/template custom — DA FARE
+**Idea utente**: oltre ai template preselezionabili, un generatore AI che crea campagne su misura.
+Approccio proposto:
+- Pulsante **"✨ Crea con AI"** nell'editor Template (e/o in Campagna) → mini-form con: **categoria/target**
+  (antiquari, B&B, designer, clienti…), **obiettivo** (prima presentazione, riattivazione, offerta/sconto,
+  evento), **tono** (formale/amichevole), **canale** (email/lettera), eventuali **note/offerta specifica**.
+- Backend: nuova action `genera_template` (in `ardy-outreach-api.php`) che chiama Claude (riusare il pattern
+  di `ardy-enrich.php` → `ardyEnrichCallAnthropic`, niente web search) con un system prompt che conosce Ardy Lab
+  (restauro/laccatura/doratura/stampa3D, Roma EUR, firma Michela, ardy-lab.it, WhatsApp) e i vincoli (no spam,
+  CTA WhatsApp, placeholder `{{nome}}`/`{{azienda}}`). Output JSON `{oggetto, corpo}`.
+- Frontend: il risultato **popola l'editor template** (oggetto+corpo) per revisione/modifica prima di salvare
+  → l'utente resta nel controllo (mai invio diretto). Salva come nuovo template riusabile.
+- Costo: ~1 chiamata Claude per generazione (token modesti). Opzionale: "rigenera"/varianti.
+- Estensione utile: generare la **variante "cartacea"** del testo per le lettere, e adattare per canale.
+
 ### 🔌 Outreach — Altre fonti dati (valutazione fatta 21/06) — NOTA
 Verificato: la **maggioranza dei portali aziendali italiani è gated** (login/paywall/anti-bot) perché i dati
 del Registro Imprese sono il loro business — ufficiocamerale, reportaziende, icribis, atoka, cerved, Pagine
