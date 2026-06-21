@@ -145,6 +145,62 @@ try {
             break;
 
         // --------------------------------------------------------
+        // GENERA TEMPLATE CON AI (Claude) — oggetto + corpo su brief
+        // --------------------------------------------------------
+        case 'genera_template':
+            $apiKey = defined('ARDY_API_KEY') ? ARDY_API_KEY : '';
+            if ($apiKey === '') { echo json_encode(['success' => false, 'error' => 'AI non configurata']); break; }
+            $categoria = $input['categoria'] ?? 'antiquari';
+            $obiettivo = trim($input['obiettivo'] ?? 'prima presentazione');
+            $tono      = trim($input['tono']      ?? 'professionale');
+            $canale    = (($input['canale'] ?? 'email') === 'posta') ? 'lettera postale cartacea' : 'email';
+            $note      = trim($input['note'] ?? '');
+
+            $targetMap = [
+                'antiquari'         => "antiquari e gallerie d'antiquariato",
+                'mercatini'         => "mercatini dell'usato e modernariato",
+                'interior_designer' => 'interior designer e studi di arredamento',
+                'bb'                => 'B&B e strutture ricettive boutique',
+                'clienti'           => 'clienti già acquisiti di Ardy Lab',
+            ];
+            $target = $targetMap[$categoria] ?? $categoria;
+
+            $system = "Sei il copywriter di Ardy Lab, bottega artigianale di Roma EUR (fondatrice Michela Panella) "
+                . "specializzata in: restauro conservativo e completo di mobili antichi, patinature e laccature decorative, "
+                . "doratura a foglia oro, restauro di cornici e specchiere, complementi d'arredo su misura anche con stampa 3D, "
+                . "boiserie. Progetto 'Living Galleries': arredi in comodato dentro B&B con tag NFC, l'ospite scopre la storia "
+                . "del pezzo e può acquistarlo. Contatti: ardy-lab.it, WhatsApp +39 377 659 5547.\n"
+                . "Scrivi un messaggio di outreach B2B, in ITALIANO, per il canale {$canale}.\n"
+                . "Regole:\n"
+                . "- Usa il segnaposto {{nome}} nel saluto (es. 'Gentile {{nome}},').\n"
+                . "- Tono {$tono}, mai aggressivo o spam; concreto, rispettoso, credibile.\n"
+                . "- Proponi valore reale e chiudi con un invito al contatto. Firma 'Michela Panella — Ardy Lab · ardy-lab.it'.\n"
+                . ($canale === 'email'
+                    ? "- NON inserire link di disiscrizione né pulsanti: vengono aggiunti automaticamente dal sistema.\n"
+                    : "- È una lettera cartacea: niente riferimenti a 'questa email' né link cliccabili.\n")
+                . "- Oggetto incisivo (max ~70 caratteri); corpo 120-200 parole.\n"
+                . "Rispondi ESCLUSIVAMENTE con un blocco JSON: {\"oggetto\":\"...\",\"corpo\":\"...\"} (usa \\n per gli a capo nel corpo).";
+
+            $userMsg = "Target: {$target}.\nObiettivo: {$obiettivo}.\n"
+                . ($note !== '' ? "Note/offerta specifica: {$note}.\n" : '')
+                . "Genera oggetto e corpo.";
+
+            $resp = ardyEnrichCallAnthropic($system, $userMsg, [], $apiKey);
+            if (!empty($resp['error'])) { echo json_encode(['success' => false, 'error' => $resp['error']]); break; }
+            $text = '';
+            foreach (($resp['content'] ?? []) as $block) {
+                if (($block['type'] ?? '') === 'text') $text .= $block['text'];
+            }
+            $json = ardyEnrichExtractJson($text);
+            if (!$json || !isset($json['corpo'])) { echo json_encode(['success' => false, 'error' => 'Risposta AI non interpretabile']); break; }
+            echo json_encode([
+                'success' => true,
+                'oggetto' => trim((string)($json['oggetto'] ?? '')),
+                'corpo'   => trim((string)$json['corpo']),
+            ]);
+            break;
+
+        // --------------------------------------------------------
         // STATISTICHE
         // --------------------------------------------------------
         case 'get_stats':

@@ -540,6 +540,30 @@
         <option value="">Tutte</option>
       </select>
     </div>
+    <div class="form-group" style="border:1px solid var(--accent);border-radius:4px;padding:12px;background:rgba(200,169,110,.06);">
+      <label class="form-label" style="color:var(--accent);">✨ CREA CON AI</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <select class="form-select" id="aiObiettivo">
+          <option value="prima presentazione">Prima presentazione</option>
+          <option value="riattivazione cliente">Riattivazione cliente</option>
+          <option value="offerta o promozione">Offerta / promozione</option>
+          <option value="novità o evento">Novità / evento</option>
+          <option value="proposta di partnership">Partnership</option>
+        </select>
+        <select class="form-select" id="aiTono">
+          <option value="professionale">Tono: professionale</option>
+          <option value="amichevole">Tono: amichevole</option>
+          <option value="caloroso">Tono: caloroso</option>
+        </select>
+        <select class="form-select" id="aiCanale">
+          <option value="email">Canale: email</option>
+          <option value="posta">Canale: lettera postale</option>
+        </select>
+        <input class="form-input" id="aiNote" placeholder="Note/offerta (facoltativo)">
+      </div>
+      <button class="btn-sm primary" id="btnGenAI" style="width:100%;" onclick="generaTemplateAI()">✨ GENERA TESTO</button>
+      <p style="font-size:10px;color:var(--text-dim);margin-top:6px;">Usa la categoria selezionata sopra come target. Genera oggetto e corpo, poi puoi modificarli.</p>
+    </div>
     <div class="form-group">
       <label class="form-label">OGGETTO EMAIL *</label>
       <input class="form-input" id="tplOggetto" placeholder="Oggetto della email">
@@ -1352,6 +1376,27 @@ function openTplModal(id) {
 }
 
 function closeTplModal() { document.getElementById('tplModal').classList.remove('open'); }
+
+async function generaTemplateAI() {
+  const categoria  = document.getElementById('tplCategoria').value || 'antiquari';
+  const obiettivo  = document.getElementById('aiObiettivo').value;
+  const tono       = document.getElementById('aiTono').value;
+  const canale     = document.getElementById('aiCanale').value;
+  const note       = document.getElementById('aiNote').value.trim();
+  const btn = document.getElementById('btnGenAI');
+  btn.disabled = true; btn.textContent = '✨ Genero...';
+  let r;
+  try { r = await api('genera_template', { categoria, obiettivo, tono, canale, note }); }
+  catch(e) { r = { success:false, error:'rete' }; }
+  btn.disabled = false; btn.textContent = '✨ GENERA TESTO';
+  if (!r.success) { toast('Errore: ' + (r.error||'sconosciuto'), 'err'); return; }
+  document.getElementById('tplOggetto').value = r.oggetto || '';
+  document.getElementById('tplCorpo').value   = r.corpo || '';
+  if (!document.getElementById('tplNome').value.trim()) {
+    document.getElementById('tplNome').value = `${categoria} — ${obiettivo}`;
+  }
+  toast('✓ Testo generato, rivedilo e salva', 'ok');
+}
 
 async function saveTpl() {
   const id     = document.getElementById('tplEditId').value;

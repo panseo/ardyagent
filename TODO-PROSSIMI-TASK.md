@@ -483,7 +483,13 @@ Da verificare in dashboard dopo l'allineamento server:
   servirebbe il suo consenso (come per l'email outreach). Tenere `stato`/categoria distinti dai lead freddi.
 - Aprire categoria/filtro "clienti" e magari template dedicati (riattivazione, cross-sell).
 
-### ✨ Outreach — "Crea con AI": generatore di campagne/template custom — DA FARE
+### ✅ Outreach — "Crea con AI": generatore template FATTO (21/06)
+Nell'editor Template, box "✨ Crea con AI": brief (obiettivo, tono, canale email/lettera, note) + categoria come
+target → action `genera_template` chiama Claude (riusa `ardyEnrichCallAnthropic`, no web search) con system prompt
+che conosce Ardy Lab → JSON `{oggetto,corpo}` che popola l'editor per revisione/modifica e salvataggio. L'utente
+resta nel controllo (mai invio diretto). Possibili migliorie: "rigenera/varianti", anteprima inline.
+
+### ✨ Outreach — "Crea con AI" (vecchia nota, ora implementata) — STORICO
 **Idea utente**: oltre ai template preselezionabili, un generatore AI che crea campagne su misura.
 Approccio proposto:
 - Pulsante **"✨ Crea con AI"** nell'editor Template (e/o in Campagna) → mini-form con: **categoria/target**
