@@ -364,7 +364,7 @@
         </p>
 
         <div class="campaign-section">
-          <div class="campaign-label">1 — CATEGORIA, ZONA, RAGGIO</div>
+          <div class="campaign-label">CATEGORIA, ZONA, RAGGIO</div>
           <div style="display:grid;grid-template-columns:1fr 1fr 100px;gap:10px;">
             <select class="form-select" id="srcCategoria">
               <option value="antiquari">Antiquari</option>
@@ -385,7 +385,7 @@
         </div>
 
         <div class="campaign-section" id="srcResultsSection" style="display:none">
-          <div class="campaign-label" id="srcResultsLabel">2 — RISULTATI</div>
+          <div class="campaign-label" id="srcResultsLabel">RISULTATI</div>
           <div class="select-all-row">
             <button class="btn-select-all" onclick="toggleSelectAllLeads()">Seleziona/deseleziona tutti i nuovi</button>
           </div>
@@ -394,7 +394,7 @@
 
         <div class="campaign-summary" id="srcSummary" style="display:none">
           <p>Nuovi selezionati: <strong id="srcCount">0</strong></p>
-          <p style="font-size:11px;color:var(--text-dim);margin-top:4px;">Dopo il salvataggio puoi recuperare le email con l'email-finder.</p>
+          <p style="font-size:11px;color:var(--text-dim);margin-top:4px;">Dopo il salvataggio, usa ✨ ARRICCHISCI sul singolo contatto o ✨ BLOCCO per completare email e dati mancanti.</p>
         </div>
 
         <button class="btn-send" id="btnSaveLeads" onclick="saveLeads()" style="display:none">💾 SALVA SELEZIONATI</button>
@@ -1079,7 +1079,7 @@ function renderSearchResults(zona) {
   const lab = document.getElementById('srcResultsLabel');
   const list = document.getElementById('srcResultsList');
   const nuovi = searchResults.filter(x => !x.exists).length;
-  lab.textContent = `2 — RISULTATI · ${searchResults.length} trovati (${nuovi} nuovi) · ${zona||''}`;
+  lab.textContent = `RISULTATI · ${searchResults.length} trovati (${nuovi} nuovi) · ${zona||''}`;
   sec.style.display = 'block';
   document.getElementById('srcSummary').style.display = searchResults.length ? 'block' : 'none';
   document.getElementById('btnSaveLeads').style.display = searchResults.length ? 'block' : 'none';
