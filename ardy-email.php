@@ -97,9 +97,26 @@ function ardy_email_social_links(string $accent = '#c8a96e'): string {
   </p>';
 }
 
-// Footer cliente completo: codice + WhatsApp + social. Da inserire prima della firma.
+// Codice etico AI: riga sul modo in cui Ardy Lab usa l'AI (l'assistente Sole).
+// Va citato in TUTTE le email/messaggi (qui in HTML; per lettere cartacee e
+// WhatsApp esiste la versione testuale in ardy_codice_etico_testo()). Tre punti:
+// non aggressione, tutela privacy/sicurezza dati, nessun uso fraudolento.
+function ardy_email_codice_etico(string $accent = '#c8a96e'): string {
+    return '
+  <p style="font-size:12px;line-height:1.6;color:#999;font-family:sans-serif;margin:18px 0 0;border-top:1px solid #eee;padding-top:14px;">
+    🤝 <strong style="color:#777;">Come usiamo l\'AI.</strong> Da Ardy Lab l\'assistente Sole è un\'intelligenza artificiale che segue un codice etico: nessuna aggressività, rispetto della tua privacy e della sicurezza dei tuoi dati, che non vengono mai usati per scopi fraudolenti.
+  </p>';
+}
+
+// Versione in testo semplice del codice etico (lettere cartacee, WhatsApp, plain text).
+function ardy_codice_etico_testo(): string {
+    return 'Da Ardy Lab usiamo l\'AI (l\'assistente Sole) con un codice etico: nessuna aggressività, '
+         . 'rispetto della privacy e della sicurezza dei tuoi dati, mai usati per scopi fraudolenti.';
+}
+
+// Footer cliente completo: codice + WhatsApp + social + codice etico. Da inserire prima della firma.
 function ardy_email_footer_cliente(string $codice = '', string $accent = '#c8a96e'): string {
-    return ardy_email_codice_block($codice) . ardy_email_whatsapp_block() . ardy_email_social_links($accent);
+    return ardy_email_codice_block($codice) . ardy_email_whatsapp_block() . ardy_email_social_links($accent) . ardy_email_codice_etico($accent);
 }
 
 }

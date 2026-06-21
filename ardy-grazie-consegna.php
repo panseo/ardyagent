@@ -71,7 +71,8 @@ function ardy_grazie_email($cli) {
     👉 <a href="' . htmlspecialchars($ig) . '" style="color:#c8a96e;">Instagram</a> &nbsp;·&nbsp;
     👉 <a href="' . htmlspecialchars($fb) . '" style="color:#c8a96e;">Facebook</a>
   </p>
-  <p style="font-size:13px;line-height:1.7;color:#777;margin:0;">Resterai nella nostra <strong>newsletter</strong> per ricevere ogni tanto consigli di cura del legno e novità della bottega. Se preferisci non riceverla, puoi disiscriverti quando vuoi col link qui sotto — nessun problema.</p>';
+  <p style="font-size:13px;line-height:1.7;color:#777;margin:0;">Resterai nella nostra <strong>newsletter</strong> per ricevere ogni tanto consigli di cura del legno e novità della bottega. Se preferisci non riceverla, puoi disiscriverti quando vuoi col link qui sotto — nessun problema.</p>
+  ' . ardy_email_codice_etico() . '';
 
     $htmlEmail = '<!DOCTYPE html><html><body style="font-family:Georgia,serif;background:#f5f5f5;margin:0;padding:20px;">
 <div style="max-width:600px;margin:0 auto;background:#fff;padding:40px;border-radius:4px;">

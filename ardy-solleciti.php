@@ -381,7 +381,8 @@ function sollecito_invia_email(string $email, string $nome, int $livello, string
         // risolvere il pagamento); i social solo sui livelli morbidi (1-2), per non
         // metterli sotto un sollecito formale.
         $footer = ardy_email_codice_block($codice) . ardy_email_whatsapp_block()
-                . ($livello <= 2 ? ardy_email_social_links() : '');
+                . ($livello <= 2 ? ardy_email_social_links() : '')
+                . ardy_email_codice_etico();
         $mail->isHTML(true);
         $mail->Body = '
 <div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:32px;color:#333;">

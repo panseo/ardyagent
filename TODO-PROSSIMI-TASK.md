@@ -72,10 +72,12 @@ La direzione che vogliamo dare allo strumento, da affrontare per prossimi step:
    **pagina dedicata** (webchat + **codice di verifica**, come il `codice_accesso` cliente esistente).
 3. **Prompt dedicato per campagna** — ogni campagna ha il suo prompt per Sole (contesto/obiettivo), così Sole
    risponde in linea con quell'iniziativa.
-4. **Codice etico AI citato in TUTTE le email/messaggi + nel prompt di Sole** — Ardy usa l'AI con limiti etici:
-   **non aggressione** (verbale e fisica), tutela di **privacy e sicurezza dei dati**, e l'AI **non userà mai i
-   dati in autonomia per azioni fraudolente** (un atto aggressivo non rientra nei suoi compiti). → riga/codice
-   "regolamento AI" nelle email + aggiornare il system prompt di Sole.
+4. **Codice etico AI — FATTO (in codice, da deployare).** Riga "Come usiamo l'AI" (non aggressione, tutela
+   privacy/sicurezza dati, mai uso fraudolento) ora in TUTTE le email (`ardy_email_codice_etico()` in
+   `ardy-email.php` → footer cliente, grazie-consegna, solleciti, outreach `brevoSend`), nelle lettere cartacee
+   e anteprime (`ardy-outreach.html`), e nei system prompt di Sole (`ardy-system.txt` → web+WhatsApp,
+   `ardy-proxy-lavorazione.php` → chat lavorazione). ⚠️ Verificare dal vivo dopo deploy che la riga compaia in
+   un'email reale e che Sole sappia esporre il codice etico se richiesto.
 
 ### 👥 Outreach — Import clienti AUTOMATICO post-Acconto
 L'import **manuale** dei clienti CRM è LIVE. Resta l'**automatico**: aggiungere il cliente all'outreach
