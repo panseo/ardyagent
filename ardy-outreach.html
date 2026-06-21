@@ -318,19 +318,28 @@
     <!-- CAMPAGNA MODE -->
     <div id="viewCampagna" style="display:none">
       <div class="campaign-panel">
-        <div class="campaign-title">INVIA CAMPAGNA</div>
+        <div class="campaign-title">CAMPAGNA</div>
 
         <div class="campaign-section">
-          <div class="campaign-label">1 — SELEZIONA TEMPLATE</div>
+          <div class="campaign-label">CANALE</div>
+          <div class="filter-row">
+            <button class="chip active" id="campChanEmail" onclick="setCampChannel('email')">✉ EMAIL</button>
+            <button class="chip" id="campChanPosta" onclick="setCampChannel('posta')">📄 LETTERA POSTALE</button>
+          </div>
+        </div>
+
+        <div class="campaign-section">
+          <div class="campaign-label">TEMPLATE</div>
           <select class="tpl-select" id="campTplSelect" onchange="loadCampTemplate()">
             <option value="">— Seleziona template —</option>
           </select>
           <div id="campOggPreview" style="font-size:12px;color:var(--text-dim);font-family:'DM Mono',monospace;margin-top:6px;"></div>
+          <button class="btn-select-all" style="margin-top:10px;" onclick="previewCampaign()">👁 ANTEPRIMA</button>
         </div>
 
         <div class="campaign-section">
-          <div class="campaign-label">2 — FILTRA E SELEZIONA DESTINATARI</div>
-          <div class="filter-row" style="margin-bottom:10px;">
+          <div class="campaign-label">SETTORE E DESTINATARI</div>
+          <div class="filter-row" id="campCatRow" style="margin-bottom:10px;">
             <button class="chip active" onclick="filterCampContacts('')">TUTTI</button>
             <button class="chip" onclick="filterCampContacts('antiquari')">ANTIQUARI</button>
             <button class="chip" onclick="filterCampContacts('mercatini')">MERCATINI</button>
@@ -351,10 +360,10 @@
 
         <div class="campaign-summary" id="campSummary">
           <p>Destinatari selezionati: <strong id="campCount">0</strong></p>
-          <p style="font-size:11px;color:var(--text-dim);margin-top:4px;">Solo i contatti con email vengono inclusi nell'invio</p>
+          <p style="font-size:11px;color:var(--text-dim);margin-top:4px;" id="campSummaryNote">Solo i contatti con email vengono inclusi nell'invio</p>
         </div>
 
-        <button class="btn-send" id="btnCampSend" onclick="sendCampaign()">📤 INVIA CAMPAGNA</button>
+        <button class="btn-send" id="btnCampSend" onclick="campaignAction()">📤 INVIA CAMPAGNA</button>
       </div>
     </div>
 
@@ -440,18 +449,10 @@
           </div>
           <button class="btn-send" onclick="enrichFiltered()" style="margin-bottom:10px;">✨ ARRICCHISCI I FILTRATI (Google Maps + web)</button>
           <button class="btn-send" onclick="deleteFiltered()" style="background:var(--red);color:#fff;">🗑 ELIMINA I FILTRATI</button>
-        </div>
-
-        <div class="campaign-section">
-          <div class="campaign-label">📄 LETTERE CARTACEE (invio postale)</div>
-          <p style="font-size:11px;color:var(--text-dim);margin-bottom:10px;line-height:1.6;">
-            Per i contatti <strong>con indirizzo</strong> (tip. filtro "Per posta"). Genera lettere A4 pronte da stampare
-            (carta intestata + indirizzo destinatario per busta a finestra). I contatti senza indirizzo vengono saltati.
+          <p style="font-size:11px;color:var(--text-dim);margin-top:12px;line-height:1.6;">
+            📄 Le <strong>lettere cartacee</strong> per i contatti senza email si generano dalla <strong>Campagna</strong>
+            (canale "Lettera postale"), dove scegli settore, template e vedi l'anteprima.
           </p>
-          <select class="tpl-select" id="letterTpl" style="margin-bottom:10px;">
-            <option value="">— Testo: seleziona un template —</option>
-          </select>
-          <button class="btn-send" onclick="generateLetters()">📄 GENERA LETTERE (filtrati con indirizzo)</button>
         </div>
       </div>
     </div>
@@ -575,6 +576,18 @@
     <div id="bulkLog" style="max-height:240px;overflow:auto;font-size:11px;color:var(--text-dim);line-height:1.7;font-family:'DM Mono',monospace;"></div>
     <div class="modal-footer">
       <button class="btn-sm" id="btnBulkClose" onclick="closeBulkModal()">CHIUDI</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ANTEPRIMA (email / lettera) -->
+<div class="modal-overlay" id="previewModal">
+  <div class="modal" style="max-width:720px;width:92vw;">
+    <div class="modal-title" id="previewTitle">ANTEPRIMA</div>
+    <div id="previewSubject" style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text-dim);margin-bottom:10px;"></div>
+    <iframe id="previewFrame" style="width:100%;height:62vh;border:1px solid var(--border);border-radius:4px;background:#fff;"></iframe>
+    <div class="modal-footer">
+      <button class="btn-sm" onclick="closePreview()">CHIUDI</button>
     </div>
   </div>
 </div>
@@ -987,14 +1000,6 @@ function renderFilterTool() {
   document.getElementById('filtCount').textContent = filt.length;
   document.getElementById('filtDesc').textContent =
     dataFilter ? `Filtro attivo: ${DATA_FILTERS[dataFilter].label}` : 'Nessun filtro dati: tutti i contatti della categoria.';
-  // Popola il selettore template per le lettere (riusa i template outreach)
-  const sel = document.getElementById('letterTpl');
-  if (sel) {
-    const cur = sel.value;
-    sel.innerHTML = '<option value="">— Testo: seleziona un template —</option>' +
-      allTemplates.map(t => `<option value="${t.id}">${escHtml(t.nome)}</option>`).join('');
-    sel.value = cur;
-  }
 }
 
 function setDataFilter(k) {
@@ -1046,27 +1051,30 @@ const ARDY_MITTENTE = {
   tel: '+39 377 659 5547', web: 'ardy-lab.it', logo: 'https://ardyagent.ardy-lab.it/assets/logo.png'
 };
 
-function generateLetters() {
-  // Solo i filtrati CON indirizzo (gli altri non sono spedibili per posta).
-  const all = getFilteredContacts();
-  const list = all.filter(c => has(c,'indirizzo'));
-  if (!list.length) { toast('Nessun contatto con indirizzo nel filtro corrente', 'err'); return; }
+function oggiIt() { return new Date().toLocaleDateString('it-IT', { day:'numeric', month:'long', year:'numeric' }); }
+function fillTpl(corpo, c) {
+  const nome = c.referente || c.nome || '';
+  return String(corpo||'').replace(/\{\{nome\}\}/g, nome).replace(/\{\{azienda\}\}/g, c.nome || '');
+}
 
-  const tplId = document.getElementById('letterTpl').value;
-  const tpl = allTemplates.find(t => String(t.id) === String(tplId));
-  if (!tpl) { toast('Seleziona un template per il testo della lettera', 'err'); return; }
+function lettersStyles() {
+  return `* { box-sizing:border-box; }
+  body { margin:0; font-family:Georgia,'Times New Roman',serif; color:#222; background:#eee; }
+  .letter { background:#fff; width:210mm; min-height:297mm; padding:25mm 25mm 20mm; margin:0 auto 10mm; position:relative; }
+  .lh { display:flex; align-items:center; gap:14px; border-bottom:2px solid #c8a96e; padding-bottom:12px; margin-bottom:6mm; }
+  .lh-logo { height:46px; }
+  .lh-info { font-family:Arial,sans-serif; font-size:10px; color:#888; line-height:1.5; }
+  .dest { margin:18mm 0 10mm 5mm; font-size:13px; line-height:1.5; }
+  .dest-label { font-size:11px; color:#777; }
+  .data { text-align:right; font-size:13px; margin-bottom:8mm; }
+  .body { font-size:13.5px; line-height:1.8; }
+  .cta { margin-top:14mm; padding-top:8px; border-top:1px solid #ddd; font-family:Arial,sans-serif; font-size:11px; color:#888; }
+  @media print { body { background:#fff; } .letter { margin:0; page-break-after:always; } @page { size:A4; margin:0; } }`;
+}
 
-  const saltati = all.length - list.length;
-  if (!confirm(`Generare ${list.length} lettere?` + (saltati ? `\n(${saltati} senza indirizzo verranno saltati)` : '') + `\nSi apre una scheda pronta per la stampa (Ctrl+P → PDF).`)) return;
-
-  const oggi = new Date().toLocaleDateString('it-IT', { day:'numeric', month:'long', year:'numeric' });
-  const corpoTpl = String(tpl.corpo || '');
-
-  const pages = list.map(c => {
-    const nome = c.referente || c.nome || '';
-    let corpo = corpoTpl.replace(/\{\{nome\}\}/g, nome).replace(/\{\{azienda\}\}/g, c.nome || '');
-    corpo = escHtml(corpo).replace(/\n/g, '<br>');
-    return `
+function letterPageHtml(c, corpoTpl, oggi) {
+  const corpo = escHtml(fillTpl(corpoTpl, c)).replace(/\n/g, '<br>');
+  return `
     <div class="letter">
       <div class="lh">
         <img src="${ARDY_MITTENTE.logo}" alt="Ardy Lab" class="lh-logo">
@@ -1081,35 +1089,52 @@ function generateLetters() {
       <div class="body">${corpo}</div>
       <div class="cta">Ci trovi su <strong>${escHtml(ARDY_MITTENTE.web)}</strong> · WhatsApp <strong>${escHtml(ARDY_MITTENTE.tel)}</strong></div>
     </div>`;
-  }).join('');
+}
 
-  const html = `<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>Lettere Ardy Lab</title>
-<style>
-  * { box-sizing:border-box; }
-  body { margin:0; font-family:Georgia,'Times New Roman',serif; color:#222; background:#eee; }
-  .letter { background:#fff; width:210mm; min-height:297mm; padding:25mm 25mm 20mm; margin:0 auto 10mm; position:relative; }
-  .lh { display:flex; align-items:center; gap:14px; border-bottom:2px solid #c8a96e; padding-bottom:12px; margin-bottom:6mm; }
-  .lh-logo { height:46px; }
-  .lh-info { font-family:Arial,sans-serif; font-size:10px; color:#888; line-height:1.5; }
-  /* Blocco destinatario posizionato per busta a finestra (sinistra) */
-  .dest { margin:18mm 0 10mm 5mm; font-size:13px; line-height:1.5; }
-  .dest-label { font-size:11px; color:#777; }
-  .data { text-align:right; font-size:13px; margin-bottom:8mm; }
-  .body { font-size:13.5px; line-height:1.8; white-space:normal; }
-  .cta { margin-top:14mm; padding-top:8px; border-top:1px solid #ddd; font-family:Arial,sans-serif; font-size:11px; color:#888; }
-  @media print {
-    body { background:#fff; }
-    .letter { margin:0; page-break-after:always; box-shadow:none; }
-    @page { size:A4; margin:0; }
-  }
-</style></head><body>${pages}
-<script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script>
-</body></html>`;
+function lettersDocument(pagesHtml, autoprint) {
+  const script = autoprint ? '<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},300);};</scr'+'ipt>' : '';
+  return `<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>Lettere Ardy Lab</title><style>${lettersStyles()}</style></head><body>${pagesHtml}${script}</body></html>`;
+}
 
+// Anteprima email (fedele al layout di brevoSend, semplificata).
+function emailPreviewDoc(c, tpl) {
+  const corpo = escHtml(fillTpl(tpl.corpo, c)).replace(/\n/g, '<br>');
+  return `<!DOCTYPE html><html><body style="margin:0;font-family:Georgia,serif;background:#f5f5f5;padding:16px;">
+    <div style="max-width:600px;margin:0 auto;background:#fff;padding:36px;border-radius:4px;">
+      <div style="border-bottom:2px solid #c8a96e;padding-bottom:16px;margin-bottom:24px;"><img src="${ARDY_MITTENTE.logo}" alt="Ardy Lab" height="40"></div>
+      <div style="font-size:15px;line-height:1.9;color:#333;">${corpo}</div>
+      <div style="text-align:center;margin-top:26px;"><span style="display:inline-block;background:#25D366;color:#fff;padding:12px 24px;border-radius:8px;font-family:sans-serif;font-size:14px;font-weight:600;">💬 Scrivici su WhatsApp</span></div>
+      <div style="margin-top:28px;padding-top:16px;border-top:1px solid #eee;font-size:12px;color:#999;font-family:sans-serif;">Ardy Lab · ${escHtml(ARDY_MITTENTE.indirizzo)}, ${escHtml(ARDY_MITTENTE.cap)} · ${escHtml(ARDY_MITTENTE.web)}</div>
+    </div></body></html>`;
+}
+
+// Genera le lettere dei contatti passati (i checked della campagna).
+function generateLettersFor(list, tpl) {
+  const valid = list.filter(c => has(c,'indirizzo'));
+  if (!valid.length) { toast('Nessun destinatario con indirizzo', 'err'); return; }
+  const saltati = list.length - valid.length;
+  if (!confirm(`Generare ${valid.length} lettere?` + (saltati ? `\n(${saltati} senza indirizzo saltati)` : '') + `\nSi apre una scheda pronta per la stampa (Ctrl+P → PDF).`)) return;
+  const oggi = oggiIt();
+  const pages = valid.map(c => letterPageHtml(c, tpl.corpo, oggi)).join('');
   const w = window.open('', '_blank');
   if (!w) { toast('Sblocca i popup per generare le lettere', 'err'); return; }
-  w.document.open(); w.document.write(html); w.document.close();
+  w.document.open(); w.document.write(lettersDocument(pages, true)); w.document.close();
 }
+
+// Anteprima campagna (email o lettera) su un contatto campione.
+function previewCampaign() {
+  const tpl = allTemplates.find(t => String(t.id) === String(document.getElementById('campTplSelect').value));
+  if (!tpl) { toast('Seleziona un template', 'err'); return; }
+  const rec = campRecipients();
+  const sample = rec[0] || { nome:'Esempio Azienda S.r.l.', referente:'', indirizzo:'Via Esempio 10, 00100 Roma' };
+  const isPosta = campChannel === 'posta';
+  document.getElementById('previewTitle').textContent = isPosta ? '📄 ANTEPRIMA LETTERA' : '✉ ANTEPRIMA EMAIL';
+  document.getElementById('previewSubject').textContent = isPosta ? ('Destinatario campione: ' + (sample.nome||'')) : ('Oggetto: ' + (tpl.oggetto||''));
+  const doc = isPosta ? lettersDocument(letterPageHtml(sample, tpl.corpo, oggiIt()), false) : emailPreviewDoc(sample, tpl);
+  document.getElementById('previewFrame').srcdoc = doc;
+  document.getElementById('previewModal').classList.add('open');
+}
+function closePreview() { document.getElementById('previewModal').classList.remove('open'); }
 
 // ============================================================
 // EMAIL COMPOSER
@@ -1161,15 +1186,28 @@ function loadCampTemplate() {
 }
 
 let campContacts = [];      // pool della categoria corrente (caricato dal server)
-let campOnlyEmail = true;   // di default mostra solo i contattabili (con email)
-let campOnlyTodo  = false;  // opzionale: solo "da contattare"
+let campChannel = 'email';  // 'email' | 'posta'
+let campOnlyEmail = true;    // email: solo CON email · posta: solo SENZA email
+let campOnlyTodo  = false;   // opzionale: solo "da contattare"
 
 async function filterCampContacts(cat) {
   campFilter = cat;
-  document.querySelectorAll('#viewCampagna .filter-row:first-of-type .chip').forEach(c => {
+  document.querySelectorAll('#campCatRow .chip').forEach(c => {
     c.classList.toggle('active', c.textContent.trim() === (cat ? cat.replace('_',' ').toUpperCase() : 'TUTTI') || (cat==='' && c.textContent.trim()==='TUTTI'));
   });
   campContacts = await api('get_contacts', { categoria: cat });
+  applyCampFilters();
+}
+
+function setCampChannel(ch) {
+  campChannel = (ch === 'posta') ? 'posta' : 'email';
+  document.getElementById('campChanEmail').classList.toggle('active', campChannel==='email');
+  document.getElementById('campChanPosta').classList.toggle('active', campChannel==='posta');
+  document.getElementById('campChipEmail').textContent = campChannel==='posta' ? '✉ SOLO SENZA EMAIL' : '✉ SOLO CON EMAIL';
+  document.getElementById('btnCampSend').textContent = campChannel==='posta' ? '📄 GENERA LETTERE' : '📤 INVIA CAMPAGNA';
+  document.getElementById('campSummaryNote').textContent = campChannel==='posta'
+    ? 'Solo i contatti con indirizzo vengono inclusi nelle lettere'
+    : "Solo i contatti con email vengono inclusi nell'invio";
   applyCampFilters();
 }
 
@@ -1185,25 +1223,39 @@ function toggleCampTodo() {
   applyCampFilters();
 }
 
-function applyCampFilters() {
+// Pool destinatari dopo i filtri (dipende dal canale).
+function campRecipients() {
   let list = campContacts || [];
-  if (campOnlyEmail) list = list.filter(c => String(c.email||'').trim());
-  if (campOnlyTodo)  list = list.filter(c => c.stato === 'da_contattare');
-  renderCampContacts(campFilter, list);
+  if (campChannel === 'posta') {
+    list = list.filter(c => has(c,'indirizzo'));                 // spedibili per posta
+    if (campOnlyEmail) list = list.filter(c => !has(c,'email')); // "solo senza email"
+  } else {
+    if (campOnlyEmail) list = list.filter(c => has(c,'email'));  // "solo con email"
+  }
+  if (campOnlyTodo) list = list.filter(c => c.stato === 'da_contattare');
+  return list;
 }
 
+function applyCampFilters() { renderCampContacts(campFilter, campRecipients()); }
+
 function renderCampContacts(cat, contacts) {
-  if (!contacts) { contacts = (campContacts && campContacts.length) ? campContacts : allContacts.filter(c => !cat || c.categoria===cat); }
+  if (!contacts) contacts = campRecipients();
   const el = document.getElementById('campContactList');
   if (!contacts.length) { el.innerHTML='<div style="padding:16px;color:var(--text-dim);font-size:13px;">Nessun contatto</div>'; return; }
-  el.innerHTML = contacts.map(c => `
+  const isPosta = campChannel === 'posta';
+  el.innerHTML = contacts.map(c => {
+    const ok    = isPosta ? has(c,'indirizzo') : has(c,'email');
+    const manca = isPosta ? '(no indirizzo)' : '(no email)';
+    const sub   = isPosta ? (c.indirizzo||'—') : (c.email||'—');
+    return `
     <label class="check-item">
-      <input type="checkbox" class="camp-check" value="${c.id}" ${c.email?'':'disabled'} onchange="updateCampCount()">
+      <input type="checkbox" class="camp-check" value="${c.id}" ${ok?'':'disabled'} onchange="updateCampCount()">
       <div style="flex:1">
-        <div class="check-nome">${escHtml(c.nome)} ${!c.email?'<span style="color:var(--red);font-size:11px;">(no email)</span>':''}</div>
-        <div class="check-email">${escHtml(c.email||'—')} · <span class="stato-badge stato-${escHtml(c.stato)}">${escHtml(c.stato.replace('_',' '))}</span></div>
+        <div class="check-nome">${escHtml(c.nome)} ${!ok?`<span style="color:var(--red);font-size:11px;">${manca}</span>`:''}</div>
+        <div class="check-email">${escHtml(sub)} · <span class="stato-badge stato-${escHtml(c.stato)}">${escHtml(c.stato.replace('_',' '))}</span></div>
       </div>
-    </label>`).join('');
+    </label>`;
+  }).join('');
   updateCampCount();
 }
 
@@ -1219,11 +1271,22 @@ function updateCampCount() {
   document.getElementById('campCount').textContent = n;
 }
 
-async function sendCampaign() {
-  const tplId = document.getElementById('campTplSelect').value;
-  if (!tplId) { toast('Seleziona un template', 'err'); return; }
+function checkedCampContacts() {
   const ids = [...document.querySelectorAll('.camp-check:checked')].map(c => parseInt(c.value));
-  if (!ids.length) { toast('Seleziona almeno un contatto', 'err'); return; }
+  return (campContacts||[]).filter(c => ids.includes(c.id));
+}
+
+// Pulsante azione: invia email oppure genera lettere a seconda del canale.
+function campaignAction() {
+  const tpl = allTemplates.find(t => String(t.id) === String(document.getElementById('campTplSelect').value));
+  if (!tpl) { toast('Seleziona un template', 'err'); return; }
+  const sel = checkedCampContacts();
+  if (!sel.length) { toast('Seleziona almeno un destinatario', 'err'); return; }
+  if (campChannel === 'posta') generateLettersFor(sel, tpl);
+  else sendCampaign(sel.map(c => c.id), tpl.id);
+}
+
+async function sendCampaign(ids, tplId) {
   if (!confirm(`Inviare a ${ids.length} contatti?`)) return;
   const btn = document.getElementById('btnCampSend');
   btn.disabled = true; btn.textContent = 'Invio in corso...';
@@ -1398,6 +1461,7 @@ function toast(msg, type='ok') {
 }
 
 // Close modals on overlay click
+document.getElementById('previewModal').addEventListener('click', e => { if(e.target===e.currentTarget) closePreview(); });
 document.getElementById('enrichModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeEnrichModal(); });
 document.getElementById('addModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeAddModal(); });
 document.getElementById('tplModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeTplModal(); });

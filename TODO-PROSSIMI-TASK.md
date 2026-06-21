@@ -471,6 +471,18 @@ Da verificare in dashboard dopo l'allineamento server:
 4. Email outreach: pulsante **Scrivici su WhatsApp** apre la chat di Sole col testo precompilato (invio di prova a un indirizzo proprio).
 5. Ricerca Google Maps: risultati più completi di OSM; salvataggio senza duplicati.
 
+### 👥 Outreach — Importa clienti da Sole/CRM → contatti outreach — DA FARE
+**Idea utente**: i clienti del CRM (dashboard Sole) **lasciano sempre l'email** → ottima base per l'outreach
+(follow-up, riattivazione, nuove proposte). Serve:
+- **Import manuale**: nella dash outreach, "Importa da clienti" → seleziona clienti (tutti/filtrati) e popola
+  `outreach_contatti` (nome, email, telefono, indirizzo), con **dedup** sull'email/nome, categoria dedicata
+  (es. `clienti`). Sorgente dati: tabella `clienti` del CRM.
+- **Automatico (opzionale)**: aggiungere un cliente all'outreach **dopo la fase Acconto** (firma + avvio reale
+  collaborazione) → hook nel punto del CRM dove lo stato passa a "acconto/in lavorazione". Da valutare con
+  attenzione **privacy/consenso**: un cliente attivo è lecito per comunicazioni di servizio; per marketing
+  servirebbe il suo consenso (come per l'email outreach). Tenere `stato`/categoria distinti dai lead freddi.
+- Aprire categoria/filtro "clienti" e magari template dedicati (riattivazione, cross-sell).
+
 ### 🔌 Outreach — Altre fonti dati (valutazione fatta 21/06) — NOTA
 Verificato: la **maggioranza dei portali aziendali italiani è gated** (login/paywall/anti-bot) perché i dati
 del Registro Imprese sono il loro business — ufficiocamerale, reportaziende, icribis, atoka, cerved, Pagine
