@@ -71,13 +71,12 @@
   .contact-card.dc-completo   { border-left-color:var(--green); }
   .contact-card.dc-parziale   { border-left-color:var(--orange); }
   .contact-card.dc-no-email   { border-left-color:var(--red); }
-  .data-dots { display:flex; gap:5px; margin-top:6px; }
-  .data-dot { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:.5px; padding:1px 5px; border-radius:2px; border:1px solid var(--border); color:var(--text-dim); opacity:.5; }
-  .data-dot.on { opacity:1; color:#000; }
-  .data-dot.on.d-email { background:var(--green); border-color:var(--green); }
-  .data-dot.on.d-tel   { background:var(--blue);  border-color:var(--blue); }
-  .data-dot.on.d-sito  { background:var(--accent);border-color:var(--accent); }
-  .data-dot.off.d-email { border-color:var(--red); color:var(--red); opacity:.8; }
+  .data-dots { display:flex; gap:5px; margin-top:6px; flex-wrap:wrap; }
+  /* Mostrate SOLO per i dati MANCANTI: chip colorato che segnala cosa manca */
+  .data-dot { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:.5px; padding:1px 5px; border-radius:2px; border:1px solid; background:transparent; }
+  .data-dot.d-email { color:var(--red);      border-color:var(--red); }
+  .data-dot.d-tel   { color:var(--orange);   border-color:var(--orange); }
+  .data-dot.d-sito  { color:var(--text-dim); border-color:var(--border); }
   .sidebar-bottom { padding:12px 16px; border-top:1px solid var(--border); display:flex; gap:8px; }
   .btn-add { flex:1; background:none; border:1px solid var(--accent); color:var(--accent); font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1px; padding:8px; cursor:pointer; border-radius:2px; transition:.2s; }
   .btn-add:hover { background:var(--accent); color:#000; }
@@ -685,16 +684,19 @@ function renderList(q='') {
   const df = DATA_FILTERS[dataFilter] || DATA_FILTERS[''];
   filtered = filtered.filter(df.test);
   if (!filtered.length) { list.innerHTML = '<div class="empty-list">Nessun contatto trovato</div>'; return; }
-  const dot = (c,f,lbl,cls) => `<span class="data-dot ${has(c,f)?'on':'off'} ${cls}">${lbl}</span>`;
-  list.innerHTML = filtered.map(c => `
+  // Mostra un'icona SOLO per i dati mancanti; se il contatto è completo, niente icone.
+  const missDot = (c,f,lbl,cls) => has(c,f) ? '' : `<span class="data-dot ${cls}">${lbl}</span>`;
+  list.innerHTML = filtered.map(c => {
+    const dots = missDot(c,'email','✉ EMAIL','d-email') + missDot(c,'telefono','☎ TEL','d-tel') + missDot(c,'sito','🌐 SITO','d-sito');
+    return `
     <div class="contact-card ${dataClass(c)} ${currentContact?.id==c.id?'selected':''}" onclick="selectContact(${c.id})">
       <div class="contact-name">${escHtml(c.nome)}</div>
       <div class="contact-meta">
         <span class="contact-cat">${escHtml(c.categoria.replace('_',' '))}</span>
         <span class="stato-badge stato-${escHtml(c.stato)}">${escHtml(c.stato.replace('_',' '))}</span>
       </div>
-      <div class="data-dots">${dot(c,'email','✉ EMAIL','d-email')}${dot(c,'telefono','☎ TEL','d-tel')}${dot(c,'sito','🌐 SITO','d-sito')}</div>
-    </div>`).join('');
+      ${dots ? `<div class="data-dots">${dots}</div>` : ''}
+    </div>`; }).join('');
 }
 
 // ============================================================
