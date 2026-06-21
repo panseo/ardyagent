@@ -481,6 +481,16 @@ function brevoSend(string $toEmail, string $toName, string $oggetto, string $cor
     $unsubToken  = substr(hash_hmac('sha256', strtolower(trim($toEmail)), $unsubSecret), 0, 20);
     $unsubLink   = 'https://ardy-lab.it/ardy-unsubscribe.php?email=' . urlencode($toEmail) . '&t=' . $unsubToken;
     $corpoHtml  = nl2br(htmlspecialchars($corpo));
+    // CTA WhatsApp: invita a risticontattare Sole. È il destinatario a iniziare
+    // la conversazione (wa.me verso il numero di Sole, con testo precompilato) →
+    // compliant con WhatsApp (niente outbound a freddo) e con la privacy.
+    $waNum  = function_exists('ardy_email_wa_number') ? ardy_email_wa_number() : '393793756437';
+    $waText = rawurlencode('Salve, ho ricevuto la vostra email di Ardy Lab e vorrei saperne di più.');
+    $waCta  = '
+  <div style="margin-top:30px;text-align:center;">
+    <a href="https://wa.me/' . $waNum . '?text=' . $waText . '" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;font-family:sans-serif;font-size:15px;font-weight:600;padding:13px 28px;border-radius:8px;">💬 Scrivici su WhatsApp</a>
+    <p style="font-family:sans-serif;font-size:12px;color:#999;margin:10px 0 0;">Rispondi a questa email o scrivici su WhatsApp, come preferisci.</p>
+  </div>';
     $htmlEmail  = '<!DOCTYPE html><html><body style="font-family:Georgia,serif;background:#f5f5f5;margin:0;padding:20px;">
 <div style="max-width:600px;margin:0 auto;background:#fff;padding:40px;border-radius:4px;">
   <div style="border-bottom:2px solid #c8a96e;padding-bottom:20px;margin-bottom:30px;">
@@ -488,6 +498,7 @@ function brevoSend(string $toEmail, string $toName, string $oggetto, string $cor
     <p style="color:#999;font-size:12px;margin:4px 0 0;font-family:sans-serif;">Restauro · Laccatura · Stampa 3D · Roma EUR</p>
   </div>
   <div style="font-size:15px;line-height:1.9;color:#333;">' . $corpoHtml . '</div>
+  ' . $waCta . '
   <div style="margin-top:40px;padding-top:20px;border-top:1px solid #eee;font-size:12px;color:#999;font-family:sans-serif;">
     <p style="margin:0;"><strong style="color:#333;">Ardy Lab</strong> · Via James Joyce 4, 00143 Roma EUR</p>
     <p style="margin:4px 0 0;"><a href="https://ardy-lab.it" style="color:#c8a96e;">ardy-lab.it</a></p>
