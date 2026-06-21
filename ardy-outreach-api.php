@@ -204,7 +204,7 @@ try {
         // STATISTICHE
         // --------------------------------------------------------
         case 'get_stats':
-            $cats = ['antiquari','mercatini','interior_designer','bb','clienti'];
+            $cats = ['antiquari','mercatini','interior_designer','bb','clienti','partner'];
             $out  = [];
             $stmtStats = $db->prepare("SELECT
                 COUNT(*) as totale,
@@ -562,6 +562,65 @@ try {
                 $proposte[$campo] = $info;
             }
             echo json_encode(['success' => true, 'id' => $id, 'campi' => $proposte, 'log' => $res['log']]);
+            break;
+
+        // --------------------------------------------------------
+        // PIPELINE — promozione lead: → Partner (categoria) o → Cliente (CRM)
+        // --------------------------------------------------------
+        case 'promote_partner':
+            $id = (int)($input['id'] ?? 0);
+            if (!$id) { echo json_encode(['success' => false, 'error' => 'ID mancante']); break; }
+            $db->prepare("UPDATE outreach_contatti SET categoria='partner', stato='partner', updated_at=NOW() WHERE id=:id")
+               ->execute([':id' => $id]);
+            echo json_encode(['success' => true]);
+            break;
+
+        case 'promote_client':
+            $id = (int)($input['id'] ?? 0);
+            if (!$id) { echo json_encode(['success' => false, 'error' => 'ID mancante']); break; }
+            $c = $db->prepare("SELECT * FROM outreach_contatti WHERE id=:id");
+            $c->execute([':id' => $id]);
+            $contact = $c->fetch();
+            if (!$contact) { echo json_encode(['success' => false, 'error' => 'Contatto non trovato']); break; }
+
+            ardyEnsureTelefonoLast9($db);
+            $nome  = trim((string)$contact['nome']);
+            $email = strtolower(trim((string)($contact['email'] ?? '')));
+            $tel   = trim((string)($contact['telefono'] ?? ''));
+            $indir = trim((string)($contact['indirizzo'] ?? ''));
+            $chiave    = $email !== '' ? $email : strtolower($nome);
+            $sessionId = 'otr-' . substr(md5($chiave), 0, 16);
+
+            // Già un cliente nel CRM? (per session_id o email) → non duplicare.
+            $esiste = false;
+            try {
+                if ($email !== '') {
+                    $chk = $db->prepare("SELECT 1 FROM clienti WHERE session_id=:sid OR email=:em LIMIT 1");
+                    $chk->execute([':sid' => $sessionId, ':em' => $email]);
+                } else {
+                    $chk = $db->prepare("SELECT 1 FROM clienti WHERE session_id=:sid LIMIT 1");
+                    $chk->execute([':sid' => $sessionId]);
+                }
+                $esiste = (bool)$chk->fetchColumn();
+            } catch (PDOException $e) { /* non bloccante */ }
+
+            if (!$esiste) {
+                $note = 'Promosso da Outreach' . (!empty($contact['categoria']) ? ' (' . $contact['categoria'] . ')' : '');
+                $db->prepare("INSERT INTO clienti (session_id,nome,telefono,telefono_last9,email,indirizzo,stato,note,created_at,updated_at)
+                              VALUES (:sid,:nome,:tel,:tel9,:email,:indir,'LEAD',:note,NOW(),NOW())")
+                   ->execute([
+                        ':sid'   => $sessionId,
+                        ':nome'  => $nome  ?: null,
+                        ':tel'   => $tel   ?: null,
+                        ':tel9'  => $tel !== '' ? ardyTelefonoLast9($tel) : null,
+                        ':email' => $email ?: null,
+                        ':indir' => $indir ?: null,
+                        ':note'  => $note,
+                   ]);
+            }
+            // Segna il lead outreach come convertito.
+            $db->prepare("UPDATE outreach_contatti SET stato='cliente', updated_at=NOW() WHERE id=:id")->execute([':id' => $id]);
+            echo json_encode(['success' => true, 'created' => !$esiste, 'session_id' => $sessionId]);
             break;
 
         default:

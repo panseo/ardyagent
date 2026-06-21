@@ -25,7 +25,7 @@
   .btn-header.active { background:var(--accent); color:#000; border-color:var(--accent); }
 
   /* STATS BAR */
-  .stats-bar { display:grid; grid-template-columns:repeat(5,1fr); border-bottom:1px solid var(--border); }
+  .stats-bar { display:grid; grid-template-columns:repeat(6,1fr); border-bottom:1px solid var(--border); }
   .stat-cell { padding:12px 20px; border-right:1px solid var(--border); }
   .stat-cell:last-child { border-right:none; }
   .stat-label { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; color:var(--text-dim); text-transform:uppercase; margin-bottom:6px; }
@@ -66,6 +66,7 @@
   .stato-risposto      { background:#2a2a0a; color:#cc0; }
   .stato-partner       { background:#2a1a0a; color:var(--accent); }
   .stato-non_interessato { background:#2a1a1a; color:#c44; }
+  .stato-cliente         { background:#0e2a1a; color:#3c9; }
   /* Completezza dati: bordo sinistro della card + indicatori E/T/S */
   .contact-card { border-left:2px solid transparent; }
   .contact-card.dc-completo   { border-left-color:var(--green); }
@@ -220,6 +221,7 @@
       <button class="btn-header">← DASHBOARD</button>
     </a>
     <button class="btn-header mode-btn" id="btnModeContatti" onclick="setMode('contatti')">CONTATTI</button>
+    <button class="btn-header mode-btn" id="btnModePipeline" onclick="setMode('pipeline')">📊 PIPELINE</button>
     <button class="btn-header mode-btn" id="btnModeCampagna" onclick="setMode('campagna')">📣 CAMPAGNA</button>
     <button class="btn-header mode-btn" id="btnModeRicerca" onclick="setMode('ricerca')">🔎 RICERCA</button>
     <button class="btn-header mode-btn" id="btnModeTemplate" onclick="setMode('template')">TEMPLATE</button>
@@ -248,6 +250,10 @@
     <div class="stat-label">Clienti</div>
     <div class="stat-nums"><span class="stat-total">—</span></div>
   </div>
+  <div class="stat-cell" id="stat-partner">
+    <div class="stat-label">Partner</div>
+    <div class="stat-nums"><span class="stat-total">—</span></div>
+  </div>
 </div>
 
 <div class="layout" id="layout">
@@ -265,6 +271,7 @@
         <button class="chip" onclick="setFilter('interior_designer')">DESIGNER</button>
         <button class="chip" onclick="setFilter('bb')">B&amp;B</button>
         <button class="chip" onclick="setFilter('clienti')">CLIENTI</button>
+        <button class="chip" onclick="setFilter('partner')">PARTNER</button>
       </div>
       <button class="btn-add" style="width:100%;margin-top:10px;" onclick="openFilterTool()">▦ FILTRI &amp; AZIONI DATI</button>
       <div id="dataFilterChip" style="display:none;margin-top:8px;font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);cursor:pointer;" onclick="setDataFilter('')" title="Rimuovi filtro"></div>
@@ -295,6 +302,10 @@
           <div class="home-ico">📇</div>
           <div><h3>Contatti</h3><p>Sfoglia la lista, apri una scheda e arricchisci i dati mancanti.</p></div>
         </div>
+        <div class="home-card" onclick="setMode('pipeline')">
+          <div class="home-ico">📊</div>
+          <div><h3>Pipeline lead</h3><p>I lead per fase. Da "Risposto" promuovi a Cliente (CRM) o a Partner.</p></div>
+        </div>
         <div class="home-card" onclick="setMode('campagna')">
           <div class="home-ico">📣</div>
           <div><h3>Campagna</h3><p>Invia email o genera lettere postali, con anteprima prima di partire.</p></div>
@@ -314,6 +325,17 @@
       </div>
     </div>
 
+    <!-- PIPELINE MODE (dash transitoria dei lead) -->
+    <div id="viewPipeline" style="display:none">
+      <div class="campaign-panel">
+        <div class="campaign-title">PIPELINE LEAD</div>
+        <p style="color:var(--text-dim);font-size:12px;font-family:'DM Mono',monospace;margin-bottom:18px;line-height:1.6;">
+          I lead per fase. Da <strong>Risposto</strong> apri la scheda e promuovi a <strong>Cliente</strong> (passa al CRM di Sole) o a <strong>Partner</strong>.
+        </p>
+        <div id="pipelineBoard"><div style="color:var(--text-dim);font-size:13px;">Caricamento…</div></div>
+      </div>
+    </div>
+
     <!-- CONTATTI MODE -->
     <div id="viewContatti">
       <div class="empty-state" id="emptyState">
@@ -329,6 +351,8 @@
           </div>
           <div class="detail-actions">
             <button class="btn-sm primary" id="btnEnrich" onclick="enrichContact()" title="Cerca in rete i dati mancanti">✨ ARRICCHISCI</button>
+            <button class="btn-sm" onclick="promoteToPartner()" title="Sposta tra i Partner">🤝 PARTNER</button>
+            <button class="btn-sm" onclick="promoteToClient()" title="Crea la scheda nel CRM di Sole">⬆ A CLIENTE</button>
             <button class="btn-sm" onclick="saveContact()">SALVA</button>
             <button class="btn-sm danger" onclick="deleteContact()">ELIMINA</button>
           </div>
@@ -350,6 +374,7 @@
               <option value="interior_designer">Interior Designer</option>
               <option value="bb">B&amp;B</option>
               <option value="clienti">Clienti</option>
+              <option value="partner">Partner</option>
             </select>
           </div>
           <div class="info-cell"><div class="info-label">DATA CONTATTO</div><input class="info-input" id="editDataContatto" type="date" onchange="markDirty()"></div>
@@ -400,6 +425,7 @@
             <button class="chip" onclick="filterCampContacts('interior_designer')">DESIGNER</button>
             <button class="chip" onclick="filterCampContacts('bb')">B&amp;B</button>
             <button class="chip" onclick="filterCampContacts('clienti')">CLIENTI</button>
+            <button class="chip" onclick="filterCampContacts('partner')">PARTNER</button>
           </div>
           <div class="filter-row" style="margin-bottom:10px;">
             <button class="chip active" id="campChipEmail" onclick="toggleCampEmail()">✉ SOLO CON EMAIL</button>
@@ -538,6 +564,7 @@
         <option value="interior_designer">Interior Designer</option>
         <option value="bb">B&amp;B</option>
         <option value="clienti">Clienti</option>
+        <option value="partner">Partner</option>
       </select>
     </div>
     <div class="form-group">
@@ -584,6 +611,7 @@
         <option value="interior_designer">Interior Designer</option>
         <option value="bb">B&amp;B</option>
         <option value="clienti">Clienti</option>
+        <option value="partner">Partner</option>
         <option value="">Tutte</option>
       </select>
     </div>
@@ -702,7 +730,7 @@ async function init() {
 
 async function loadStats() {
   const s = await api('get_stats');
-  const cats = ['antiquari','mercatini','interior_designer','bb','clienti'];
+  const cats = ['antiquari','mercatini','interior_designer','bb','clienti','partner'];
   cats.forEach(cat => {
     const el = document.getElementById('stat-' + cat);
     if (!el || !s[cat]) return;
@@ -748,19 +776,69 @@ async function loadTemplates() {
 function setMode(m) {
   mode = m;
   document.getElementById('viewHome').style.display      = m==='home'      ? 'block' : 'none';
+  document.getElementById('viewPipeline').style.display  = m==='pipeline'  ? 'block' : 'none';
   document.getElementById('viewContatti').style.display  = m==='contatti'  ? 'block' : 'none';
   document.getElementById('viewCampagna').style.display  = m==='campagna'  ? 'block' : 'none';
   document.getElementById('viewRicerca').style.display   = m==='ricerca'   ? 'block' : 'none';
   document.getElementById('viewTemplate').style.display  = m==='template'  ? 'block' : 'none';
   document.getElementById('viewFiltri').style.display    = m==='filtri'    ? 'block' : 'none';
-  ['Contatti','Campagna','Ricerca','Template'].forEach(x => {
+  ['Contatti','Pipeline','Campagna','Ricerca','Template'].forEach(x => {
     const b = document.getElementById('btnMode'+x);
     if(b) b.classList.toggle('active', m===x.toLowerCase());
   });
   if (m==='campagna') filterCampContacts('');
   if (m==='template') renderTplList();
   if (m==='filtri')   renderFilterTool();
+  if (m==='pipeline') renderPipeline();
   applyMobilePanel();
+}
+
+// ============================================================
+// PIPELINE LEAD (dash transitoria)
+// ============================================================
+const PIPELINE_STAGES = [
+  ['risposto',       '💬 Risposto — da decidere'],
+  ['da_contattare',  'Da contattare'],
+  ['inviato',        'Inviato'],
+  ['partner',        '🤝 Partner'],
+  ['cliente',        '✅ Diventati clienti'],
+  ['non_interessato','Non interessati'],
+];
+
+async function renderPipeline() {
+  const board = document.getElementById('pipelineBoard');
+  board.innerHTML = '<div style="color:var(--text-dim);font-size:13px;">Caricamento…</div>';
+  let all;
+  try { all = await api('get_contacts', {}); } catch(e) { all = []; }
+  if (!Array.isArray(all)) all = [];
+  board.innerHTML = PIPELINE_STAGES.map(([st, label]) => {
+    const items = all.filter(c => (c.stato||'da_contattare') === st);
+    const open = (st === 'risposto');   // la fase "decisione" parte espansa
+    const rows = items.length ? items.map(c => `
+      <div class="contact-card" style="border-left-color:transparent;" onclick="openLead(${c.id})">
+        <div class="contact-name">${escHtml(c.nome)}</div>
+        <div class="contact-meta">
+          <span class="contact-cat">${escHtml((c.categoria||'').replace('_',' '))}</span>
+          <span class="check-email" style="font-size:11px;">${escHtml([c.email,c.telefono].filter(Boolean).join(' · ')||'—')}</span>
+        </div>
+      </div>`).join('') : '<div style="padding:10px 4px;color:var(--text-dim);font-size:12px;">—</div>';
+    return `<details ${open?'open':''} style="margin-bottom:14px;border:1px solid var(--border);border-radius:4px;overflow:hidden;">
+      <summary style="cursor:pointer;padding:12px 14px;background:var(--surface);font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--text-mid);">
+        ${label} · <strong style="color:var(--accent);">${items.length}</strong>
+      </summary>
+      <div style="padding:6px 10px;">${rows}</div>
+    </details>`;
+  }).join('');
+}
+
+// Apre un lead della pipeline nella scheda Contatti (carica tutte le categorie).
+async function openLead(id) {
+  currentFilter = '';
+  document.querySelectorAll('.sidebar-top .filter-row .chip').forEach(c =>
+    c.classList.toggle('active', c.textContent.trim() === 'TUTTI'));
+  await loadContacts();
+  setMode('contatti');
+  selectContact(id);
 }
 
 // Su mobile mostra UN solo pannello: la lista (sidebar) solo per "Contatti"
@@ -862,7 +940,7 @@ function selectContact(id) {
 }
 
 function renderStatoRow() {
-  const stati = ['da_contattare','inviato','risposto','partner','non_interessato'];
+  const stati = ['da_contattare','inviato','risposto','partner','cliente','non_interessato'];
   document.getElementById('statoRow').innerHTML = stati.map(s =>
     `<button class="stato-btn ${currentContact.stato===s?'active':''}" onclick="setStato('${s}')">${s.replace('_',' ').toUpperCase()}</button>`
   ).join('');
@@ -911,6 +989,33 @@ async function deleteContact() {
   await loadContacts();
   await loadStats();
   toast('✓ Eliminato', 'ok');
+}
+
+// --- Promozione lead: Partner / Cliente (CRM) -------------------------------
+async function promoteToPartner() {
+  if (!currentContact) return;
+  if (!confirm(`Spostare "${currentContact.nome}" tra i Partner?`)) return;
+  const r = await api('promote_partner', { id: currentContact.id });
+  if (!r.success) { toast('Errore: ' + (r.error||'sconosciuto'), 'err'); return; }
+  Object.assign(currentContact, { categoria:'partner', stato:'partner' });
+  await Promise.all([loadContacts(), loadStats()]);
+  selectContact(currentContact.id);
+  toast('🤝 Spostato tra i Partner', 'ok');
+}
+
+async function promoteToClient() {
+  if (!currentContact) return;
+  if (!currentContact.email && !currentContact.telefono) {
+    if (!confirm('Questo contatto non ha né email né telefono: la scheda CRM sarà povera. Procedere comunque?')) return;
+  } else if (!confirm(`Creare la scheda di "${currentContact.nome}" nel CRM di Sole?\nEntrerà come LEAD; poi lo gestisci dalla dashboard di Sole.`)) {
+    return;
+  }
+  const r = await api('promote_client', { id: currentContact.id });
+  if (!r.success) { toast('Errore: ' + (r.error||'sconosciuto'), 'err'); return; }
+  currentContact.stato = 'cliente';
+  await Promise.all([loadContacts(), loadStats()]);
+  selectContact(currentContact.id);
+  toast(r.created ? '✓ Scheda creata nel CRM di Sole' : '✓ Era già nel CRM — lead segnato come cliente', 'ok');
 }
 
 function closeMobileDetail() {
