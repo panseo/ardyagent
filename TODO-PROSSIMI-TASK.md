@@ -107,7 +107,8 @@ INI-PEC non automatizzabile (captcha) → PEC via API a pagamento, eventuale tas
 
 ## ⏳ DA VERIFICARE DAL VIVO / AZIONI MANUALI
 - **Date sopralluogo/consegna in dashboard (nuovo) — test dopo deploy:**
-  - *Sopralluoghi (lista, Fase 1)*: nella scheda, sezione "📅 Sopralluoghi" → **Aggiungi** una visita
+  - *Sopralluoghi (lista, Fase 1)*: ✅ deployato, la sezione "📅 Sopralluoghi" si VEDE in scheda.
+    Resta da provare il funzionamento: nella scheda, sezione "📅 Sopralluoghi" → **Aggiungi** una visita
     (data/ora + etichetta) e verificare che su **Google Calendar** compaia l'evento; **sposta** una
     visita (cambia data/ora + 💾) → l'evento si sposta, niente doppione; **elimina** (🗑) → l'evento
     sparisce anche dal calendario. Aggiungere una **seconda** visita allo stesso cliente (es. "2°
