@@ -117,6 +117,12 @@ INI-PEC non automatizzabile (captcha) → PEC via API a pagamento, eventuale tas
   - *Passo 2 — Data di consegna*: impostare il campo "📦 Data di consegna" su una scheda con email,
     salvare → verificare che al cliente arrivi l'**email di conferma consegna** (riusa il modulo
     Trasporti, guard "una sola email per data": ri-salvando la stessa data NON deve re-inviare).
+  - *Sopralluoghi via Sole su WhatsApp (Fase 2)* — solo PHP, NIENTE re-paste n8n: da chat staff provare
+    "aggiungi un 2° sopralluogo per Alberto giovedì alle 15" (deve AGGIUNGERE, non dire "ha già un
+    appuntamento"); "che sopralluoghi ha Alberto?" (li elenca); "sposta il sopralluogo di Alberto" quando
+    ne ha 2 → Sole deve CHIEDERE quale. Verificare che le visite aggiunte da Sole compaiano anche nella
+    lista in dashboard, e viceversa. ⚠️ Nota: il cliente che prenota da sé (canale cliente) resta a UN
+    sopralluogo (mirror); compare nella lista via riconciliazione — ampliarlo è un eventuale follow-up.
 - **Test Piano B — spostamento appuntamento su WhatsApp** (da numero NON staff con sopralluogo già fissato):
   verificare (a) l'evento Google Calendar si SPOSTA (non ne crea uno nuovo), (b) Michela riceve notifica
   "SPOSTATO" (WA + email), (c) al cliente arriva la conferma del nuovo orario.

@@ -23,6 +23,7 @@ date_default_timezone_set('Europe/Rome');
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-gcal.php';
+require_once __DIR__ . '/ardy-sopralluoghi-lib.php';  // sopralluoghi multipli (staff): lista/salva/elimina + mirror
 require_once __DIR__ . '/ardy-net.php';       // ardyCompressImage() per le foto WhatsApp
 require_once __DIR__ . '/ardy-sanitize.php';
 require_once __DIR__ . '/ardy-notifica-michela.php';
@@ -255,6 +256,17 @@ function waFormattaSchedeAmbigue(array $cards): string {
     return implode("\n", $lines);
 }
 
+// Lista leggibile dei sopralluoghi di un cliente (per elencare/disambiguare).
+function waFormattaSopralluoghi(array $rows): string {
+    if (empty($rows)) return '(nessun sopralluogo)';
+    $lines = [];
+    foreach ($rows as $r) {
+        $quando = !empty($r['data_ora']) ? date('d/m/Y \a\l\l\e H:i', strtotime((string) $r['data_ora'])) : '(senza data)';
+        $lines[] = '- ' . ($r['etichetta'] ?: 'Sopralluogo') . ': ' . $quando . ' · sopralluogo_id=' . $r['id'];
+    }
+    return implode("\n", $lines);
+}
+
 // -----------------------------------------------------------
 // Tool calendario (stesse definizioni del sito — lettura + prenotazione)
 // -----------------------------------------------------------
@@ -341,29 +353,41 @@ if ($staff) {
             ],
         ],
         [
-            'name'        => 'fissa_appuntamento_staff',
-            'description' => 'Fissa un sopralluogo nel calendario di Ardy Lab PER CONTO di un cliente del CRM (lo stai facendo tu, dello staff, non il cliente). Identifica il cliente per nome; se esistono più schede con quel nome ti verrà restituito l\'elenco e dovrai richiamare il tool col session_id giusto. Usalo solo dopo che lo staff ha indicato giorno e ora precisi.',
+            'name'        => 'elenca_sopralluoghi_staff',
+            'description' => 'Elenca i sopralluoghi (anche più di uno) di un cliente del CRM, con data/ora ed etichetta. Usalo quando lo staff chiede "che sopralluoghi ha X?" o quando devi sapere QUALE visita spostare/eliminare prima di agire.',
             'input_schema' => [
                 'type'       => 'object',
                 'properties' => [
-                    'nome'        => ['type' => 'string', 'description' => 'Nome (o nome e cognome) del cliente.'],
-                    'start'       => ['type' => 'string', 'description' => 'Data e ora inizio, ISO 8601. Es: 2026-06-23T10:00:00+02:00'],
-                    'session_id'  => ['type' => 'string', 'description' => 'Opzionale: session_id della scheda esatta, per disambiguare gli omonimi (formato wa-XXXXXXXXXXXXXXXX).'],
-                    'summary'     => ['type' => 'string', 'description' => 'Opzionale: titolo evento. Se non lo dai, lo genero io.'],
-                    'description' => ['type' => 'string', 'description' => 'Opzionale: note/scheda per la descrizione evento.'],
+                    'nome'       => ['type' => 'string', 'description' => 'Nome (o nome e cognome) del cliente.'],
+                    'session_id' => ['type' => 'string', 'description' => 'Opzionale: session_id della scheda esatta, per disambiguare gli omonimi.'],
+                ],
+                'required' => ['nome'],
+            ],
+        ],
+        [
+            'name'        => 'fissa_appuntamento_staff',
+            'description' => 'AGGIUNGE un sopralluogo nel calendario di Ardy Lab PER CONTO di un cliente del CRM (lo stai facendo tu, dello staff). Un cliente può averne PIÙ DI UNO (1°, 2°, sopralluogo colori…): questo tool aggiunge SEMPRE una nuova visita, non è un doppione. Identifica il cliente per nome; se esistono più schede con quel nome ti verrà restituito l\'elenco e dovrai richiamare il tool col session_id giusto. Usalo solo dopo che lo staff ha indicato giorno e ora precisi.',
+            'input_schema' => [
+                'type'       => 'object',
+                'properties' => [
+                    'nome'       => ['type' => 'string', 'description' => 'Nome (o nome e cognome) del cliente.'],
+                    'start'      => ['type' => 'string', 'description' => 'Data e ora inizio, ISO 8601. Es: 2026-06-23T10:00:00+02:00'],
+                    'session_id' => ['type' => 'string', 'description' => 'Opzionale: session_id della scheda esatta, per disambiguare gli omonimi (formato wa-XXXXXXXXXXXXXXXX).'],
+                    'etichetta'  => ['type' => 'string', 'description' => 'Opzionale: etichetta della visita (es. "2° sopralluogo", "sopralluogo colori"). Default "Sopralluogo".'],
                 ],
                 'required' => ['nome', 'start'],
             ],
         ],
         [
             'name'        => 'sposta_appuntamento_staff',
-            'description' => 'Sposta a una nuova data/ora un sopralluogo GIÀ fissato di un cliente del CRM, per conto dello staff. Identifica il cliente per nome (disambigua col session_id se più schede). Prima verifica la disponibilità del nuovo periodo con ottieni_disponibilita_calendario.',
+            'description' => 'Sposta a una nuova data/ora un sopralluogo GIÀ esistente di un cliente del CRM, per conto dello staff. Identifica il cliente per nome (disambigua col session_id se più schede). Se il cliente ha PIÙ sopralluoghi e non hai indicato sopralluogo_id, ti verrà restituito l\'elenco e dovrai chiedere allo staff QUALE spostare, poi richiamare col sopralluogo_id giusto. Prima verifica la disponibilità del nuovo periodo con ottieni_disponibilita_calendario.',
             'input_schema' => [
                 'type'       => 'object',
                 'properties' => [
-                    'nome'       => ['type' => 'string', 'description' => 'Nome (o nome e cognome) del cliente.'],
-                    'start'      => ['type' => 'string', 'description' => 'Nuova data e ora di inizio, ISO 8601.'],
-                    'session_id' => ['type' => 'string', 'description' => 'Opzionale: session_id della scheda esatta, per disambiguare gli omonimi.'],
+                    'nome'          => ['type' => 'string', 'description' => 'Nome (o nome e cognome) del cliente.'],
+                    'start'         => ['type' => 'string', 'description' => 'Nuova data e ora di inizio, ISO 8601.'],
+                    'session_id'    => ['type' => 'string', 'description' => 'Opzionale: session_id della scheda esatta, per disambiguare gli omonimi.'],
+                    'sopralluogo_id'=> ['type' => 'integer', 'description' => 'Opzionale: id del sopralluogo da spostare (necessario se il cliente ne ha più di uno). Lo trovi con elenca_sopralluoghi_staff.'],
                 ],
                 'required' => ['nome', 'start'],
             ],
@@ -664,13 +688,31 @@ while ($iteration < $maxIterations) {
                 $toolResult = 'Errore nella ricerca della scheda. Riprova.';
             }
 
+        } elseif ($toolName === 'elenca_sopralluoghi_staff') {
+            try {
+                $db = ardyDB();
+                [$stato, $payload] = waRisolviScheda($db, (string) ($toolInput['nome'] ?? ''), (string) ($toolInput['session_id'] ?? ''));
+                if ($stato === 'none') {
+                    $toolResult = 'Non trovo nessuna scheda per «' . ($toolInput['nome'] ?? '') . '».';
+                } elseif ($stato === 'ambiguo') {
+                    $toolResult = "Ci sono PIÙ schede con questo nome: chiedi allo staff QUALE, poi richiama col session_id giusto.\n"
+                                . waFormattaSchedeAmbigue($payload);
+                } else {
+                    $rows = sopr_list($db, $payload['session_id']);
+                    $nm   = trim(($payload['nome'] ?? '') . ' ' . ($payload['cognome'] ?? ''));
+                    $toolResult = 'Sopralluoghi di ' . ($nm !== '' ? $nm : 'questo cliente') . ":\n" . waFormattaSopralluoghi($rows);
+                }
+            } catch (Exception $e) {
+                error_log('ARDY WA-AGENT STAFF ELENCA ERROR: ' . $e->getMessage());
+                $toolResult = 'Errore nel recupero dei sopralluoghi. Riprova.';
+            }
+
         } elseif ($toolName === 'fissa_appuntamento_staff') {
             try {
                 if (empty($toolInput['nome']) || empty($toolInput['start'])) {
                     $toolResult = 'Servono il nome del cliente e la data/ora di inizio. Chiedi allo staff di precisare.';
                 } else {
                     $db = ardyDB();
-                    waEnsureSopralluogoCols($db);
                     [$stato, $payload] = waRisolviScheda($db, (string) $toolInput['nome'], (string) ($toolInput['session_id'] ?? ''));
                     if ($stato === 'none') {
                         $toolResult = 'Non trovo nessuna scheda per «' . $toolInput['nome'] . '». Chiedi allo staff di verificare il nome o di creare prima la scheda.';
@@ -678,31 +720,24 @@ while ($iteration < $maxIterations) {
                         $toolResult = "Ci sono PIÙ schede con questo nome: NON scegliere a caso. Chiedi allo staff QUALE cliente è, poi richiama fissa_appuntamento_staff col session_id giusto.\n"
                                     . waFormattaSchedeAmbigue($payload);
                     } else {
-                        $card = $payload;
-                        if (!empty($card['gcal_event_id'])) {
-                            $quando = !empty($card['sopralluogo_at']) ? ('il ' . date('d/m/Y \a\l\l\e H:i', strtotime((string) $card['sopralluogo_at']))) : 'una data già fissata';
-                            $toolResult = 'Questo cliente ha GIÀ un appuntamento (' . $quando . '): non crearne un altro (sarebbe un doppione). Se va spostato usa sposta_appuntamento_staff.';
+                        $card    = $payload;
+                        $dataOra = sopr_norm_data($toolInput['start']);
+                        if ($dataOra === null) {
+                            $toolResult = 'La data/ora non è valida. Chiedi allo staff di ripeterla (giorno e ora).';
                         } else {
-                            $startDt = new DateTime($toolInput['start']);
-                            $dateStr = $startDt->format('Y-m-d');
-                            $timeStr = $startDt->format('H:i');
-                            $nm      = trim(($card['nome'] ?? '') . ' ' . ($card['cognome'] ?? ''));
-                            $summary = $toolInput['summary'] ?? ('Sopralluogo Ardy Lab' . (!empty($card['zona']) ? ' — ' . $card['zona'] : '') . ($nm !== '' ? ' / ' . $nm : ''));
-                            $desc    = $toolInput['description'] ?? '';
-                            $r = gcal_create_event($dateStr, $timeStr, $summary, '', '', '', $desc);
-                            if ($r) {
-                                $bookingMade    = true;
-                                $bookingWhen    = $startDt;
-                                $bookingEventId = is_array($r) ? ($r['id'] ?? null) : null;
-                                $sessionId      = $card['session_id'];   // persist + email cliente colpiscono la scheda giusta
-                                if ($nm !== '')            $leadNome = $nm;
-                                if (!empty($card['zona'])) $leadZona = (string) $card['zona'];
-                                $em = trim((string) ($card['email'] ?? ''));
-                                if ($em !== '' && filter_var($em, FILTER_VALIDATE_EMAIL)) $leadEmail = $em;
-                                $toolResult = 'Appuntamento creato nel calendario di Michela per ' . ($nm !== '' ? $nm : 'il cliente') . ' il ' . $startDt->format('d/m/Y') . ' alle ' . $timeStr . '.';
-                            } else {
-                                $toolResult = 'Errore nella creazione dell\'appuntamento sul calendario. Riprova.';
-                            }
+                            // AGGIUNGE sempre una nuova visita (un cliente può averne più d'una).
+                            $cli = sopr_get_cliente($db, $card['session_id']);
+                            sopr_salva($db, $card['session_id'], 0, $dataOra, (string) ($toolInput['etichetta'] ?? ''), '', $cli);
+                            $startDt     = new DateTime($dataOra);
+                            $bookingMade = true;          // → conferma al cliente (se ha email)
+                            $bookingWhen = $startDt;       // NB: niente $bookingEventId → il mirror lo cura la lib
+                            $nm = trim(($card['nome'] ?? '') . ' ' . ($card['cognome'] ?? ''));
+                            if ($nm !== '') $leadNome = $nm;
+                            $em = trim((string) ($card['email'] ?? ''));
+                            if ($em !== '' && filter_var($em, FILTER_VALIDATE_EMAIL)) $leadEmail = $em;
+                            $et = trim((string) ($toolInput['etichetta'] ?? '')) ?: 'Sopralluogo';
+                            $toolResult = 'Sopralluogo «' . $et . '» aggiunto per ' . ($nm !== '' ? $nm : 'il cliente')
+                                        . ' il ' . $startDt->format('d/m/Y') . ' alle ' . $startDt->format('H:i') . ' (calendario aggiornato).';
                         }
                     }
                 }
@@ -716,43 +751,58 @@ while ($iteration < $maxIterations) {
                 if (empty($toolInput['nome']) || empty($toolInput['start'])) {
                     $toolResult = 'Servono il nome del cliente e la nuova data/ora. Chiedi allo staff di precisare.';
                 } else {
-                    $startDt = new DateTime($toolInput['start']);
-                    if ($startDt < new DateTime('now')) {
+                    $dataOra = sopr_norm_data($toolInput['start']);
+                    $startDt = $dataOra !== null ? new DateTime($dataOra) : null;
+                    if ($startDt === null) {
+                        $toolResult = 'La nuova data/ora non è valida. Chiedi allo staff di ripeterla.';
+                    } elseif ($startDt < new DateTime('now')) {
                         $toolResult = 'La nuova data è nel passato: serve una data futura.';
                     } else {
                         $db = ardyDB();
-                        waEnsureSopralluogoCols($db);
                         [$stato, $payload] = waRisolviScheda($db, (string) $toolInput['nome'], (string) ($toolInput['session_id'] ?? ''));
                         if ($stato === 'none') {
                             $toolResult = 'Non trovo nessuna scheda per «' . $toolInput['nome'] . '».';
                         } elseif ($stato === 'ambiguo') {
                             $toolResult = "Ci sono PIÙ schede con questo nome: chiedi allo staff QUALE cliente è, poi richiama sposta_appuntamento_staff col session_id giusto.\n"
                                         . waFormattaSchedeAmbigue($payload);
-                        } elseif (empty($payload['gcal_event_id'])) {
-                            $toolResult = 'Questo cliente non ha un appuntamento già fissato da spostare. Se vuoi crearne uno nuovo usa fissa_appuntamento_staff.';
                         } else {
-                            $card    = $payload;
-                            $dateStr = $startDt->format('Y-m-d');
-                            $timeStr = $startDt->format('H:i');
-                            $free    = gcal_is_slot_free($dateStr, $timeStr, 2);
-                            if ($free === false) {
-                                $toolResult = 'Quel nuovo orario è già occupato. Proponi un altro slot (controlla con ottieni_disponibilita_calendario).';
+                            $card = $payload;
+                            $rows = sopr_list($db, $card['session_id']);
+                            if (empty($rows)) {
+                                $toolResult = 'Questo cliente non ha sopralluoghi da spostare. Se vuoi crearne uno usa fissa_appuntamento_staff.';
                             } else {
-                                $upd = gcal_update_event($card['gcal_event_id'], $dateStr, $timeStr, 2);
-                                if (!$upd) {
-                                    $toolResult = 'Non sono riuscita a spostare l\'appuntamento sul calendario. Riprova.';
+                                // Quale visita spostare? (id esplicito, oppure unica, oppure chiedi)
+                                $soprId = (int) ($toolInput['sopralluogo_id'] ?? 0);
+                                $target = null;
+                                if ($soprId > 0) {
+                                    foreach ($rows as $r) { if ((int) $r['id'] === $soprId) { $target = $r; break; } }
+                                    if (!$target) {
+                                        $toolResult = "Quel sopralluogo_id non è di questo cliente. Ecco i suoi sopralluoghi:\n" . waFormattaSopralluoghi($rows);
+                                    }
+                                } elseif (count($rows) === 1) {
+                                    $target = $rows[0];
                                 } else {
-                                    $db->prepare("UPDATE clienti SET sopralluogo_at = :dt, stato = 'SOPRALLUOGO', updated_at = NOW() WHERE session_id = :sid")
-                                       ->execute([':dt' => $startDt->format('Y-m-d H:i:s'), ':sid' => $card['session_id']]);
-                                    $rescheduled    = true;
-                                    $bookingWhen    = $startDt;
-                                    $bookingEventId = $card['gcal_event_id'];
-                                    $sessionId      = $card['session_id'];
-                                    $nm = trim(($card['nome'] ?? '') . ' ' . ($card['cognome'] ?? ''));
-                                    if ($nm !== '') $leadNome = $nm;
-                                    $em = trim((string) ($card['email'] ?? ''));
-                                    if ($em !== '' && filter_var($em, FILTER_VALIDATE_EMAIL)) $leadEmail = $em;
-                                    $toolResult = 'Appuntamento spostato al ' . $startDt->format('d/m/Y') . ' alle ' . $timeStr . ' per ' . ($nm !== '' ? $nm : 'il cliente') . '.';
+                                    $toolResult = "Questo cliente ha PIÙ sopralluoghi: chiedi allo staff QUALE spostare, poi richiama sposta_appuntamento_staff col sopralluogo_id giusto.\n"
+                                                . waFormattaSopralluoghi($rows);
+                                }
+                                if ($target) {
+                                    $dateStr = $startDt->format('Y-m-d');
+                                    $timeStr = $startDt->format('H:i');
+                                    $free    = gcal_is_slot_free($dateStr, $timeStr, 2);
+                                    if ($free === false) {
+                                        $toolResult = 'Quel nuovo orario è già occupato. Proponi un altro slot (controlla con ottieni_disponibilita_calendario).';
+                                    } else {
+                                        $cli = sopr_get_cliente($db, $card['session_id']);
+                                        sopr_salva($db, $card['session_id'], (int) $target['id'], $dataOra, (string) ($target['etichetta'] ?? ''), (string) ($target['note'] ?? ''), $cli);
+                                        $rescheduled = true;
+                                        $bookingWhen = $startDt;   // niente $bookingEventId → il mirror lo cura la lib
+                                        $nm = trim(($card['nome'] ?? '') . ' ' . ($card['cognome'] ?? ''));
+                                        if ($nm !== '') $leadNome = $nm;
+                                        $em = trim((string) ($card['email'] ?? ''));
+                                        if ($em !== '' && filter_var($em, FILTER_VALIDATE_EMAIL)) $leadEmail = $em;
+                                        $toolResult = 'Sopralluogo «' . ($target['etichetta'] ?: 'Sopralluogo') . '» spostato al '
+                                                    . $startDt->format('d/m/Y') . ' alle ' . $timeStr . ' per ' . ($nm !== '' ? $nm : 'il cliente') . '.';
+                                    }
                                 }
                             }
                         }
