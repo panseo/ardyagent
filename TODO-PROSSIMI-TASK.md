@@ -106,6 +106,14 @@ INI-PEC non automatizzabile (captcha) → PEC via API a pagamento, eventuale tas
 ---
 
 ## ⏳ DA VERIFICARE DAL VIVO / AZIONI MANUALI
+- **Date sopralluogo/consegna in dashboard (nuovo) — test dopo deploy:**
+  - *Passo 1 — Data e ora sopralluogo*: aprire una scheda, impostare il campo "📅 Data e ora
+    sopralluogo", salvare → verificare che su **Google Calendar** l'evento si **crei** (se non c'era) o
+    si **sposti** (se la scheda aveva già un evento), senza doppioni. Provare anche a cambiarla una
+    seconda volta (deve spostare, non duplicare).
+  - *Passo 2 — Data di consegna*: impostare il campo "📦 Data di consegna" su una scheda con email,
+    salvare → verificare che al cliente arrivi l'**email di conferma consegna** (riusa il modulo
+    Trasporti, guard "una sola email per data": ri-salvando la stessa data NON deve re-inviare).
 - **Test Piano B — spostamento appuntamento su WhatsApp** (da numero NON staff con sopralluogo già fissato):
   verificare (a) l'evento Google Calendar si SPOSTA (non ne crea uno nuovo), (b) Michela riceve notifica
   "SPOSTATO" (WA + email), (c) al cliente arriva la conferma del nuovo orario.

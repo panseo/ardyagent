@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit();
 const ARDY_CLIENTI_COLS =
     "session_id, nome, cognome, telefono, email, servizio, mobile, zona, budget, "
   . "indirizzo, stato, note, note_consegna, data_followup, inizio_lavoro, "
-  . "fine_lavoro_prevista, sopralluogo_at, wp_post_id, wp_post_link, foto_archiviate_at, "
+  . "fine_lavoro_prevista, sopralluogo_at, trasporto_data, wp_post_id, wp_post_link, foto_archiviate_at, "
   . "faq_pubblicata_at, created_at, updated_at, deleted_at, conversazione_letta_at";
 
 function ardy_map_cliente(array $r, bool $withDeletedAt = false, bool $haFasi = false, bool $haRisposto = false, string $ultimoMsgAt = ''): array {
@@ -42,6 +42,7 @@ function ardy_map_cliente(array $r, bool $withDeletedAt = false, bool $haFasi = 
         'Inizio_lavoro'         => $r['inizio_lavoro']        ?? '',
         'Fine_lavoro_prevista'  => $r['fine_lavoro_prevista'] ?? '',
         'Sopralluogo_at'        => $r['sopralluogo_at']       ?? '',
+        'Trasporto_data'        => $r['trasporto_data']       ?? '',
         'wp_post_id'    => $r['wp_post_id']     ?? '',
         'wp_post_link'  => $r['wp_post_link']   ?? '',
         'foto_archiviate_at' => $r['foto_archiviate_at'] ?? '',

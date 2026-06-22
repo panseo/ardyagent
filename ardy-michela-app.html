@@ -206,6 +206,10 @@
               <div class="info-label">📅 Data e ora sopralluogo <small style="color:var(--text-dim);font-size:9px;">(aggiorna Google Calendar)</small></div>
               <input type="datetime-local" class="info-value editable" id="dSopralluogo" oninput="markDirty()" style="width:100%;">
             </div>
+            <div class="info-cell anag-field">
+              <div class="info-label">📦 Data di consegna <small style="color:var(--text-dim);font-size:9px;">(invia email di conferma al cliente)</small></div>
+              <input type="date" class="info-value editable" id="dDataConsegna" oninput="markDirty()" style="width:100%;">
+            </div>
             <!-- Session ID: dato tecnico (per Sole/n8n), non utile in dashboard.
                  Resta nel DOM perché il JS lo popola (rimuoverlo romperebbe il riempimento). -->
             <div class="info-cell" style="display:none;">
@@ -876,6 +880,8 @@ function renderDetail() {
   document.getElementById('dDataFollowup').value    = l.Data_followup ?? '';
   // sopralluogo_at è "YYYY-MM-DD HH:MM:SS" in DB → il campo datetime-local vuole "YYYY-MM-DDTHH:MM"
   document.getElementById('dSopralluogo').value      = l.Sopralluogo_at ? String(l.Sopralluogo_at).replace(' ', 'T').slice(0, 16) : '';
+  // trasporto_data è una DATE "YYYY-MM-DD" → entra diretta nel campo date
+  document.getElementById('dDataConsegna').value     = l.Trasporto_data ? String(l.Trasporto_data).slice(0, 10) : '';
   document.getElementById('dInizioLavoro').value        = l.Inizio_lavoro ?? '';
   document.getElementById('dFineLavoroPrevista').value  = l.Fine_lavoro_prevista ?? '';
   document.getElementById('dSessionId').textContent = l.Session_ID ?? '—';
@@ -1077,6 +1083,10 @@ async function saveLead() {
   // Inviata solo se valorizzata (anti-clobber, come le altre date).
   const vSoprSave = document.getElementById('dSopralluogo').value;
   if (vSoprSave) payload.sopralluogo_at = vSoprSave.replace('T', ' ') + ':00';
+  // Data di consegna (trasporto_data): inviata solo se valorizzata (anti-clobber).
+  // Al salvataggio il backend manda al cliente l'email di conferma (modulo Trasporti).
+  const vConsSave = document.getElementById('dDataConsegna').value;
+  if (vConsSave) payload.trasporto_data = vConsSave;
 
   try {
     const res  = await fetch(UPDATE_URL, {
@@ -1114,6 +1124,7 @@ async function saveLead() {
           ...('inizio_lavoro'        in payload ? { Inizio_lavoro: payload.inizio_lavoro } : {}),
           ...('fine_lavoro_prevista' in payload ? { Fine_lavoro_prevista: payload.fine_lavoro_prevista } : {}),
           ...('sopralluogo_at'       in payload ? { Sopralluogo_at: payload.sopralluogo_at } : {}),
+          ...('trasporto_data'       in payload ? { Trasporto_data: payload.trasporto_data } : {}),
         });
         currentLead = allLeads[idx];
       }
