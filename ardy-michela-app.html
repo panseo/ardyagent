@@ -203,12 +203,17 @@
               <input type="date" class="info-value editable" id="dDataFollowup" oninput="markDirty()" style="width:100%;">
             </div>
             <div class="info-cell anag-field">
-              <div class="info-label">📅 Data e ora sopralluogo <small style="color:var(--text-dim);font-size:9px;">(aggiorna Google Calendar)</small></div>
-              <input type="datetime-local" class="info-value editable" id="dSopralluogo" oninput="markDirty()" style="width:100%;">
-            </div>
-            <div class="info-cell anag-field">
               <div class="info-label">📦 Data di consegna <small style="color:var(--text-dim);font-size:9px;">(invia email di conferma al cliente)</small></div>
               <input type="date" class="info-value editable" id="dDataConsegna" oninput="markDirty()" style="width:100%;">
+            </div>
+            <div class="info-cell full">
+              <div class="info-label">📅 Sopralluoghi <small style="color:var(--text-dim);font-size:9px;">(ogni riga è un evento su Google Calendar — si salvano da soli)</small></div>
+              <div id="soprList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;border-top:1px dashed var(--border);padding-top:8px;">
+                <input type="datetime-local" id="soprNewData" class="info-value editable" style="flex:1 1 180px;min-width:160px;">
+                <input type="text" id="soprNewEtichetta" class="info-value editable" placeholder="Etichetta (es. 2° sopralluogo)" style="flex:1 1 160px;min-width:140px;">
+                <button type="button" onclick="aggiungiSopralluogo()" style="background:var(--accent,#c8a96e);color:#1a1a1a;border:none;border-radius:5px;padding:7px 12px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">➕ Aggiungi</button>
+              </div>
             </div>
             <!-- Session ID: dato tecnico (per Sole/n8n), non utile in dashboard.
                  Resta nel DOM perché il JS lo popola (rimuoverlo romperebbe il riempimento). -->
@@ -878,8 +883,8 @@ function renderDetail() {
   const hintEl = document.getElementById('notaSenzaFasiHint');
   if (hintEl) hintEl.style.display = notaSenzaFasi(l) ? 'block' : 'none';
   document.getElementById('dDataFollowup').value    = l.Data_followup ?? '';
-  // sopralluogo_at è "YYYY-MM-DD HH:MM:SS" in DB → il campo datetime-local vuole "YYYY-MM-DDTHH:MM"
-  document.getElementById('dSopralluogo').value      = l.Sopralluogo_at ? String(l.Sopralluogo_at).replace(' ', 'T').slice(0, 16) : '';
+  // Sopralluoghi: lista a parte (si salva da sola, non passa dal bottone SALVA)
+  caricaSopralluoghi(l.Session_ID ?? '');
   // trasporto_data è una DATE "YYYY-MM-DD" → entra diretta nel campo date
   document.getElementById('dDataConsegna').value     = l.Trasporto_data ? String(l.Trasporto_data).slice(0, 10) : '';
   document.getElementById('dInizioLavoro').value        = l.Inizio_lavoro ?? '';
@@ -1079,10 +1084,6 @@ async function saveLead() {
   const vFinSave = document.getElementById('dFineLavoroPrevista').value;
   if (vIniSave) payload.inizio_lavoro        = vIniSave;
   if (vFinSave) payload.fine_lavoro_prevista = vFinSave;
-  // Data e ora sopralluogo: "YYYY-MM-DDTHH:MM" → "YYYY-MM-DD HH:MM:00" per il DB.
-  // Inviata solo se valorizzata (anti-clobber, come le altre date).
-  const vSoprSave = document.getElementById('dSopralluogo').value;
-  if (vSoprSave) payload.sopralluogo_at = vSoprSave.replace('T', ' ') + ':00';
   // Data di consegna (trasporto_data): inviata solo se valorizzata (anti-clobber).
   // Al salvataggio il backend manda al cliente l'email di conferma (modulo Trasporti).
   const vConsSave = document.getElementById('dDataConsegna').value;
@@ -1123,7 +1124,6 @@ async function saveLead() {
           // Aggiorna in memoria solo le date effettivamente inviate (vedi anti-clobber)
           ...('inizio_lavoro'        in payload ? { Inizio_lavoro: payload.inizio_lavoro } : {}),
           ...('fine_lavoro_prevista' in payload ? { Fine_lavoro_prevista: payload.fine_lavoro_prevista } : {}),
-          ...('sopralluogo_at'       in payload ? { Sopralluogo_at: payload.sopralluogo_at } : {}),
           ...('trasporto_data'       in payload ? { Trasporto_data: payload.trasporto_data } : {}),
         });
         currentLead = allLeads[idx];
@@ -1782,6 +1782,90 @@ async function caricaFotoScheda(sessionId) {
   } catch (e) {
     status.textContent = 'Errore nel caricamento delle foto.';
   }
+}
+
+// ─── Sopralluoghi del cliente (lista di N visite, ognuna un evento Google Calendar) ───
+// Si gestiscono da soli (carica/aggiungi/sposta/elimina), NON passano dal bottone SALVA.
+let soprSessionCorrente = '';
+
+async function caricaSopralluoghi(sessionId) {
+  soprSessionCorrente = sessionId || '';
+  const cont = document.getElementById('soprList');
+  if (!cont) return;
+  // reset del form "aggiungi"
+  const nd = document.getElementById('soprNewData');      if (nd) nd.value = '';
+  const ne = document.getElementById('soprNewEtichetta'); if (ne) ne.value = '';
+  if (!sessionId) { cont.innerHTML = '<div style="color:var(--text-dim);font-size:11px;">Scheda senza sessione.</div>'; return; }
+  cont.innerHTML = '<div style="color:var(--text-dim);font-size:11px;">Carico…</div>';
+  try {
+    const r = await fetch(BASE_URL + '/ardy-sopralluoghi-api.php?session_id=' + encodeURIComponent(sessionId));
+    const data = await r.json();
+    renderSopralluoghi((data && data.items) || []);
+  } catch (e) {
+    cont.innerHTML = '<div style="color:#c87070;font-size:11px;">Errore nel caricamento.</div>';
+  }
+}
+
+function renderSopralluoghi(items) {
+  const cont = document.getElementById('soprList');
+  if (!cont) return;
+  if (!items.length) {
+    cont.innerHTML = '<div style="color:var(--text-dim);font-size:11px;">Nessun sopralluogo ancora. Aggiungine uno qui sotto 👇</div>';
+    return;
+  }
+  cont.innerHTML = items.map(it => {
+    const val = it.data_ora ? String(it.data_ora).replace(' ', 'T').slice(0, 16) : '';
+    const et  = escHtml(it.etichetta || 'Sopralluogo');
+    return `<div class="sopr-row" data-id="${it.id}" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+      <input type="datetime-local" value="${val}" data-f="data" class="info-value editable" style="flex:1 1 180px;min-width:160px;">
+      <input type="text" value="${et}" data-f="etichetta" class="info-value editable" style="flex:1 1 160px;min-width:140px;">
+      <button type="button" onclick="salvaSopralluogo(${it.id})" title="Salva / sposta" style="background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:5px;padding:6px 9px;font-size:12px;cursor:pointer;">💾</button>
+      <button type="button" onclick="eliminaSopralluogo(${it.id})" title="Elimina" style="background:none;border:1px solid var(--border);color:#c87070;border-radius:5px;padding:6px 9px;font-size:12px;cursor:pointer;">🗑</button>
+    </div>`;
+  }).join('');
+}
+
+async function soprPost(payload) {
+  const r = await fetch(BASE_URL + '/ardy-sopralluoghi-api.php', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+  });
+  return r.json();
+}
+
+async function aggiungiSopralluogo() {
+  if (!soprSessionCorrente) return;
+  const data = document.getElementById('soprNewData').value;
+  const et   = document.getElementById('soprNewEtichetta').value.trim();
+  if (!data) { showToast('Metti data e ora del sopralluogo', 'error'); return; }
+  try {
+    const res = await soprPost({ mode: 'salva', session_id: soprSessionCorrente, id: 0, data_ora: data, etichetta: et });
+    if (res && res.success) { showToast('📅 Sopralluogo aggiunto (calendario aggiornato)', 'success'); caricaSopralluoghi(soprSessionCorrente); }
+    else showToast('⚠ ' + ((res && res.error) || 'Errore'), 'error');
+  } catch (e) { showToast('⚠ Errore di rete', 'error'); }
+}
+
+async function salvaSopralluogo(id) {
+  if (!soprSessionCorrente) return;
+  const row = document.querySelector('.sopr-row[data-id="' + id + '"]');
+  if (!row) return;
+  const data = row.querySelector('[data-f="data"]').value;
+  const et   = row.querySelector('[data-f="etichetta"]').value.trim();
+  if (!data) { showToast('Metti data e ora', 'error'); return; }
+  try {
+    const res = await soprPost({ mode: 'salva', session_id: soprSessionCorrente, id: id, data_ora: data, etichetta: et });
+    if (res && res.success) { showToast('📅 Sopralluogo aggiornato (calendario spostato)', 'success'); caricaSopralluoghi(soprSessionCorrente); }
+    else showToast('⚠ ' + ((res && res.error) || 'Errore'), 'error');
+  } catch (e) { showToast('⚠ Errore di rete', 'error'); }
+}
+
+async function eliminaSopralluogo(id) {
+  if (!soprSessionCorrente) return;
+  if (!confirm('Eliminare questo sopralluogo? L\'evento sparirà anche da Google Calendar.')) return;
+  try {
+    const res = await soprPost({ mode: 'delete', session_id: soprSessionCorrente, id: id });
+    if (res && res.success) { showToast('🗑 Sopralluogo eliminato', 'success'); caricaSopralluoghi(soprSessionCorrente); }
+    else showToast('⚠ ' + ((res && res.error) || 'Errore'), 'error');
+  } catch (e) { showToast('⚠ Errore di rete', 'error'); }
 }
 
 // ─── Fasi pubblicate (sola lettura: solo titolo + data) ───
