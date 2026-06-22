@@ -388,3 +388,32 @@ function gcal_update_event($eventId, $date, $startTime, $durationHours = 2) {
     $result = json_decode($response, true);
     return isset($result['id']) ? $result : false;
 }
+
+// Cancella un evento dal calendario. Ritorna true se cancellato (o se era già
+// sparito: 404/410 li trattiamo come "ok, non c'è più").
+function gcal_delete_event($eventId) {
+    global $GCAL_CALENDAR_ID;
+
+    $accessToken = gcal_get_access_token();
+    if (!$accessToken || !$eventId) return false;
+
+    $url = 'https://www.googleapis.com/calendar/v3/calendars/' .
+           urlencode($GCAL_CALENDAR_ID) . '/events/' . urlencode($eventId);
+
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST,  'DELETE');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT,        30);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $accessToken]);
+    curl_exec($ch);
+    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err  = curl_error($ch);
+    curl_close($ch);
+
+    if ($err) {
+        error_log('ARDY GCAL DELETE ERROR: ' . $err);
+        return false;
+    }
+    return in_array($code, [200, 204, 404, 410], true);
+}

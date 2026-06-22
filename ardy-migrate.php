@@ -179,6 +179,33 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `conoscenza_appresa` (
     `updated_at`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE conoscenza_appresa");
 
+// Sopralluoghi: un cliente → N visite (1°, 2°, sopralluogo colori, ecc.). Ogni
+// riga ha la sua data/ora e il suo evento Google Calendar. Il "prossimo"
+// sopralluogo resta rispecchiato su clienti.sopralluogo_at/gcal_event_id (così
+// Sole su WhatsApp continua a funzionare finché non passa anche lei alla lista).
+ddl($pdo, "CREATE TABLE IF NOT EXISTS `sopralluoghi` (
+    `id`            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `session_id`    VARCHAR(64) NOT NULL,
+    `data_ora`      DATETIME NOT NULL,
+    `etichetta`     VARCHAR(80) NOT NULL DEFAULT 'Sopralluogo',
+    `note`          TEXT NULL,
+    `gcal_event_id` VARCHAR(255) NULL,
+    `created_at`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_sopr_session (session_id, data_ora)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE sopralluoghi");
+
+// Travaso (idempotente): per ogni cliente attivo che ha già un sopralluogo nei
+// vecchi campi ma NESSUNA riga in sopralluoghi, crea la prima riga. Re-eseguibile
+// senza duplicare (grazie al NOT EXISTS).
+ddl($pdo, "INSERT INTO sopralluoghi (session_id, data_ora, etichetta, gcal_event_id, created_at, updated_at)
+    SELECT c.session_id, c.sopralluogo_at, 'Sopralluogo', c.gcal_event_id, NOW(), NOW()
+      FROM clienti c
+     WHERE c.sopralluogo_at IS NOT NULL
+       AND c.deleted_at IS NULL
+       AND NOT EXISTS (SELECT 1 FROM sopralluoghi s WHERE s.session_id = c.session_id)",
+    "BACKFILL sopralluoghi");
+
 // ── COLONNE clienti ───────────────────────────────────────────────────────────
 
 $clientiCols = [
