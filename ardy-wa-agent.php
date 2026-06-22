@@ -107,30 +107,52 @@ function waCallAnthropic(array $messages, string $system, array $tools, string $
         'tools'      => $cachedTools,
         'messages'   => $messages,
     ]);
-    $ch = curl_init('https://api.anthropic.com/v1/messages');
-    curl_setopt($ch, CURLOPT_POST,           true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS,     $payload);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT,        120);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
-    curl_setopt($ch, CURLOPT_HTTP_VERSION,   CURL_HTTP_VERSION_1_1);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Content-Type: application/json',
-        'Connection: close',
-        'x-api-key: ' . $apiKey,
-        'anthropic-version: 2023-06-01',
-        'anthropic-beta: prompt-caching-2024-07-31',
-    ]);
-    $response = curl_exec($ch);
-    $err      = curl_error($ch);
-    curl_close($ch);
-    if ($err) {
-        error_log('ARDY WA-AGENT CURL ERROR: ' . $err);
-        return ['error' => 'curl', 'message' => $err];
+    // Fino a 3 tentativi: gli errori TRANSITORI di Anthropic (429 rate limit,
+    // 529 overloaded, 5xx) sono comuni e passeggeri → riprova con breve attesa,
+    // invece di mostrare subito "ora non riesco a rispondere". Gli errori di
+    // richiesta (4xx ≠ 429) NON si ritentano: si logga il motivo per capirli.
+    $attempts = 0;
+    while (true) {
+        $attempts++;
+        $ch = curl_init('https://api.anthropic.com/v1/messages');
+        curl_setopt($ch, CURLOPT_POST,           true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS,     $payload);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT,        120);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_HTTP_VERSION,   CURL_HTTP_VERSION_1_1);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'Connection: close',
+            'x-api-key: ' . $apiKey,
+            'anthropic-version: 2023-06-01',
+            'anthropic-beta: prompt-caching-2024-07-31',
+        ]);
+        $response = curl_exec($ch);
+        $code     = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err      = curl_error($ch);
+        curl_close($ch);
+
+        if ($err) {
+            error_log('ARDY WA-AGENT CURL ERROR: ' . $err);
+            return ['error' => 'curl', 'message' => $err];
+        }
+        $decoded = json_decode($response, true);
+        // Risposta valida (200, niente blocco "error") → ritornala.
+        if (is_array($decoded) && $code < 300 && (($decoded['type'] ?? '') !== 'error')) {
+            return $decoded;
+        }
+        // Errore: logga SEMPRE il motivo (così è diagnosticabile dal log).
+        error_log('ARDY WA-AGENT ANTHROPIC ERROR http=' . $code . ' resp=' . substr((string) $response, 0, 600));
+        // Ritenta solo gli errori transitori.
+        if ($attempts < 3 && ($code === 429 || $code === 529 || $code >= 500)) {
+            usleep(900000 * $attempts);   // 0,9s · 1,8s
+            continue;
+        }
+        return is_array($decoded) ? ($decoded + ['error' => 'api']) : ['error' => 'json'];
     }
-    return json_decode($response, true) ?? ['error' => 'json'];
 }
 
 // PHPMailer preconfigurato su Brevo (stesse impostazioni di ardy-proxy.php).
