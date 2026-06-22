@@ -107,10 +107,12 @@ INI-PEC non automatizzabile (captcha) → PEC via API a pagamento, eventuale tas
 
 ## ⏳ DA VERIFICARE DAL VIVO / AZIONI MANUALI
 - **Date sopralluogo/consegna in dashboard (nuovo) — test dopo deploy:**
-  - *Passo 1 — Data e ora sopralluogo*: aprire una scheda, impostare il campo "📅 Data e ora
-    sopralluogo", salvare → verificare che su **Google Calendar** l'evento si **crei** (se non c'era) o
-    si **sposti** (se la scheda aveva già un evento), senza doppioni. Provare anche a cambiarla una
-    seconda volta (deve spostare, non duplicare).
+  - *Sopralluoghi (lista, Fase 1)*: nella scheda, sezione "📅 Sopralluoghi" → **Aggiungi** una visita
+    (data/ora + etichetta) e verificare che su **Google Calendar** compaia l'evento; **sposta** una
+    visita (cambia data/ora + 💾) → l'evento si sposta, niente doppione; **elimina** (🗑) → l'evento
+    sparisce anche dal calendario. Aggiungere una **seconda** visita allo stesso cliente (es. "2°
+    sopralluogo") → devono coesistere. Verificare che un sopralluogo fissato da **Sole su WhatsApp**
+    compaia poi nella lista (riconciliazione "pigra" alla riapertura scheda).
   - *Passo 2 — Data di consegna*: impostare il campo "📦 Data di consegna" su una scheda con email,
     salvare → verificare che al cliente arrivi l'**email di conferma consegna** (riusa il modulo
     Trasporti, guard "una sola email per data": ri-salvando la stessa data NON deve re-inviare).
@@ -142,6 +144,15 @@ Non sollecitare; attendere esito su `ardy.documenti`.
 ---
 
 ## 📋 TASK DA SVILUPPARE (aperti)
+
+### 🪑 Nuovo stato cliente "RITIRATI" (mobili in laboratorio, lavori non avviati)
+Serve uno stato per i mobili che **abbiamo già prelevato** e sono **in laboratorio**, ma per cui **non
+c'è ancora il via all'avvio lavori** (manca acconto/conferma/decisione cliente). Oggi cadono in un limbo
+tra ACCONTO e IN_LAVORAZIONE. Aggiungere `RITIRATI` all'elenco stati (`stati` in `ardy-michela-app.html`,
+badge + colore; valutare se in `FASI_BADGE_STATES`/archivio) e capire dove si inserisce nel flusso
+(probabilmente dopo SOPRALLUOGO/ACCONTO e prima di IN_LAVORAZIONE). ⚠️ Decidere con Michela il nome esatto
+e se deve far scattare qualcosa (es. promemoria "in giacenza da N giorni"). Per ora solo annotato.
+
 
 ### 🚚 Trasporti — aggiungere il WhatsApp ai 2 messaggi (oggi solo email)
 Il flusso consegne/ritiri è LIVE solo via email: "è pronto" automatico al passaggio a COMPLETATO + messaggio
