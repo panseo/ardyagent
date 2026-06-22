@@ -87,9 +87,6 @@ while (msgs.length && msgs[0].role !== 'user') msgs.shift();
 // la cache): arriva separato in look.crm_context e lo attacchiamo al messaggio corrente.
 // Fallback: se i campi nuovi non ci sono, si usa il vecchio look.system_prompt.
 const systemText = look.system_static || look.system_prompt;
-const systemBlocks = [
-  { type: 'text', text: systemText, cache_control: { type: 'ephemeral' } },
-];
 
 const claudeMsgs = msgs.map(m => ({ role: m.role, content: m.content }));
 if (look.crm_context && claudeMsgs.length) {
@@ -101,19 +98,19 @@ if (look.crm_context && claudeMsgs.length) {
 
 let reply;
 if (look.mode === 'titolare') {
-  // STAFF (Michela/Andrea): flusso esistente, single-shot + marker. Nessun tool.
-  const claude = await this.helpers.httpRequest({
-    method: 'POST', url: 'https://api.anthropic.com/v1/messages',
-    headers: {
-      'x-api-key': ANTHROPIC_KEY,
-      'anthropic-version': '2023-06-01',
-      'anthropic-beta': 'prompt-caching-2024-07-31',
-      'content-type': 'application/json',
-    },
-    body: { model: 'claude-sonnet-4-6', max_tokens: 600, system: systemBlocks, messages: claudeMsgs },
-    json: true,
+  // STAFF (Michela/Andrea): stesso cervello PHP dei clienti ma in modalità STAFF
+  // (flag staff:true). Così Sole ha i tool calendario in versione "per conto di un
+  // cliente nominato nel CRM" (fissa/sposta/disponibilità) invece di RECITARE la
+  // chiamata e bloccarsi (era il bug: single-shot senza tool → "lancio il tool"
+  // a vuoto). I marker [[CREA_SCHEDA]]/[[CONTATTA_LEAD]] continuano a viaggiare nel
+  // reply e li gestiamo qui sotto come prima.
+  const ag = await this.helpers.httpRequest({
+    method: 'POST', url: BASE + '/ardy-wa-agent.php',
+    headers: { 'X-Ardy-Secret': SECRET, 'content-type': 'application/json' },
+    body: { system: systemText, messages: claudeMsgs, phone: from, staff: true },
+    json: true, timeout: 120000,
   });
-  reply = (claude.content && claude.content[0] && claude.content[0].text) || 'Scusa, ora non riesco a rispondere. Ti ricontatto a breve.';
+  reply = (ag && ag.reply) || 'Scusa, ora non riesco a rispondere. Ti ricontatto a breve.';
 } else {
   // CLIENTI: cervello PHP con tool calendario.
   const ag = await this.helpers.httpRequest({

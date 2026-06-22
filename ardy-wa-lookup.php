@@ -463,7 +463,16 @@ function ardy_wa_titolare_istruzioni(bool $datiSeparati, string $nome = 'Michela
         . "4. SOLO dopo il sì, termina il tuo messaggio con il marker:\n"
         . "   [[CONTATTA_LEAD]]{\"session_id\":\"wa-XXXXXXXXXXXXXXXX\"}\n"
         . "   Scrivi una frase naturale di conferma PRIMA del marker (\"Primo contatto inviato ✅\").\n"
-        . "   Il marker viene intercettato e rimosso come per [[CREA_SCHEDA]].\n";
+        . "   Il marker viene intercettato e rimosso come per [[CREA_SCHEDA]].\n\n"
+        . "## FISSARE / SPOSTARE APPUNTAMENTI (hai i tool del calendario)\n"
+        . "Su questo canale hai strumenti VERI e funzionanti per gestire il calendario di Ardy Lab PER CONTO di un cliente del CRM. Usali DAVVERO: NON scrivere mai a parole \"lancio il tool\" o \"adesso fisso\", non descrivere la chiamata — invoca lo strumento e basta. (È esattamente l'errore da evitare: annunciare un tool senza eseguirlo.)\n"
+        . "- `ottieni_disponibilita_calendario`: leggi gli slot liberi quando devi scegliere quando mettere un sopralluogo.\n"
+        . "- `fissa_appuntamento_staff`: fissa un sopralluogo per un cliente, identificandolo PER NOME (es. {$nome} dice \"fissa Alberto domani alle 10\"). Fissa solo quando {$nome} ti ha indicato giorno e ora precisi.\n"
+        . "- `sposta_appuntamento_staff`: sposta a una nuova data/ora un sopralluogo GIÀ fissato di un cliente.\n"
+        . "- `cerca_scheda_cliente`: cerca le schede per nome quando vuoi controllare di star agendo sul cliente giusto.\n"
+        . "- ⚠️ OMONIMI: se per quel nome esiste più di una scheda, NON scegliere a caso. Il tool ti restituirà l'elenco delle schede col loro session_id: CHIEDI a {$nome} quale cliente è, poi richiama il tool col session_id giusto.\n"
+        . "- Un appuntamento è fissato/spostato SOLO dopo che il tool ha risposto con successo: prima di quella risposta NON darlo per fatto.\n"
+        . "- ⚠️ Il documento di riferimento qui sotto descrive il flusso calendario del canale CLIENTE (tool `fissa_appuntamento_calendario`/`sposta_appuntamento`, senza suffisso `_staff`): a TE, dello staff, NON si applica quel flusso e quei nomi NON esistono qui. Tu usi solo i tool `_staff` elencati sopra.\n";
 }
 
 // Documento di riferimento Ardy Lab (statico).

@@ -59,6 +59,7 @@ $sessionId = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string) ($in['session_id'] ?
 $cliente   = is_array($in['cliente'] ?? null) ? $in['cliente'] : [];
 $phone     = preg_replace('/\D+/', '', (string) ($in['phone'] ?? ''));   // numero WhatsApp del mittente
 $mediaId   = trim((string) ($in['media_id'] ?? ''));                     // id foto WhatsApp (se presente)
+$staff     = !empty($in['staff']);                                       // true se chiamato dal canale TITOLARE (staff)
 // Cartella di storage foto = quella della scheda. Per un lead nuovo (senza
 // scheda ancora) usiamo l'id deterministico dal telefono: combacia con quello
 // che genererà ardy-wa-crea-scheda.php → le foto si agganciano alla scheda.
@@ -200,6 +201,60 @@ function waEnsureSopralluogoCols(PDO $db): void {
     // colonne garantite da ardy-migrate.php
 }
 
+// ── STAFF (titolare): trova le schede attive per nome/cognome/"nome cognome".
+function waTrovaSchedePerNome(PDO $db, string $nome): array {
+    $q = trim($nome);
+    if ($q === '') return [];
+    $like = '%' . $q . '%';
+    $st = $db->prepare(
+        "SELECT session_id, nome, cognome, zona, stato, email, sopralluogo_at, gcal_event_id
+           FROM clienti
+          WHERE deleted_at IS NULL
+            AND (nome LIKE :q OR cognome LIKE :q OR CONCAT(COALESCE(nome,''),' ',COALESCE(cognome,'')) LIKE :q)
+       ORDER BY updated_at DESC, id DESC
+          LIMIT 10"
+    );
+    $st->execute([':q' => $like]);
+    return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+}
+
+// Risolve la scheda per i tool staff. Ritorna [stato, payload]:
+//   ['ok', $card]       → una sola scheda (o session_id già fornito dal modello)
+//   ['none', null]      → nessuna scheda
+//   ['ambiguo', $cards] → più schede con quel nome: vanno disambiguate.
+function waRisolviScheda(PDO $db, string $nome, string $sessionIdHint): array {
+    $sessionIdHint = preg_replace('/[^a-zA-Z0-9_\-]/', '', $sessionIdHint);
+    if ($sessionIdHint !== '') {
+        $st = $db->prepare(
+            "SELECT session_id, nome, cognome, zona, stato, email, sopralluogo_at, gcal_event_id
+               FROM clienti WHERE session_id = :sid AND deleted_at IS NULL LIMIT 1"
+        );
+        $st->execute([':sid' => $sessionIdHint]);
+        $c = $st->fetch(PDO::FETCH_ASSOC);
+        return $c ? ['ok', $c] : ['none', null];
+    }
+    $cards = waTrovaSchedePerNome($db, $nome);
+    if (count($cards) === 0) return ['none', null];
+    if (count($cards) === 1) return ['ok', $cards[0]];
+    return ['ambiguo', $cards];
+}
+
+// Lista leggibile delle schede candidate (per far disambiguare il modello/lo staff).
+function waFormattaSchedeAmbigue(array $cards): string {
+    $lines = [];
+    foreach ($cards as $c) {
+        $nm = trim(($c['nome'] ?? '') . ' ' . ($c['cognome'] ?? ''));
+        $extra = [];
+        if (!empty($c['zona']))           $extra[] = 'zona ' . $c['zona'];
+        if (!empty($c['stato']))          $extra[] = $c['stato'];
+        if (!empty($c['sopralluogo_at'])) $extra[] = 'sopralluogo ' . date('d/m/Y H:i', strtotime((string) $c['sopralluogo_at']));
+        $lines[] = '- ' . ($nm !== '' ? $nm : '(senza nome)')
+                 . ($extra ? ' (' . implode(', ', $extra) . ')' : '')
+                 . ' · session_id=' . $c['session_id'];
+    }
+    return implode("\n", $lines);
+}
+
 // -----------------------------------------------------------
 // Tool calendario (stesse definizioni del sito — lettura + prenotazione)
 // -----------------------------------------------------------
@@ -263,6 +318,58 @@ $tools = [
         ],
     ],
 ];
+
+// -----------------------------------------------------------
+// MODALITÀ STAFF (titolare): Sole NON parla con un cliente ma con lo staff, e
+// agisce sul calendario PER CONTO di un cliente NOMINATO nel CRM. Quindi i tool
+// non sono quelli legati al numero WhatsApp di chi scrive (che qui è lo staff),
+// ma versioni "_staff" che identificano il cliente per nome (con disambiguazione
+// in caso di omonimi). La creazione/contatto scheda resta sui marker n8n.
+// -----------------------------------------------------------
+if ($staff) {
+    $tools = [
+        $tools[0],   // ottieni_disponibilita_calendario — identico al canale cliente
+        [
+            'name'        => 'cerca_scheda_cliente',
+            'description' => 'Cerca nel CRM le schede cliente per nome o cognome. Usalo per controllare di star agendo sul cliente giusto, o quando ci sono possibili omonimi. Ritorna le schede trovate con il loro session_id, da riusare con fissa_appuntamento_staff / sposta_appuntamento_staff per disambiguare.',
+            'input_schema' => [
+                'type'       => 'object',
+                'properties' => [
+                    'nome' => ['type' => 'string', 'description' => 'Nome (o nome e cognome) del cliente da cercare.'],
+                ],
+                'required' => ['nome'],
+            ],
+        ],
+        [
+            'name'        => 'fissa_appuntamento_staff',
+            'description' => 'Fissa un sopralluogo nel calendario di Ardy Lab PER CONTO di un cliente del CRM (lo stai facendo tu, dello staff, non il cliente). Identifica il cliente per nome; se esistono più schede con quel nome ti verrà restituito l\'elenco e dovrai richiamare il tool col session_id giusto. Usalo solo dopo che lo staff ha indicato giorno e ora precisi.',
+            'input_schema' => [
+                'type'       => 'object',
+                'properties' => [
+                    'nome'        => ['type' => 'string', 'description' => 'Nome (o nome e cognome) del cliente.'],
+                    'start'       => ['type' => 'string', 'description' => 'Data e ora inizio, ISO 8601. Es: 2026-06-23T10:00:00+02:00'],
+                    'session_id'  => ['type' => 'string', 'description' => 'Opzionale: session_id della scheda esatta, per disambiguare gli omonimi (formato wa-XXXXXXXXXXXXXXXX).'],
+                    'summary'     => ['type' => 'string', 'description' => 'Opzionale: titolo evento. Se non lo dai, lo genero io.'],
+                    'description' => ['type' => 'string', 'description' => 'Opzionale: note/scheda per la descrizione evento.'],
+                ],
+                'required' => ['nome', 'start'],
+            ],
+        ],
+        [
+            'name'        => 'sposta_appuntamento_staff',
+            'description' => 'Sposta a una nuova data/ora un sopralluogo GIÀ fissato di un cliente del CRM, per conto dello staff. Identifica il cliente per nome (disambigua col session_id se più schede). Prima verifica la disponibilità del nuovo periodo con ottieni_disponibilita_calendario.',
+            'input_schema' => [
+                'type'       => 'object',
+                'properties' => [
+                    'nome'       => ['type' => 'string', 'description' => 'Nome (o nome e cognome) del cliente.'],
+                    'start'      => ['type' => 'string', 'description' => 'Nuova data e ora di inizio, ISO 8601.'],
+                    'session_id' => ['type' => 'string', 'description' => 'Opzionale: session_id della scheda esatta, per disambiguare gli omonimi.'],
+                ],
+                'required' => ['nome', 'start'],
+            ],
+        ],
+    ];
+}
 
 // -----------------------------------------------------------
 // FOTO IN ARRIVO DA WHATSAPP: scarica, valida, comprime, salva su scheda
@@ -542,6 +649,120 @@ while ($iteration < $maxIterations) {
                 }
             }
 
+        } elseif ($toolName === 'cerca_scheda_cliente') {
+            try {
+                $db    = ardyDB();
+                $cards = waTrovaSchedePerNome($db, (string) ($toolInput['nome'] ?? ''));
+                if (empty($cards)) {
+                    $toolResult = 'Nessuna scheda trovata per «' . ($toolInput['nome'] ?? '') . '». Verifica il nome con lo staff o crea prima la scheda.';
+                } else {
+                    $toolResult = "Schede trovate:\n" . waFormattaSchedeAmbigue($cards)
+                                . "\nPer agire sulla scheda giusta usa il suo session_id con fissa_appuntamento_staff / sposta_appuntamento_staff.";
+                }
+            } catch (PDOException $e) {
+                error_log('ARDY WA-AGENT STAFF CERCA ERROR: ' . $e->getMessage());
+                $toolResult = 'Errore nella ricerca della scheda. Riprova.';
+            }
+
+        } elseif ($toolName === 'fissa_appuntamento_staff') {
+            try {
+                if (empty($toolInput['nome']) || empty($toolInput['start'])) {
+                    $toolResult = 'Servono il nome del cliente e la data/ora di inizio. Chiedi allo staff di precisare.';
+                } else {
+                    $db = ardyDB();
+                    waEnsureSopralluogoCols($db);
+                    [$stato, $payload] = waRisolviScheda($db, (string) $toolInput['nome'], (string) ($toolInput['session_id'] ?? ''));
+                    if ($stato === 'none') {
+                        $toolResult = 'Non trovo nessuna scheda per «' . $toolInput['nome'] . '». Chiedi allo staff di verificare il nome o di creare prima la scheda.';
+                    } elseif ($stato === 'ambiguo') {
+                        $toolResult = "Ci sono PIÙ schede con questo nome: NON scegliere a caso. Chiedi allo staff QUALE cliente è, poi richiama fissa_appuntamento_staff col session_id giusto.\n"
+                                    . waFormattaSchedeAmbigue($payload);
+                    } else {
+                        $card = $payload;
+                        if (!empty($card['gcal_event_id'])) {
+                            $quando = !empty($card['sopralluogo_at']) ? ('il ' . date('d/m/Y \a\l\l\e H:i', strtotime((string) $card['sopralluogo_at']))) : 'una data già fissata';
+                            $toolResult = 'Questo cliente ha GIÀ un appuntamento (' . $quando . '): non crearne un altro (sarebbe un doppione). Se va spostato usa sposta_appuntamento_staff.';
+                        } else {
+                            $startDt = new DateTime($toolInput['start']);
+                            $dateStr = $startDt->format('Y-m-d');
+                            $timeStr = $startDt->format('H:i');
+                            $nm      = trim(($card['nome'] ?? '') . ' ' . ($card['cognome'] ?? ''));
+                            $summary = $toolInput['summary'] ?? ('Sopralluogo Ardy Lab' . (!empty($card['zona']) ? ' — ' . $card['zona'] : '') . ($nm !== '' ? ' / ' . $nm : ''));
+                            $desc    = $toolInput['description'] ?? '';
+                            $r = gcal_create_event($dateStr, $timeStr, $summary, '', '', '', $desc);
+                            if ($r) {
+                                $bookingMade    = true;
+                                $bookingWhen    = $startDt;
+                                $bookingEventId = is_array($r) ? ($r['id'] ?? null) : null;
+                                $sessionId      = $card['session_id'];   // persist + email cliente colpiscono la scheda giusta
+                                if ($nm !== '')            $leadNome = $nm;
+                                if (!empty($card['zona'])) $leadZona = (string) $card['zona'];
+                                $em = trim((string) ($card['email'] ?? ''));
+                                if ($em !== '' && filter_var($em, FILTER_VALIDATE_EMAIL)) $leadEmail = $em;
+                                $toolResult = 'Appuntamento creato nel calendario di Michela per ' . ($nm !== '' ? $nm : 'il cliente') . ' il ' . $startDt->format('d/m/Y') . ' alle ' . $timeStr . '.';
+                            } else {
+                                $toolResult = 'Errore nella creazione dell\'appuntamento sul calendario. Riprova.';
+                            }
+                        }
+                    }
+                }
+            } catch (Exception $e) {
+                error_log('ARDY WA-AGENT STAFF FISSA ERROR: ' . $e->getMessage() . ' input=' . json_encode($toolInput));
+                $toolResult = 'Errore tecnico nella prenotazione. Riprova.';
+            }
+
+        } elseif ($toolName === 'sposta_appuntamento_staff') {
+            try {
+                if (empty($toolInput['nome']) || empty($toolInput['start'])) {
+                    $toolResult = 'Servono il nome del cliente e la nuova data/ora. Chiedi allo staff di precisare.';
+                } else {
+                    $startDt = new DateTime($toolInput['start']);
+                    if ($startDt < new DateTime('now')) {
+                        $toolResult = 'La nuova data è nel passato: serve una data futura.';
+                    } else {
+                        $db = ardyDB();
+                        waEnsureSopralluogoCols($db);
+                        [$stato, $payload] = waRisolviScheda($db, (string) $toolInput['nome'], (string) ($toolInput['session_id'] ?? ''));
+                        if ($stato === 'none') {
+                            $toolResult = 'Non trovo nessuna scheda per «' . $toolInput['nome'] . '».';
+                        } elseif ($stato === 'ambiguo') {
+                            $toolResult = "Ci sono PIÙ schede con questo nome: chiedi allo staff QUALE cliente è, poi richiama sposta_appuntamento_staff col session_id giusto.\n"
+                                        . waFormattaSchedeAmbigue($payload);
+                        } elseif (empty($payload['gcal_event_id'])) {
+                            $toolResult = 'Questo cliente non ha un appuntamento già fissato da spostare. Se vuoi crearne uno nuovo usa fissa_appuntamento_staff.';
+                        } else {
+                            $card    = $payload;
+                            $dateStr = $startDt->format('Y-m-d');
+                            $timeStr = $startDt->format('H:i');
+                            $free    = gcal_is_slot_free($dateStr, $timeStr, 2);
+                            if ($free === false) {
+                                $toolResult = 'Quel nuovo orario è già occupato. Proponi un altro slot (controlla con ottieni_disponibilita_calendario).';
+                            } else {
+                                $upd = gcal_update_event($card['gcal_event_id'], $dateStr, $timeStr, 2);
+                                if (!$upd) {
+                                    $toolResult = 'Non sono riuscita a spostare l\'appuntamento sul calendario. Riprova.';
+                                } else {
+                                    $db->prepare("UPDATE clienti SET sopralluogo_at = :dt, stato = 'SOPRALLUOGO', updated_at = NOW() WHERE session_id = :sid")
+                                       ->execute([':dt' => $startDt->format('Y-m-d H:i:s'), ':sid' => $card['session_id']]);
+                                    $rescheduled    = true;
+                                    $bookingWhen    = $startDt;
+                                    $bookingEventId = $card['gcal_event_id'];
+                                    $sessionId      = $card['session_id'];
+                                    $nm = trim(($card['nome'] ?? '') . ' ' . ($card['cognome'] ?? ''));
+                                    if ($nm !== '') $leadNome = $nm;
+                                    $em = trim((string) ($card['email'] ?? ''));
+                                    if ($em !== '' && filter_var($em, FILTER_VALIDATE_EMAIL)) $leadEmail = $em;
+                                    $toolResult = 'Appuntamento spostato al ' . $startDt->format('d/m/Y') . ' alle ' . $timeStr . ' per ' . ($nm !== '' ? $nm : 'il cliente') . '.';
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Exception $e) {
+                error_log('ARDY WA-AGENT STAFF SPOSTA ERROR: ' . $e->getMessage());
+                $toolResult = 'Errore tecnico nello spostamento. Riprova.';
+            }
+
         } else {
             // Tool non disponibile su questo canale: lo segnaliamo senza bloccare.
             $toolResult = 'Strumento non disponibile su WhatsApp.';
@@ -592,12 +813,14 @@ if (function_exists('fastcgi_finish_request')) { fastcgi_finish_request(); }
 // -----------------------------------------------------------
 
 // 1) Avvisa Michela su WhatsApp di nuovo sopralluogo o spostamento (dedupe).
-if ($bookingMade && $bookingWhen instanceof DateTime) {
+//    In modalità STAFF è Michela/lo staff a fissare via Sole: non avvisarla di una
+//    cosa che ha appena fatto lei (sarebbe rumore nella sua stessa chat).
+if (!$staff && $bookingMade && $bookingWhen instanceof DateTime) {
     $quando = $bookingWhen->format('d/m/Y') . ' alle ' . $bookingWhen->format('H:i');
     $testo  = "📅 Nuovo sopralluogo fissato da Sole su WhatsApp:\n" . ($leadNome ?: 'un cliente')
             . ($leadZona !== '' ? " · {$leadZona}" : '') . "\n🗓 {$quando}";
     notificaMichela($testo, 'wa-sopr:' . ($bookingEventId ?: md5($testo)));
-} elseif ($rescheduled && $bookingWhen instanceof DateTime) {
+} elseif (!$staff && $rescheduled && $bookingWhen instanceof DateTime) {
     $quando = $bookingWhen->format('d/m/Y') . ' alle ' . $bookingWhen->format('H:i');
     $testo  = "📅 Sopralluogo SPOSTATO da Sole su WhatsApp:\n" . ($leadNome ?: 'un cliente')
             . "\n🗓 nuovo orario: {$quando}";
@@ -605,7 +828,9 @@ if ($bookingMade && $bookingWhen instanceof DateTime) {
 }
 
 // 2) NOTIFICA EMAIL A MICHELA — nuovo lead, sopralluogo fissato o spostato.
-if ($leadCreated || $bookingMade || $rescheduled) {
+//    Saltata in modalità STAFF: l'azione l'ha fatta lo staff stesso via Sole, e il
+//    "transcript" qui sarebbe la chat staff↔Sole, non una conversazione cliente.
+if (!$staff && ($leadCreated || $bookingMade || $rescheduled)) {
     try {
         $isMove = $rescheduled && !$bookingMade && !$leadCreated;
         $body  = ($isMove ? "Sopralluogo SPOSTATO da Sole su WhatsApp\n" : "Nuovo contatto da Sole su WhatsApp\n") . str_repeat('─', 40) . "\n\n";
