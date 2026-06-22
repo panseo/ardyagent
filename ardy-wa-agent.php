@@ -496,6 +496,16 @@ while ($iteration < $maxIterations) {
 
     $stopReason = $data['stop_reason'] ?? 'end_turn';
     $content    = $data['content']     ?? [];
+    // FIX: i tool SENZA argomenti (es. leggi_nota_settimanale) tornano con input {}
+    // che json_decode trasforma in array PHP vuoto []; rimandandolo ad Anthropic
+    // diventerebbe `[]` (array) e l'API rifiuta con "Input should be an object"
+    // (400), bloccando anche i messaggi successivi. Riportiamo gli input vuoti a {}.
+    foreach ($content as &$blk) {
+        if (($blk['type'] ?? '') === 'tool_use' && isset($blk['input']) && is_array($blk['input']) && empty($blk['input'])) {
+            $blk['input'] = (object) [];
+        }
+    }
+    unset($blk);
     $messages[] = ['role' => 'assistant', 'content' => $content];
 
     if ($stopReason === 'end_turn') {
