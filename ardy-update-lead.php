@@ -30,6 +30,7 @@ try {
         'servizio', 'mobile', 'zona', 'budget',
         'indirizzo', 'stato', 'note', 'note_consegna',
         'data_followup', 'inizio_lavoro', 'fine_lavoro_prevista',
+        'sopralluogo_at',
         'wp_post_id', 'wp_post_link'
     ];
 
@@ -93,6 +94,37 @@ try {
             ardy_invia_pronto($db, $sessionId);
         } catch (Throwable $e) {
             error_log('ARDY UPDATE LEAD pronto: ' . $e->getMessage());
+        }
+    }
+
+    // Data e ora sopralluogo impostata/cambiata dalla dashboard → sincronizza Google
+    // Calendar: aggiorna l'evento se la scheda ne ha già uno, altrimenti lo crea
+    // (anti-doppione: un solo evento per scheda). Best-effort, non blocca il salvataggio.
+    if (array_key_exists('sopralluogo_at', $input) && !empty($input['sopralluogo_at'])) {
+        try {
+            require_once __DIR__ . '/ardy-gcal.php';
+            $qc = $db->prepare("SELECT nome, cognome, zona, telefono, email, gcal_event_id FROM clienti WHERE session_id = :sid LIMIT 1");
+            $qc->execute([':sid' => $sessionId]);
+            $cli = $qc->fetch(PDO::FETCH_ASSOC);
+            if ($cli) {
+                $dt      = new DateTime((string) $input['sopralluogo_at']);
+                $dateStr = $dt->format('Y-m-d');
+                $timeStr = $dt->format('H:i');
+                if (!empty($cli['gcal_event_id'])) {
+                    // C'è già l'evento: lo SPOSTA alla nuova data/ora (niente doppione).
+                    gcal_update_event($cli['gcal_event_id'], $dateStr, $timeStr, 2);
+                } else {
+                    $nm      = trim(($cli['nome'] ?? '') . ' ' . ($cli['cognome'] ?? ''));
+                    $summary = 'Sopralluogo Ardy Lab' . (!empty($cli['zona']) ? ' — ' . $cli['zona'] : '') . ($nm !== '' ? ' / ' . $nm : '');
+                    $ev = gcal_create_event($dateStr, $timeStr, $summary, (string) ($cli['telefono'] ?? ''), (string) ($cli['email'] ?? ''), '', '');
+                    if (is_array($ev) && !empty($ev['id'])) {
+                        $db->prepare("UPDATE clienti SET gcal_event_id = :eid WHERE session_id = :sid")
+                           ->execute([':eid' => $ev['id'], ':sid' => $sessionId]);
+                    }
+                }
+            }
+        } catch (Throwable $e) {
+            error_log('ARDY UPDATE LEAD sopralluogo gcal: ' . $e->getMessage());
         }
     }
 
