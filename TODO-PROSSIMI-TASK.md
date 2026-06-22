@@ -182,6 +182,9 @@ rilegge e la aggiorna. Implementato (canale titolare/staff):
 - **Test dopo deploy** (chat staff): dettare "cose da fare questa settimana: 1)… 2)…" → Sole salva e
   conferma; "leggimi le cose da fare" → le rilegge; "aggiungi…" / "segna fatto il 2" → Sole legge,
   modifica e risalva l'elenco intero (le voci vecchie NON si perdono).
+- **Condivisa** (scelta Andrea): una sola lista del laboratorio, valida per Michela E Andrea (l'ultima
+  salvata è quella che leggono entrambi). Funziona per Andrea SOLO se il suo numero è impostato come
+  `WA_ANDREA_NUMBER` in `ardy-config.php` (server). Test: Andrea scrive a Sole → se lo tratta da staff è ok.
 - Follow-up possibili (non ora): mostrare la nota anche in dashboard; citarla nel briefing del mattino.
 
 ### 🎨 Adottare temi/layout da "Claude Design" — ANALISI PRONTA (da decidere)
