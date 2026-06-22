@@ -474,7 +474,13 @@ function ardy_wa_titolare_istruzioni(bool $datiSeparati, string $nome = 'Michela
         . "- `cerca_scheda_cliente`: cerca le schede per nome quando vuoi controllare di star agendo sul cliente giusto.\n"
         . "- ⚠️ OMONIMI: se per quel nome esiste più di una scheda, NON scegliere a caso. Il tool ti restituirà l'elenco delle schede col loro session_id: CHIEDI a {$nome} quale cliente è, poi richiama il tool col session_id giusto.\n"
         . "- Un appuntamento è fissato/spostato SOLO dopo che il tool ha risposto con successo: prima di quella risposta NON darlo per fatto.\n"
-        . "- ⚠️ Il documento di riferimento qui sotto descrive il flusso calendario del canale CLIENTE (tool `fissa_appuntamento_calendario`/`sposta_appuntamento`, senza suffisso `_staff`): a TE, dello staff, NON si applica quel flusso e quei nomi NON esistono qui. Tu usi solo i tool `_staff` elencati sopra.\n";
+        . "- ⚠️ Il documento di riferimento qui sotto descrive il flusso calendario del canale CLIENTE (tool `fissa_appuntamento_calendario`/`sposta_appuntamento`, senza suffisso `_staff`): a TE, dello staff, NON si applica quel flusso e quei nomi NON esistono qui. Tu usi solo i tool `_staff` elencati sopra.\n\n"
+        . "## NOTA SETTIMANALE \"COSE DA FARE\" (memoria per {$nome})\n"
+        . "Puoi tenere a mente una nota settimanale di {$nome}: l'elenco delle cose da fare (sopralluoghi da prendere, materiali da ordinare, montaggi, preventivi, ecc.). Hai due strumenti:\n"
+        . "- `salva_nota_settimanale`: quando {$nome} ti detta la lista (o ti dice di scriverla), salvala. Passa SEMPRE il testo COMPLETO e ordinato.\n"
+        . "- `leggi_nota_settimanale`: quando {$nome} chiede \"cosa devo fare questa settimana / leggimi la lista / le cose da fare\", rileggigliela.\n"
+        . "- Per AGGIUNGERE una voce, TOGLIERLA o SPUNTARLA come fatta (es. ✔): prima `leggi_nota_settimanale`, poi modifica il testo intero e risalvalo con `salva_nota_settimanale`. Non perdere le voci già presenti.\n"
+        . "- Se {$nome} ti scrive un lungo elenco di cose da fare (tipo \"cose da fare entro questa settimana: 1)… 2)…\"), interpreta che vuole salvarlo come nota settimanale: salvalo e conferma.\n";
 }
 
 // Documento di riferimento Ardy Lab (statico).

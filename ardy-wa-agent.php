@@ -392,6 +392,25 @@ if ($staff) {
                 'required' => ['nome', 'start'],
             ],
         ],
+        [
+            'name'        => 'leggi_nota_settimanale',
+            'description' => 'Restituisce la NOTA SETTIMANALE "cose da fare" dello staff salvata più di recente (un promemoria libero: sopralluoghi da prendere, materiali da ordinare, montaggi, ecc.). Usala quando lo staff chiede "cosa devo fare questa settimana / leggimi la lista / le cose da fare", e SEMPRE prima di aggiungere o spuntare una voce (così parti dal testo aggiornato).',
+            'input_schema' => [
+                'type'       => 'object',
+                'properties' => (object) [],
+            ],
+        ],
+        [
+            'name'        => 'salva_nota_settimanale',
+            'description' => 'Salva/aggiorna la NOTA SETTIMANALE "cose da fare" dello staff. Passa il TESTO COMPLETO e aggiornato della nota (non solo la modifica): se lo staff chiede di aggiungere, togliere o spuntare una voce, prima leggi con leggi_nota_settimanale, modifica il testo intero e risalvalo qui. Mantieni un elenco ordinato e leggibile.',
+            'input_schema' => [
+                'type'       => 'object',
+                'properties' => [
+                    'testo' => ['type' => 'string', 'description' => 'Testo COMPLETO e aggiornato della nota settimanale (l\'elenco intero, non il singolo punto).'],
+                ],
+                'required' => ['testo'],
+            ],
+        ],
     ];
 }
 
@@ -811,6 +830,38 @@ while ($iteration < $maxIterations) {
             } catch (Exception $e) {
                 error_log('ARDY WA-AGENT STAFF SPOSTA ERROR: ' . $e->getMessage());
                 $toolResult = 'Errore tecnico nello spostamento. Riprova.';
+            }
+
+        } elseif ($toolName === 'leggi_nota_settimanale') {
+            try {
+                $db  = ardyDB();
+                $row = $db->query("SELECT testo, settimana, created_at FROM note_staff ORDER BY id DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+                if (!$row || trim((string) $row['testo']) === '') {
+                    $toolResult = 'Non c\'è ancora una nota settimanale salvata. Quando lo staff te la detta, salvala con salva_nota_settimanale.';
+                } else {
+                    $quando = !empty($row['created_at']) ? date('d/m/Y H:i', strtotime((string) $row['created_at'])) : '';
+                    $toolResult = "NOTA SETTIMANALE" . (!empty($row['settimana']) ? ' (' . $row['settimana'] . ')' : '')
+                                . ($quando !== '' ? ' — aggiornata il ' . $quando : '') . ":\n" . $row['testo'];
+                }
+            } catch (PDOException $e) {
+                error_log('ARDY WA-AGENT NOTA LEGGI ERROR: ' . $e->getMessage());
+                $toolResult = 'Errore nel recupero della nota settimanale. Riprova.';
+            }
+
+        } elseif ($toolName === 'salva_nota_settimanale') {
+            try {
+                $testo = trim((string) ($toolInput['testo'] ?? ''));
+                if ($testo === '') {
+                    $toolResult = 'La nota è vuota: dimmi cosa scrivere.';
+                } else {
+                    $db = ardyDB();
+                    $db->prepare("INSERT INTO note_staff (settimana, testo, created_at) VALUES (:s, :t, NOW())")
+                       ->execute([':s' => date('o-\WW'), ':t' => $testo]);
+                    $toolResult = 'Nota settimanale salvata ✅ (la trovi con "leggimi le cose da fare").';
+                }
+            } catch (PDOException $e) {
+                error_log('ARDY WA-AGENT NOTA SALVA ERROR: ' . $e->getMessage());
+                $toolResult = 'Errore nel salvataggio della nota settimanale. Riprova.';
             }
 
         } else {

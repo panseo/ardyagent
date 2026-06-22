@@ -206,6 +206,16 @@ ddl($pdo, "INSERT INTO sopralluoghi (session_id, data_ora, etichetta, gcal_event
        AND NOT EXISTS (SELECT 1 FROM sopralluoghi s WHERE s.session_id = c.session_id)",
     "BACKFILL sopralluoghi");
 
+// Nota settimanale "cose da fare" dello staff (un promemoria libero che Michela
+// detta a Sole su WhatsApp e si fa rileggere/aggiornare). Ogni salvataggio è una
+// riga nuova (storico settimane); si legge sempre la più recente.
+ddl($pdo, "CREATE TABLE IF NOT EXISTS `note_staff` (
+    `id`         BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `settimana`  VARCHAR(12) NOT NULL DEFAULT '',
+    `testo`      MEDIUMTEXT NOT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE note_staff");
+
 // ── COLONNE clienti ───────────────────────────────────────────────────────────
 
 $clientiCols = [

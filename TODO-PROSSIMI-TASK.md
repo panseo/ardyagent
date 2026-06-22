@@ -107,8 +107,8 @@ INI-PEC non automatizzabile (captcha) → PEC via API a pagamento, eventuale tas
 
 ## ⏳ DA VERIFICARE DAL VIVO / AZIONI MANUALI
 - **Date sopralluogo/consegna in dashboard (nuovo) — test dopo deploy:**
-  - *Sopralluoghi (lista, Fase 1)*: ✅ deployato, la sezione "📅 Sopralluoghi" si VEDE in scheda.
-    Resta da provare il funzionamento: nella scheda, sezione "📅 Sopralluoghi" → **Aggiungi** una visita
+  - *Sopralluoghi (lista, Fase 1)*: ✅ deployato; aggiungi/sposta/elimina ci sono e **rispondono bene**
+    (test rapido ok). Restano i test funzionali completi: nella scheda, sezione "📅 Sopralluoghi" → **Aggiungi** una visita
     (data/ora + etichetta) e verificare che su **Google Calendar** compaia l'evento; **sposta** una
     visita (cambia data/ora + 💾) → l'evento si sposta, niente doppione; **elimina** (🗑) → l'evento
     sparisce anche dal calendario. Aggiungere una **seconda** visita allo stesso cliente (es. "2°
@@ -173,19 +173,16 @@ personale/social/spiegazione non si possono aggiungere da PHP. Vanno aggiunti **
 e rifacendolo approvare, poi allineare i parametri in `inviaWhatsAppCliente()` (`ardy-pubblica-lavorazione.php`).
 Quei dati ci sono già nell'email e nella pagina lavorazione. (bassa)
 
-### 🗒️ Nota settimanale a Sole (memoria "cose da fare") — idea Michela
-Michela vuole poter **dettare a Sole una nota settimanale** ("cose da fare entro questa settimana":
-elenco di task — sopralluoghi da prendere, materiali da ordinare, montaggi da organizzare, ecc.) e
-che **Sole la memorizzi** per poterla richiamare/aggiornare nei giorni successivi (es. "leggimi la lista
-di questa settimana", "segna fatto il punto 3", "aggiungi…"). Anche solo agganciandola al **dossier**
-le va bene. Idea d'impianto (canale titolare):
-- Nuovo tool staff `salva_nota_settimanale(testo)` / `leggi_nota_settimanale()` in `ardy-wa-agent.php`
-  (modalità `staff`), che persiste la nota su una tabella/colonna dedicata (schema in `ardy-migrate.php`).
-  Valutare se legare la nota alla **settimana** (es. chiave `YYYY-Www`) o tenerne una sola "corrente".
-- In alternativa più leggera: appenderla a un **dossier/promemoria operativo** che Sole rilegge nel
-  riepilogo titolare (`ardy-wa-lookup.php`) — così entra nel briefing del mattino.
-- Esporla nei **dati operativi** del prompt titolare così Sole la cita quando Michela chiede "cosa devo
-  fare questa settimana". (da progettare: una nota sola vs. checklist con item spuntabili)
+### 🗒️ Nota settimanale a Sole (memoria "cose da fare") — ✅ FATTO (da testare/deployare)
+Michela detta a **Sole su WhatsApp** la lista "cose da fare della settimana" e Sole la memorizza, la
+rilegge e la aggiorna. Implementato (canale titolare/staff):
+- Tool `salva_nota_settimanale(testo)` e `leggi_nota_settimanale()` in `ardy-wa-agent.php`; tabella
+  `note_staff` (storico per settimana, si legge la più recente) in `ardy-migrate.php`; istruzioni nel
+  prompt titolare (`ardy-wa-lookup.php`).
+- **Test dopo deploy** (chat staff): dettare "cose da fare questa settimana: 1)… 2)…" → Sole salva e
+  conferma; "leggimi le cose da fare" → le rilegge; "aggiungi…" / "segna fatto il 2" → Sole legge,
+  modifica e risalva l'elenco intero (le voci vecchie NON si perdono).
+- Follow-up possibili (non ora): mostrare la nota anche in dashboard; citarla nel briefing del mattino.
 
 ### 🎨 Adottare temi/layout da "Claude Design" — ANALISI PRONTA (da decidere)
 Analisi completa in **`ANALISI-CLAUDE-DESIGN.md`**. Blocco vero: **363 `style="…"` inline** nel dashboard
