@@ -147,6 +147,20 @@ personale/social/spiegazione non si possono aggiungere da PHP. Vanno aggiunti **
 e rifacendolo approvare, poi allineare i parametri in `inviaWhatsAppCliente()` (`ardy-pubblica-lavorazione.php`).
 Quei dati ci sono già nell'email e nella pagina lavorazione. (bassa)
 
+### 🗒️ Nota settimanale a Sole (memoria "cose da fare") — idea Michela
+Michela vuole poter **dettare a Sole una nota settimanale** ("cose da fare entro questa settimana":
+elenco di task — sopralluoghi da prendere, materiali da ordinare, montaggi da organizzare, ecc.) e
+che **Sole la memorizzi** per poterla richiamare/aggiornare nei giorni successivi (es. "leggimi la lista
+di questa settimana", "segna fatto il punto 3", "aggiungi…"). Anche solo agganciandola al **dossier**
+le va bene. Idea d'impianto (canale titolare):
+- Nuovo tool staff `salva_nota_settimanale(testo)` / `leggi_nota_settimanale()` in `ardy-wa-agent.php`
+  (modalità `staff`), che persiste la nota su una tabella/colonna dedicata (schema in `ardy-migrate.php`).
+  Valutare se legare la nota alla **settimana** (es. chiave `YYYY-Www`) o tenerne una sola "corrente".
+- In alternativa più leggera: appenderla a un **dossier/promemoria operativo** che Sole rilegge nel
+  riepilogo titolare (`ardy-wa-lookup.php`) — così entra nel briefing del mattino.
+- Esporla nei **dati operativi** del prompt titolare così Sole la cita quando Michela chiede "cosa devo
+  fare questa settimana". (da progettare: una nota sola vs. checklist con item spuntabili)
+
 ### 🎨 Adottare temi/layout da "Claude Design" — ANALISI PRONTA (da decidere)
 Analisi completa in **`ANALISI-CLAUDE-DESIGN.md`**. Blocco vero: **363 `style="…"` inline** nel dashboard
 scavalcano i temi. Procedura: Fase 0 (inline→classi + ampliare i token, su branch) → poi un solo `theme.css`
