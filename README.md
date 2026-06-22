@@ -36,7 +36,9 @@ ardyagent.ardy-lab.it/
 ├── ardy-sanitize.php          # Rete anti-sbrodolatura: ripulisce eventuale sintassi tool trapelata come testo
 ├── ardy-fasi-bozza-api.php    # API bozze fasi di lavorazione; `mode:'salva'` = bozza completa con foto (salva senza pubblicare)
 ├── ardy-save-lead.php         # Salva lead dal chatbot nel DB
-├── ardy-update-lead.php       # Aggiorna dati lead dalla dashboard
+├── ardy-update-lead.php       # Aggiorna dati lead dalla dashboard (+ data consegna → email Trasporti)
+├── ardy-sopralluoghi-api.php  # API sopralluoghi MULTIPLI per cliente (lista/salva/elimina) — dashboard
+├── ardy-sopralluoghi-lib.php  # Logica condivisa sopralluoghi (calendario + "mirror") usata da API e da Sole WhatsApp
 ├── ardy-db.php                # Connessione DB condivisa
 ├── ardy-config.php            # ⚠️ NON in repo — credenziali DB
 ├── ardy-crm-api.php           # API CRM interna
@@ -109,7 +111,10 @@ data_followup, wp_post_id, wp_post_link, ip_address,
 sopralluogo_at (data/ora reale del sopralluogo), gcal_event_id (id evento Google Calendar)
 ```
 > `sopralluogo_at` + `gcal_event_id` salvano la data vera dell'appuntamento e
-> l'id dell'evento: servono per mostrare le date corrette nei riepiloghi e per **spostare** i sopralluoghi.
+> l'id dell'evento. ⚠️ Da giu 2026 un cliente può avere **più sopralluoghi** (tabella `sopralluoghi`):
+> questi due campi su `clienti` restano come **"mirror" del sopralluogo PIÙ VICINO** (allineati
+> automaticamente da `ardy-sopralluoghi-lib.php`), così i flussi che leggono ancora i vecchi campi
+> (es. tool cliente su WhatsApp, riepiloghi) continuano a funzionare. Vedi la tabella `sopralluoghi`.
 
 Altre colonne (gestite da `ardy-migrate.php`): `inizio_lavoro`, `fine_lavoro_prevista` (date dell'intero
 lavoro → pallini in lista), `note_consegna` (promemoria consegna), `deleted_at` (cestino soft-delete),
@@ -138,6 +143,27 @@ foto_urls (JSON), video_urls (JSON), created_at
 ```
 > `fase_tipo='comunicazione'` distingue le **comunicazioni straordinarie** (imprevisti segnalati
 > al cliente prima di procedere) dalle normali fasi di avanzamento. Le comunicazioni non entrano nel reel.
+
+#### `sopralluoghi`  *(giu 2026)*
+**Più sopralluoghi per cliente** (1°, 2°, sopralluogo colori…), ognuno con la sua data/ora ed evento
+Google Calendar. Gestita da `ardy-sopralluoghi-lib.php` (logica condivisa) via `ardy-sopralluoghi-api.php`
+(dashboard, sezione "📅 Sopralluoghi" nella scheda) e dai tool staff di Sole su WhatsApp.
+
+```
+id, session_id, data_ora, etichetta, note, gcal_event_id, created_at, updated_at
+```
+> La lib fa anche: **mirror** (riallinea `clienti.sopralluogo_at`/`gcal_event_id` al sopralluogo più
+> vicino dopo ogni modifica) e **riconciliazione "pigra"** (un sopralluogo fissato dal canale cliente,
+> presente solo nei vecchi campi, viene inserito come riga alla prima lettura → compare nella lista).
+
+#### `note_staff`  *(giu 2026)*
+**Nota settimanale "cose da fare"** condivisa tra Michela e Andrea: la dettano a Sole su WhatsApp
+(tool `salva_nota_settimanale`/`leggi_nota_settimanale`), Sole la memorizza e la rilegge/aggiorna. Ogni
+salvataggio è una riga nuova (storico per settimana); si legge sempre la più recente.
+
+```
+id, settimana ('YYYY-Www'), testo, created_at
+```
 
 #### `solleciti_pagamento`
 Casi di clienti morosi gestiti dalla "segretaria antipatica".
@@ -457,6 +483,13 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
 - **Libreria fasi lavorative** (DB, **condivisa tra dispositivi**) con 12 fasi predefinite
 - **Periodo del lavoro** (date inizio/fine, riferite all'intero lavoro) + elenco **📋 Fasi
   pubblicate** (sola lettura: titolo + data) caricato da `ardy-get-fasi.php`
+- **📅 Sopralluoghi** *(giu 2026)*: nella scheda, lista di N visite per cliente (data/ora + etichetta),
+  ognuna **un evento Google Calendar**. Aggiungi / sposta (💾) / elimina (🗑) si salvano da soli via
+  `ardy-sopralluoghi-api.php` (NON passano dal bottone SALVA). Sincronizzata con i sopralluoghi che
+  Sole fissa su WhatsApp (mirror + riconciliazione, vedi tabella `sopralluoghi`)
+- **📦 Data di consegna** *(giu 2026)*: campo nella scheda che, al salvataggio, invia al cliente l'email
+  di conferma consegna **riusando il modulo Trasporti** (`ardy_invia_avviso_trasporto`, scrive su
+  `clienti.trasporto_data`, guard "una sola email per data"). NB: "trasporto" = ritiro **o** consegna
 - **Pubblicazione fasi** con foto (scatta dal telefono o galleria) sotto il bottone collassabile
   **🔨 Crea e pubblica nuova fase**; la prima foto diventa l'**immagine in evidenza** del post
 - **💾 Salva in bozza** delle fasi ("scatta ora, pubblica la sera"): nel form della fase il pulsante
@@ -511,8 +544,29 @@ Sui clienti (NON sullo staff) Sole gira con lo **stesso loop agentico del sito**
 - inviare le **email** come il sito: notifica a Michela, conferma del sopralluogo al cliente,
   email di benvenuto col **codice di accesso** al lead.
 
-Lo **staff** (Michela/Andrea) resta sul flusso n8n esistente (nessun tool). Una **rete di sicurezza**
-(`ardy-sanitize.php`) ripulisce eventuale sintassi tool che trapelasse come testo.
+Una **rete di sicurezza** (`ardy-sanitize.php`) ripulisce eventuale sintassi tool che trapelasse come testo.
+
+### Staff (titolare) — Sole ha i tool _staff_  *(giu 2026)*
+> ⚠️ Aggiornamento: lo staff **non** è più "single-shot senza tool". Il ramo titolare di n8n inoltra a
+> `ardy-wa-agent.php` con flag **`staff:true`**: Sole ha un set di tool _staff_ che agiscono **per conto
+> di un cliente NOMINATO nel CRM** (identificato per nome, con **disambiguazione omonimi** via `session_id`).
+> Era il bug del "caso Alberto": prima Sole *recitava* la chiamata al tool e si bloccava.
+
+Tool staff (in `ardy-wa-agent.php`, ramo `$staff`; prompt in `ardy-wa-lookup.php` → `ardy_wa_titolare_istruzioni`):
+- `ottieni_disponibilita_calendario`, `cerca_scheda_cliente`;
+- **Sopralluoghi MULTIPLI**: `fissa_appuntamento_staff` (AGGIUNGE sempre una visita, niente anti-doppione),
+  `sposta_appuntamento_staff` (se il cliente ha più visite, Sole **chiede QUALE** via `sopralluogo_id`),
+  `elenca_sopralluoghi_staff`. Usano `ardy-sopralluoghi-lib.php` (stesso motore della dashboard);
+- **Nota settimanale**: `salva_nota_settimanale` / `leggi_nota_settimanale` (tabella `note_staff`,
+  condivisa Michela+Andrea). Sole legge → modifica il testo intero → risalva.
+
+La **creazione/contatto scheda** resta sui marker n8n (`[[CREA_SCHEDA]]`/`[[CONTATTA_LEAD]]`).
+
+> ⚠️ **Gotcha tool a zero argomenti**: un tool senza parametri (es. `leggi_nota_settimanale`) torna con
+> `input {}`; `json_decode(assoc)` lo rende un **array PHP vuoto** che, rispedito ad Anthropic, diventa
+> `[]` → **400 "Input should be an object"** e blocca la conversazione. Fix in `ardy-wa-agent.php`: prima
+> di accodare il turno assistant, gli `input` di `tool_use` vuoti vengono riportati a `(object)[]`.
+> `waCallAnthropic` ora **logga** gli errori Anthropic e **ritenta** i transitori (429/529/5xx).
 
 ### Ricezione FOTO LIVE
 Se il cliente manda una **foto del mobile** su WhatsApp, Sole la **riceve come immagine, la guarda

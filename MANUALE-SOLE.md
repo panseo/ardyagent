@@ -101,6 +101,16 @@ Quando Michela o Andrea scrivono a Sole su WhatsApp, lei legge il CRM **dal vivo
 ### 7. Creare una scheda cliente su dettatura di Michela (WhatsApp)
 Quando Michela detta a Sole un cliente nuovo (es. *«Sole, segnami Mario Rossi, 333 1234567, vuole rilaccare una credenza, zona Prati»*), Sole raccoglie i dati, **li rilegge e chiede conferma**, e solo dopo il "sì" crea la scheda nel CRM. Stessa scheda se Michela ridetta lo stesso telefono (niente doppioni). Per ora crea **solo la scheda cliente** (il preventivo si fa dalla dashboard).
 
+### 7b. Gestire i sopralluoghi per conto dello staff (WhatsApp) — *giu 2026*
+Su richiesta di Michela o Andrea, Sole agisce sul calendario **per conto di un cliente nominato** (lo identifica per nome; se ci sono **omonimi** chiede quale). Un cliente può avere **più sopralluoghi** (1°, 2°, sopralluogo colori…):
+- *«Sole, fissa ad Alberto il sopralluogo domani alle 10»* → lo **aggiunge** (anche se ne ha già altri: non è un doppione);
+- *«che sopralluoghi ha Alberto?»* → li **elenca**;
+- *«sposta il sopralluogo di Alberto»* → se ne ha più d'uno, Sole **chiede QUALE** prima di spostarlo.
+> È lo stesso "motore" della lista **📅 Sopralluoghi** nella scheda della dashboard: ciò che Sole fa su WhatsApp compare lì, e viceversa.
+
+### 7c. La nota settimanale "cose da fare" (WhatsApp) — *giu 2026*
+Michela **e** Andrea possono dettare a Sole la **lista delle cose da fare della settimana** (sopralluoghi da prendere, materiali da ordinare, montaggi…). È **una sola lista condivisa**: Sole la **memorizza**, la **rilegge** (*«leggimi le cose da fare»*) e la **aggiorna** (*«aggiungi…»*, *«segna fatto il 3»* → Sole legge, modifica il testo intero e risalva, senza perdere le voci).
+
 ---
 
 ## ✍️ Cosa scrive Sole per Michela (dalla dashboard)
@@ -124,15 +134,28 @@ Per i clienti che non pagano, Sole indossa un secondo cappello — più formale 
 
 ## 🛠️ Gli strumenti che Sole può usare
 
+**Lato cliente (sito + WhatsApp):**
+
 | Strumento | Cosa fa |
 |---|---|
 | `ottieni_disponibilita_calendario` | Legge gli slot liberi nel calendario di Michela |
 | `fissa_appuntamento_calendario` | Crea davvero l'evento del sopralluogo |
 | `sposta_appuntamento` | Sposta un sopralluogo già fissato (su WhatsApp è legato al numero di chi scrive) |
 | `salva_lead_crm` | Salva/aggiorna il cliente nel CRM |
-| `avvisa_michela` | Manda a Michela una notifica WhatsApp di riepilogo |
 
-Su **WhatsApp** (lato cliente) Sole usa lo stesso set di strumenti del sito — **disponibilità calendario, fissa appuntamento, salva lead, sposta appuntamento** — più la **ricezione e valutazione delle foto** del mobile. Il **codice di accesso** e lo strumento **`cerca_cliente`** restano invece **solo sul sito** (su WhatsApp il riconoscimento è il numero, vedi sopra).
+Su **WhatsApp** (lato cliente) Sole usa lo stesso set di strumenti del sito, più la **ricezione e valutazione delle foto** del mobile. Il **codice di accesso** e lo strumento **`cerca_cliente`** restano invece **solo sul sito** (su WhatsApp il riconoscimento è il numero, vedi sopra).
+
+**Lato staff (solo WhatsApp titolare — Michela/Andrea):** *giu 2026*
+
+| Strumento | Cosa fa |
+|---|---|
+| `cerca_scheda_cliente` | Cerca le schede per nome (per agire sul cliente giusto / disambiguare omonimi) |
+| `fissa_appuntamento_staff` | **Aggiunge** un sopralluogo a un cliente nominato (anche più d'uno) |
+| `sposta_appuntamento_staff` | Sposta un sopralluogo; se il cliente ne ha più, chiede QUALE (`sopralluogo_id`) |
+| `elenca_sopralluoghi_staff` | Elenca i sopralluoghi di un cliente |
+| `salva_nota_settimanale` / `leggi_nota_settimanale` | La nota "cose da fare" condivisa Michela+Andrea |
+
+> Nota: **non** esiste un tool con cui Sole manda messaggi all'altro titolare (es. "avvisa Michela"): le notifiche WhatsApp a Michela sono **automatiche** (nuovi sopralluoghi/lead via `notificaMichela`), non a comando. Scelta deliberata (vedi TODO). La creazione scheda da dettatura usa i **marker** n8n, non un tool.
 
 ---
 

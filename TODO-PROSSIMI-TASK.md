@@ -5,6 +5,28 @@
 
 ---
 
+## 🆕 FATTO DI RECENTE (sessione 22/06/2026) — contesto per una nuova sessione
+Tutto **deployato**; restano i **test funzionali dal vivo** (vedi "DA VERIFICARE DAL VIVO").
+1. **Staff WhatsApp con tool VERI** — il ramo titolare di n8n ora inoltra a `ardy-wa-agent.php` con
+   `staff:true` (prima era single-shot senza tool → "caso Alberto": Sole *recitava* la chiamata e si
+   bloccava). Tool staff: disponibilità, `cerca_scheda_cliente`, fissa/sposta/elenca sopralluoghi.
+2. **Date in dashboard**: campo **📦 Data di consegna** (→ email Trasporti, `clienti.trasporto_data`).
+3. **Sopralluoghi MULTIPLI** per cliente — nuova tabella `sopralluoghi` + `ardy-sopralluoghi-lib.php`
+   (motore condiviso: calendario + "mirror" su `clienti.sopralluogo_at`/`gcal_event_id` + riconciliazione)
+   + `ardy-sopralluoghi-api.php` (dashboard, sezione "📅 Sopralluoghi") + tool staff di Sole. `gcal_delete_event`
+   aggiunto in `ardy-gcal.php`.
+4. **Nota settimanale "cose da fare"** — tabella `note_staff`, tool `salva/leggi_nota_settimanale`
+   (staff). **Condivisa** Michela+Andrea. Richiede che il numero di Andrea sia in `WA_ANDREA_NUMBER`.
+5. **Fix WhatsApp**: tool a zero argomenti (es. `leggi_nota_settimanale`) → `input {}` diventava `[]` →
+   400 "Input should be an object" e bloccava la chat. Corretto in `ardy-wa-agent.php` (input vuoti →
+   `(object)[]`). Aggiunto **log degli errori Anthropic** + **retry** sui transitori (429/529/5xx).
+   ⚠️ Promemoria: se Sole tace su TUTTI i canali insieme, sospetta **credito Anthropic esaurito** (era
+   capitato il 21/06; si ricarica da Plans & Billing).
+> Doc allineati: `README.md` (file, tabelle, dashboard, sezione "Staff (titolare)") e `MANUALE-SOLE.md`
+> (mansioni 7b/7c + tabella strumenti staff).
+
+---
+
 ## 🔧 NOTE OPERATIVE (servono sempre)
 
 **⚠️ Sole non risponde su WhatsApp ma la webchat sì → è n8n giù.** Il ramo WhatsApp è
