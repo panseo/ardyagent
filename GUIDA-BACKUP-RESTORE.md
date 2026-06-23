@@ -355,3 +355,69 @@ cd ~/repositories && git clone <repo> ardyagent && cd ardyagent
 - [ ] Cron notturno attivo con log in `~/logs/ardy-backup.log`
 - [ ] **Prova di restore** su un DB/cartella di test (un backup non testato non è un backup)
 - [ ] Stesso giro sul secondo gemello con `ARDY_ENV` diverso
+
+---
+
+## 11. VPS con WHM (AlmaLinux ~200 GB) — usa il backup NATIVO di cPanel verso B2
+
+Il server è un **VPS con WHM/cPanel su AlmaLinux** (accesso **root** via WHM). Qui la strada migliore
+**non** sono gli script rclone delle sezioni 2-7, ma il **backup integrato di cPanel** verso una
+destinazione **"S3 Compatible"** — e **Backblaze B2 espone un endpoint S3-compatibile**. Vantaggi:
+copre **interi account cPanel** (file + DB + email + config + cron), ha **scheduling e ritenzione**
+nativi, e si **ripristina dalla UI di WHM**. Gli script rclone restano utili come copia *granulare*
+solo-app (vedi fondo sezione).
+
+### 11.1 Recupera l'endpoint S3 di B2
+Nel pannello Backblaze, apri il bucket `ardy-backup` → voce **Endpoint**, es.
+`s3.us-west-004.backblazeb2.com`. La parte `us-west-004` è la **region**. La tua **app key**:
+il `keyID` fa da **Access Key ID** e l'`applicationKey` da **Secret Access Key**.
+
+> ⚠️ Per l'uso S3-compatibile la app key deve poter **listare i bucket**: crea la chiave **senza**
+> restringerla a un singolo bucket (oppure assicurati che il transport funzioni col bucket fissato —
+> alcune versioni di cPanel richiedono `listBuckets`). Se la validazione in WHM fallisce, è quasi
+> sempre questo.
+
+### 11.2 Abilita i backup (WHM, come root)
+1. WHM → **Backup → Backup Configuration**.
+2. **Enable Backups: On**. Tipo: **Compressed** (o Incremental se vuoi più frequenza e meno spazio).
+3. **Schedule & Retention**: scegli i giorni (es. Daily) e quante copie tenere (es. 7). Lo storage
+   locale serve come *staging* prima dell'upload: con 200 GB sei larghissimo.
+4. **Select Users**: almeno l'account **`micoperibg`** (l'app Ardy). Puoi includere tutti.
+
+### 11.3 Crea la destinazione B2 (S3 Compatible)
+WHM → **Backup → Backup Configuration → Additional Destinations** → tipo **S3 Compatible** → *Create*:
+
+| Campo | Valore |
+|---|---|
+| Destination Name | `B2-ardy` |
+| Bucket | `ardy-backup` |
+| **Backup Directory** | **`srv-prod`** ← prefisso UNICO di questo server (l'altro gemello userà `srv-staging`) |
+| Access Key ID | il **keyID** B2 |
+| Secret Access Key | l'**applicationKey** B2 |
+| S3 Host / Endpoint | `s3.us-west-004.backblazeb2.com` (il tuo) |
+| Region | `us-west-004` (la tua) |
+| Timeout | lascia il default |
+
+Poi **Validate Destination**: deve dare verde. Spunta **Transfer System Backups** se vuoi anche i
+backup di sistema. Conviene tenere **"Save backups locally too"** finché non ti fidi del transport.
+
+### 11.4 Verifica e ripristino
+- **Verifica:** WHM → **Backup → Backup User Selection / Backup Restoration**, oppure lancia a mano
+  `/usr/local/cpanel/bin/backup --force` (root) e controlla `/var/cpanel/logs/cpbackup/`. Dopo il run,
+  nel bucket B2 deve comparire `ardy-backup/srv-prod/...`.
+- **Ripristino di un account:** WHM → **Backup → Backup Restoration** → scegli utente e data → Restore.
+  In alternativa per un singolo file/DB: scarica l'archivio da B2 ed estrai solo ciò che serve.
+
+### 11.5 I due gemelli con WHM
+Stesso bucket, **Backup Directory diverso** per server: `srv-prod` su uno, `srv-staging` sull'altro.
+Ognuno ripristina dal **proprio** prefisso. È l'unica accortezza per non mischiare i due ambienti.
+
+### 11.6 Quando servono ANCORA gli script rclone (sez. 2-7)
+Il backup cPanel è "a livello account" (granularità: l'intero utente, una volta al giorno). Tieni gli
+script rclone se vuoi **in più**:
+- backup **più frequente del solo DB** (es. ogni ora) tra un backup cPanel e l'altro;
+- una copia **solo-media** indipendente dal formato proprietario cPanel, leggibile/ripristinabile ovunque;
+- backup di **n8n** (volume Docker), che il backup cPanel **non** include — vedi §9.
+
+In pratica: **WHM→B2 come backup principale** dell'account, **rclone** come rete di sicurezza mirata
+su DB/media/n8n. Entrambi scrivono nello stesso bucket, in prefissi distinti per server.
