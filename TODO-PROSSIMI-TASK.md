@@ -229,7 +229,16 @@ Nuovo utente: `htpasswd -B <path> dipendente` (mai `-c`).
 - **Briefing del mattino** (opzionale): salvare data ultimo briefing per numero così il riepilogo lungo parte
   da solo al primo "buongiorno" (oggi parte quando Michela chiede "come va oggi?").
 - **Widget WordPress**: il pulsante flottante dice ancora "Chatta con **Ardy**" (aria-label già "Sole") → uniformare a "Sole" nello snippet WPCode.
-- **Nota settimanale "cose da fare" in dashboard**: oggi vive solo su WhatsApp (tabella `note_staff`); mostrarla anche in dashboard come pannello modificabile. ⚠️ Per Andrea la nota condivisa funziona solo se il suo numero è in `WA_ANDREA_NUMBER` (`ardy-config.php`) — verificare che sia impostato.
+- **Nota settimanale "cose da fare" in dashboard** — ✅ FATTO (in codice, da deployare). Pannello
+  nella home (empty state, quando nessun cliente è selezionato): mostra la nota più recente a colpo
+  d'occhio + "✏️ Modifica" → editor modale → salva. Stessa fonte di Sole su WhatsApp (tabella
+  `note_staff`, si legge l'ultima per id, ogni salvataggio è una riga nuova con `settimana` ISO), quindi
+  resta allineata col briefing del mattino. Nuovo endpoint `ardy-nota-settimanale-api.php` (GET = ultima,
+  POST `{testo}` = salva), aggiunto al `<FilesMatch>` del `.htaccess`. Niente migrazione DB (tabella già
+  esistente). ⚠️ Da verificare dal vivo: aprire la dashboard senza selezionare un cliente → la nota appare;
+  modificarla e salvare → ricompare aggiornata e Sole su WhatsApp legge la stessa versione. ⚠️ La home/empty
+  state si rivede solo a refresh pagina (l'app non ha un bottone "home"); ampliarlo è un eventuale follow-up.
+  ⚠️ Per Andrea la nota condivisa funziona solo se il suo numero è in `WA_ANDREA_NUMBER` (`ardy-config.php`).
 - **Estrarre JS inline (~3.400 righe) dalla dashboard** in `ardy-michela-app.js` (CSS già esterno): win di caching, refactor delicato.
 
 ### ⚡ Reel async (`ardy-crea-reel.php`) — priorità media
