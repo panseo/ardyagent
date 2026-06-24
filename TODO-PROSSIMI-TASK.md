@@ -186,6 +186,50 @@ Non sollecitare; attendere esito su `ardy.documenti`.
 
 ## 📋 TASK DA SVILUPPARE (aperti)
 
+### ☁️ Media su Backblaze B2 — off-load disco + semilavorato migrazione (PIANIFICATO 24/06)
+**Obiettivo doppio:** togliere i media dal disco del server attuale (oggi si "intasa") **e**, nello stesso
+gesto, pre-staggiare i media su B2 così che alla migrazione sul nuovo VPS (vedi `PIANO-MIGRAZIONE.md`
+Fase 3/5) **non** si debba ri-trasferire tutto al cutover — la nuova app punta allo stesso bucket. È la
+Fase 5 del piano ("upload diretti su B2") anticipata sull'infra attuale, come già fatto per il backup off-site.
+
+**Decisioni prese (24/06):**
+- **Scope v1 = foto private (scheda + chat) + video/reel** (i veri mangia-disco). Restano **fuori**: le foto
+  di fase **già pubblicate su WP Media Library** (pubbliche, gestite da WP) e — per ora — la cache PDF
+  preventivi (rigenerabile; eventuale fase 2).
+- **Semilavorato = sync continuo via cron** (backfill iniziale + cron che tiene B2 allineato al disco):
+  a fine migrazione è sempre aggiornato e funge anche da **backup media off-site continuo**.
+
+**Architettura (privacy invariata):**
+- Bucket **`ardy-media` PRIVATO** + app key **ristretta a quel bucket** (creazione manuale in console B2 —
+  prerequisito infra, non da codice). Riusa l'account B2 esistente.
+- **B2 via API nativa** in un piccolo `ardy-b2.php` (curl: `b2_authorize_account` → token in cache ~24h →
+  `b2_upload_file`/`b2_download_file_by_name`/`b2_delete`). Niente SDK pesante (composer ha solo mpdf),
+  coerente con lo stile del repo. (Alternativa S3-compatibile scartata: servirebbe SigV4/aws-sdk.)
+- **Le immagini restano private**: gli script che oggi le servono (`ardy-lead-foto.php`, immagini chat in
+  `ardy-proxy.php`, ecc.) diventano **proxy** che leggono da B2 e streammano dietro Basic Auth → **zero URL
+  pubblici, zero modifiche al frontend**.
+- **Layer di astrazione `ardy-storage.php`** (`put/get/delete/exists`) così i chiamanti non sanno se è disco
+  o B2 → migrazione incrementale e reversibile.
+
+**Fasi (a basso rischio, reversibili):**
+1. Console B2: creare bucket `ardy-media` privato + app key ristretta → costanti in `ardy-config.php`
+   (`ARDY_B2_KEY_ID`, `ARDY_B2_APP_KEY`, `ARDY_B2_BUCKET`, `ARDY_B2_BUCKET_ID`, flag `ARDY_B2_ENABLED` per
+   rollout graduale). Aggiungere `ardy-b2.php`/`ardy-storage.php` al deny `.htaccess` (interne, non API).
+2. `ardy-b2.php` (auth+cache token) + `ardy-storage.php` (astrazione disco/B2).
+3. **Backfill** one-shot: sincronizza i media esistenti (`ARDY_UPLOAD_DIR/<session>/`, `lavorazioni/`, reel)
+   su B2 con manifest. = il "semilavorato".
+4. **Write path**: i nuovi upload (foto scheda/chat, video, reel) scrivono su B2; opzionale dual-write su
+   disco per i primi giorni di sicurezza.
+5. **Read path**: i serve-script provano B2 → **fallback a disco** (niente si rompe in transizione).
+6. **Cron sync** continuo (allinea disco→B2, riconcilia eventuali delta) + **flip** a B2-only e reclaim del
+   disco quando stabile.
+
+**Note/attenzioni:** i reel sono intermedi (poi vanno su social/WP) — valutare se off-loadarli o cancellarli
+post-pubblicazione; coordinare con `ardy-archivia-persi.php` (oggi sposta foto/reel dei PERSI in
+`_da_liberare/`) e con `ardy-elimina-cliente.php` (cancella `ARDY_UPLOAD_DIR/<session>`) perché dovranno
+agire anche su B2. ⚠️ Sul nuovo VPS no-panel il backup B2 va comunque rifatto in chiave no-cPanel (dump DB
+cron + sync media) — questo task copre proprio il lato media.
+
 ### 🪑 Nuovo stato cliente "RITIRATI" — FATTO (in codice, da deployare)
 Stato per i mobili **già prelevati e in laboratorio**, ma con **lavori non ancora avviati** (limbo tra
 ACCONTO e IN_LAVORAZIONE). Implementato: posizione **tra ACCONTO e IN_LAVORAZIONE** nel flusso e nel filtro

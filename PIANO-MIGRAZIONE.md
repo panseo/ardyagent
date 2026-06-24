@@ -76,6 +76,9 @@ Confronto: dedicato €40–250/mese senza vantaggi reali per il tuo carico. cPa
 - [x] Aprire account **Backblaze B2** = FATTO. ⚠️ I bucket di backup già esistono **per server**:
   `UGLmico` (Server 1) e `micoper` (Server 2). Per il nuovo VPS resta da creare il bucket **media**
   (`ardy-media`) con chiave app dedicata; per i dump DB del nuovo server si può riusare l'account B2.
+  > 🔜 **Anticipato sull'infra attuale**: il task "☁️ Media su Backblaze B2" (vedi `TODO-PROSSIMI-TASK.md`)
+  > crea `ardy-media` e sposta foto/video/reel su B2 **già ora** → disco alleggerito + media pre-staggiati,
+  > così al cutover (Fase 3) non si ri-trasferisce nulla: la nuova app punta allo stesso bucket.
 - [ ] Decidere chi amministra il server nel quotidiano.
 
 ### Fase 1 — Nuovo server (nulla in produzione ancora)
