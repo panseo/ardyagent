@@ -1,29 +1,10 @@
 # Ardy Lab — Task aperti & note utili
 
 > Solo task **aperti** + note operative + verifiche residue. Tutto ciò che è fatto **e deployato**
-> è rimosso (lo storico resta nei commit git). Ultima pulizia: 21/06/2026.
+> è rimosso (lo storico resta nei commit git). Ultima pulizia: 24/06/2026.
 
----
-
-## 🆕 FATTO DI RECENTE (sessione 22/06/2026) — contesto per una nuova sessione
-Tutto **deployato**; restano i **test funzionali dal vivo** (vedi "DA VERIFICARE DAL VIVO").
-1. **Staff WhatsApp con tool VERI** — il ramo titolare di n8n ora inoltra a `ardy-wa-agent.php` con
-   `staff:true` (prima era single-shot senza tool → "caso Alberto": Sole *recitava* la chiamata e si
-   bloccava). Tool staff: disponibilità, `cerca_scheda_cliente`, fissa/sposta/elenca sopralluoghi.
-2. **Date in dashboard**: campo **📦 Data di consegna** (→ email Trasporti, `clienti.trasporto_data`).
-3. **Sopralluoghi MULTIPLI** per cliente — nuova tabella `sopralluoghi` + `ardy-sopralluoghi-lib.php`
-   (motore condiviso: calendario + "mirror" su `clienti.sopralluogo_at`/`gcal_event_id` + riconciliazione)
-   + `ardy-sopralluoghi-api.php` (dashboard, sezione "📅 Sopralluoghi") + tool staff di Sole. `gcal_delete_event`
-   aggiunto in `ardy-gcal.php`.
-4. **Nota settimanale "cose da fare"** — tabella `note_staff`, tool `salva/leggi_nota_settimanale`
-   (staff). **Condivisa** Michela+Andrea. Richiede che il numero di Andrea sia in `WA_ANDREA_NUMBER`.
-5. **Fix WhatsApp**: tool a zero argomenti (es. `leggi_nota_settimanale`) → `input {}` diventava `[]` →
-   400 "Input should be an object" e bloccava la chat. Corretto in `ardy-wa-agent.php` (input vuoti →
-   `(object)[]`). Aggiunto **log degli errori Anthropic** + **retry** sui transitori (429/529/5xx).
-   ⚠️ Promemoria: se Sole tace su TUTTI i canali insieme, sospetta **credito Anthropic esaurito** (era
-   capitato il 21/06; si ricarica da Plans & Billing).
-> Doc allineati: `README.md` (file, tabelle, dashboard, sezione "Staff (titolare)") e `MANUALE-SOLE.md`
-> (mansioni 7b/7c + tabella strumenti staff).
+> ⚠️ Promemoria sempre valido: se Sole tace su **tutti** i canali insieme (WhatsApp + webchat),
+> sospetta **credito Anthropic esaurito** (capitato il 21/06; si ricarica da Plans & Billing).
 
 ---
 
@@ -219,20 +200,6 @@ personale/social/spiegazione non si possono aggiungere da PHP. Vanno aggiunti **
 e rifacendolo approvare, poi allineare i parametri in `inviaWhatsAppCliente()` (`ardy-pubblica-lavorazione.php`).
 Quei dati ci sono già nell'email e nella pagina lavorazione. (bassa)
 
-### 🗒️ Nota settimanale a Sole (memoria "cose da fare") — ✅ FATTO (da testare/deployare)
-Michela detta a **Sole su WhatsApp** la lista "cose da fare della settimana" e Sole la memorizza, la
-rilegge e la aggiorna. Implementato (canale titolare/staff):
-- Tool `salva_nota_settimanale(testo)` e `leggi_nota_settimanale()` in `ardy-wa-agent.php`; tabella
-  `note_staff` (storico per settimana, si legge la più recente) in `ardy-migrate.php`; istruzioni nel
-  prompt titolare (`ardy-wa-lookup.php`).
-- **Test dopo deploy** (chat staff): dettare "cose da fare questa settimana: 1)… 2)…" → Sole salva e
-  conferma; "leggimi le cose da fare" → le rilegge; "aggiungi…" / "segna fatto il 2" → Sole legge,
-  modifica e risalva l'elenco intero (le voci vecchie NON si perdono).
-- **Condivisa** (scelta Andrea): una sola lista del laboratorio, valida per Michela E Andrea (l'ultima
-  salvata è quella che leggono entrambi). Funziona per Andrea SOLO se il suo numero è impostato come
-  `WA_ANDREA_NUMBER` in `ardy-config.php` (server). Test: Andrea scrive a Sole → se lo tratta da staff è ok.
-- Follow-up possibili (non ora): mostrare la nota anche in dashboard; citarla nel briefing del mattino.
-
 ### 🎨 Adottare temi/layout da "Claude Design" — ANALISI PRONTA (da decidere)
 Analisi completa in **`ANALISI-CLAUDE-DESIGN.md`**. Blocco vero: **363 `style="…"` inline** nel dashboard
 scavalcano i temi. Procedura: Fase 0 (inline→classi + ampliare i token, su branch) → poi un solo `theme.css`
@@ -254,6 +221,7 @@ Nuovo utente: `htpasswd -B <path> dipendente` (mai `-c`).
 - **Briefing del mattino** (opzionale): salvare data ultimo briefing per numero così il riepilogo lungo parte
   da solo al primo "buongiorno" (oggi parte quando Michela chiede "come va oggi?").
 - **Widget WordPress**: il pulsante flottante dice ancora "Chatta con **Ardy**" (aria-label già "Sole") → uniformare a "Sole" nello snippet WPCode.
+- **Nota settimanale "cose da fare" in dashboard**: oggi vive solo su WhatsApp (tabella `note_staff`); mostrarla anche in dashboard come pannello modificabile. ⚠️ Per Andrea la nota condivisa funziona solo se il suo numero è in `WA_ANDREA_NUMBER` (`ardy-config.php`) — verificare che sia impostato.
 - **Estrarre JS inline (~3.400 righe) dalla dashboard** in `ardy-michela-app.js` (CSS già esterno): win di caching, refactor delicato.
 
 ### ⚡ Reel async (`ardy-crea-reel.php`) — priorità media

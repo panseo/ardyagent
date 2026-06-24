@@ -109,7 +109,7 @@ Su richiesta di Michela o Andrea, Sole agisce sul calendario **per conto di un c
 > È lo stesso "motore" della lista **📅 Sopralluoghi** nella scheda della dashboard: ciò che Sole fa su WhatsApp compare lì, e viceversa.
 
 ### 7c. La nota settimanale "cose da fare" (WhatsApp) — *giu 2026*
-Michela **e** Andrea possono dettare a Sole la **lista delle cose da fare della settimana** (sopralluoghi da prendere, materiali da ordinare, montaggi…). È **una sola lista condivisa**: Sole la **memorizza**, la **rilegge** (*«leggimi le cose da fare»*) e la **aggiorna** (*«aggiungi…»*, *«segna fatto il 3»* → Sole legge, modifica il testo intero e risalva, senza perdere le voci).
+Michela **e** Andrea possono dettare a Sole la **lista delle cose da fare della settimana** (sopralluoghi da prendere, materiali da ordinare, montaggi…). È **una sola lista condivisa**: Sole la **memorizza**, la **rilegge** (*«leggimi le cose da fare»*) e la **aggiorna** (*«aggiungi…»*, *«segna fatto il 3»* → Sole legge, modifica il testo intero e risalva, senza perdere le voci). Al **buongiorno del mattino** Sole la **include da sola** nel resoconto, senza doverla chiedere.
 
 ---
 
