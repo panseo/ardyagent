@@ -343,6 +343,11 @@
               <div class="lav-row">
                 <input class="lav-input" id="lavPrezzo" placeholder="Prezzo fase (interno, es. 350,00)" inputmode="decimal">
               </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;">Note per Claude</span>
+                <button type="button" onclick="openNoteEditor('lavNote')" title="Apri editor a tutto schermo"
+                        style="background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;">⛶ Espandi</button>
+              </div>
               <textarea class="lav-textarea" id="lavNote" placeholder="Scrivi 2-3 righe su cosa hai fatto — Claude le espande in testo professionale..."></textarea>
               <div class="lav-foto-buttons">
                 <label class="lav-foto-btn" for="lavFotoCamera">
@@ -1432,8 +1437,11 @@ function openNoteEditor(targetId) {
   if (!src || !dst) return;
   dst.value = src.value || '';
   const titleEl = document.getElementById('noteEditorTitle');
-  if (titleEl) titleEl.textContent = noteEditorTarget === 'dNoteConsegna'
-    ? '📦 NOTE CONSEGNA — EDITOR ESPANSO' : 'NOTE — EDITOR ESPANSO';
+  if (titleEl) {
+    if (noteEditorTarget === 'dNoteConsegna') titleEl.textContent = '📦 NOTE CONSEGNA — EDITOR ESPANSO';
+    else if (noteEditorTarget === 'lavNote')   titleEl.textContent = '🔨 NOTE FASE — EDITOR ESPANSO';
+    else                                        titleEl.textContent = 'NOTE — EDITOR ESPANSO';
+  }
   document.getElementById('noteEditorOverlay').classList.add('open');
   setTimeout(() => dst.focus(), 50);
 }
