@@ -179,13 +179,18 @@ Non sollecitare; attendere esito su `ardy.documenti`.
 
 ## 📋 TASK DA SVILUPPARE (aperti)
 
-### 🪑 Nuovo stato cliente "RITIRATI" (mobili in laboratorio, lavori non avviati)
-Serve uno stato per i mobili che **abbiamo già prelevato** e sono **in laboratorio**, ma per cui **non
-c'è ancora il via all'avvio lavori** (manca acconto/conferma/decisione cliente). Oggi cadono in un limbo
-tra ACCONTO e IN_LAVORAZIONE. Aggiungere `RITIRATI` all'elenco stati (`stati` in `ardy-michela-app.html`,
-badge + colore; valutare se in `FASI_BADGE_STATES`/archivio) e capire dove si inserisce nel flusso
-(probabilmente dopo SOPRALLUOGO/ACCONTO e prima di IN_LAVORAZIONE). ⚠️ Decidere con Michela il nome esatto
-e se deve far scattare qualcosa (es. promemoria "in giacenza da N giorni"). Per ora solo annotato.
+### 🪑 Nuovo stato cliente "RITIRATI" — FATTO (in codice, da deployare)
+Stato per i mobili **già prelevati e in laboratorio**, ma con **lavori non ancora avviati** (limbo tra
+ACCONTO e IN_LAVORAZIONE). Implementato: posizione **tra ACCONTO e IN_LAVORAZIONE** nel flusso e nel filtro
+sidebar; badge teal (`.stato-RITIRATI`); mostra **Preventivi + Lavorazione** (può già preparare le fasi in
+bozza). Toccati: `ardy-michela-app.html` (chip filtro, `const stati`, `statiPrev`, `statiLav`,
+`FASI_BADGE_STATES`, dropdown import), `.css` (badge), e le whitelist/descrizioni stati lato Sole/import
+(`ardy-wa-crea-scheda.php`, `ardy-import-scheda-pdf.php`, `ardy-import-preventivi.php`, `ardy-wa-agent.php`,
+`ardy-proxy.php`). Nessuna migrazione DB (`clienti.stato` è stringa libera).
+**Follow-up rinviato (deciso):** promemoria "in giacenza da N giorni" (richiede colonna data + logica). Il
+segnale-scadenza (`faseSegnale`) resta escluso per RITIRATI perché i lavori non sono avviati (niente date).
+⚠️ Da verificare dal vivo dopo deploy: settare un cliente su RITIRATI, controllare badge/filtro e che
+compaiano sia Preventivi sia Lavorazione.
 
 
 ### 🚚 Trasporti — aggiungere il WhatsApp ai 2 messaggi (oggi solo email)

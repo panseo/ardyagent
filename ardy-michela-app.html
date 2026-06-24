@@ -61,6 +61,7 @@
       <button class="filter-chip" data-stato="SOPRALLUOGO" onclick="setFilter(this)">SOPRALLUOGO</button>
       <button class="filter-chip" data-stato="PREVENTIVO" onclick="setFilter(this)">PREVENTIVO</button>
       <button class="filter-chip" data-stato="ACCONTO" onclick="setFilter(this)">ACCONTO</button>
+      <button class="filter-chip" data-stato="RITIRATI" onclick="setFilter(this)" title="Mobili gi&agrave; in laboratorio, lavori non ancora avviati">RITIRATI</button>
       <button class="filter-chip" data-stato="IN_LAVORAZIONE" onclick="setFilter(this)">IN LAVORAZIONE</button>
       <button class="filter-chip" data-stato="COMPLETATO" onclick="setFilter(this)">COMPLETATO</button>
       <button class="filter-chip" data-stato="CONSEGNATO" onclick="setFilter(this)">CONSEGNATO</button>
@@ -650,7 +651,7 @@ async function loadLeads() {
 const SEG_COLORI = { red:'#e05c5c', orange:'#e08a3c', green:'#4caf72', yellow:'#d8b23c' };
 // Stati in cui ha senso ricordare "c'è una nota ma nessuna fase generata ancora"
 // (esclude LEAD/STANDBY/PERSO/CONSEGNATO, dove le note non riguardano le fasi).
-const FASI_BADGE_STATES = ['SOPRALLUOGO','PREVENTIVO','ACCONTO','IN_LAVORAZIONE','COMPLETATO'];
+const FASI_BADGE_STATES = ['SOPRALLUOGO','PREVENTIVO','ACCONTO','RITIRATI','IN_LAVORAZIONE','COMPLETATO'];
 function notaSenzaFasi(l) {
   const stato = (l.Stato || '').toUpperCase();
   return FASI_BADGE_STATES.includes(stato) && (l.Note || '').trim() !== '' && !l.ha_fasi;
@@ -927,7 +928,7 @@ function renderDetail() {
   // Nota: 'PAGATO' è stato rimosso dagli stati cliente (coincideva con CONSEGNATO; il
   // "saldato/non moroso" è gestito dal modulo MOROSI). Resta riconosciuto come alias
   // legacy nei raggruppamenti d'archivio per i clienti già marcati così.
-  const stati = ['LEAD','SOPRALLUOGO','PREVENTIVO','ACCONTO','IN_LAVORAZIONE','COMPLETATO','CONSEGNATO','STANDBY','PERSO'];
+  const stati = ['LEAD','SOPRALLUOGO','PREVENTIVO','ACCONTO','RITIRATI','IN_LAVORAZIONE','COMPLETATO','CONSEGNATO','STANDBY','PERSO'];
   document.getElementById('statoSelector').innerHTML = stati.map(s => `
     <button class="stato-btn ${(l.Stato??'').toUpperCase() === s ? 'current' : ''}"
             onclick="setStato('${s}')">
@@ -959,11 +960,11 @@ function aggiornaSezioniVisibili(stato) {
   const s = (stato ?? '').toUpperCase();
 
   // Preventivi: da PREVENTIVO in poi (inclusi STANDBY e PERSO — il preventivo c'era)
-  const statiPrev = ['PREVENTIVO','ACCONTO','IN_LAVORAZIONE','COMPLETATO','CONSEGNATO','PAGATO','STANDBY','PERSO'];
+  const statiPrev = ['PREVENTIVO','ACCONTO','RITIRATI','IN_LAVORAZIONE','COMPLETATO','CONSEGNATO','PAGATO','STANDBY','PERSO'];
   document.getElementById('acc-preventivi').style.display = statiPrev.includes(s) ? '' : 'none';
 
-  // Lavorazione: da ACCONTO in poi (incluso IN_LAVORAZIONE)
-  const statiLav = ['ACCONTO','IN_LAVORAZIONE','COMPLETATO','CONSEGNATO','PAGATO'];
+  // Lavorazione: da ACCONTO in poi (incluso RITIRATI, mobile in lab pronto a partire)
+  const statiLav = ['ACCONTO','RITIRATI','IN_LAVORAZIONE','COMPLETATO','CONSEGNATO','PAGATO'];
   const showLav  = statiLav.includes(s);
   document.getElementById('acc-lavorazione').style.display = showLav ? '' : 'none';
   if (showLav) {
@@ -4579,6 +4580,7 @@ async function archiviaPersi() {
               <option value="SOPRALLUOGO">SOPRALLUOGO</option>
               <option value="PREVENTIVO">PREVENTIVO</option>
               <option value="ACCONTO">ACCONTO</option>
+              <option value="RITIRATI">RITIRATI</option>
               <option value="STANDBY">STANDBY</option>
               <option value="PERSO">PERSO</option>
             </select>

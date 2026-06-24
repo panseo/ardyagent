@@ -334,7 +334,7 @@ $tools = [
                 'mobile'    => ['type' => 'string', 'description' => 'Descrizione del mobile o pezzo'],
                 'zona'      => ['type' => 'string', 'description' => 'Zona o città del cliente'],
                 'budget'    => ['type' => 'string', 'description' => 'Forbice di budget comunicata'],
-                'stato'     => ['type' => 'string', 'description' => 'Stato: LEAD, SOPRALLUOGO, PREVENTIVO, ACCONTO, STANDBY, PERSO'],
+                'stato'     => ['type' => 'string', 'description' => 'Stato: LEAD, SOPRALLUOGO, PREVENTIVO, ACCONTO, RITIRATI (mobile ritirato, in laboratorio, lavori non avviati), IN_LAVORAZIONE, STANDBY, PERSO'],
                 'note'      => ['type' => 'string', 'description' => 'Note aggiuntive per Michela'],
             ],
             'required' => ['nome', 'stato'],

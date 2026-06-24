@@ -50,7 +50,7 @@ const CSV_COLONNE = [
     'stato_preventivo', 'data', 'scadenza', 'file_pdf', 'note', // preventivo (opzionali)
 ];
 
-$STATI_CLIENTE    = ['LEAD', 'SOPRALLUOGO', 'PREVENTIVO', 'ACCONTO', 'STANDBY', 'PERSO'];
+$STATI_CLIENTE    = ['LEAD', 'SOPRALLUOGO', 'PREVENTIVO', 'ACCONTO', 'RITIRATI', 'IN_LAVORAZIONE', 'STANDBY', 'PERSO'];
 $STATI_PREVENTIVO = ['bozza', 'inviato', 'accettato', 'rifiutato'];
 
 $mode = $_GET['mode'] ?? '';
