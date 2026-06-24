@@ -282,7 +282,7 @@ Nuovo utente: `htpasswd -B <path> dipendente` (mai `-c`).
 - **Widget WordPress** — ✅ FATTO nel backup repo (`wordpress-snippets/pulsante-flottante-ovunque.php`:
   testo del pulsante ora "Chatta con **Sole**", aria-label già "Sole"). ⚠️ Lo snippet repo è SOLO un backup:
   per renderlo live va re-incollato nel WPCode id 15243 ("Pulsante flottante ovunque") da WordPress.
-- **Nota settimanale "cose da fare" in dashboard** — ✅ FATTO (in codice, da deployare). Pannello
+- **Nota settimanale "cose da fare" in dashboard** — ✅ FATTO (DEPLOYATO 24/06, test live pendente). Pannello
   nella home (empty state, quando nessun cliente è selezionato): mostra la nota più recente a colpo
   d'occhio + "✏️ Modifica" → editor modale → salva. Stessa fonte di Sole su WhatsApp (tabella
   `note_staff`, si legge l'ultima per id, ogni salvataggio è una riga nuova con `settimana` ISO), quindi
