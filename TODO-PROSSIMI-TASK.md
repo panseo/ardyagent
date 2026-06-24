@@ -228,7 +228,9 @@ Nuovo utente: `htpasswd -B <path> dipendente` (mai `-c`).
 - **Filtro sidebar default su ACCONTO/IN_LAVORAZIONE** invece di TUTTI (da decidere sull'uso reale).
 - **Briefing del mattino** (opzionale): salvare data ultimo briefing per numero così il riepilogo lungo parte
   da solo al primo "buongiorno" (oggi parte quando Michela chiede "come va oggi?").
-- **Widget WordPress**: il pulsante flottante dice ancora "Chatta con **Ardy**" (aria-label già "Sole") → uniformare a "Sole" nello snippet WPCode.
+- **Widget WordPress** — ✅ FATTO nel backup repo (`wordpress-snippets/pulsante-flottante-ovunque.php`:
+  testo del pulsante ora "Chatta con **Sole**", aria-label già "Sole"). ⚠️ Lo snippet repo è SOLO un backup:
+  per renderlo live va re-incollato nel WPCode id 15243 ("Pulsante flottante ovunque") da WordPress.
 - **Nota settimanale "cose da fare" in dashboard** — ✅ FATTO (in codice, da deployare). Pannello
   nella home (empty state, quando nessun cliente è selezionato): mostra la nota più recente a colpo
   d'occhio + "✏️ Modifica" → editor modale → salva. Stessa fonte di Sole su WhatsApp (tabella

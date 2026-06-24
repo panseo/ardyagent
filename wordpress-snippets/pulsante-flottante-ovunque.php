@@ -2,7 +2,7 @@
 /**
  * WPCode snippet — BACKUP (NON è la fonte attiva: vedi README.md)
  * id: 15243 | titolo: "Pulsante flottante ovunque" | tipo: php
- * posizione: everywhere | auto_insert: 1 | modificato: 2026-06-10 11:54:20
+ * posizione: everywhere | auto_insert: 1 | modificato: 2026-06-24
  * NB: in WPCode il codice gira SENZA il tag <?php (lo aggiunge WPCode).
  *     Qui il tag c'è solo per avere un .php valido/lintabile.
  */
@@ -16,7 +16,7 @@ add_action('wp_footer', function () {
     ?>
     <a href="https://ardy-lab.it/ardy-agent/" id="ardy-chat-cta" aria-label="Chatta con Sole, l'assistente AI">
       <span class="ardy-chat-icon">💬</span>
-      <span class="ardy-chat-text">Chatta con Ardy</span>
+      <span class="ardy-chat-text">Chatta con Sole</span>
     </a>
     <style>
     #ardy-chat-cta{
