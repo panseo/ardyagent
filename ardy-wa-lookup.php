@@ -133,6 +133,23 @@ function ardy_riepilogo_settimana(PDO $db, array $staffDigits = []): string {
         }
     } catch (Throwable $e) { error_log('ARDY WA RIEPILOGO GCAL: ' . $e->getMessage()); }
 
+    // 🗒️ NOTA SETTIMANALE "cose da fare" (la più recente) — così entra nel briefing del
+    // mattino senza che Michela debba chiederla. Stessa fonte del tool leggi_nota_settimanale
+    // (tabella note_staff, ultima per id). Difensivo: se la tabella manca, salta in silenzio.
+    try {
+        $nota = $db->query("SELECT testo, settimana FROM note_staff ORDER BY id DESC LIMIT 1")
+                   ->fetch(PDO::FETCH_ASSOC);
+        $testoNota = $nota ? trim((string) $nota['testo']) : '';
+        if ($testoNota !== '') {
+            $sett = !empty($nota['settimana']) ? ' (' . $nota['settimana'] . ')' : '';
+            $out[] = "🗒️ COSE DA FARE QUESTA SETTIMANA{$sett}:";
+            foreach (array_slice(preg_split('/\r\n|\r|\n/', $testoNota), 0, 20) as $riga) {
+                $riga = rtrim($riga);
+                if ($riga !== '') $out[] = "  {$riga}";
+            }
+        }
+    } catch (PDOException $e) { /* tabella note_staff assente: salta */ }
+
     // 💬 CONVERSAZIONI RECENTI dei clienti/lead (ultime 48h) — chi ha scritto a Sole.
     // Risponde a domande tipo "i contatti di ieri ti hanno risposto?". Solo messaggi
     // IN ARRIVO (role='user'), esclusi i numeri staff (Michela/Andrea). Difensivo: se
@@ -432,7 +449,7 @@ function ardy_wa_titolare_istruzioni(bool $datiSeparati, string $nome = 'Michela
         . "- Comportati come la sua assistente personale/segretaria, NON come l'assistente commerciale dei clienti.\n"
         . "- NIENTE messaggio di benvenuto da lead, NIENTE domande di qualifica, NIENTE \"vuoi informazioni su restauri o sei un cliente\".\n"
         . "- Rivolgiti a {$nome} per nome, dalle/dagli del tu, tono confidenziale ed efficiente. Messaggi brevi (è WhatsApp).\n"
-        . "- Quando ti chiede aggiornamenti (es. \"aggiornami sulla settimana\", \"come va oggi\", \"situazione lead\", \"chi devo richiamare\"), rispondi USANDO I DATI OPERATIVI {$dove}: sintetici, concreti, azionabili. Per il \"buongiorno\"/briefing del mattino apri SEMPRE con gli IMPEGNI IN CALENDARIO di oggi e con i lavori URGENTI (scadenza entro 4 giorni), poi il resto (nuovi lead da richiamare, lavori in corso, morosi).\n"
+        . "- Quando ti chiede aggiornamenti (es. \"aggiornami sulla settimana\", \"come va oggi\", \"situazione lead\", \"chi devo richiamare\"), rispondi USANDO I DATI OPERATIVI {$dove}: sintetici, concreti, azionabili. Per il \"buongiorno\"/briefing del mattino apri SEMPRE con gli IMPEGNI IN CALENDARIO di oggi e con i lavori URGENTI (scadenza entro 4 giorni), poi le COSE DA FARE DELLA SETTIMANA (blocco \"🗒️ COSE DA FARE QUESTA SETTIMANA\", se presente nei dati) e il resto (nuovi lead da richiamare, lavori in corso, morosi). Includi SEMPRE la nota settimanale nel briefing se c'è, senza aspettare che te la chieda.\n"
         . "- Se {$nome} ti chiede se un cliente/lead ha risposto o ti ha scritto (es. \"i contatti di ieri ti hanno risposto?\"), GUARDA il blocco \"💬 CONVERSAZIONI RECENTI\" nei dati operativi: elenca chi ha scritto nelle ultime 48h (WhatsApp + chat sito) con orario e un estratto. Se un nome NON è in quel blocco, vuol dire che non ha scritto in quella finestra; dillo con onestà.\n"
         . "- Se ti chiede qualcosa che non è nei dati, dillo con onestà e indica dove guardare (la dashboard).\n"
         . "- Puoi aiutarla/aiutarlo a ragionare, redigere messaggi/email, organizzare la giornata.\n"

@@ -178,6 +178,10 @@ INI-PEC non automatizzabile (captcha) → PEC via API a pagamento, eventuale tas
 - **Conoscenza di bottega di Sole** (`ardy-conoscenza-restauro.txt`): è una **v1** → Michela la rivede e la
   "ardy-izza" con le sue tecniche/parole.
 - **Export WPCode** (Tools → Export All → JSON): rinfrescare il backup `wordpress-snippets/` + mappa.
+- **Briefing del mattino con la nota settimanale (FIX deployato, da verificare dal vivo):** al "buongiorno"
+  Sole deve ora includere da sola il blocco "🗒️ COSE DA FARE QUESTA SETTIMANA" (la nota più recente),
+  senza che Michela la chieda. Fix: blocco aggiunto in `ardy_riepilogo_settimana()` + istruzione briefing
+  in `ardy-wa-lookup.php`. Test: salutare Sole al mattino con una nota salvata → deve elencarla nel resoconto.
 
 ---
 
@@ -193,18 +197,6 @@ Non sollecitare; attendere esito su `ardy.documenti`.
 ---
 
 ## 📋 TASK DA SVILUPPARE (aperti)
-
-### 🐞 BUG — Briefing del mattino omette "le cose da fare questa settimana"
-Quando Michela saluta Sole al mattino ("buongiorno"), il resoconto apre con calendario + lavori urgenti,
-poi lead/lavori/morosi, ma **NON** include la **nota settimanale "cose da fare"**: va richiesta a parte
-("leggimi le cose da fare"). **Causa**: l'istruzione briefing in `ardy-wa-lookup.php` (`ardy_wa_titolare_istruzioni`,
-~riga 435) elenca cosa mettere nel buongiorno ma non cita la nota; il contenuto della nota **non** è nel riepilogo
-CRM (`ardy_riepilogo_settimana`) e Sole legge `note_staff` solo via il tool `leggi_nota_settimanale`, chiamato
-**solo su richiesta esplicita** (~riga 481). **Fix consigliato** (il più robusto, niente tool round-trip):
-aggiungere un blocco "🗒️ COSE DA FARE QUESTA SETTIMANA" dentro `ardy_riepilogo_settimana()` leggendo la nota
-più recente da `note_staff` (difensivo come gli altri blocchi), così entra nei DATI OPERATIVI e Sole la cita
-al briefing. In alternativa/aggiunta: nell'istruzione del briefing dire di **chiamare `leggi_nota_settimanale`**
-come parte del buongiorno. (Era già annotato come follow-up nella sezione "Nota settimanale".)
 
 ### 🪑 Nuovo stato cliente "RITIRATI" (mobili in laboratorio, lavori non avviati)
 Serve uno stato per i mobili che **abbiamo già prelevato** e sono **in laboratorio**, ma per cui **non
