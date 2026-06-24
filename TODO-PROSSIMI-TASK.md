@@ -27,6 +27,26 @@ Tutto **deployato**; restano i **test funzionali dal vivo** (vedi "DA VERIFICARE
 
 ---
 
+## 💾 BACKUP OFF-SITE Backblaze B2 — ✅ FATTO (sessione `ardy-infra`, 24/06/2026)
+Chiude il punto **#4 (backup off-site)** del `PIANO-MIGRAZIONE.md` — fatto **ora, sull'infra attuale**
+OVH/cPanel, senza aspettare il cutover sul nuovo VPS.
+- **cPanel → B2** configurato su **entrambi i VPS gemelli OVH (WHM/cPanel)** con **bucket dedicati e
+  isolati per server**: Server 1 → bucket `UGLmico` (prefisso `srv1`); Server 2 → bucket `micoper`
+  (chiave ristretta). Lifecycle **30 giorni** + **SSE-B2** attivi; destinazioni **validate e abilitate**
+  (`disabled:0`).
+- **n8n** (solo Server 2): backup del volume `/opt/n8n/n8n_data` (SQLite) via **rclone**, script
+  `/root/bin/n8n-backup.sh` in **cron alle 04:00** → `micoper/n8n/`.
+- Guida + script committati su repo **`ardy-infra`** (branch `claude/modest-cori-hc1w1l`).
+- **Nessun impatto sull'app Ardy**: backup separati, niente da toccare nel codice.
+
+**Pending (non bloccante):**
+1. Verificare che i primi backup completi abbiano popolato `UGLmico/srv1/` e `micoper/srv2/` (upload in corso).
+2. **Cleanup sicurezza**: ruotare la app key del Server 1 (ora "All buckets") in una **ristretta a `UGLmico`**
+   per isolamento totale.
+3. Fare almeno una **prova di restore** reale (account cPanel di test + volume n8n).
+
+---
+
 ## 🔧 NOTE OPERATIVE (servono sempre)
 
 **⚠️ Sole non risponde su WhatsApp ma la webchat sì → è n8n giù.** Il ramo WhatsApp è

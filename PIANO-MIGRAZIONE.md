@@ -73,7 +73,9 @@ Confronto: dedicato €40–250/mese senza vantaggi reali per il tuo carico. cPa
 
 ### Fase 0 — Preparazione (call con Edmondo)
 - [ ] Scegliere provider VPS (Hetzner = miglior prezzo/UE; Aruba/Serverplan = IT).
-- [ ] Aprire account **Backblaze B2** + creare bucket `ardy-media` e `ardy-backup` (chiavi app dedicate).
+- [x] Aprire account **Backblaze B2** = FATTO. ⚠️ I bucket di backup già esistono **per server**:
+  `UGLmico` (Server 1) e `micoper` (Server 2). Per il nuovo VPS resta da creare il bucket **media**
+  (`ardy-media`) con chiave app dedicata; per i dump DB del nuovo server si può riusare l'account B2.
 - [ ] Decidere chi amministra il server nel quotidiano.
 
 ### Fase 1 — Nuovo server (nulla in produzione ancora)
@@ -102,7 +104,13 @@ Confronto: dedicato €40–250/mese senza vantaggi reali per il tuo carico. cPa
 ### Fase 5 — Sicurezza & ottimizzazioni (post-cutover)
 - [ ] Creare `dash.ardy-lab.it` **proxato** → **Cloudflare Access** (codice email per Michela/Andrea) = **#1 fatto**.
 - [ ] Spostare gli **upload diretti su B2** (così la dashboard può stare dietro Cloudflare senza limite 100 MB).
-- [ ] **Backup automatici** su B2: dump DB giornaliero (cron) + sync media = **#4 fatto**.
+- [x] **Backup automatici off-site su B2 = #4 FATTO (24/06, sessione `ardy-infra`)** — anticipato sull'infra
+  **attuale** OVH/cPanel (non si è aspettato il nuovo server): backup nativo **cPanel→B2** su **entrambi i VPS
+  gemelli**, **bucket isolati per server** (Server 1 → `UGLmico`/prefisso `srv1`; Server 2 → `micoper`, chiave
+  ristretta), lifecycle 30 gg + SSE-B2, destinazioni validate/abilitate. **n8n** (Server 2): volume
+  `/opt/n8n/n8n_data` via rclone → `micoper/n8n/` (cron 04:00). Guida/script su repo `ardy-infra`
+  (`claude/modest-cori-hc1w1l`). ⚠️ Sul **nuovo** VPS (no-panel) il backup andrà **rifatto** in chiave no-cPanel
+  (dump DB cron + sync media), riusando lo stesso account/bucket B2. Dettagli e pending in `TODO-PROSSIMI-TASK.md`.
 - [ ] **Email/MX**: sostituire l'MX attuale (`mx.ardy-lab.it` → vecchio server) con **Cloudflare Email Routing** (inoltro su Proton) o rimuoverlo. ✅ Invio Brevo già autenticato (DKIM/DMARC verificati) → non serve toccarlo.
 - [ ] Spegnere/dismettere il vecchio VPS.
 
