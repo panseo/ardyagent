@@ -221,7 +221,10 @@ resto admin-only. `ardyAuthUser()` già restituisce lo username → manca lo str
 Nuovo utente: `htpasswd -B <path> dipendente` (mai `-c`).
 
 ### Migliorie minori UX / dashboard CRM (bassa priorità)
-- **Popup date all'attivazione IN_LAVORAZIONE**: al click stato, modale che chiede `inizio_lavoro`/`fine_lavoro_prevista`.
+- **Popup date all'attivazione IN_LAVORAZIONE** — ✅ FATTO (in codice, da deployare). Al click su
+  IN_LAVORAZIONE, se inizio/fine lavoro sono vuote, si apre un modale che le chiede (inizio precompilato a
+  oggi); "IMPOSTA DATE" le copia nei campi "Periodo del lavoro" e marca dirty (salvi tu, anti-clobber attivo),
+  "SALTA" chiude senza scrivere. Serve a far scattare gli avvisi di scadenza che dipendono da quelle date.
 - **Filtro sidebar default su ACCONTO/IN_LAVORAZIONE** invece di TUTTI (da decidere sull'uso reale).
 - **Briefing del mattino** (opzionale): salvare data ultimo briefing per numero così il riepilogo lungo parte
   da solo al primo "buongiorno" (oggi parte quando Michela chiede "come va oggi?").

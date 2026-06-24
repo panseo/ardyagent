@@ -1052,6 +1052,7 @@ function aggiornaAvvisoScadenza() {
 
 // ─── STATO ────────────────────────────────────────────────
 function setStato(s) {
+  const prev = (currentLead.Stato ?? '').toUpperCase();
   currentLead.Stato = s;
   markDirty();
   document.querySelectorAll('.stato-btn').forEach(b => {
@@ -1059,6 +1060,36 @@ function setStato(s) {
   });
   const scEl = document.getElementById('statoCorrente');
   if (scEl) scEl.textContent = s;
+  // All'avvio del lavoro chiedi le date (solo se mancano): senza inizio/fine gli
+  // avvisi di scadenza non scattano. Non rompe se la sezione Lavorazione è chiusa.
+  if (s === 'IN_LAVORAZIONE' && prev !== 'IN_LAVORAZIONE') {
+    const ini = document.getElementById('dInizioLavoro');
+    const fin = document.getElementById('dFineLavoroPrevista');
+    if (ini && fin && !ini.value && !fin.value) apriDateLav();
+  }
+}
+
+// Popup date all'attivazione di IN_LAVORAZIONE. Precompila inizio = oggi.
+function apriDateLav() {
+  const dlIni = document.getElementById('dl-inizio');
+  const dlFin = document.getElementById('dl-fine');
+  if (!dlIni || !dlFin) return;
+  const oggi = new Date().toISOString().slice(0, 10);
+  dlIni.value = document.getElementById('dInizioLavoro').value || oggi;
+  dlFin.value = document.getElementById('dFineLavoroPrevista').value || '';
+  document.getElementById('dateLavOverlay').classList.add('open');
+}
+// applica=true → copia le date nei campi reali (Periodo del lavoro) e marca dirty.
+function chiudiDateLav(applica) {
+  if (applica) {
+    const dlIni = document.getElementById('dl-inizio').value;
+    const dlFin = document.getElementById('dl-fine').value;
+    if (dlIni) document.getElementById('dInizioLavoro').value      = dlIni;
+    if (dlFin) document.getElementById('dFineLavoroPrevista').value = dlFin;
+    aggiornaAvvisoScadenza();
+    markDirty();
+  }
+  document.getElementById('dateLavOverlay').classList.remove('open');
 }
 
 // ─── DIRTY ────────────────────────────────────────────────
@@ -4493,7 +4524,33 @@ async function archiviaPersi() {
   </div>
 </div>
 
-<!-- ANTEPRIMA INSTAGRAM DEL POST -->
+<!-- MODAL DATE INIZIO LAVORAZIONE (chiesto all'attivazione di IN_LAVORAZIONE) -->
+<div class="modal-overlay" id="dateLavOverlay" onclick="if(event.target===this)chiudiDateLav(false)">
+  <div class="modal-lg" onclick="event.stopPropagation()" style="width:min(440px,94vw);">
+    <div class="modal-lg-head">
+      <h3>📅 DATE DEL LAVORO</h3>
+      <button class="modal-lg-close" onclick="chiudiDateLav(false)">✕</button>
+    </div>
+    <div class="modal-lg-body">
+      <p style="font-size:12px;color:var(--text-dim);margin:0 0 14px;">Il lavoro parte: imposta le date così scattano gli avvisi di scadenza. Puoi anche saltare e metterle dopo.</p>
+      <div class="dark-form-grid">
+        <div class="dark-field">
+          <label>Inizio lavoro</label>
+          <input type="date" id="dl-inizio">
+        </div>
+        <div class="dark-field">
+          <label>Fine prevista</label>
+          <input type="date" id="dl-fine">
+        </div>
+      </div>
+    </div>
+    <div class="modal-lg-actions">
+      <button class="btn-cancel" onclick="chiudiDateLav(false)">SALTA</button>
+      <button class="btn-save" onclick="chiudiDateLav(true)">✓ IMPOSTA DATE</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="igPreviewOverlay" onclick="if(event.target===this)chiudiAnteprimaIg()">
   <div onclick="event.stopPropagation()" style="width:min(420px,94vw);background:#fff;color:#262626;border-radius:12px;overflow:hidden;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;">
     <!-- header -->
