@@ -329,9 +329,13 @@
               <div id="fasiBozzaList"></div>
             </div>
 
-            <!-- Bottone PRIMARIO: crea e pubblica una nuova fase -->
-            <button class="btn-pubblica" id="btnToggleNuovaFase" onclick="toggleNuovaFase()" style="width:100%;margin-bottom:14px;">🔨 Crea e pubblica nuova fase</button>
-            <div id="nuovaFaseBody" class="lav-form" style="display:none;margin-bottom:16px;">
+            <!-- Editor nuova fase: accordion come gli altri -->
+            <div style="border:1px solid var(--border);border-radius:6px;margin-bottom:16px;overflow:hidden;">
+            <button class="acc-header" id="btnToggleNuovaFase" onclick="toggleNuovaFase()">
+              <span class="acc-title">🔨 Crea e pubblica nuova fase</span>
+              <span class="acc-chevron" id="nuovaFaseChevron">▾</span>
+            </button>
+            <div id="nuovaFaseBody" class="lav-form" style="display:none;border:none;border-top:1px solid var(--border);border-radius:0;margin-bottom:0;">
               <div class="lav-row">
                 <input class="lav-input" id="lavFase" placeholder="Nome fase (es. Sverniciatura)">
                 <input class="lav-input" id="lavMobile" placeholder="Mobile (es. Credenza anni 60)">
@@ -376,6 +380,7 @@
               <p style="font-size:11px;color:var(--text-dim);margin:6px 2px 0;">Usa la comunicazione straordinaria per un imprevisto da segnalare al cliente prima di procedere (non è un avanzamento, non va sui social).</p>
               <div class="lav-result" id="lavResult"></div>
             </div><!-- /nuovaFaseBody -->
+            </div><!-- /nuovaFaseSection -->
 
             <!-- Elenco fasi già pubblicate (sola lettura): solo titolo + data -->
             <div id="fasiPubblicateWrap" style="display:none;margin-bottom:16px;">
@@ -980,6 +985,8 @@ function aggiornaSezioniVisibili(stato) {
     faseBozzaIdInCorso = null;
     const nfBody = document.getElementById('nuovaFaseBody');
     if (nfBody) nfBody.style.display = 'none';
+    const nfChevron = document.getElementById('nuovaFaseChevron');
+    if (nfChevron) nfChevron.style.transform = '';
   }
 
   // Reel: solo CONSEGNATO e PAGATO
@@ -1994,6 +2001,8 @@ async function modificaFaseBozza(id) {
   document.getElementById('lavPrezzo').value = b.prezzo ? String(b.prezzo).replace('.', ',') : '';
   const body = document.getElementById('nuovaFaseBody');
   if (body) body.style.display = 'block';
+  const chevronBozza = document.getElementById('nuovaFaseChevron');
+  if (chevronBozza) chevronBozza.style.transform = 'rotate(180deg)';
   document.getElementById('lavFase').scrollIntoView({ behavior: 'smooth', block: 'center' });
 
   // Ricarica le FOTO e i VIDEO salvati nella bozza, così premendo PUBBLICA partono con tutto.
@@ -2880,7 +2889,10 @@ function togglePendingEdit(id) {
 function toggleNuovaFase() {
   const el = document.getElementById('nuovaFaseBody');
   if (!el) return;
-  el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+  const isOpen = el.style.display === 'block';
+  el.style.display = isOpen ? 'none' : 'block';
+  const chevron = document.getElementById('nuovaFaseChevron');
+  if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
 }
 
 // Galleria foto di una bozza in attesa: ogni foto con la ✕ per rimuoverla.
