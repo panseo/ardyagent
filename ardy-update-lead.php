@@ -97,6 +97,25 @@ try {
         }
     }
 
+    // Transizione → cliente "reale" (firma/Acconto e oltre): aggiunge il cliente
+    // ai contatti outreach (categoria "clienti", stato 'cliente' → riattivazione/
+    // servizio, NON cold-marketing). Scatta quando entra per la prima volta in uno
+    // stato "impegnato" (gestisce anche il salto diretto Acconto→Ritirati/Lavorazione).
+    // Idempotente (dedup nella lib), best-effort: non blocca il salvataggio.
+    if (array_key_exists('stato', $input)) {
+        $statiImpegnati = ['ACCONTO', 'RITIRATI', 'IN_LAVORAZIONE', 'COMPLETATO', 'CONSEGNATO', 'PAGATO'];
+        $statoNuovo = strtoupper((string) $input['stato']);
+        if (in_array($statoNuovo, $statiImpegnati, true)
+            && !in_array((string) $statoVecchio, $statiImpegnati, true)) {
+            try {
+                require_once __DIR__ . '/ardy-outreach-lib.php';
+                ardy_outreach_aggiungi_cliente($db, $sessionId, ucfirst(strtolower($statoNuovo)));
+            } catch (Throwable $e) {
+                error_log('ARDY UPDATE LEAD outreach add: ' . $e->getMessage());
+            }
+        }
+    }
+
     // Nota: la "Data e ora sopralluogo" NON passa più da qui — ora i sopralluoghi
     // (anche più d'uno) sono gestiti da ardy-sopralluoghi-api.php, che cura calendario
     // e allineamento di clienti.sopralluogo_at/gcal_event_id.

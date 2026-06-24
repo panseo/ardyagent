@@ -108,11 +108,18 @@ La direzione che vogliamo dare allo strumento, da affrontare per prossimi step:
    `ardy-proxy-lavorazione.php` → chat lavorazione). ⚠️ Verificare dal vivo dopo deploy che la riga compaia in
    un'email reale e che Sole sappia esporre il codice etico se richiesto.
 
-### 👥 Outreach — Import clienti AUTOMATICO post-Acconto
-L'import **manuale** dei clienti CRM è LIVE. Resta l'**automatico**: aggiungere il cliente all'outreach
-(categoria `clienti`) **dopo la fase Acconto** (firma + avvio reale), via hook nel punto del CRM dove lo
-stato passa ad acconto/in lavorazione. ⚠️ Privacy/consenso: per comunicazioni di servizio ok; per marketing
-serve consenso. Tenere stato/categoria distinti dai lead freddi.
+### 👥 Outreach — Import clienti AUTOMATICO post-Acconto — ✅ FATTO (in codice, da deployare)
+L'import **manuale** dei clienti CRM era già LIVE. Aggiunto l'**automatico**: quando un cliente entra per la
+prima volta in uno stato "impegnato" (`ACCONTO`, `RITIRATI`, `IN_LAVORAZIONE`, `COMPLETATO`, `CONSEGNATO`,
+`PAGATO` — gestisce anche il salto diretto Acconto→Ritirati/Lavorazione), viene aggiunto ai contatti outreach
+in **categoria `clienti`** con **stato `cliente`** (NON `da_contattare`), così resta **distinto dai lead freddi**
+e **fuori dalle campagne cold** (che targetizzano solo `da_contattare`) → privacy ok: è servizio/riattivazione,
+non cold-marketing. Hook in `ardy-update-lead.php` (riusa `$statoVecchio` già letto), logica in nuova lib
+condivisa `ardy-outreach-lib.php` (`ardy_outreach_aggiungi_cliente()`), **idempotente** (dedup per email/nome
+come l'import manuale, richiede email). Lib aggiunta al blocco deny del `.htaccess` (interna, non API).
+**Nota:** l'import *manuale* continua a usare stato `da_contattare` (azione esplicita di Michela); l'*automatico*
+usa `cliente` di proposito. ⚠️ Da verificare dal vivo: portare un cliente con email su ACCONTO → compare in
+Outreach categoria "clienti" con badge "cliente"; ri-salvare/altre transizioni NON creano doppioni.
 
 ### 🔌 Outreach — Altre fonti dati (VIES / P.IVA) — NOTA
 Portali aziendali IT quasi tutti gated → niente scraping. Vie aperte utili: **VIES** (ec.europa.eu, gratis,
