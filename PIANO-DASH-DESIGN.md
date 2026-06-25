@@ -231,9 +231,14 @@ nessun pubblico, prezzo posizionato male**. L'energia di sviluppo va nella **mac
 - [x] **Fasi-contenuto di progetto** (`ardy-progetti-fasi-api.php`): CRUD fasi via `progetto_id` +
       upload/serve foto (riusa `ardyCompressImage`/`ardyHardenUploadDir`). La dash ha l'editor
       completo (crea/modifica/elimina fase, foto multiple). È il binario racconto, base per reel/social.
-- [ ] **Slice successiva**: wiring del motore **reel/social/WordPress** sulle fasi di progetto. Oggi
-      `ardy-crea-reel.php` / `ardy-pubblica-social.php` ecc. sono agganciati al cliente via `session_id`;
-      vanno estesi per accettare anche `progetto_id` (la colonna c'è già). Le foto/testo ci sono già.
+- [x] **Reel da progetto** (`ardy-crea-reel.php`): aggiunto un ramo `progetto_id` che **legge le foto
+      dal disco** (le foto di progetto stanno dietro Basic Auth, non scaricabili via HTTP — decisione A
+      del 25/06). Ramo cliente invariato (helper `reelLeggiFoto`). Pulsante "Crea reel" nella dash.
+- [ ] **Slice successiva — clone publish WP + social** (decisione 25/06: *le fasi di lavoro sono il clone
+      di quelle della dash principale*). Estendere `ardy-pubblica-lavorazione.php` / `ardy-pubblica-social.php`
+      ad accettare `progetto_id`, **senza il guscio cliente** (niente codici/email/WhatsApp): la pubblicazione
+      è contenuto di brand (portfolio/social), non una pagina-lavorazione privata.
+- [ ] **Invio al catalogo**: a **fine ciclo** (stato A_CATALOGO → Tappa 2/3), separato dal flusso fasi.
 
 > **Storage foto → Backblaze B2 (alla migrazione)**: il DB salva solo i *nomi* file (`foto_urls`), le
 > foto si servono via endpoint `?file=`. Alla migrazione su B2 cambiano solo path di scrittura + ramo

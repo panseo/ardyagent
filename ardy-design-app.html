@@ -376,8 +376,32 @@ function fasiPanel(){
       </div>`).join('') : '<div class="muted">Nessuna fase-contenuto ancora.</div>'}
 
     ${stato.faseForm ? fasiFormHtml() : `<button class="primary" style="margin-top:8px" onclick="nuovaFase()">+ Aggiungi fase</button>`}
-    <div class="muted" style="margin-top:10px">⏭️ Generazione reel e pubblicazione social/WordPress da queste fasi: slice successiva (gli endpoint reel/social oggi sono agganciati ai clienti via session_id).</div>
+
+    ${fasi.length ? `
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+      <button onclick="creaReel()" id="reelBtn">🎬 Crea reel dalle foto</button>
+      <span class="muted" style="margin-left:8px">Servono almeno 2 foto totali. Montaggio verticale 9:16.</span>
+      <div id="reelOut" style="margin-top:10px"></div>
+    </div>` : ''}
+    <div class="muted" style="margin-top:10px">⏭️ Pubblicazione social/WordPress da queste fasi: slice successiva. Il reel è già attivo (legge le foto di progetto da disco).</div>
   </div>`;
+}
+async function creaReel(){
+  const btn = document.getElementById('reelBtn');
+  const out = document.getElementById('reelOut');
+  btn.disabled = true; const txt = btn.textContent; btn.textContent = '⏳ Monto il reel… (può richiedere un minuto)';
+  out.innerHTML = '';
+  try {
+    const d = await fetch('ardy-crea-reel.php', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ progetto_id: stato.dettaglio.progetto.id, musica:'casuale' }) }).then(r=>r.json());
+    if (d.success && d.reel_url){
+      out.innerHTML = `<video src="${d.reel_url}" controls style="max-width:240px;border-radius:var(--radius-sm);border:1px solid var(--border);display:block"></video>
+        <div style="margin-top:6px"><a href="${d.reel_url}" download>⬇️ Scarica il reel</a>${d.caption?` · <span class="muted">caption pronta</span>`:''}</div>
+        ${d.caption?`<div class="muted" style="margin-top:6px;white-space:pre-wrap">${esc(d.caption)}</div>`:''}`;
+      toast('Reel creato');
+    } else { out.innerHTML = `<span class="neg">${esc(d.error||'Errore creazione reel')}</span>`; toast(d.error||'Errore'); }
+  } catch(e){ out.innerHTML = `<span class="neg">Errore di rete</span>`; }
+  btn.disabled = false; btn.textContent = txt;
 }
 function fasiFormHtml(){
   const ff = stato.faseForm;

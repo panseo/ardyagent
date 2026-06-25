@@ -389,7 +389,12 @@ no concorrenza); diventa prioritario con più utenti o se compaiono 504. Refacto
   - ⮑ **Fasi-contenuto progetto (25/06)**: `ardy-progetti-fasi-api.php` (CRUD fasi via progetto_id +
     upload/serve foto, riusa gli helper immagine) + editor completo nella dash. Foto su disco
     (`ARDY_UPLOAD_DIR/progetti/<id>/fasi/<faseid>/`); il DB salva solo i nomi → **seam pronto per la
-    migrazione su Backblaze B2** (cambiano solo path scrittura + serving). ⏭️ Resta reel/social wiring.
+    migrazione su Backblaze B2** (cambiano solo path scrittura + serving).
+  - ⮑ **Reel da progetto (25/06)**: `ardy-crea-reel.php` ha un ramo `progetto_id` che legge le foto da
+    disco (decisione A; foto progetto dietro Basic Auth, non scaricabili via HTTP). Ramo cliente invariato
+    (helper `reelLeggiFoto`). Pulsante "Crea reel" nella dash design. ⏭️ Resta: clone publish WP/social
+    sulle fasi di progetto (estendere `ardy-pubblica-lavorazione`/`ardy-pubblica-social` con `progetto_id`,
+    SENZA guscio cliente — è contenuto di brand). Invio a catalogo a fine ciclo (Tappa 2/3).
 - **Conoscenza Sole — FASE 2**: datazione fotografica guidata + community + eventuale mini-RAG se la knowledge base cresce troppo.
 - **BIMI (logo avatar mittente Gmail)**: serve DMARC enforcement + VMC (certificato ~1.000+€/anno + marchio registrato). Decisione commerciale.
 - **Codice d'accesso su WhatsApp**: su WA il numero = identità; il codice serve solo per numeri non registrati (raro). Servirebbe marker `[[CERCA:ARD-XXXX]]`.

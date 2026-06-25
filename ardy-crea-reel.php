@@ -48,6 +48,19 @@ function runCmd(string $cmd, ?array &$out = null): int {
     return $code;
 }
 
+// Ritorna i byte di una foto-item. Cliente: scarica dall'URL pubblico (foto su WP).
+// Progetto: legge dal disco locale (le foto di progetto stanno dietro Basic Auth e
+// non sono scaricabili via HTTP — vedi PIANO-DASH-DESIGN.md, reel decisione A).
+function reelLeggiFoto(array $it): ?string {
+    if (!empty($it['path'])) {
+        if (!is_file($it['path'])) return null;
+        $b = @file_get_contents($it['path']);
+        return ($b !== false && strlen($b) >= 100) ? $b : null;
+    }
+    $resp = ardySafeHttpGet($it['url'] ?? '', 20, 3, 26214400); // max 25 MB, anti-SSRF
+    return $resp['body'] ?? null;
+}
+
 // -- Input (HTTP o CLI per test) -------------------------------------------
 $isCli = (PHP_SAPI === 'cli');
 if ($isCli) {
@@ -61,11 +74,17 @@ if ($isCli) {
     $input = json_decode(file_get_contents('php://input'), true) ?: [];
 }
 $sessionId  = preg_replace('/[^a-zA-Z0-9_\-]/', '', $input['session_id'] ?? '');
+$progettoId = (int) ($input['progetto_id'] ?? 0);   // dash design: reel da un progetto
 $musica     = $input['musica'] ?? '';   // nome file, 'casuale' oppure '' / 'nessuna'
 $mobile     = trim($input['mobile'] ?? '');
 $templateId = preg_replace('/[^a-zA-Z0-9_\-]/', '', $input['template_id'] ?? '');
 
-if ($sessionId === '') fail('session_id mancante');
+// Il reel nasce O da un cliente (session_id) O da un progetto di design (progetto_id).
+if ($sessionId === '' && $progettoId <= 0) fail('session_id o progetto_id mancante');
+
+// Chiave per i nomi di file di lavoro (tmp + reel finale); per i clienti resta il
+// session_id (comportamento invariato), per i progetti diventa "p<ID>".
+$workKey = $progettoId > 0 ? ('p' . $progettoId) : $sessionId;
 
 if (!is_file(FFMPEG)) fail('FFmpeg non trovato sul server', 500);
 
@@ -100,14 +119,27 @@ try {
 // -- Raccogli le foto dalle fasi -------------------------------------------
 try {
     $db   = ardyDB();
-    // Esclude le comunicazioni straordinarie: nel reel vanno solo le fasi di avanzamento
-    $stmt = $db->prepare("SELECT fase_nome, foto_urls, testo_generato FROM fasi WHERE session_id = ? AND (fase_tipo IS NULL OR fase_tipo <> 'comunicazione') ORDER BY created_at ASC");
-    $stmt->execute([$sessionId]);
-    $rows = $stmt->fetchAll();
-    if ($mobile === '') {
-        $st2 = $db->prepare("SELECT mobile FROM clienti WHERE session_id = ? LIMIT 1");
-        $st2->execute([$sessionId]);
-        $mobile = trim((string)($st2->fetchColumn() ?: ''));
+    if ($progettoId > 0) {
+        // Dash design: fasi del progetto. Serve anche l'id fase per costruire il path
+        // su disco delle foto. $mobile riusa il "titolo" del progetto per la slide-titolo.
+        $stmt = $db->prepare("SELECT id, fase_nome, foto_urls, testo_generato FROM fasi WHERE progetto_id = ? AND (fase_tipo IS NULL OR fase_tipo <> 'comunicazione') ORDER BY ordine ASC, created_at ASC");
+        $stmt->execute([$progettoId]);
+        $rows = $stmt->fetchAll();
+        if ($mobile === '') {
+            $st2 = $db->prepare("SELECT titolo FROM progetti WHERE id = ? LIMIT 1");
+            $st2->execute([$progettoId]);
+            $mobile = trim((string)($st2->fetchColumn() ?: ''));
+        }
+    } else {
+        // Esclude le comunicazioni straordinarie: nel reel vanno solo le fasi di avanzamento
+        $stmt = $db->prepare("SELECT fase_nome, foto_urls, testo_generato FROM fasi WHERE session_id = ? AND (fase_tipo IS NULL OR fase_tipo <> 'comunicazione') ORDER BY created_at ASC");
+        $stmt->execute([$sessionId]);
+        $rows = $stmt->fetchAll();
+        if ($mobile === '') {
+            $st2 = $db->prepare("SELECT mobile FROM clienti WHERE session_id = ? LIMIT 1");
+            $st2->execute([$sessionId]);
+            $mobile = trim((string)($st2->fetchColumn() ?: ''));
+        }
     }
 } catch (PDOException $e) {
     error_log('ARDY REEL DB ERROR: ' . $e->getMessage());
@@ -121,7 +153,11 @@ foreach ($rows as $r) {
     if ($fn !== '' && !in_array($fn, $fasiNomi, true)) $fasiNomi[] = $fn;
     $urls = json_decode($r['foto_urls'] ?? '[]', true) ?: [];
     foreach ($urls as $u) {
-        if (is_string($u) && $u !== '') {
+        if (!is_string($u) || $u === '') continue;
+        if ($progettoId > 0) {
+            // foto_urls di progetto = nomi file su disco → path locale (no HTTP).
+            $items[] = ['path' => rtrim(ARDY_UPLOAD_DIR, '/') . '/progetti/' . $progettoId . '/fasi/' . ((int) $r['id']) . '/' . basename($u), 'fase' => $fn];
+        } else {
             $items[] = ['url' => $u, 'fase' => $fn];
         }
     }
@@ -155,7 +191,7 @@ if (!is_dir($reelsDir) && !mkdir($reelsDir, 0755, true) && !is_dir($reelsDir)) {
     fail('Impossibile creare la cartella reels', 500);
 }
 ardyHardenUploadDir($reelsDir); // i reels non devono eseguire script
-$tmpDir = $reelsDir . 'tmp_' . $sessionId . '_' . uniqid() . '/';
+$tmpDir = $reelsDir . 'tmp_' . $workKey . '_' . uniqid() . '/';
 if (!mkdir($tmpDir, 0755, true)) fail('Impossibile creare cartella temporanea', 500);
 
 function pulisci(string $dir): void {
@@ -168,10 +204,7 @@ $normFiles  = [];
 $usedItems  = [];   // gli item effettivamente elaborati (per prima/dopo)
 $idx = 0;
 foreach ($items as $it) {
-    $url = $it['url'];
-    $resp = ardySafeHttpGet($url, 20, 3, 26214400); // max 25 MB, anti-SSRF
-    if ($resp === null) continue;
-    $bin = $resp['body'];
+    $bin = reelLeggiFoto($it); // cliente: URL pubblico · progetto: file su disco
     if (!is_string($bin) || strlen($bin) < 100) continue;
     $src = $tmpDir . 'src_' . $idx . '.img';
     file_put_contents($src, $bin);
@@ -203,11 +236,9 @@ $titleSlide = $showTitolo ? slideTitolo($tmpDir, $normFiles[0], $logo, $font, $m
 // -- Slide finale "Prima -> Dopo" (prima e ultima foto + logo) -------------
 $finalSlide = null;
 if ($showFinale) {
-    $primaResp = ardySafeHttpGet($usedItems[0]['url'], 20, 3, 26214400);
-    $dopoResp  = ardySafeHttpGet(end($usedItems)['url'], 20, 3, 26214400);
-    if ($primaResp !== null && $dopoResp !== null) {
-        $primaBin = $primaResp['body'];
-        $dopoBin  = $dopoResp['body'];
+    $primaBin = reelLeggiFoto($usedItems[0]);
+    $dopoBin  = reelLeggiFoto(end($usedItems));
+    if ($primaBin !== null && $dopoBin !== null) {
         $primaSrc = $tmpDir . 'prima.img';
         $dopoSrc  = $tmpDir . 'dopo.img';
         file_put_contents($primaSrc, $primaBin);
@@ -272,7 +303,7 @@ if ($musica !== '' && strtolower($musica) !== 'nessuna') {
 }
 
 // -- Step 3: fade in/out video + audio (se presente) -----------------------
-$finalName = 'reel_' . $sessionId . '_' . date('Ymd_His') . '.mp4';
+$finalName = 'reel_' . $workKey . '_' . date('Ymd_His') . '.mp4';
 $finalPath = $reelsDir . $finalName;
 $fadeOut   = max(0, $durataTot - 1);
 $vf        = 'fade=t=in:st=0:d=0.5,fade=t=out:st=' . $fadeOut . ':d=1';
