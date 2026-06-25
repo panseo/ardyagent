@@ -1069,6 +1069,18 @@
     cursor: pointer;
   }
   .lib-btn-edit:hover { border-color: var(--accent2); color: var(--text); }
+  .lav-date-edit-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 5px 10px;
+    border-radius: 3px;
+    font-size: 11px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .lav-date-edit-btn:hover { border-color: var(--accent2); color: var(--text); }
   .lib-btn-del {
     background: none;
     border: none;

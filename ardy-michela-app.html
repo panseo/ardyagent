@@ -319,7 +319,10 @@
               <a href="#" class="lav-post-link" id="lavPostLink" target="_blank" style="display:none;">Vedi post →</a>
             </div>
             <div class="lav-date-box">
-              <div class="lav-title" style="margin-bottom:8px;">📅 Periodo del lavoro</div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
+                <div class="lav-title">📅 Periodo del lavoro</div>
+                <button type="button" class="lav-date-edit-btn" onclick="apriDateLav()" title="Imposta/modifica le date del lavoro">✏️ Imposta date</button>
+              </div>
               <p style="font-size:11px;color:var(--text-dim);margin:0 0 10px;">Si riferiscono all'<strong>intero lavoro</strong>, non alla singola fase.</p>
               <div class="lav-row">
                 <div style="flex:1;">
@@ -4604,7 +4607,7 @@ async function archiviaPersi() {
   </div>
 </div>
 
-<!-- MODAL DATE INIZIO LAVORAZIONE (chiesto all'attivazione di IN_LAVORAZIONE) -->
+<!-- MODAL DATE DEL LAVORO (auto all'attivazione di IN_LAVORAZIONE; o via "✏️ Imposta date" nel box Periodo) -->
 <div class="modal-overlay" id="dateLavOverlay" onclick="if(event.target===this)chiudiDateLav(false)">
   <div class="modal-lg" onclick="event.stopPropagation()" style="width:min(440px,94vw);">
     <div class="modal-lg-head">
@@ -4612,7 +4615,7 @@ async function archiviaPersi() {
       <button class="modal-lg-close" onclick="chiudiDateLav(false)">✕</button>
     </div>
     <div class="modal-lg-body">
-      <p style="font-size:12px;color:var(--text-dim);margin:0 0 14px;">Il lavoro parte: imposta le date così scattano gli avvisi di scadenza. Puoi anche saltare e metterle dopo.</p>
+      <p style="font-size:12px;color:var(--text-dim);margin:0 0 14px;">Inizio e fine prevista del lavoro: servono a far scattare gli avvisi di scadenza. Puoi metterle/cambiarle anche dopo.</p>
       <div class="dark-form-grid">
         <div class="dark-field">
           <label>Inizio lavoro</label>
@@ -4625,7 +4628,7 @@ async function archiviaPersi() {
       </div>
     </div>
     <div class="modal-lg-actions">
-      <button class="btn-cancel" onclick="chiudiDateLav(false)">SALTA</button>
+      <button class="btn-cancel" onclick="chiudiDateLav(false)">ANNULLA</button>
       <button class="btn-save" onclick="chiudiDateLav(true)">✓ IMPOSTA DATE</button>
     </div>
   </div>

@@ -298,7 +298,12 @@ Nuovo utente: `htpasswd -B <path> dipendente` (mai `-c`).
 - **Popup date all'attivazione IN_LAVORAZIONE** — ✅ FATTO (in codice, da deployare). Al click su
   IN_LAVORAZIONE, se inizio/fine lavoro sono vuote, si apre un modale che le chiede (inizio precompilato a
   oggi); "IMPOSTA DATE" le copia nei campi "Periodo del lavoro" e marca dirty (salvi tu, anti-clobber attivo),
-  "SALTA" chiude senza scrivere. Serve a far scattare gli avvisi di scadenza che dipendono da quelle date.
+  "ANNULLA" chiude senza scrivere. Serve a far scattare gli avvisi di scadenza che dipendono da quelle date.
+  **UX fix (25/06):** prima il popup si poteva richiamare SOLO ri-facendo la transizione di stato (giro
+  storto: ricaricare la pagina / cambiare stato e tornare). Aggiunto pulsante **"✏️ Imposta date"** nel box
+  "📅 Periodo del lavoro" che apre il modale in qualsiasi momento (precompila coi valori già presenti);
+  testo del modale reso neutro (vale sia all'avvio sia in modifica). In alternativa i due campi data restano
+  editabili a mano direttamente nel box.
 - **Filtro sidebar default su ACCONTO/IN_LAVORAZIONE** invece di TUTTI (da decidere sull'uso reale).
 - **Briefing del mattino** (opzionale): salvare data ultimo briefing per numero così il riepilogo lungo parte
   da solo al primo "buongiorno" (oggi parte quando Michela chiede "come va oggi?").
