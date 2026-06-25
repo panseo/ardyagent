@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ardy Lab — Dashboard Michela</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="ardy-michela-app.css?v=20260625">
+<link rel="stylesheet" href="ardy-michela-app.css?v=20260625b">
 </head>
 <body>
 
@@ -1140,9 +1140,57 @@ async function caricaNotaSettimanale() {
   }
 }
 function apriNotaEditor() {
-  document.getElementById('notaTextarea').value = _notaCorrente;
+  notaCostruisciRighe(_notaCorrente);
   document.getElementById('notaEditorOverlay').classList.add('open');
-  setTimeout(() => document.getElementById('notaTextarea').focus(), 50);
+}
+// Editor a righe con checkbox "Fatto". Lo STORAGE resta testo libero (tabella
+// note_staff) col marcatore ✔ sulle voci fatte → compatibile con Sole su WhatsApp
+// e col rollover del lunedì (ardy_nota_strip_fatte). Qui si fa solo il ponte
+// testo↔righe, così in dashboard si spunta senza dover digitare l'icona.
+function notaParseRighe(testo) {
+  const out = [];
+  (testo || '').split(/\r\n|\r|\n/).forEach(raw => {
+    const r = raw.trim();
+    if (r === '') return;
+    const done = /[✔✓✅]/.test(r) || /^\[\s*[xX]\s*\]/.test(r);
+    // toglie i marcatori/bullet iniziali (✔ ✓ ✅ [x] • -) per ricavare l'etichetta pulita
+    const label = r.replace(/^(\s*(\[\s*[xX]\s*\]|[✔✓✅•\-]+)\s*)+/u, '').trim();
+    out.push({ label, done });
+  });
+  return out;
+}
+function notaCostruisciRighe(testo) {
+  const wrap = document.getElementById('notaRows');
+  wrap.innerHTML = '';
+  const righe = notaParseRighe(testo);
+  if (righe.length === 0) { notaAddRow('', false); }
+  else righe.forEach(r => notaAddRow(r.label, r.done));
+}
+function notaAddRow(label = '', done = false, focus = false) {
+  const wrap = document.getElementById('notaRows');
+  const div = document.createElement('div');
+  div.className = 'nota-row';
+  div.innerHTML =
+    '<label class="nota-done-lbl"><input type="checkbox" class="nota-done"' + (done ? ' checked' : '') + '><span>Fatto</span></label>'
+    + '<input type="text" class="nota-text" placeholder="Cosa c\'è da fare…">'
+    + '<button type="button" class="nota-del" title="Rimuovi riga" onclick="this.closest(\'.nota-row\').remove()">✕</button>';
+  div.querySelector('.nota-text').value = label; // set via value: niente HTML injection
+  const cb = div.querySelector('.nota-done');
+  const txt = div.querySelector('.nota-text');
+  const sync = () => { div.classList.toggle('done', cb.checked); };
+  cb.addEventListener('change', sync); sync();
+  wrap.appendChild(div);
+  if (focus) txt.focus();
+}
+function notaSerializzaRighe() {
+  const lines = [];
+  document.querySelectorAll('#notaRows .nota-row').forEach(row => {
+    const label = row.querySelector('.nota-text').value.trim();
+    if (label === '') return;
+    const done = row.querySelector('.nota-done').checked;
+    lines.push((done ? '✔ ' : '- ') + label);
+  });
+  return lines.join('\n');
 }
 // Apertura dal pulsante in sidebar (raggiungibile anche con una scheda aperta):
 // ricarica prima la versione più recente, così riprende anche le modifiche fatte
@@ -1156,7 +1204,7 @@ function chiudiNotaEditor() {
 }
 async function salvaNotaSettimanale() {
   const btn = document.getElementById('notaSaveBtn');
-  const testo = document.getElementById('notaTextarea').value.trim();
+  const testo = notaSerializzaRighe();
   if (testo === '') {
     showToast('La nota è vuota.', 'error');
     return;
@@ -4650,9 +4698,10 @@ async function archiviaPersi() {
       <button class="modal-lg-close" onclick="chiudiNotaEditor()">✕</button>
     </div>
     <div class="modal-lg-body">
-      <p style="font-size:12px;color:var(--text-dim);margin:0 0 8px;">Promemoria libero della settimana (sopralluoghi, materiali da ordinare, montaggi…). È la stessa lista che leggi e aggiorni con Sole su WhatsApp.</p>
-      <p style="font-size:12px;color:#c8a96e;margin:0 0 12px;">✔ Metti una spunta (✔ o <code>[x]</code>) sulle voci fatte: ogni <strong>lunedì</strong> quelle spuntate spariscono e restano solo le cose ancora da fare.</p>
-      <textarea id="notaTextarea" style="width:100%;min-height:260px;background:#1a1a1a;border:1px solid var(--border);color:var(--text);border-radius:6px;padding:12px;font-family:'DM Mono',monospace;font-size:13px;line-height:1.6;resize:vertical;box-sizing:border-box;" placeholder="- Ordinare la stoffa per il divano di Alberto&#10;- Montaggio armadio Mottini venerdì&#10;- Richiamare il falegname"></textarea>
+      <p style="font-size:12px;color:var(--text-dim);margin:0 0 8px;">Una riga per ogni cosa da fare (sopralluoghi, materiali da ordinare, montaggi…). È la stessa lista che leggi e aggiorni con Sole su WhatsApp.</p>
+      <p style="font-size:12px;color:#c8a96e;margin:0 0 12px;">Spunta <strong>«Fatto»</strong> sulle voci chiuse: ogni <strong>lunedì</strong> quelle spuntate spariscono e restano solo le cose ancora da fare. (Su WhatsApp le spunti dicendolo a Sole.)</p>
+      <div id="notaRows" style="display:flex;flex-direction:column;gap:6px;max-height:48vh;overflow:auto;"></div>
+      <button type="button" class="nota-add-btn" onclick="notaAddRow('', false, true)">+ Aggiungi riga</button>
     </div>
     <div class="modal-lg-actions">
       <button class="btn-cancel" onclick="chiudiNotaEditor()">ANNULLA</button>

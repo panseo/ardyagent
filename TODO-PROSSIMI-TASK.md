@@ -235,7 +235,10 @@ La settimana è lun→dom. Il lunedì il job legge l'ultima `note_staff`, **elim
 - Nuovo endpoint **`ardy-rollover-nota.php`**, protetto da `WA_LOOKUP_SECRET`, NIENTE Basic Auth. **Idempotente**:
   se l'ultima nota è già della settimana corrente non fa nulla (`?force=1` per i test). Logica pura in
   `ardy-briefing-lib.php` → `ardy_nota_strip_fatte()` (testata: header tenuti, voci ✔/`[x]` rimosse).
-- Hint nell'editor nota in dashboard: "metti ✔ sulle voci fatte, il lunedì spariscono".
+- **Editor nota in dashboard a RIGHE con checkbox "Fatto"** (non più textarea libera): in dashboard non si
+  digita l'icona ✔, si spunta la casella. Lo STORAGE resta testo libero col marcatore ✔ (ponte testo↔righe:
+  `notaParseRighe`/`notaSerializzaRighe` in `ardy-michela-app.html`) → Sole su WhatsApp e il rollover restano
+  identici. Voci spuntate mostrate barrate; "+ Aggiungi riga" e ✕ per riga.
 - ⚠️ **Cron da impostare** (Europe/Rome), lunedì 06:00 (prima del briefing delle 9):
   `0 6 * * 1 curl -s -H "X-Ardy-Secret: <WA_LOOKUP_SECRET>" https://ardyagent.ardy-lab.it/ardy-rollover-nota.php >/dev/null 2>&1`
 - ⚠️ Caveat (atteso): se nessuno spunta col ✔, il lunedì si riporta tutto — comportamento sicuro, non "pulisce" da solo.
