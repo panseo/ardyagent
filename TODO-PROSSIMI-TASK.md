@@ -209,6 +209,32 @@ Non sollecitare; attendere esito su `ardy.documenti`.
 
 ## 📋 TASK DA SVILUPPARE (aperti)
 
+### ☀️ Briefing del mattino via EMAIL (push automatico 9:00) — FATTO in codice (branch), da config+cron+deploy
+Push proattivo del briefing **senza aspettare il "buongiorno"**. Scelto **email** (non WhatsApp) perché la
+finestra 24h di Meta non garantirebbe la consegna fuori sessione e un template non regge un briefing dinamico.
+- Nuovo endpoint **`ardy-briefing-mattino.php`**, protetto da `WA_LOOKUP_SECRET` (header `X-Ardy-Secret`),
+  NIENTE Basic Auth (lo chiama il cron). Solo **giorni feriali** (salta sab/dom; `?force=1` per test manuali).
+- Riusa la **stessa fonte del "buongiorno" WhatsApp**: la funzione `ardy_riepilogo_settimana()` è stata
+  **estratta** da `ardy-wa-lookup.php` in una lib condivisa **`ardy-briefing-lib.php`** (+ helper
+  `ardy_briefing_email_html()`); `ardy-wa-lookup.php` ora include la lib (nessuna duplicazione, comportamento
+  WhatsApp invariato). Lib aggiunta al deny `.htaccess`.
+- Invio via SMTP Brevo (stesso pattern di solleciti/trasporti), email HTML col logo. Include un **CTA**
+  "Apri la dashboard" per modificare le «Cose da fare questa settimana» (link `ARDY_DASHBOARD_URL`,
+  default `https://ardyagent.ardy-lab.it/ardy-michela-app.html`).
+- **Destinatario deciso:** solo `michelapanella1999@gmail.com` (Andrea non lo vuole). Niente migrazione DB.
+- ⚠️ **AZIONI MANUALI per renderlo live** (lato server, non da repo):
+  1. In `ardy-config.php`: `define('ARDY_BRIEFING_EMAILS', 'michelapanella1999@gmail.com');`
+     (opzionale `define('ARDY_DASHBOARD_URL', 'https://ardyagent.ardy-lab.it/ardy-michela-app.html');`).
+  2. **Cron** (fuso Europe/Rome): `0 9 * * 1-5 curl -s -H "X-Ardy-Secret: <WA_LOOKUP_SECRET>" https://ardyagent.ardy-lab.it/ardy-briefing-mattino.php >/dev/null 2>&1`
+  3. Test: chiamare l'endpoint con `?force=1` + segreto e verificare che l'email arrivi e i blocchi siano giusti.
+
+### 🔁 Rollover settimanale della nota "Cose da fare" (lunedì) — DA SVILUPPARE (approvato, design deciso)
+La settimana è lun→dom. Il lunedì un job legge l'ultima `note_staff`, **elimina le righe marcate fatte (✔/✓)**
+e **riporta le non evase** salvando una riga nuova con la nuova settimana ISO (si incastra col modello
+append-only). v1 su **testo libero + marcatore ✔** (zero AI), no refactor a task strutturati. Serve un
+**trigger del lunedì** (cron/n8n) e definire bene il marcatore "fatto". ⚠️ Caveat: se nessuno spunta col ✔,
+il lunedì si riporta tutto (comportamento sicuro, ma non "pulisce" da solo).
+
 ### ☁️ Media su Backblaze B2 — off-load disco + semilavorato migrazione (PIANIFICATO 24/06)
 **Obiettivo doppio:** togliere i media dal disco del server attuale (oggi si "intasa") **e**, nello stesso
 gesto, pre-staggiare i media su B2 così che alla migrazione sul nuovo VPS (vedi `PIANO-MIGRAZIONE.md`
