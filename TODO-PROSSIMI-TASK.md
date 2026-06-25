@@ -8,6 +8,29 @@
 
 ---
 
+## 🚀 PRONTO AL DEPLOY (mergiato su `main` 25/06/2026 — SHA `521eadf`)
+Tutti i rami feature aperti sono stati **mergiati su `main`** (fast-forward pulito; nessuna migrazione DB,
+nessun conflitto, `php -l` ok). **Resta da lanciare il deploy sul server** e fare le verifiche dal vivo.
+
+**Deploy** (da root sul server — vedi NOTE OPERATIVE per il comando completo):
+```
+runuser -u micoperibg -- bash -c 'cd ~/repositories/ardyagent && git pull origin main && ./deploy.sh'
+```
+
+**Cosa entra in produzione con questo deploy** (dettagli e check dal vivo nei rispettivi blocchi sotto):
+1. **Codice etico AI** in email/lettere + prompt di Sole.
+2. **Nuovo stato cliente "RITIRATI"** (limbo ACCONTO→IN_LAVORAZIONE).
+3. **Popup date all'attivazione IN_LAVORAZIONE**.
+4. **Briefing del mattino** con la nota settimanale "cose da fare".
+5. **Import clienti AUTOMATICO post-Acconto** nell'outreach (categoria `clienti`, stato `cliente`).
+6. **Nota settimanale "cose da fare" anche in dashboard** (pannello home, endpoint `ardy-nota-settimanale-api.php`).
+7. **Widget WordPress "Chatta con Sole"** (⚠️ lo snippet repo è solo backup: va re-incollato nel WPCode id 15243).
+8. **Guida backup/restore B2** (`GUIDA-BACKUP-RESTORE.md`, solo docs).
+
+⚠️ Dopo il deploy, spuntare le verifiche dal vivo elencate sotto e poi rimuovere da qui le voci confermate.
+
+---
+
 ## 💾 BACKUP OFF-SITE Backblaze B2 — ✅ FATTO (sessione `ardy-infra`, 24/06/2026)
 Chiude il punto **#4 (backup off-site)** del `PIANO-MIGRAZIONE.md` — fatto **ora, sull'infra attuale**
 OVH/cPanel, senza aspettare il cutover sul nuovo VPS.
