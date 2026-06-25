@@ -102,6 +102,11 @@
   .iter .h { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
   .iter .vtag { font-family:'DM Mono',monospace; color:var(--accent); font-weight:500; }
 
+  .thumbs { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .thumb { width:74px; height:74px; object-fit:cover; border-radius:var(--radius-sm); border:1px solid var(--border); display:block; }
+  .thumbwrap { position:relative; }
+  .thumbwrap .x { position:absolute; top:-6px; right:-6px; width:20px; height:20px; padding:0; border-radius:50%; background:var(--red); color:#fff; border:none; font-size:11px; line-height:1; cursor:pointer; }
+
   .empty { color:var(--text-dim); text-align:center; padding:60px 20px; }
   .muted { color:var(--text-dim); font-size:12px; }
   .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--surface2); border:1px solid var(--accent); color:var(--text); padding:10px 18px; border-radius:var(--radius-sm); box-shadow:var(--shadow); opacity:0; transition:.2s; pointer-events:none; z-index:300; }
@@ -135,7 +140,7 @@ const TIPI = ['lampada','mobile','complemento','restyling','prototipo'];
 const STATI = ['IDEA','PROGETTAZIONE','PROTOTIPO','FILE_CONGELATO','PRODUZIONE','FOTOGRAFIA','A_CATALOGO'];
 const CATEGORIE = ['filamento','stampa','elettrico','ferramenta','finitura','imballo','manodopera'];
 const UNITA_DEF = { filamento:'g', stampa:'h', manodopera:'h' };
-let stato = { lista:[], sel:null, dettaglio:null, costoOrario:50 };
+let stato = { lista:[], sel:null, dettaglio:null, costoOrario:50, faseForm:null };
 
 const eur = n => (n===null||n===undefined||n==='') ? '—' : Number(n).toLocaleString('it-IT',{style:'currency',currency:'EUR'});
 const esc = s => (s??'').toString().replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -351,17 +356,89 @@ async function eliminaIter(id){
   apri(stato.dettaglio.progetto.id);
 }
 
-// ── Fasi (binario racconto) — placeholder slice successiva ──
+// ── Fasi (binario racconto) — editor completo + upload foto ──
+const FASI_API = 'ardy-progetti-fasi-api.php';
+function fotoUrlFase(faseId, file){ return `${FASI_API}?progetto_id=${stato.dettaglio.progetto.id}&fase_id=${faseId}&file=${encodeURIComponent(file)}`; }
+
 function fasiPanel(){
   const fasi = stato.dettaglio.fasi;
+  const pid = stato.dettaglio.progetto.id;
   return `
   <div class="panel">
-    <h2>Contenuti — fasi racconto <small>reel / social / WordPress</small></h2>
-    ${fasi.length
-      ? fasi.map(f=>`<div class="iter"><b>${esc(f.fase_nome)}</b> <span class="badge">${esc(f.stato)}</span><div class="muted">${esc(f.testo_breve)}</div></div>`).join('')
-      : '<div class="muted">Nessuna fase-contenuto.</div>'}
-    <div class="muted" style="margin-top:10px">⏭️ Il wiring del motore reel/social sulle fasi di progetto è la prossima slice della Tappa 1 (gli endpoint reel/social oggi sono agganciati ai clienti via session_id).</div>
+    <h2>Contenuti — fasi racconto <small>foto + testo per reel / social / WordPress</small></h2>
+    ${fasi.length ? fasi.map(f=>`
+      <div class="iter">
+        <div class="h"><b>${esc(f.fase_nome)||'(senza titolo)'}</b>
+          <span><button class="sm" onclick="editFase(${f.id})">Modifica</button>
+                <button class="sm ghost danger" onclick="eliminaFase(${f.id})">✕</button></span></div>
+        ${f.testo_breve?`<div class="muted">${esc(f.testo_breve)}</div>`:''}
+        ${(f.foto_urls&&f.foto_urls.length)?`<div class="thumbs">${f.foto_urls.map(fn=>`<img class="thumb" src="${fotoUrlFase(f.id,fn)}" alt="">`).join('')}</div>`:''}
+      </div>`).join('') : '<div class="muted">Nessuna fase-contenuto ancora.</div>'}
+
+    ${stato.faseForm ? fasiFormHtml() : `<button class="primary" style="margin-top:8px" onclick="nuovaFase()">+ Aggiungi fase</button>`}
+    <div class="muted" style="margin-top:10px">⏭️ Generazione reel e pubblicazione social/WordPress da queste fasi: slice successiva (gli endpoint reel/social oggi sono agganciati ai clienti via session_id).</div>
   </div>`;
+}
+function fasiFormHtml(){
+  const ff = stato.faseForm;
+  return `
+  <div class="panel" style="background:var(--surface2);margin-top:12px">
+    <div class="field"><label>Titolo fase</label><input id="ff_nome" value="${esc(ff.fase_nome)}" placeholder="Es. Stampa del corpo lampada"></div>
+    <div class="field"><label>Testo (racconto breve)</label><textarea id="ff_breve" placeholder="Cosa succede in questa fase">${esc(ff.testo_breve)}</textarea></div>
+    <div class="field"><label>Foto</label>
+      <div class="thumbs">
+        ${ff.fotoEsistenti.map((fn,i)=>`<div class="thumbwrap"><img class="thumb" src="${fotoUrlFase(ff.id,fn)}"><button class="x" onclick="rimuoviFotoEsistente(${i})">✕</button></div>`).join('')}
+        ${ff.fotoNuove.map((b64,i)=>`<div class="thumbwrap"><img class="thumb" src="data:image/*;base64,${b64}"><button class="x" onclick="rimuoviFotoNuova(${i})">✕</button></div>`).join('')}
+      </div>
+      <input type="file" accept="image/*" multiple onchange="onFotoInput(this)" style="margin-top:8px">
+    </div>
+    <div class="row">
+      <button class="primary" onclick="salvaFase()">Salva fase</button>
+      <button class="ghost" onclick="annullaFase()">Annulla</button>
+    </div>
+  </div>`;
+}
+function captureFaseForm(){
+  if (!stato.faseForm) return;
+  const n=document.getElementById('ff_nome'), b=document.getElementById('ff_breve');
+  if (n) stato.faseForm.fase_nome = n.value;
+  if (b) stato.faseForm.testo_breve = b.value;
+}
+function nuovaFase(){ stato.faseForm = { id:0, fase_nome:'', testo_breve:'', fotoEsistenti:[], fotoNuove:[] }; renderDettaglio(); }
+function editFase(id){
+  const f = stato.dettaglio.fasi.find(x=>x.id===id); if (!f) return;
+  stato.faseForm = { id:f.id, fase_nome:f.fase_nome||'', testo_breve:f.testo_breve||'', fotoEsistenti:(f.foto_urls||[]).slice(), fotoNuove:[] };
+  renderDettaglio();
+}
+function annullaFase(){ stato.faseForm = null; renderDettaglio(); }
+function rimuoviFotoEsistente(i){ captureFaseForm(); stato.faseForm.fotoEsistenti.splice(i,1); renderDettaglio(); }
+function rimuoviFotoNuova(i){ captureFaseForm(); stato.faseForm.fotoNuove.splice(i,1); renderDettaglio(); }
+function onFotoInput(input){
+  captureFaseForm();
+  const files = Array.from(input.files||[]);
+  let pending = files.length;
+  if (!pending) return;
+  files.forEach(file=>{
+    const reader = new FileReader();
+    reader.onload = ()=>{ stato.faseForm.fotoNuove.push(reader.result.split(',')[1]); if(--pending===0) renderDettaglio(); };
+    reader.onerror = ()=>{ if(--pending===0) renderDettaglio(); };
+    reader.readAsDataURL(file);
+  });
+}
+async function salvaFase(){
+  captureFaseForm();
+  const ff = stato.faseForm;
+  if (!ff.fase_nome.trim() && !ff.testo_breve.trim()){ toast('Servono titolo o testo'); return; }
+  const immagini = [...ff.fotoEsistenti, ...ff.fotoNuove];
+  const d = await fetch(FASI_API, { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ mode:'salva', progetto_id:stato.dettaglio.progetto.id, id:ff.id, fase_nome:ff.fase_nome, testo_breve:ff.testo_breve, immagini }) }).then(r=>r.json());
+  if (d.success){ toast('Fase salvata'); stato.faseForm=null; apri(stato.dettaglio.progetto.id); }
+  else toast(d.error||'Errore');
+}
+async function eliminaFase(id){
+  if (!confirm('Eliminare questa fase e le sue foto?')) return;
+  await fetch(FASI_API, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode:'delete', id }) });
+  apri(stato.dettaglio.progetto.id);
 }
 
 caricaLista();

@@ -386,6 +386,10 @@ no concorrenza); diventa prioritario con più utenti o se compaiono 504. Refacto
     pipeline stato, costi live, iterazioni). Endpoint nel `.htaccess`. ⏭️ **Resta**: wiring reel/social/WP
     sulle fasi di progetto (estendere `ardy-crea-reel.php`/`ardy-pubblica-social.php` ad accettare
     `progetto_id`, la colonna c'è già). ⚠️ Da testare dal vivo dopo il deploy (migrate crea le tabelle).
+  - ⮑ **Fasi-contenuto progetto (25/06)**: `ardy-progetti-fasi-api.php` (CRUD fasi via progetto_id +
+    upload/serve foto, riusa gli helper immagine) + editor completo nella dash. Foto su disco
+    (`ARDY_UPLOAD_DIR/progetti/<id>/fasi/<faseid>/`); il DB salva solo i nomi → **seam pronto per la
+    migrazione su Backblaze B2** (cambiano solo path scrittura + serving). ⏭️ Resta reel/social wiring.
 - **Conoscenza Sole — FASE 2**: datazione fotografica guidata + community + eventuale mini-RAG se la knowledge base cresce troppo.
 - **BIMI (logo avatar mittente Gmail)**: serve DMARC enforcement + VMC (certificato ~1.000+€/anno + marchio registrato). Decisione commerciale.
 - **Codice d'accesso su WhatsApp**: su WA il numero = identità; il codice serve solo per numeri non registrati (raro). Servirebbe marker `[[CERCA:ARD-XXXX]]`.

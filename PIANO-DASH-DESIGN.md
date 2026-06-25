@@ -228,10 +228,16 @@ nessun pubblico, prezzo posizionato male**. L'energia di sviluppo va nella **mac
 - [x] **`ardy-design-app.html`**: dash gemella theming-ready (token brand via `var()`, niente CSS-mostro
       ereditato) — lista progetti, editor con pipeline di stato, pannello costi/BOM con margine live,
       iterazioni prototipo, congela-file. Link da/per la dash principale.
+- [x] **Fasi-contenuto di progetto** (`ardy-progetti-fasi-api.php`): CRUD fasi via `progetto_id` +
+      upload/serve foto (riusa `ardyCompressImage`/`ardyHardenUploadDir`). La dash ha l'editor
+      completo (crea/modifica/elimina fase, foto multiple). È il binario racconto, base per reel/social.
 - [ ] **Slice successiva**: wiring del motore **reel/social/WordPress** sulle fasi di progetto. Oggi
       `ardy-crea-reel.php` / `ardy-pubblica-social.php` ecc. sono agganciati al cliente via `session_id`;
-      vanno estesi per accettare anche `progetto_id` (la colonna c'è già). La dash mostra già le fasi
-      di progetto in sola lettura come placeholder.
+      vanno estesi per accettare anche `progetto_id` (la colonna c'è già). Le foto/testo ci sono già.
+
+> **Storage foto → Backblaze B2 (alla migrazione)**: il DB salva solo i *nomi* file (`foto_urls`), le
+> foto si servono via endpoint `?file=`. Alla migrazione su B2 cambiano solo path di scrittura + ramo
+> serving; modello dati e dashboard invariati. Stesso seam del resto dell'app (clienti inclusi).
 - **Valore immediato**: già da ora crei progetti, tracci prototipi e costi/margine. La produzione di
   contenuti (reel/social) si sblocca con la slice successiva.
 
