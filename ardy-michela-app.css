@@ -406,6 +406,20 @@
   }
   .nota-text:focus { border-bottom-color: var(--accent); }
   .nota-row.done .nota-text { text-decoration: line-through; opacity: 0.55; }
+  .nota-row-header {
+    background: transparent;
+    border: none;
+    padding: 10px 4px 2px;
+  }
+  .nota-header-text {
+    flex: 1;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    min-width: 0;
+  }
   .nota-del {
     flex: 0 0 auto;
     background: none;

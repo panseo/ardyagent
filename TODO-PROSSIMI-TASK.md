@@ -234,6 +234,10 @@ La settimana è lun→dom. Il lunedì il job legge l'ultima `note_staff`, **elim
   digita l'icona ✔, si spunta la casella. Lo STORAGE resta testo libero col marcatore ✔ (ponte testo↔righe:
   `notaParseRighe`/`notaSerializzaRighe` in `ardy-michela-app.html`) → Sole su WhatsApp e il rollover restano
   identici. Voci spuntate mostrate barrate; "+ Aggiungi riga" e ✕ per riga.
+- 🐞 **Bugfix 25/06:** le righe di INTESTAZIONE (es. "NOTA SETTIMANALE (2026-W26)", "COSE DA FARE QUESTA
+  SETTIMANA") comparivano come voci con checkbox. Ora una riga è una VOCE solo se inizia da elemento di elenco
+  (bullet/numero/✔/`[x]`); le altre diventano **intestazioni** (senza checkbox, rimovibili con ✕, preservate
+  al salvataggio). In più, istruito Sole (prompt in `ardy-wa-lookup.php`) a **non** salvare righe di intestazione.
 - ⏳ **Cron del lunedì 06:00 da confermare** (vedi blocco "DA CONTROLLARE SUBITO" in cima).
 - ⚠️ Caveat (atteso): se nessuno spunta col ✔, il lunedì si riporta tutto — comportamento sicuro, non "pulisce" da solo.
 

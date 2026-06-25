@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ardy Lab — Dashboard Michela</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="ardy-michela-app.css?v=20260625b">
+<link rel="stylesheet" href="ardy-michela-app.css?v=20260625c">
 </head>
 <body>
 
@@ -1152,10 +1152,15 @@ function notaParseRighe(testo) {
   (testo || '').split(/\r\n|\r|\n/).forEach(raw => {
     const r = raw.trim();
     if (r === '') return;
+    // Una riga è una VOCE solo se inizia come elemento di elenco: bullet (- • *),
+    // numero (1. / 1)), spunta (✔ ✓ ✅) o [x]. Tutto il resto (es. "NOTA SETTIMANALE
+    // (2026-W26)", "COSE DA FARE…") è un'INTESTAZIONE: si tiene ma senza checkbox.
+    const isVoce = /^(\[\s*[xX]\s*\]|[✔✓✅•\-*]|\d+[\.\)])/.test(r);
+    if (!isVoce) { out.push({ tipo: 'header', label: r }); return; }
     const done = /[✔✓✅]/.test(r) || /^\[\s*[xX]\s*\]/.test(r);
-    // toglie i marcatori/bullet iniziali (✔ ✓ ✅ [x] • -) per ricavare l'etichetta pulita
-    const label = r.replace(/^(\s*(\[\s*[xX]\s*\]|[✔✓✅•\-]+)\s*)+/u, '').trim();
-    out.push({ label, done });
+    // toglie i marcatori/bullet/numeri iniziali per ricavare l'etichetta pulita
+    const label = r.replace(/^(\s*(\[\s*[xX]\s*\]|[✔✓✅•\-*]+|\d+[\.\)])\s*)+/u, '').trim();
+    out.push({ tipo: 'task', label, done });
   });
   return out;
 }
@@ -1163,8 +1168,22 @@ function notaCostruisciRighe(testo) {
   const wrap = document.getElementById('notaRows');
   wrap.innerHTML = '';
   const righe = notaParseRighe(testo);
-  if (righe.length === 0) { notaAddRow('', false); }
-  else righe.forEach(r => notaAddRow(r.label, r.done));
+  righe.forEach(r => r.tipo === 'header' ? notaAddHeader(r.label) : notaAddRow(r.label, r.done));
+  // se non c'è nessuna VOCE (solo intestazioni o nota vuota), offri una riga vuota
+  if (!righe.some(r => r.tipo === 'task')) notaAddRow('', false);
+}
+// Riga-intestazione: titolo che NON è una cosa da fare (niente checkbox). Si può
+// rimuovere con la ✕; viene preservata nel testo al salvataggio.
+function notaAddHeader(text = '') {
+  const wrap = document.getElementById('notaRows');
+  const div = document.createElement('div');
+  div.className = 'nota-row nota-row-header';
+  div.innerHTML =
+    '<span class="nota-header-text"></span>'
+    + '<button type="button" class="nota-del" title="Rimuovi intestazione" onclick="this.closest(\'.nota-row\').remove()">✕</button>';
+  div.querySelector('.nota-header-text').textContent = text;
+  div.dataset.header = text;
+  wrap.appendChild(div);
 }
 function notaAddRow(label = '', done = false, focus = false) {
   const wrap = document.getElementById('notaRows');
@@ -1185,6 +1204,11 @@ function notaAddRow(label = '', done = false, focus = false) {
 function notaSerializzaRighe() {
   const lines = [];
   document.querySelectorAll('#notaRows .nota-row').forEach(row => {
+    if (row.classList.contains('nota-row-header')) {
+      const h = (row.dataset.header || '').trim();
+      if (h !== '') lines.push(h);
+      return;
+    }
     const label = row.querySelector('.nota-text').value.trim();
     if (label === '') return;
     const done = row.querySelector('.nota-done').checked;
