@@ -335,6 +335,21 @@ foreach ($fasiCols as $col => $sql) {
     }
 }
 
+// La tabella `fasi` è nata per i clienti con session_id NOT NULL. Da quando una fase
+// può appartenere a un PROGETTO di design (progetto_id) invece che a un cliente, il
+// session_id deve poter essere NULL (altrimenti l'INSERT di una fase-progetto fallisce
+// con "Field 'session_id' doesn't have a default value"). Reso nullable preservando il
+// tipo esatto, una sola volta (idempotente via information_schema).
+$sidCol = $pdo->query(
+    "SELECT COLUMN_TYPE, IS_NULLABLE FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'fasi' AND COLUMN_NAME = 'session_id'"
+)->fetch(PDO::FETCH_ASSOC);
+if ($sidCol && strtoupper($sidCol['IS_NULLABLE']) === 'NO') {
+    ddl($pdo, "ALTER TABLE fasi MODIFY `session_id` {$sidCol['COLUMN_TYPE']} NULL", "fasi.session_id nullable");
+} else {
+    echo "  skip fasi.session_id nullable\n"; $skip++;
+}
+
 // ── INDICI ───────────────────────────────────────────────────────────────────
 
 // Lista clienti in dashboard: WHERE deleted_at IS NULL ORDER BY updated_at DESC
