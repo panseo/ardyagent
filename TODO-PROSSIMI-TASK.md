@@ -317,8 +317,11 @@ Nuovo utente: `htpasswd -B <path> dipendente` (mai `-c`).
   resta allineata col briefing del mattino. Nuovo endpoint `ardy-nota-settimanale-api.php` (GET = ultima,
   POST `{testo}` = salva), aggiunto al `<FilesMatch>` del `.htaccess`. Niente migrazione DB (tabella già
   esistente). ⚠️ Da verificare dal vivo: aprire la dashboard senza selezionare un cliente → la nota appare;
-  modificarla e salvare → ricompare aggiornata e Sole su WhatsApp legge la stessa versione. ⚠️ La home/empty
-  state si rivede solo a refresh pagina (l'app non ha un bottone "home"); ampliarlo è un eventuale follow-up.
+  modificarla e salvare → ricompare aggiornata e Sole su WhatsApp legge la stessa versione.
+  **Accesso da ovunque (25/06):** aggiunto pulsante **"🗒️ DA FARE"** nella barra laterale (accanto a GUIDA/⚙︎)
+  che apre l'editor della nota anche con una scheda cliente aperta (prima viveva solo nella home/empty state e
+  per rivederla serviva ricaricare la pagina). Ricarica la versione più recente prima di aprire (riprende anche
+  le modifiche fatte da Sole/Andrea su WhatsApp). Aggiunto anche un cache-buster `?v=` al link del CSS.
   ⚠️ Per Andrea la nota condivisa funziona solo se il suo numero è in `WA_ANDREA_NUMBER` (`ardy-config.php`).
 - **Estrarre JS inline (~3.400 righe) dalla dashboard** in `ardy-michela-app.js` (CSS già esterno): win di caching, refactor delicato.
 

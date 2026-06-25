@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ardy Lab — Dashboard Michela</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="ardy-michela-app.css">
+<link rel="stylesheet" href="ardy-michela-app.css?v=20260625">
 </head>
 <body>
 
@@ -38,6 +38,7 @@
           <button class="btn-nuovo-cliente" onclick="openNuovoCliente()" style="flex:1;text-align:center;background:none;border:1px solid #8b6f3e;color:#c8a96e;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">+ NUOVO</button>
           <button class="btn-nuovo-cliente" onclick="openGestioneLibreria()" style="flex:1;text-align:center;background:none;border:1px solid #444;color:#888;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">LIBRERIA</button>
           <button class="btn-nuovo-cliente" onclick="window.open('ardy-guida-michela.html','_blank')" style="flex:1;text-align:center;background:none;border:1px solid #444;color:#888;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">❓ GUIDA</button>
+          <button onclick="apriNotaEditorDaPulsante()" id="btnNotaDaFare" title="Cose da fare questa settimana" style="background:none;border:1px solid #8b6f3e;color:#c8a96e;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;white-space:nowrap;">🗒️ DA FARE</button>
           <button onclick="toggleStrumenti()" id="btnStrumenti" title="Strumenti" style="background:none;border:1px solid #444;color:#888;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">⚙︎</button>
         </div>
         <div id="strumentiPanel" style="display:none;gap:5px;margin-top:5px;flex-wrap:wrap;">
@@ -1142,6 +1143,13 @@ function apriNotaEditor() {
   document.getElementById('notaTextarea').value = _notaCorrente;
   document.getElementById('notaEditorOverlay').classList.add('open');
   setTimeout(() => document.getElementById('notaTextarea').focus(), 50);
+}
+// Apertura dal pulsante in sidebar (raggiungibile anche con una scheda aperta):
+// ricarica prima la versione più recente, così riprende anche le modifiche fatte
+// da Sole/Andrea su WhatsApp dall'ultimo caricamento pagina.
+async function apriNotaEditorDaPulsante() {
+  await caricaNotaSettimanale();
+  apriNotaEditor();
 }
 function chiudiNotaEditor() {
   document.getElementById('notaEditorOverlay').classList.remove('open');
