@@ -374,8 +374,12 @@ no concorrenza); diventa prioritario con più utenti o se compaiono 504. Refacto
   - ⮑ **Filiera mappata (25/06)**: stampa 3D = prototipo+produzione (no on-demand); prodotto replicabile
     a serie, stock fuori dalla dash (Woo/Etsy); ciclo di vita finisce a A CATALOGO (no VENDUTO); prototipo
     tracciato v1/v2/v3 con iterazioni promuovibili a contenuto; "file congelato" = transizione manuale con
-    snapshot STL+profilo+scheda; render/CAD/schede a livello progetto. Restano aperte: serve Woo al lancio?,
-    CE/sicurezza lampade, campi definitivi DB. Tutto in `PIANO-DASH-DESIGN.md` §3.
+    snapshot STL+profilo+scheda; render/CAD/schede a livello progetto. Tutto in `PIANO-DASH-DESIGN.md` §3.
+  - ⮑ **Materiali/costi (25/06)**: `materiali` testo pubblico + BOM `progetto_materiali` interna (filamento/
+    stampa/elettrico/ferramenta/finitura/imballo/manodopera); costi filamento/ore digitati da OrcaSlicer (no
+    integrazione Moonraker, stampante in LAN); manodopera €50/h default in config; scarto stampa 10% default;
+    margine = prezzo − costo. Campi DB approvati. In coda (dopo Tappa 1): serve Woo al lancio?, CE/sicurezza
+    lampade, tariffa oraria macchina. Vedi `PIANO-DASH-DESIGN.md` §2.5.
 - **Conoscenza Sole — FASE 2**: datazione fotografica guidata + community + eventuale mini-RAG se la knowledge base cresce troppo.
 - **BIMI (logo avatar mittente Gmail)**: serve DMARC enforcement + VMC (certificato ~1.000+€/anno + marchio registrato). Decisione commerciale.
 - **Codice d'accesso su WhatsApp**: su WA il numero = identità; il codice serve solo per numeri non registrati (raro). Servirebbe marker `[[CERCA:ARD-XXXX]]`.

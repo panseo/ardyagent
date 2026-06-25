@@ -62,8 +62,9 @@ progetti
   tipo               VARCHAR   -- lampada | mobile | complemento | restyling | prototipo
   stato              VARCHAR   -- vedi §3 (ciclo di vita nuovo)
   descrizione        TEXT      -- racconto/concept
-  materiali          TEXT
-  costo_produzione   DECIMAL   -- per stima margine (uso interno)
+  materiali          TEXT      -- descrizione PUBBLICA per la listing ("PLA riciclato, ottone…")
+  scarto_pct         DECIMAL   -- % scarto/fallimenti stampa, default 10 (vedi §2.5)
+  costo_produzione   DECIMAL   -- CALCOLATO: somma BOM × (1 + scarto_pct) (vedi §2.5)
   prezzo_vendita     DECIMAL   -- prezzo suggerito per la listing (NON lo gestisce la dash dopo)
   tempo_lavoro       VARCHAR
   -- binario R&D / "verità del prodotto" (artefatti a livello progetto, opzione A):
@@ -116,6 +117,39 @@ così il registro R&D alimenta anche la brand awareness senza doppio lavoro.
 
 > Implementazione probabile: una tabella `progetto_iterazioni` (v_num, note, foto, cad_ref, data,
 > `promossa_a_fase_id` NULL) per il binario R&D; le `fasi` (via `progetto_id`, §2.2) per il racconto.
+
+### 2.5 Materiali e costi (definito 25/06)
+Due cose con lo stesso nome, da tenere separate:
+- **Materiali pubblici** = testo descrittivo per la listing → campo `materiali` su `progetti`.
+- **Costi interni** = una piccola **distinta (BOM)** per sapere il margine → tabella `progetto_materiali`.
+
+```
+progetto_materiali           -- distinta costi (interna)
+  id              BIGINT PK
+  progetto_id     BIGINT FK
+  categoria       VARCHAR   -- filamento | stampa | elettrico | ferramenta | finitura | imballo | manodopera
+  voce            VARCHAR   -- es. "PLA nero bobina X", "kit E27 cavo tessile"
+  qta             DECIMAL   -- grammi / ore / pezzi
+  unita           VARCHAR   -- g | h | pz
+  costo_unitario  DECIMAL   -- €/g, €/h, €/pz
+  costo_riga      DECIMAL   -- qta × costo_unitario (calcolato)
+  note            TEXT NULL
+```
+
+Regole:
+- **`costo_produzione`** (su `progetti`) = Σ `costo_riga` × `(1 + scarto_pct/100)`. La dash mostra il
+  **margine** = `prezzo_vendita − costo_produzione`.
+- **`scarto_pct`** = % fallimenti stampa, **default 10**, modificabile per progetto (senza, il margine
+  è una bugia).
+- **Manodopera**: contata nel costo. Tariffa oraria **default €50,00/h** in config
+  (es. `ARDY_DESIGN_COSTO_ORARIO = 50.00`), modificabile sulla singola riga (`categoria='manodopera'`,
+  `unita='h'`). Da fissare ancora: tariffa oraria **macchina/stampa** (energia+ammortamento, numero
+  più piccolo, `categoria='stampa'`).
+- **Cattura da OrcaSlicer (no integrazione)**: le righe **filamento** (grammi) e **stampa** (ore) si
+  pre-compilano coi numeri che Orca dà a ogni stampa; le altre voci a mano. La porta su **Moonraker/
+  Klipper** (API live) resta aperta per dopo — ora impraticabile (stampante in LAN, dash su hosting).
+- Lo **snapshot del file congelato** (`file_snapshot`, §2.1/§3) include il **profilo OrcaSlicer** +
+  grammi/tempo del momento → "con cosa ho prodotto questo lotto" è risposto del tutto.
 
 ---
 
@@ -220,15 +254,17 @@ nessun pubblico, prezzo posizionato male**. L'energia di sviluppo va nella **mac
 - [x] **File congelato** = transizione di stato esplicita, manuale "a naso", con snapshot — §3.
 - [x] **Render/CAD/schede** = artefatti **a livello progetto** (opzione A), non dentro le fasi — §2.1/§2.4.
 - [x] **Catawiki/aste** → marginale; il prodotto è da **listino**.
+- [x] **Materiali vs costi** separati: `materiali` (testo pubblico) + BOM `progetto_materiali` (interna) — §2.5.
+- [x] **Manodopera** contata nel costo, tariffa default **€50,00/h** (config, override per riga).
+- [x] **Scarto stampa** = campo `scarto_pct`, default **10%** modificabile.
+- [x] **Costi da OrcaSlicer** (grammi/ore digitati), **niente integrazione Moonraker** per ora.
+- [x] **Campi DB** `progetti` + `progetto_materiali` (§2.1/§2.5) — approvati il 25/06.
 
-### Ancora aperte
-- [ ] **Serve Woo al lancio?** Finché ci sono 2-3 pezzi e zero traffico sul sito tuo, Etsy +
-      "scrivimi per acquistare" + fattura a mano vende uguale a costo zero. Woo quando c'è davvero
-      un catalogo e traffico da convertire.
-- [ ] **CE / sicurezza elettrica** delle lampade (vedi §3) — blocco non-software da chiarire prima
-      della vendita in serie.
-- [ ] Campi definitivi di `progetti` (§2.1) e della tabella `progetto_iterazioni` (§2.4) — ultimo
-      affinamento prima di scrivere il DDL.
+### Ancora aperte (in coda, non bloccano la Tappa 1)
+- [ ] **Serve Woo al lancio?** — *in coda* (dopo). Etsy + vendita a mano regge il lancio a costo zero.
+- [ ] **CE / sicurezza elettrica** delle lampade — *task da affrontare dopo*, prima della vendita in serie.
+- [ ] **Tariffa oraria macchina/stampa** (energia+ammortamento) — numero da fissare per la riga `stampa`.
+- [ ] Campi della tabella `progetto_iterazioni` (§2.4) — ultimo affinamento prima del DDL.
 
 ---
 
