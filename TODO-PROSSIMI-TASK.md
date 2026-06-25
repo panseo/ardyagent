@@ -1,33 +1,31 @@
 # Ardy Lab — Task aperti & note utili
 
 > Solo task **aperti** + note operative + verifiche residue. Tutto ciò che è fatto **e deployato**
-> è rimosso (lo storico resta nei commit git). Ultima pulizia: 24/06/2026.
+> è rimosso (lo storico resta nei commit git). Ultima pulizia: 25/06/2026.
 
 > ⚠️ Promemoria sempre valido: se Sole tace su **tutti** i canali insieme (WhatsApp + webchat),
 > sospetta **credito Anthropic esaurito** (capitato il 21/06; si ricarica da Plans & Billing).
 
 ---
 
-## 🚀 PRONTO AL DEPLOY (mergiato su `main` 25/06/2026 — SHA `521eadf`)
-Tutti i rami feature aperti sono stati **mergiati su `main`** (fast-forward pulito; nessuna migrazione DB,
-nessun conflitto, `php -l` ok). **Resta da lanciare il deploy sul server** e fare le verifiche dal vivo.
+## ⏰ DA CONTROLLARE SUBITO (prossima sessione) — i 2 CRON sono davvero attivi?
+La sessione 25/06 ha deployato briefing mattutino + rollover nota (vedi sotto). Michela ha **impostato i cron
+di corsa** ma NON ha fatto in tempo a verificarli. **Primo task: confermare che siano attivi e che girino.**
 
-**Deploy** (da root sul server — vedi NOTE OPERATIVE per il comando completo):
+I due cron previsti (server, fuso Europe/Rome; `<SEGRETO>` = `WA_LOOKUP_SECRET`):
 ```
-runuser -u micoperibg -- bash -c 'cd ~/repositories/ardyagent && git pull origin main && ./deploy.sh'
+0 6 * * 1   curl -s -H "X-Ardy-Secret: <SEGRETO>" https://ardyagent.ardy-lab.it/ardy-rollover-nota.php   >/dev/null 2>&1
+0 9 * * 1-5 curl -s -H "X-Ardy-Secret: <SEGRETO>" https://ardyagent.ardy-lab.it/ardy-briefing-mattino.php >/dev/null 2>&1
 ```
-
-**Cosa entra in produzione con questo deploy** (dettagli e check dal vivo nei rispettivi blocchi sotto):
-1. **Codice etico AI** in email/lettere + prompt di Sole.
-2. **Nuovo stato cliente "RITIRATI"** (limbo ACCONTO→IN_LAVORAZIONE).
-3. **Popup date all'attivazione IN_LAVORAZIONE**.
-4. **Briefing del mattino** con la nota settimanale "cose da fare".
-5. **Import clienti AUTOMATICO post-Acconto** nell'outreach (categoria `clienti`, stato `cliente`).
-6. **Nota settimanale "cose da fare" anche in dashboard** (pannello home, endpoint `ardy-nota-settimanale-api.php`).
-7. **Widget WordPress "Chatta con Sole"** (⚠️ lo snippet repo è solo backup: va re-incollato nel WPCode id 15243).
-8. **Guida backup/restore B2** (`GUIDA-BACKUP-RESTORE.md`, solo docs).
-
-⚠️ Dopo il deploy, spuntare le verifiche dal vivo elencate sotto e poi rimuovere da qui le voci confermate.
+**Come verificarlo:**
+- **Diretto** (serve accesso server): `crontab -l` dell'utente giusto, oppure la UI **cPanel → Cron Jobs**.
+  ⚠️ Attenzione all'utente: l'app gira come `micoperibg` ma il cron potrebbe essere su un altro utente/root —
+  controllare dove è stato messo. Il comando deve avere l'header `X-Ardy-Secret` col valore reale.
+- **Indiretto** (anche dalla sessione web, senza SSH): (a) il **briefing**: Michela ha ricevuto l'email delle
+  ~9:00 in un giorno feriale? (b) il **rollover**: lunedì dopo le 06:00 dev'esserci in `note_staff` una riga
+  nuova con `settimana` = ISO della settimana corrente e `created_at` ~06:00 (lo si vede dalla nota in dashboard:
+  data "agg." aggiornata al lunedì). Se manca, il cron del rollover non è partito.
+- **Test manuale** (sempre ok per provare l'endpoint a mano): aggiungere `?force=1&secret=<SEGRETO>` all'URL.
 
 ---
 
@@ -124,14 +122,14 @@ La direzione che vogliamo dare allo strumento, da affrontare per prossimi step:
    **pagina dedicata** (webchat + **codice di verifica**, come il `codice_accesso` cliente esistente).
 3. **Prompt dedicato per campagna** — ogni campagna ha il suo prompt per Sole (contesto/obiettivo), così Sole
    risponde in linea con quell'iniziativa.
-4. **Codice etico AI — FATTO (in codice, da deployare).** Riga "Come usiamo l'AI" (non aggressione, tutela
+4. **Codice etico AI — ✅ DEPLOYATO 25/06.** Riga "Come usiamo l'AI" (non aggressione, tutela
    privacy/sicurezza dati, mai uso fraudolento) ora in TUTTE le email (`ardy_email_codice_etico()` in
    `ardy-email.php` → footer cliente, grazie-consegna, solleciti, outreach `brevoSend`), nelle lettere cartacee
    e anteprime (`ardy-outreach.html`), e nei system prompt di Sole (`ardy-system.txt` → web+WhatsApp,
    `ardy-proxy-lavorazione.php` → chat lavorazione). ⚠️ Verificare dal vivo dopo deploy che la riga compaia in
    un'email reale e che Sole sappia esporre il codice etico se richiesto.
 
-### 👥 Outreach — Import clienti AUTOMATICO post-Acconto — ✅ FATTO (in codice, da deployare)
+### 👥 Outreach — Import clienti AUTOMATICO post-Acconto — ✅ DEPLOYATO 25/06
 L'import **manuale** dei clienti CRM era già LIVE. Aggiunto l'**automatico**: quando un cliente entra per la
 prima volta in uno stato "impegnato" (`ACCONTO`, `RITIRATI`, `IN_LAVORAZIONE`, `COMPLETATO`, `CONSEGNATO`,
 `PAGATO` — gestisce anche il salto diretto Acconto→Ritirati/Lavorazione), viene aggiunto ai contatti outreach
@@ -209,7 +207,7 @@ Non sollecitare; attendere esito su `ardy.documenti`.
 
 ## 📋 TASK DA SVILUPPARE (aperti)
 
-### ☀️ Briefing del mattino via EMAIL (push automatico 9:00) — FATTO in codice (branch), da config+cron+deploy
+### ☀️ Briefing del mattino via EMAIL (push automatico 9:00) — ✅ DEPLOYATO 25/06 (cron da confermare, vedi in cima)
 Push proattivo del briefing **senza aspettare il "buongiorno"**. Scelto **email** (non WhatsApp) perché la
 finestra 24h di Meta non garantirebbe la consegna fuori sessione e un template non regge un briefing dinamico.
 - Nuovo endpoint **`ardy-briefing-mattino.php`**, protetto da `WA_LOOKUP_SECRET` (header `X-Ardy-Secret`),
@@ -221,14 +219,11 @@ finestra 24h di Meta non garantirebbe la consegna fuori sessione e un template n
 - Invio via SMTP Brevo (stesso pattern di solleciti/trasporti), email HTML col logo. Include un **CTA**
   "Apri la dashboard" per modificare le «Cose da fare questa settimana» (link `ARDY_DASHBOARD_URL`,
   default `https://ardyagent.ardy-lab.it/` — unico accesso alla dashboard di Michela).
-- **Destinatario deciso:** solo `michelapanella1999@gmail.com` (Andrea non lo vuole). Niente migrazione DB.
-- ⚠️ **AZIONI MANUALI per renderlo live** (lato server, non da repo):
-  1. In `ardy-config.php`: `define('ARDY_BRIEFING_EMAILS', 'michelapanella1999@gmail.com');`
-     (opzionale `define('ARDY_DASHBOARD_URL', 'https://ardyagent.ardy-lab.it/');`).
-  2. **Cron** (fuso Europe/Rome): `0 9 * * 1-5 curl -s -H "X-Ardy-Secret: <WA_LOOKUP_SECRET>" https://ardyagent.ardy-lab.it/ardy-briefing-mattino.php >/dev/null 2>&1`
-  3. Test: chiamare l'endpoint con `?force=1` + segreto e verificare che l'email arrivi e i blocchi siano giusti.
+- **Destinatario:** solo `michelapanella1999@gmail.com` (Andrea non lo vuole). Niente migrazione DB.
+- **Config (FATTA):** `ARDY_BRIEFING_EMAILS` impostata in `ardy-config.php`. L'email di test è arrivata → endpoint OK.
+- ⏳ **Resta solo da confermare il cron delle 9:00** (vedi blocco "DA CONTROLLARE SUBITO" in cima).
 
-### 🔁 Rollover settimanale della nota "Cose da fare" (lunedì) — FATTO in codice (branch), da cron+deploy
+### 🔁 Rollover settimanale della nota "Cose da fare" (lunedì) — ✅ DEPLOYATO 25/06 (cron da confermare, vedi in cima)
 La settimana è lun→dom. Il lunedì il job legge l'ultima `note_staff`, **elimina le righe marcate fatte**
 (✔ ✓ ✅ oppure `[x]`/`[X]`) e **riporta le non evase** salvando una riga nuova con la settimana ISO corrente
 (stessa codifica `date('o-\WW')` dei salvataggi). v1 su **testo libero + spunta** (zero AI), nessun refactor.
@@ -239,8 +234,7 @@ La settimana è lun→dom. Il lunedì il job legge l'ultima `note_staff`, **elim
   digita l'icona ✔, si spunta la casella. Lo STORAGE resta testo libero col marcatore ✔ (ponte testo↔righe:
   `notaParseRighe`/`notaSerializzaRighe` in `ardy-michela-app.html`) → Sole su WhatsApp e il rollover restano
   identici. Voci spuntate mostrate barrate; "+ Aggiungi riga" e ✕ per riga.
-- ⚠️ **Cron da impostare** (Europe/Rome), lunedì 06:00 (prima del briefing delle 9):
-  `0 6 * * 1 curl -s -H "X-Ardy-Secret: <WA_LOOKUP_SECRET>" https://ardyagent.ardy-lab.it/ardy-rollover-nota.php >/dev/null 2>&1`
+- ⏳ **Cron del lunedì 06:00 da confermare** (vedi blocco "DA CONTROLLARE SUBITO" in cima).
 - ⚠️ Caveat (atteso): se nessuno spunta col ✔, il lunedì si riporta tutto — comportamento sicuro, non "pulisce" da solo.
 
 ### ☁️ Media su Backblaze B2 — off-load disco + semilavorato migrazione (PIANIFICATO 24/06)
@@ -287,7 +281,7 @@ post-pubblicazione; coordinare con `ardy-archivia-persi.php` (oggi sposta foto/r
 agire anche su B2. ⚠️ Sul nuovo VPS no-panel il backup B2 va comunque rifatto in chiave no-cPanel (dump DB
 cron + sync media) — questo task copre proprio il lato media.
 
-### 🪑 Nuovo stato cliente "RITIRATI" — FATTO (in codice, da deployare)
+### 🪑 Nuovo stato cliente "RITIRATI" — ✅ DEPLOYATO 25/06
 Stato per i mobili **già prelevati e in laboratorio**, ma con **lavori non ancora avviati** (limbo tra
 ACCONTO e IN_LAVORAZIONE). Implementato: posizione **tra ACCONTO e IN_LAVORAZIONE** nel flusso e nel filtro
 sidebar; badge teal (`.stato-RITIRATI`); mostra **Preventivi + Lavorazione** (può già preparare le fasi in
@@ -329,7 +323,7 @@ resto admin-only. `ardyAuthUser()` già restituisce lo username → manca lo str
 Nuovo utente: `htpasswd -B <path> dipendente` (mai `-c`).
 
 ### Migliorie minori UX / dashboard CRM (bassa priorità)
-- **Popup date all'attivazione IN_LAVORAZIONE** — ✅ FATTO (in codice, da deployare). Al click su
+- **Popup date all'attivazione IN_LAVORAZIONE** — ✅ DEPLOYATO 25/06. Al click su
   IN_LAVORAZIONE, se inizio/fine lavoro sono vuote, si apre un modale che le chiede (inizio precompilato a
   oggi); "IMPOSTA DATE" le copia nei campi "Periodo del lavoro" e marca dirty (salvi tu, anti-clobber attivo),
   "ANNULLA" chiude senza scrivere. Serve a far scattare gli avvisi di scadenza che dipendono da quelle date.
