@@ -370,8 +370,12 @@ no concorrenza); diventa prioritario con più utenti o se compaiono 504. Refacto
   - ⮑ **Scongelato/evoluto in `PIANO-DASH-DESIGN.md`** (25/06): dash separata per i progetti interni di design
     (prototipi/lampade/mobili/restyling) → fasi → contenuti → vendita. Deciso: stesso codebase + dati separati
     (`progetti` + `fasi.progetto_id`), la dash NON vende (master contenuti), Woo master commercio via push a
-    senso unico, un canale per volta. Tappa 1 (progetti + dash + fasi) è autoconsistente. Decisioni aperte:
-    ciclo di vita pezzo-singolo vs lotti, peso Catawiki, se serve Woo al lancio.
+    senso unico, un canale per volta. Tappa 1 (progetti + dash + fasi) è autoconsistente.
+  - ⮑ **Filiera mappata (25/06)**: stampa 3D = prototipo+produzione (no on-demand); prodotto replicabile
+    a serie, stock fuori dalla dash (Woo/Etsy); ciclo di vita finisce a A CATALOGO (no VENDUTO); prototipo
+    tracciato v1/v2/v3 con iterazioni promuovibili a contenuto; "file congelato" = transizione manuale con
+    snapshot STL+profilo+scheda; render/CAD/schede a livello progetto. Restano aperte: serve Woo al lancio?,
+    CE/sicurezza lampade, campi definitivi DB. Tutto in `PIANO-DASH-DESIGN.md` §3.
 - **Conoscenza Sole — FASE 2**: datazione fotografica guidata + community + eventuale mini-RAG se la knowledge base cresce troppo.
 - **BIMI (logo avatar mittente Gmail)**: serve DMARC enforcement + VMC (certificato ~1.000+€/anno + marchio registrato). Decisione commerciale.
 - **Codice d'accesso su WhatsApp**: su WA il numero = identità; il codice serve solo per numeri non registrati (raro). Servirebbe marker `[[CERCA:ARD-XXXX]]`.

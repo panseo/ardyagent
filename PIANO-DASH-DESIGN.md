@@ -25,6 +25,11 @@
 - **Sequenza**: prima la macchina di contenuti (Tappa 1, autoconsistente), poi catalogo, poi il
   ponte Woo **solo quando esistono davvero catalogo replicabile e traffico** — non "perché ci
   vuole l'ecommerce".
+- **Filiera reale (definita 25/06, vedi §3)**: la stampa 3D è **prototipo *e* produzione** (no
+  print-on-demand per ora). Il prodotto è **replicabile a serie**, lo **stock vive su Woo/Etsy,
+  non nella dash**. Il ciclo di vita finisce a *"prodotto pronto + file congelato + scheda + foto"*
+  → **A CATALOGO**, non "venduto". Due binari dentro al progetto: **R&D** (interno) e **racconto**
+  (pubblico).
 
 ---
 
@@ -35,8 +40,9 @@
 | Soggetto | `clienti` (chi porta un mobile) | `progetti` (pezzo tuo) |
 | Cuore | `fasi` (foto/video, stato, ordine, prezzo) | **le stesse `fasi`** |
 | Output contenuti | reel, bozze social, pubblicazione WordPress | **gli stessi** |
-| Fondo dell'imbuto | consegna + pagamento + solleciti | **catalogo + vendita su canali** |
-| Stato | `LEAD → ACCONTO → IN_LAVORAZIONE → COMPLETATO → CONSEGNATO` | `IDEA → … → VENDUTO` (nuovo) |
+| Fondo dell'imbuto | consegna + pagamento + solleciti | **a catalogo** (stock/vendita fuori dalla dash) |
+| Stato | `LEAD → ACCONTO → IN_LAVORAZIONE → COMPLETATO → CONSEGNATO` | `IDEA → … → A CATALOGO` (vedi §3) |
+| Binari interni | uno solo (le fasi sono già "racconto") | **due**: R&D interno + racconto pubblico |
 
 Conseguenza pratica: il pezzo di software più prezioso e collaudato che hai — *fasi → reel/social*
 — non si tocca e non si duplica. Cambia il soggetto a monte e il fondo a valle.
@@ -50,22 +56,34 @@ Niente campi "cliente" (telefono, indirizzo, sopralluogo, solleciti). Bozza dei 
 
 ```
 progetti
-  id                BIGINT PK
-  slug              VARCHAR   -- per URL pubblico catalogo/lavorazione
-  titolo            VARCHAR
-  tipo              VARCHAR   -- lampada | mobile | complemento | restyling | prototipo
-  stato             VARCHAR   -- vedi §3 (ciclo di vita nuovo)
-  descrizione       TEXT      -- racconto/concept
-  materiali         TEXT
-  costo_produzione  DECIMAL
-  prezzo_vendita    DECIMAL
-  tempo_lavoro      VARCHAR   -- o ore stimate/effettive
-  serie             VARCHAR   -- pezzo unico | serie limitata | replicabile
-  canali_vendita    TEXT      -- JSON: dove è in vendita + link/id esterni
-  woo_product_id    BIGINT NULL  -- popolato dal push (Tappa 3)
-  copertina_url     VARCHAR NULL
+  id                 BIGINT PK
+  slug               VARCHAR   -- per URL pubblico catalogo/lavorazione
+  titolo             VARCHAR
+  tipo               VARCHAR   -- lampada | mobile | complemento | restyling | prototipo
+  stato              VARCHAR   -- vedi §3 (ciclo di vita nuovo)
+  descrizione        TEXT      -- racconto/concept
+  materiali          TEXT
+  costo_produzione   DECIMAL   -- per stima margine (uso interno)
+  prezzo_vendita     DECIMAL   -- prezzo suggerito per la listing (NON lo gestisce la dash dopo)
+  tempo_lavoro       VARCHAR
+  -- binario R&D / "verità del prodotto" (artefatti a livello progetto, opzione A):
+  scheda_tecnica     TEXT      -- dimensioni, finiture, e per lampada: attacco, V, cavo, peso…
+  file_congelato_at  DATETIME NULL  -- quando hai premuto "congela" (vedi §3)
+  file_snapshot      TEXT NULL -- JSON snapshot: STL + profilo stampa + scheda al congelamento
+  render_urls        TEXT NULL -- JSON: render
+  cad_urls           TEXT NULL -- JSON: file CAD/STL
+  -- canali / catalogo:
+  canali_vendita     TEXT      -- JSON: dove è pubblicato + link/id esterni (annunci)
+  woo_product_id     BIGINT NULL  -- popolato dal push (Tappa 3)
+  copertina_url      VARCHAR NULL
   created_at / updated_at / deleted_at (soft delete come clienti)
 ```
+> **Nessun campo stock/quantità/venduto**: lo stock vive su Woo/Etsy (deciso 25/06). La dash si
+> ferma a "prodotto pronto + pubblicato". `prezzo_vendita` è solo un *suggerimento* per la listing.
+
+> **`serie`**: non serve un campo "pezzo unico vs serie" — la stampa 3D rende tutto **replicabile**
+> per natura (deciso 25/06). Eventuali edizioni limitate sono una scelta di marketing, non un vincolo
+> del modello.
 
 ### 2.2 Riuso delle `fasi` — colonna `progetto_id` nullable (deciso)
 Oggi `fasi` è legata al cliente via `session_id`. Si aggiunge `progetto_id BIGINT NULL`: una fase
@@ -85,26 +103,53 @@ Gemella di `ardy-michela-app.html`: stesso CSS/token (`ardy-michela-app.css`), s
 > Nota tecnica per dopo: i 363 `style=""` inline della dash principale (vedi `ANALISI-CLAUDE-DESIGN.md`)
 > non vanno **ereditati** nella nuova app — partire theming-ready (classi/token) è un'occasione gratis.
 
+### 2.4 Due binari dentro al progetto (definito 25/06)
+Il restauro ha un solo binario: le fasi *nascono già* per essere pubblicate. Il design ne ha **due**:
+- **Binario R&D (interno)**: iterazioni di prototipo (v1, v2, v3…) con foto + **note di iterazione**
+  ("qui non torna, rifare"), più gli artefatti tecnici a livello progetto (CAD, render, scheda, file
+  congelato). Serve a *ricordarti cosa hai cambiato*, non a pubblicare.
+- **Binario racconto (pubblico)**: le **fasi** riusate dalla dash principale → reel/social/WordPress.
+
+Le iterazioni R&D restano interne *di default*, ma una iterazione deve poter essere **"promossa" a
+contenuto** (i timelapse di stampa, il "v1 sbagliato vs v3 giusto" sono ottimo materiale social):
+così il registro R&D alimenta anche la brand awareness senza doppio lavoro.
+
+> Implementazione probabile: una tabella `progetto_iterazioni` (v_num, note, foto, cad_ref, data,
+> `promossa_a_fase_id` NULL) per il binario R&D; le `fasi` (via `progetto_id`, §2.2) per il racconto.
+
 ---
 
-## 3. Lo stato del progetto — il pezzo nuovo da disegnare
+## 3. Il ciclo di vita del progetto (definito 25/06)
 
 Il cliente fa `LEAD → ACCONTO → IN_LAVORAZIONE → COMPLETATO → CONSEGNATO` (lo pilotano i pagamenti).
-Il progetto invece è pilotato dalla **pubblicazione e messa in vendita**, non dai soldi. Proposta:
+Il progetto è pilotato dalla **maturazione del prodotto**, non dai soldi, e **finisce a catalogo**
+(stock/ordini/venduto vivono su Woo/Etsy, fuori dalla dash). Sequenza reale:
 
 ```
-IDEA → PROTOTIPO → IN_LAVORAZIONE → FINITO → FOTOGRAFATO → A_CATALOGO → IN_VENDITA → VENDUTO
+IDEA → PROGETTAZIONE (CAD/render)
+     → PROTOTIPO  ⟲ loop tracciato: v1, v2, v3… (foto + note iterazione)   [binario R&D]
+     → [⏟ FILE CONGELATO]  ← bottone manuale "a naso": scatta lo snapshot (STL + profilo + scheda)
+     → PRODUZIONE (stampi il lotto — la stampa 3D è anche metodo di produzione, no on-demand per ora)
+     → FOTOGRAFIA
+     → A CATALOGO / PUBBLICATO  ← stato terminale, con link all'annuncio
+        └─ da qui: Woo/Etsy. La dash NON segue stock/ordini/venduto.
 ```
 
 Transizioni che *fanno succedere qualcosa* (come oggi IN_LAVORAZIONE apre il popup date):
-- **FOTOGRAFATO** → sblocca la creazione della scheda prodotto (foto pronte).
-- **A_CATALOGO** → la scheda è pubblicata nel catalogo interno/sito.
-- **IN_VENDITA** → push verso Woo/canali (Tappa 3+).
-- **VENDUTO** → ritiro dai canali, archiviazione.
+- **FILE CONGELATO** → la transizione più importante: separa "sto progettando" da "sto producendo".
+  Non è un gate (il sistema non giudica se è pronto): è un **bottone manuale** che, al click,
+  **scatta lo snapshot** del file STL + profilo di stampa + scheda tecnica di quella versione
+  (`file_snapshot`), così sai con cosa hai prodotto quel lotto anche se il CAD poi va avanti.
+- **FOTOGRAFIA** → sblocca la creazione della scheda prodotto (foto pronte).
+- **A CATALOGO** → scheda pubblicata + (Tappa 3+) push verso Woo. Stato terminale lato dash.
 
-> ⚠️ Da confermare con Ardy/Michela: questa sequenza assume **pezzo singolo**. Se si lavora a
-> **lotti/serie** (es. 5 lampande uguali) lo stato deve gestire la quantità e "VENDUTO" diventa
-> "stock". Decisione che riflette il modo reale di lavorare — non copiabile dal restauro.
+> Decisioni che questa sequenza **chiude** (erano aperte in §6): è **serie replicabile + stock fuori
+> dalla dash** (non pezzo singolo); Catawiki/aste → **marginale** (il prodotto è da listino, non da
+> asta); niente stato `VENDUTO` nella dash.
+
+> ⚠️ **Scenario non-software da tenere a mente**: la lampada è un **prodotto elettrico**. Venderne
+> *in serie* in UE chiama in causa **sicurezza/marcatura CE** — non è codice, ma è un blocco che può
+> frenare il "metti in vendita". Da chiarire prima della Tappa 3, non dopo.
 
 ---
 
@@ -127,8 +172,8 @@ La dash resta dov'è il lavoro e la storia; Woo è la cassa.
 ### 4.3 Canali — realtà, non lista della spesa
 - **WooCommerce**: API REST pulita → ponte diretto fattibile (Tappa 3).
 - **Etsy**: il più sensato per partire (pubblico giusto per design/restyling, foto e racconto contano).
-- **Catawiki**: **asta selezionata**, non un listino. Niente push: candidatura di lotti a mano. Ottimo
-  per il pezzo unico di pregio, **flusso manuale a sé**.
+- **Catawiki**: **asta selezionata**, non un listino. Marginale per te (il prodotto stampato è da
+  listino, non da asta); resta un **flusso manuale a sé**, occasionale, per l'eventuale pezzo di pregio.
 - **Google Shopping**: gioco di **feed + ads a pagamento**. Solo dopo, via feed di Woo, con budget.
 - **Amazon**: **no** per pezzi di design unici/restyling. Commodity + burocrazia handmade. Sbagliato per te.
 
@@ -157,28 +202,38 @@ nessun pubblico, prezzo posizionato male**. L'energia di sviluppo va nella **mac
 - `woo_product_id` salvato su `progetti`. Da lì Woo è il master commerciale.
 
 ### Tappa 4 — Feed / marketplace
-- Google Shopping via **feed di Woo**. Poi eventualmente **Etsy** (un canale per volta).
-- **Catawiki manuale** quando c'è il pezzo unico giusto.
+- **Etsy** come primo marketplace (un canale per volta). Google Shopping via **feed di Woo**, con budget ads.
+- **Catawiki manuale**, marginale, solo per l'eventuale pezzo di pregio.
 
 > Tappa 1 dà ritorno subito; vendita e marketplace vengono dopo, su decisioni che maturano
 > **vendendo davvero**, non a tavolino.
 
 ---
 
-## 6. Decisioni ancora aperte (da chiudere prima/durante Tappa 1)
-- [ ] **Ciclo di vita** del progetto: la sequenza di §3 va bene a **pezzo singolo** o serve gestire
-      **lotti/serie + stock**?
-- [ ] **Peso di Catawiki/aste** vs prodotto replicabile a listino (cambia quanto investire sul
-      "pezzo unico di pregio").
-- [ ] **Serve Woo al lancio?** Realisticamente: finché ci sono 2-3 pezzi e zero traffico sul sito
-      tuo, Etsy + "scrivimi per acquistare" + fattura a mano vende uguale a costo zero. Woo quando
-      c'è davvero un catalogo e traffico da convertire.
-- [ ] Campi definitivi di `progetti` (§2.1) — affinare su come lavori davvero.
+## 6. Decisioni — chiuse il 25/06 e ancora aperte
+
+### Chiuse (filiera mappata insieme il 25/06)
+- [x] **Stampa 3D** = prototipo **e** produzione (no print-on-demand per ora).
+- [x] **Prodotto replicabile a serie**; **stock fuori dalla dash** (vive su Woo/Etsy).
+- [x] **Ciclo di vita** lato dash finisce a **A CATALOGO** (no `VENDUTO`) — §3.
+- [x] **Prototipo tracciato** (loop v1/v2/v3 con note), con iterazioni **promuovibili a contenuto** — §2.4.
+- [x] **File congelato** = transizione di stato esplicita, manuale "a naso", con snapshot — §3.
+- [x] **Render/CAD/schede** = artefatti **a livello progetto** (opzione A), non dentro le fasi — §2.1/§2.4.
+- [x] **Catawiki/aste** → marginale; il prodotto è da **listino**.
+
+### Ancora aperte
+- [ ] **Serve Woo al lancio?** Finché ci sono 2-3 pezzi e zero traffico sul sito tuo, Etsy +
+      "scrivimi per acquistare" + fattura a mano vende uguale a costo zero. Woo quando c'è davvero
+      un catalogo e traffico da convertire.
+- [ ] **CE / sicurezza elettrica** delle lampade (vedi §3) — blocco non-software da chiarire prima
+      della vendita in serie.
+- [ ] Campi definitivi di `progetti` (§2.1) e della tabella `progetto_iterazioni` (§2.4) — ultimo
+      affinamento prima di scrivere il DDL.
 
 ---
 
 ## 7. Prossimo passo concreto (quando si parte)
-1. Confermare il **ciclo di vita** (§3) — è il cuore della dash nuova.
-2. Congelare i **campi di `progetti`** (§2.1).
+1. ✅ Ciclo di vita confermato (§3) — il cuore della dash nuova è mappato.
+2. Affinare i **campi di `progetti`** (§2.1) e `progetto_iterazioni` (§2.4): ultimo giro prima del DDL.
 3. Tappa 1: DDL in `ardy-migrate.php` → `ardy-progetti-api.php` → `ardy-design-app.html` (theming-ready)
    → agganciare il motore fasi/reel. Su branch, niente impatto sulla dash live.
