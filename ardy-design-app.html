@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Ardy Design — Progetti</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* Token brand — allineati a ardy-michela-app.css (:root). Tenuti qui per partire
+     theming-ready senza ereditare i 363 stili inline della dash principale. */
+  :root {
+    --bg:#0e0e0e; --surface:#161616; --surface2:#1e1e1e; --border:#2a2a2a;
+    --accent:#c8a96e; --accent2:#8b6f3e; --text:#e8e2d9; --text-dim:#7a7470;
+    --text-mid:#b0a89e; --red:#c0392b; --green:#27ae60; --blue:#2980b9;
+    --orange:#e67e22; --yellow:#f1c40f;
+    --radius:10px; --radius-sm:7px; --space:16px; --shadow:0 4px 18px rgba(0,0,0,.35);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; font-size:14px; min-height:100vh; }
+  a { color:var(--accent); }
+
+  header {
+    background:var(--surface); border-bottom:1px solid var(--border); padding:0 24px;
+    height:56px; display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:100;
+  }
+  .logo { font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:3px; color:var(--accent); }
+  .logo small { color:var(--text-dim); letter-spacing:2px; font-size:13px; margin-left:8px; }
+  header a.back { font-size:13px; color:var(--text-mid); text-decoration:none; }
+  header a.back:hover { color:var(--accent); }
+
+  .layout { display:grid; grid-template-columns:320px 1fr; min-height:calc(100vh - 56px); }
+  .sidebar { background:var(--surface); border-right:1px solid var(--border); padding:16px; overflow-y:auto; }
+  .main { padding:24px; overflow-y:auto; max-width:1100px; }
+
+  button {
+    font-family:inherit; font-size:13px; cursor:pointer; border:1px solid var(--border);
+    background:var(--surface2); color:var(--text); padding:8px 14px; border-radius:var(--radius-sm);
+    transition:.15s;
+  }
+  button:hover { border-color:var(--accent); }
+  button.primary { background:var(--accent); color:#1a1407; border-color:var(--accent); font-weight:600; }
+  button.primary:hover { background:#d8ba80; }
+  button.ghost { background:transparent; }
+  button.danger:hover { border-color:var(--red); color:var(--red); }
+  button.sm { padding:5px 10px; font-size:12px; }
+
+  input, select, textarea {
+    font-family:inherit; font-size:13px; background:var(--bg); color:var(--text);
+    border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 10px; width:100%;
+  }
+  input:focus, select:focus, textarea:focus { outline:none; border-color:var(--accent); }
+  textarea { resize:vertical; min-height:64px; }
+  label { display:block; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--text-dim); margin:0 0 5px; }
+  .field { margin-bottom:14px; }
+  .row { display:flex; gap:12px; flex-wrap:wrap; }
+  .row > .field { flex:1; min-width:140px; }
+
+  .newbtn { width:100%; margin-bottom:14px; }
+  .plist { display:flex; flex-direction:column; gap:8px; }
+  .pcard {
+    background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm);
+    padding:11px 13px; cursor:pointer; transition:.15s;
+  }
+  .pcard:hover { border-color:var(--accent2); }
+  .pcard.active { border-color:var(--accent); background:#221d12; }
+  .pcard .t { font-weight:600; margin-bottom:4px; }
+  .pcard .meta { font-size:11px; color:var(--text-dim); display:flex; gap:8px; align-items:center; }
+
+  .badge { display:inline-block; font-size:10px; letter-spacing:.5px; padding:2px 7px; border-radius:20px; border:1px solid var(--border); text-transform:uppercase; }
+  .badge.IDEA{color:var(--text-mid)} .badge.PROGETTAZIONE{color:var(--blue);border-color:var(--blue)}
+  .badge.PROTOTIPO{color:var(--orange);border-color:var(--orange)} .badge.FILE_CONGELATO{color:var(--yellow);border-color:var(--yellow)}
+  .badge.PRODUZIONE{color:var(--accent);border-color:var(--accent)} .badge.FOTOGRAFIA{color:var(--text)}
+  .badge.A_CATALOGO{color:var(--green);border-color:var(--green)}
+
+  .panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-bottom:18px; box-shadow:var(--shadow); }
+  .panel h2 { font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:2px; color:var(--accent); margin-bottom:14px; font-weight:400; }
+  .panel h2 small { color:var(--text-dim); font-family:'DM Sans'; font-size:11px; letter-spacing:.5px; }
+
+  /* Pipeline stati */
+  .pipeline { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+  .step { font-size:11px; padding:6px 10px; border-radius:20px; border:1px solid var(--border); background:var(--surface2); cursor:pointer; color:var(--text-dim); white-space:nowrap; }
+  .step:hover { border-color:var(--accent); }
+  .step.done { color:var(--text-mid); }
+  .step.current { background:var(--accent); color:#1a1407; border-color:var(--accent); font-weight:600; }
+
+  table.bom { width:100%; border-collapse:collapse; font-size:13px; }
+  table.bom th { text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--text-dim); padding:6px 6px; border-bottom:1px solid var(--border); }
+  table.bom td { padding:4px 6px; border-bottom:1px solid var(--surface2); vertical-align:middle; }
+  table.bom input, table.bom select { padding:5px 7px; font-size:12px; }
+  .num { font-family:'DM Mono',monospace; text-align:right; }
+  .costbar { display:flex; gap:24px; flex-wrap:wrap; margin-top:14px; padding-top:14px; border-top:1px solid var(--border); }
+  .costbar .b { font-family:'DM Mono',monospace; }
+  .costbar .b span { display:block; font-family:'DM Sans'; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--text-dim); margin-bottom:3px; }
+  .costbar .b b { font-size:20px; font-weight:500; }
+  .pos{color:var(--green)} .neg{color:var(--red)}
+
+  .iter { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:8px; }
+  .iter .h { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .iter .vtag { font-family:'DM Mono',monospace; color:var(--accent); font-weight:500; }
+
+  .empty { color:var(--text-dim); text-align:center; padding:60px 20px; }
+  .muted { color:var(--text-dim); font-size:12px; }
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--surface2); border:1px solid var(--accent); color:var(--text); padding:10px 18px; border-radius:var(--radius-sm); box-shadow:var(--shadow); opacity:0; transition:.2s; pointer-events:none; z-index:300; }
+  .toast.show { opacity:1; }
+  .hidden { display:none !important; }
+  @media (max-width:760px){ .layout{grid-template-columns:1fr} .sidebar{border-right:none;border-bottom:1px solid var(--border)} }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">ARDY DESIGN <small>progetti interni</small></div>
+  <a class="back" href="ardy-michela-app.html">← Dash principale</a>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <button class="primary newbtn" onclick="nuovoProgetto()">+ Nuovo progetto</button>
+    <div class="plist" id="plist"></div>
+  </aside>
+
+  <main class="main" id="main">
+    <div class="empty">Seleziona un progetto o creane uno nuovo.</div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'ardy-progetti-api.php';
+const TIPI = ['lampada','mobile','complemento','restyling','prototipo'];
+const STATI = ['IDEA','PROGETTAZIONE','PROTOTIPO','FILE_CONGELATO','PRODUZIONE','FOTOGRAFIA','A_CATALOGO'];
+const CATEGORIE = ['filamento','stampa','elettrico','ferramenta','finitura','imballo','manodopera'];
+const UNITA_DEF = { filamento:'g', stampa:'h', manodopera:'h' };
+let stato = { lista:[], sel:null, dettaglio:null, costoOrario:50 };
+
+const eur = n => (n===null||n===undefined||n==='') ? '—' : Number(n).toLocaleString('it-IT',{style:'currency',currency:'EUR'});
+const esc = s => (s??'').toString().replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
+
+async function api(method, body){
+  const opt = { method, headers:{'Content-Type':'application/json'} };
+  if (body) opt.body = JSON.stringify(body);
+  const r = await fetch(API + (method==='GET'&&body?('?'+new URLSearchParams(body)):''), method==='GET'?{}:opt);
+  return r.json();
+}
+
+// ── Lista ───────────────────────────────────────────────
+async function caricaLista(){
+  const d = await api('GET');
+  stato.lista = d.progetti || [];
+  renderLista();
+}
+function renderLista(){
+  const el = document.getElementById('plist');
+  if (!stato.lista.length){ el.innerHTML = '<div class="muted" style="padding:8px">Nessun progetto.</div>'; return; }
+  el.innerHTML = stato.lista.map(p => `
+    <div class="pcard ${p.id===stato.sel?'active':''}" onclick="apri(${p.id})">
+      <div class="t">${esc(p.titolo)||'(senza titolo)'}</div>
+      <div class="meta">
+        <span class="badge ${p.stato}">${p.stato.replace('_',' ')}</span>
+        <span>${esc(p.tipo)}</span>
+        ${p.margine!==null?`<span class="${p.margine>=0?'pos':'neg'}">${eur(p.margine)}</span>`:''}
+      </div>
+    </div>`).join('');
+}
+
+// ── Dettaglio ───────────────────────────────────────────
+async function apri(id){
+  stato.sel = id;
+  const d = await api('GET', { id });
+  if (!d.success){ toast('Errore caricamento'); return; }
+  stato.dettaglio = d;
+  if (d.config) stato.costoOrario = d.config.costo_orario;
+  renderLista();
+  renderDettaglio();
+}
+
+function nuovoProgetto(){
+  stato.sel = null;
+  stato.dettaglio = { progetto:{ id:0, titolo:'', tipo:'lampada', stato:'IDEA', descrizione:'', materiali:'', scheda_tecnica:'', scarto_pct:10, prezzo_vendita:'', tempo_lavoro:'', costo_produzione:null, margine:null }, materiali:[], iterazioni:[], fasi:[] };
+  renderLista();
+  renderDettaglio(true);
+}
+
+function renderDettaglio(nuovo=false){
+  const p = stato.dettaglio.progetto;
+  const stepi = STATI.indexOf(p.stato);
+  document.getElementById('main').innerHTML = `
+    <div class="panel">
+      <div class="row">
+        <div class="field" style="flex:2"><label>Titolo</label><input id="f_titolo" value="${esc(p.titolo)}" placeholder="Es. Lampada Orbit"></div>
+        <div class="field"><label>Tipo</label><select id="f_tipo">${TIPI.map(t=>`<option ${t===p.tipo?'selected':''}>${t}</option>`).join('')}</select></div>
+      </div>
+
+      ${p.id?`
+      <label>Ciclo di vita</label>
+      <div class="pipeline">
+        ${STATI.map((s,i)=>`<div class="step ${i<stepi?'done':''} ${i===stepi?'current':''}" onclick="cambiaStato('${s}')">${s.replace('_',' ')}</div>`).join('')}
+      </div>
+      <div class="muted" style="margin-bottom:8px">Lo stato terminale è <b>A CATALOGO</b>: stock e vendita vivono su Woo/Etsy, non qui.</div>
+      `:''}
+
+      <div class="field"><label>Descrizione / concept</label><textarea id="f_descrizione" placeholder="Il racconto del pezzo">${esc(p.descrizione)}</textarea></div>
+      <div class="field"><label>Materiali (testo pubblico per la listing)</label><textarea id="f_materiali" placeholder="Es. PLA riciclato, ottone, cavo tessile">${esc(p.materiali)}</textarea></div>
+      <div class="field"><label>Scheda tecnica</label><textarea id="f_scheda_tecnica" placeholder="Dimensioni, finiture, e per la lampada: attacco, V, cavo, peso…">${esc(p.scheda_tecnica)}</textarea></div>
+      <div class="row">
+        <div class="field"><label>Tempo lavoro</label><input id="f_tempo_lavoro" value="${esc(p.tempo_lavoro)}" placeholder="Es. 6h"></div>
+        <div class="field"><label>Prezzo vendita (suggerito) €</label><input id="f_prezzo_vendita" class="num" value="${p.prezzo_vendita??''}" placeholder="0,00"></div>
+        <div class="field"><label>Scarto stampa %</label><input id="f_scarto_pct" class="num" value="${p.scarto_pct??10}"></div>
+      </div>
+      <div class="row" style="align-items:center">
+        <button class="primary" onclick="salvaProgetto()">${p.id?'Salva modifiche':'Crea progetto'}</button>
+        ${p.id?`<button class="ghost danger" onclick="eliminaProgetto()">Elimina</button>`:''}
+        ${p.id?`<button class="ghost" onclick="apriCongela()">${p.file_congelato_at?'🔒 File congelato '+(p.file_congelato_at||'').slice(0,10):'⏟ Congela file'}</button>`:''}
+      </div>
+    </div>
+
+    ${p.id?bomPanel()+iterPanel()+fasiPanel():'<div class="muted">Salva il progetto per gestire costi, prototipi e contenuti.</div>'}
+  `;
+}
+
+function val(id){ const e=document.getElementById(id); return e?e.value:''; }
+
+async function salvaProgetto(){
+  const body = {
+    mode:'save', id: stato.dettaglio.progetto.id,
+    titolo:val('f_titolo'), tipo:val('f_tipo'), descrizione:val('f_descrizione'),
+    materiali:val('f_materiali'), scheda_tecnica:val('f_scheda_tecnica'),
+    tempo_lavoro:val('f_tempo_lavoro'), prezzo_vendita:val('f_prezzo_vendita'), scarto_pct:val('f_scarto_pct')
+  };
+  if (!body.titolo.trim()){ toast('Titolo mancante'); return; }
+  const d = await api('POST', body);
+  if (!d.success){ toast(d.error||'Errore'); return; }
+  toast('Salvato'); await caricaLista(); apri(d.id);
+}
+async function cambiaStato(s){
+  const d = await api('POST', { mode:'stato', id:stato.dettaglio.progetto.id, stato:s });
+  if (d.success){ toast('Stato → '+s.replace('_',' ')); apri(stato.dettaglio.progetto.id); caricaLista(); }
+}
+async function eliminaProgetto(){
+  if (!confirm('Eliminare il progetto? (spostato nel cestino)')) return;
+  await api('POST', { mode:'delete', id:stato.dettaglio.progetto.id });
+  stato.sel=null; stato.dettaglio=null;
+  document.getElementById('main').innerHTML='<div class="empty">Progetto eliminato.</div>';
+  caricaLista();
+}
+async function apriCongela(){
+  const stl = prompt('File STL (nome/rif):',''); if (stl===null) return;
+  const profilo = prompt('Profilo OrcaSlicer:','')||'';
+  const grammi = prompt('Grammi filamento (da Orca):','')||'';
+  const ore = prompt('Ore stampa (da Orca):','')||'';
+  const d = await api('POST', { mode:'congela', id:stato.dettaglio.progetto.id, snapshot:{ stl, profilo_orca:profilo, grammi, ore, congelato:new Date().toISOString() } });
+  if (d.success){ toast('File congelato'); apri(stato.dettaglio.progetto.id); caricaLista(); }
+}
+
+// ── BOM / costi ─────────────────────────────────────────
+function bomPanel(){
+  const mats = stato.dettaglio.materiali;
+  const p = stato.dettaglio.progetto;
+  const somma = mats.reduce((s,m)=>s+Number(m.costo_riga||0),0);
+  return `
+  <div class="panel">
+    <h2>Costi — distinta materiali <small>uso interno · margine</small></h2>
+    <table class="bom">
+      <thead><tr><th>Categoria</th><th>Voce</th><th>Q.tà</th><th>Unità</th><th>€ unit.</th><th>€ riga</th><th></th></tr></thead>
+      <tbody>
+        ${mats.map(m=>bomRow(m)).join('')}
+        ${bomRow({id:0,categoria:'filamento',voce:'',qta:'',unita:'g',costo_unitario:'',costo_riga:0}, true)}
+      </tbody>
+    </table>
+    <div class="costbar">
+      <div class="b"><span>Somma BOM</span><b>${eur(somma)}</b></div>
+      <div class="b"><span>Costo prod. (×scarto ${p.scarto_pct||0}%)</span><b>${eur(p.costo_produzione)}</b></div>
+      <div class="b"><span>Prezzo vendita</span><b>${eur(p.prezzo_vendita)}</b></div>
+      <div class="b"><span>Margine</span><b class="${p.margine>=0?'pos':'neg'}">${eur(p.margine)}</b></div>
+    </div>
+    <div class="muted" style="margin-top:8px">Filamento (g) e stampa (h) si compilano coi numeri di OrcaSlicer. Manodopera default ${eur(stato.costoOrario)}/h.</div>
+  </div>`;
+}
+function bomRow(m, isNew=false){
+  const rid = isNew?'new':m.id;
+  return `<tr data-mid="${m.id}">
+    <td><select id="m_cat_${rid}" onchange="onCat('${rid}')">${CATEGORIE.map(c=>`<option ${c===m.categoria?'selected':''}>${c}</option>`).join('')}</select></td>
+    <td><input id="m_voce_${rid}" value="${esc(m.voce)}" placeholder="${isNew?'+ nuova voce…':''}"></td>
+    <td><input id="m_qta_${rid}" class="num" value="${m.qta!==''&&m.qta!=null?Number(m.qta):''}" style="width:70px" oninput="onQta('${rid}')"></td>
+    <td><input id="m_unita_${rid}" value="${esc(m.unita)}" style="width:48px"></td>
+    <td><input id="m_cu_${rid}" class="num" value="${m.costo_unitario!==''&&m.costo_unitario!=null?Number(m.costo_unitario):''}" style="width:80px" oninput="onQta('${rid}')"></td>
+    <td class="num" id="m_riga_${rid}">${eur(m.costo_riga)}</td>
+    <td>${isNew
+        ? `<button class="sm" onclick="salvaMat('new')">Aggiungi</button>`
+        : `<button class="sm" onclick="salvaMat(${m.id})">✓</button> <button class="sm ghost danger" onclick="eliminaMat(${m.id})">✕</button>`}</td>
+  </tr>`;
+}
+function onCat(rid){ // pre-compila unità e tariffa manodopera
+  const cat = val('m_cat_'+rid);
+  const u = document.getElementById('m_unita_'+rid); if (u && UNITA_DEF[cat]) u.value = UNITA_DEF[cat];
+  if (cat==='manodopera'){ const cu=document.getElementById('m_cu_'+rid); if (cu && !cu.value) cu.value = stato.costoOrario; }
+  onQta(rid);
+}
+function onQta(rid){
+  const q = parseFloat((val('m_qta_'+rid)||'0').replace(',','.'))||0;
+  const cu = parseFloat((val('m_cu_'+rid)||'0').replace(',','.'))||0;
+  const cell = document.getElementById('m_riga_'+rid); if (cell) cell.textContent = eur(Math.round(q*cu*100)/100);
+}
+async function salvaMat(rid){
+  const body = { mode:'mat_save', progetto_id:stato.dettaglio.progetto.id,
+    id: rid==='new'?0:rid, categoria:val('m_cat_'+rid), voce:val('m_voce_'+rid),
+    qta:val('m_qta_'+rid), unita:val('m_unita_'+rid), costo_unitario:val('m_cu_'+rid) };
+  const d = await api('POST', body);
+  if (d.success){ toast('Costo aggiornato'); apri(stato.dettaglio.progetto.id); caricaLista(); }
+  else toast(d.error||'Errore');
+}
+async function eliminaMat(id){
+  await api('POST', { mode:'mat_delete', id });
+  apri(stato.dettaglio.progetto.id); caricaLista();
+}
+
+// ── Iterazioni prototipo (binario R&D) ──────────────────
+function iterPanel(){
+  const its = stato.dettaglio.iterazioni;
+  return `
+  <div class="panel">
+    <h2>Prototipo — iterazioni <small>binario R&amp;D interno</small></h2>
+    ${its.map(it=>`
+      <div class="iter">
+        <div class="h"><span class="vtag">v${it.v_num}</span>
+          <span><button class="sm ghost danger" onclick="eliminaIter(${it.id})">✕</button></span></div>
+        <div class="muted">${esc(it.note)||'(nessuna nota)'}</div>
+        ${it.cad_ref?`<div class="muted">CAD: ${esc(it.cad_ref)}</div>`:''}
+      </div>`).join('') || '<div class="muted">Nessuna iterazione ancora.</div>'}
+    <div class="field" style="margin-top:12px"><label>Nuova iterazione — note ("qui non torna…")</label>
+      <textarea id="iter_note" placeholder="Cosa hai cambiato / cosa non va"></textarea></div>
+    <div class="row">
+      <div class="field"><label>Rif. CAD / profilo</label><input id="iter_cad" placeholder="opzionale"></div>
+      <div style="align-self:flex-end"><button class="primary" onclick="salvaIter()">+ Aggiungi iterazione</button></div>
+    </div>
+  </div>`;
+}
+async function salvaIter(){
+  const note = val('iter_note');
+  if (!note.trim()){ toast('Scrivi una nota'); return; }
+  const d = await api('POST', { mode:'iter_save', progetto_id:stato.dettaglio.progetto.id, note, cad_ref:val('iter_cad') });
+  if (d.success){ toast('Iterazione v'+d.v_num+' aggiunta'); apri(stato.dettaglio.progetto.id); }
+}
+async function eliminaIter(id){
+  await api('POST', { mode:'iter_delete', id });
+  apri(stato.dettaglio.progetto.id);
+}
+
+// ── Fasi (binario racconto) — placeholder slice successiva ──
+function fasiPanel(){
+  const fasi = stato.dettaglio.fasi;
+  return `
+  <div class="panel">
+    <h2>Contenuti — fasi racconto <small>reel / social / WordPress</small></h2>
+    ${fasi.length
+      ? fasi.map(f=>`<div class="iter"><b>${esc(f.fase_nome)}</b> <span class="badge">${esc(f.stato)}</span><div class="muted">${esc(f.testo_breve)}</div></div>`).join('')
+      : '<div class="muted">Nessuna fase-contenuto.</div>'}
+    <div class="muted" style="margin-top:10px">⏭️ Il wiring del motore reel/social sulle fasi di progetto è la prossima slice della Tappa 1 (gli endpoint reel/social oggi sono agganciati ai clienti via session_id).</div>
+  </div>`;
+}
+
+caricaLista();
+</script>
+</body>
+</html>

@@ -1,0 +1,290 @@
+<?php
+// -----------------------------------------------------------
+// ARDY LAB — Dash Design: API progetti interni (CRUD + BOM/costi + iterazioni)
+// Gemella di ardy-crm-api.php ma sul soggetto "progetto" invece di "cliente".
+// Vedi PIANO-DASH-DESIGN.md. Tabelle create da ardy-migrate.php.
+//
+//   GET                          → lista progetti (non eliminati), con costo/margine
+//   GET ?id=N                    → un progetto completo: BOM, iterazioni, fasi, config
+//   POST {mode:'save', ...}      → upsert progetto (ritorna id)
+//   POST {mode:'stato', id, stato}   → cambia stato del progetto
+//   POST {mode:'congela', id, snapshot} → segna file congelato + salva snapshot
+//   POST {mode:'delete', id}     → soft delete (deleted_at)
+//   POST {mode:'mat_save', progetto_id, ...riga} → upsert riga BOM (ricalcola costo)
+//   POST {mode:'mat_delete', id} → elimina riga BOM (ricalcola costo)
+//   POST {mode:'iter_save', progetto_id, ...} → upsert iterazione prototipo
+//   POST {mode:'iter_delete', id} → elimina iterazione
+//
+// Protetto via .htaccess (Basic Auth) — elencato nel <FilesMatch>.
+// -----------------------------------------------------------
+
+require_once __DIR__ . '/ardy-db.php';
+
+header('Access-Control-Allow-Origin: https://ardyagent.ardy-lab.it');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
+header('Content-Type: application/json');
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
+
+// Ciclo di vita del progetto (vedi PIANO-DASH-DESIGN.md §3). 'A_CATALOGO' è terminale
+// lato dash: stock/ordini/venduto vivono su Woo/Etsy, non qui.
+const PROGETTO_STATI = ['IDEA', 'PROGETTAZIONE', 'PROTOTIPO', 'FILE_CONGELATO', 'PRODUZIONE', 'FOTOGRAFIA', 'A_CATALOGO'];
+const PROGETTO_TIPI  = ['lampada', 'mobile', 'complemento', 'restyling', 'prototipo'];
+const MAT_CATEGORIE  = ['filamento', 'stampa', 'elettrico', 'ferramenta', 'finitura', 'imballo', 'manodopera'];
+
+/** Tariffa oraria manodopera di default (override in ardy-config.php non versionato). */
+function progettoCostoOrario(): float {
+    return defined('ARDY_DESIGN_COSTO_ORARIO') ? (float) ARDY_DESIGN_COSTO_ORARIO : 50.00;
+}
+
+/** Numero: accetta float o stringa "1.450,00" / "350,00" (come ardy-fasi-bozza-api). */
+function progettoParseNum($v): float {
+    if (is_numeric($v)) return (float) $v;
+    if (!is_string($v) || trim($v) === '') return 0.0;
+    $s = preg_replace('/[^\d,.\-]/', '', trim($v));
+    if ($s === '') return 0.0;
+    if (strpos($s, ',') !== false && strpos($s, '.') !== false) {
+        if (strrpos($s, ',') > strrpos($s, '.')) { $s = str_replace('.', '', $s); $s = str_replace(',', '.', $s); }
+        else { $s = str_replace(',', '', $s); }
+    } elseif (strpos($s, ',') !== false) {
+        $s = str_replace(',', '.', $s);
+    }
+    return is_numeric($s) ? (float) $s : 0.0;
+}
+
+/** Ricalcola e salva progetti.costo_produzione = Σ costo_riga × (1 + scarto/100). */
+function progettoRicalcolaCosto(PDO $db, int $progettoId): float {
+    $somma = (float) $db->query(
+        "SELECT COALESCE(SUM(costo_riga),0) FROM progetto_materiali WHERE progetto_id = " . (int) $progettoId
+    )->fetchColumn();
+    $scarto = (float) $db->query(
+        "SELECT COALESCE(scarto_pct,0) FROM progetti WHERE id = " . (int) $progettoId
+    )->fetchColumn();
+    $costo = round($somma * (1 + $scarto / 100), 2);
+    $db->prepare("UPDATE progetti SET costo_produzione = :c WHERE id = :id")
+       ->execute([':c' => $costo, ':id' => $progettoId]);
+    return $costo;
+}
+
+/** Decodifica i campi JSON di una riga progetto e aggiunge il margine. */
+function progettoArricchisci(array $r): array {
+    foreach (['render_urls', 'cad_urls', 'canali_vendita', 'file_snapshot'] as $k) {
+        $r[$k] = json_decode($r[$k] ?? 'null', true);
+        if ($r[$k] === null && $k !== 'file_snapshot') $r[$k] = [];
+    }
+    $prezzo = $r['prezzo_vendita'] !== null ? (float) $r['prezzo_vendita'] : null;
+    $costo  = $r['costo_produzione'] !== null ? (float) $r['costo_produzione'] : null;
+    $r['margine'] = ($prezzo !== null && $costo !== null) ? round($prezzo - $costo, 2) : null;
+    return $r;
+}
+
+try {
+    $db = ardyDB();
+
+    // ── GET ──────────────────────────────────────────────────
+    if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+        $id = (int) ($_GET['id'] ?? 0);
+
+        if ($id <= 0) {
+            // Lista (sommario) — esclude gli eliminati.
+            $rows = $db->query(
+                "SELECT * FROM progetti WHERE deleted_at IS NULL ORDER BY updated_at DESC"
+            )->fetchAll();
+            echo json_encode(['success' => true, 'progetti' => array_map('progettoArricchisci', $rows)]);
+            exit();
+        }
+
+        // Dettaglio completo.
+        $st = $db->prepare("SELECT * FROM progetti WHERE id = ? AND deleted_at IS NULL");
+        $st->execute([$id]);
+        $p = $st->fetch();
+        if (!$p) { http_response_code(404); echo json_encode(['success' => false, 'error' => 'Progetto non trovato']); exit(); }
+        $p = progettoArricchisci($p);
+
+        $mat = $db->prepare("SELECT * FROM progetto_materiali WHERE progetto_id = ? ORDER BY id ASC");
+        $mat->execute([$id]);
+
+        $iter = $db->prepare("SELECT * FROM progetto_iterazioni WHERE progetto_id = ? ORDER BY v_num ASC, id ASC");
+        $iter->execute([$id]);
+        $iterRows = $iter->fetchAll();
+        foreach ($iterRows as &$it) { $it['foto_urls'] = json_decode($it['foto_urls'] ?? '[]', true) ?? []; }
+        unset($it);
+
+        $fasi = $db->prepare("SELECT * FROM fasi WHERE progetto_id = ? ORDER BY ordine ASC, created_at ASC");
+        $fasi->execute([$id]);
+        $fasiRows = $fasi->fetchAll();
+        foreach ($fasiRows as &$f) { $f['foto_urls'] = json_decode($f['foto_urls'] ?? '[]', true) ?? []; }
+        unset($f);
+
+        echo json_encode([
+            'success'    => true,
+            'progetto'   => $p,
+            'materiali'  => $mat->fetchAll(),
+            'iterazioni' => $iterRows,
+            'fasi'       => $fasiRows,
+            'config'     => [
+                'stati'             => PROGETTO_STATI,
+                'tipi'              => PROGETTO_TIPI,
+                'categorie'         => MAT_CATEGORIE,
+                'costo_orario'      => progettoCostoOrario(),
+            ],
+        ]);
+        exit();
+    }
+
+    // ── POST ─────────────────────────────────────────────────
+    $in   = json_decode(file_get_contents('php://input'), true) ?: [];
+    $mode = $in['mode'] ?? 'save';
+
+    // — upsert progetto —
+    if ($mode === 'save') {
+        $id     = (int) ($in['id'] ?? 0);
+        $titolo = trim((string) ($in['titolo'] ?? ''));
+        if ($titolo === '') { echo json_encode(['success' => false, 'error' => 'Titolo mancante']); exit(); }
+
+        $tipo  = in_array($in['tipo'] ?? '', PROGETTO_TIPI, true) ? $in['tipo'] : 'lampada';
+        $stato = in_array($in['stato'] ?? '', PROGETTO_STATI, true) ? $in['stato'] : 'IDEA';
+
+        $fields = [
+            'titolo'         => $titolo,
+            'tipo'           => $tipo,
+            'stato'          => $stato,
+            'descrizione'    => trim((string) ($in['descrizione'] ?? '')),
+            'materiali'      => trim((string) ($in['materiali'] ?? '')),
+            'scheda_tecnica' => trim((string) ($in['scheda_tecnica'] ?? '')),
+            'scarto_pct'     => max(0, progettoParseNum($in['scarto_pct'] ?? 10)),
+            'prezzo_vendita' => isset($in['prezzo_vendita']) && $in['prezzo_vendita'] !== '' ? progettoParseNum($in['prezzo_vendita']) : null,
+            'tempo_lavoro'   => trim((string) ($in['tempo_lavoro'] ?? '')),
+        ];
+
+        if ($id > 0) {
+            $set = implode(', ', array_map(fn($k) => "`$k` = :$k", array_keys($fields)));
+            $st  = $db->prepare("UPDATE progetti SET $set WHERE id = :id AND deleted_at IS NULL");
+            $st->execute($fields + [':id' => $id]);
+        } else {
+            $cols = implode(', ', array_map(fn($k) => "`$k`", array_keys($fields)));
+            $phs  = implode(', ', array_map(fn($k) => ":$k", array_keys($fields)));
+            $db->prepare("INSERT INTO progetti ($cols) VALUES ($phs)")->execute($fields);
+            $id = (int) $db->lastInsertId();
+        }
+        progettoRicalcolaCosto($db, $id); // lo scarto può essere cambiato qui
+        echo json_encode(['success' => true, 'id' => $id]);
+        exit();
+    }
+
+    // — cambia stato —
+    if ($mode === 'stato') {
+        $id    = (int) ($in['id'] ?? 0);
+        $stato = $in['stato'] ?? '';
+        if ($id <= 0 || !in_array($stato, PROGETTO_STATI, true)) {
+            echo json_encode(['success' => false, 'error' => 'Stato non valido']); exit();
+        }
+        $db->prepare("UPDATE progetti SET stato = :s WHERE id = :id AND deleted_at IS NULL")
+           ->execute([':s' => $stato, ':id' => $id]);
+        echo json_encode(['success' => true]);
+        exit();
+    }
+
+    // — congela file (scatta lo snapshot, click manuale "a naso") —
+    if ($mode === 'congela') {
+        $id = (int) ($in['id'] ?? 0);
+        if ($id <= 0) { echo json_encode(['success' => false, 'error' => 'id mancante']); exit(); }
+        $snapshot = $in['snapshot'] ?? null; // {stl, profilo_orca, grammi, ore, scheda, ...}
+        $db->prepare(
+            "UPDATE progetti SET file_congelato_at = NOW(), file_snapshot = :snap, stato = 'FILE_CONGELATO'
+             WHERE id = :id AND deleted_at IS NULL"
+        )->execute([':snap' => $snapshot !== null ? json_encode($snapshot) : null, ':id' => $id]);
+        echo json_encode(['success' => true]);
+        exit();
+    }
+
+    // — soft delete —
+    if ($mode === 'delete') {
+        $id = (int) ($in['id'] ?? 0);
+        if ($id <= 0) { echo json_encode(['success' => false, 'error' => 'id mancante']); exit(); }
+        $db->prepare("UPDATE progetti SET deleted_at = NOW() WHERE id = ?")->execute([$id]);
+        echo json_encode(['success' => true]);
+        exit();
+    }
+
+    // — upsert riga BOM —
+    if ($mode === 'mat_save') {
+        $progettoId = (int) ($in['progetto_id'] ?? 0);
+        if ($progettoId <= 0) { echo json_encode(['success' => false, 'error' => 'progetto mancante']); exit(); }
+        $id        = (int) ($in['id'] ?? 0);
+        $categoria = in_array($in['categoria'] ?? '', MAT_CATEGORIE, true) ? $in['categoria'] : 'filamento';
+        $voce      = trim((string) ($in['voce'] ?? ''));
+        $qta       = progettoParseNum($in['qta'] ?? 0);
+        $unita     = trim((string) ($in['unita'] ?? 'pz')) ?: 'pz';
+        $costoUnit = progettoParseNum($in['costo_unitario'] ?? 0);
+        $note      = trim((string) ($in['note'] ?? ''));
+        $costoRiga = round($qta * $costoUnit, 2);
+
+        if ($id > 0) {
+            $db->prepare(
+                "UPDATE progetto_materiali SET categoria=:c, voce=:v, qta=:q, unita=:u, costo_unitario=:cu, costo_riga=:cr, note=:n
+                 WHERE id=:id AND progetto_id=:pid"
+            )->execute([':c'=>$categoria, ':v'=>$voce, ':q'=>$qta, ':u'=>$unita, ':cu'=>$costoUnit, ':cr'=>$costoRiga, ':n'=>$note, ':id'=>$id, ':pid'=>$progettoId]);
+        } else {
+            $db->prepare(
+                "INSERT INTO progetto_materiali (progetto_id, categoria, voce, qta, unita, costo_unitario, costo_riga, note)
+                 VALUES (:pid, :c, :v, :q, :u, :cu, :cr, :n)"
+            )->execute([':pid'=>$progettoId, ':c'=>$categoria, ':v'=>$voce, ':q'=>$qta, ':u'=>$unita, ':cu'=>$costoUnit, ':cr'=>$costoRiga, ':n'=>$note]);
+            $id = (int) $db->lastInsertId();
+        }
+        $costo = progettoRicalcolaCosto($db, $progettoId);
+        echo json_encode(['success' => true, 'id' => $id, 'costo_riga' => $costoRiga, 'costo_produzione' => $costo]);
+        exit();
+    }
+
+    // — elimina riga BOM —
+    if ($mode === 'mat_delete') {
+        $id = (int) ($in['id'] ?? 0);
+        if ($id <= 0) { echo json_encode(['success' => false, 'error' => 'id mancante']); exit(); }
+        $pid = (int) $db->query("SELECT progetto_id FROM progetto_materiali WHERE id = " . $id)->fetchColumn();
+        $db->prepare("DELETE FROM progetto_materiali WHERE id = ?")->execute([$id]);
+        $costo = $pid > 0 ? progettoRicalcolaCosto($db, $pid) : null;
+        echo json_encode(['success' => true, 'costo_produzione' => $costo]);
+        exit();
+    }
+
+    // — upsert iterazione prototipo —
+    if ($mode === 'iter_save') {
+        $progettoId = (int) ($in['progetto_id'] ?? 0);
+        if ($progettoId <= 0) { echo json_encode(['success' => false, 'error' => 'progetto mancante']); exit(); }
+        $id    = (int) ($in['id'] ?? 0);
+        $note  = trim((string) ($in['note'] ?? ''));
+        $cad   = trim((string) ($in['cad_ref'] ?? ''));
+
+        if ($id > 0) {
+            $vnum = (int) ($in['v_num'] ?? 1);
+            $db->prepare("UPDATE progetto_iterazioni SET v_num=:vn, note=:n, cad_ref=:c WHERE id=:id AND progetto_id=:pid")
+               ->execute([':vn'=>$vnum, ':n'=>$note, ':c'=>$cad, ':id'=>$id, ':pid'=>$progettoId]);
+        } else {
+            // Numerazione automatica: prossima versione in coda.
+            $vnum = (int) $db->query("SELECT COALESCE(MAX(v_num),0)+1 FROM progetto_iterazioni WHERE progetto_id = " . $progettoId)->fetchColumn();
+            $db->prepare("INSERT INTO progetto_iterazioni (progetto_id, v_num, note, cad_ref, foto_urls) VALUES (:pid, :vn, :n, :c, '[]')")
+               ->execute([':pid'=>$progettoId, ':vn'=>$vnum, ':n'=>$note, ':c'=>$cad]);
+            $id = (int) $db->lastInsertId();
+        }
+        echo json_encode(['success' => true, 'id' => $id, 'v_num' => $vnum]);
+        exit();
+    }
+
+    // — elimina iterazione —
+    if ($mode === 'iter_delete') {
+        $id = (int) ($in['id'] ?? 0);
+        if ($id <= 0) { echo json_encode(['success' => false, 'error' => 'id mancante']); exit(); }
+        $db->prepare("DELETE FROM progetto_iterazioni WHERE id = ?")->execute([$id]);
+        echo json_encode(['success' => true]);
+        exit();
+    }
+
+    echo json_encode(['success' => false, 'error' => 'mode non valido']);
+
+} catch (PDOException $e) {
+    error_log('ARDY PROGETTI API ERROR: ' . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Errore interno']);
+}

@@ -216,6 +216,68 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `note_staff` (
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE note_staff");
 
+// ── DASH DESIGN (progetti interni) — vedi PIANO-DASH-DESIGN.md ────────────────
+// Progetto interno di design (lampade, mobili, complementi, restyling, prototipi):
+// soggetto della dash design, gemella della dash clienti. Non ha campi "cliente";
+// il ciclo di vita finisce a 'A_CATALOGO' (stock/vendita vivono su Woo/Etsy, fuori
+// dalla dash). 'costo_produzione' è CALCOLATO dalla BOM (progetto_materiali) × scarto.
+ddl($pdo, "CREATE TABLE IF NOT EXISTS `progetti` (
+    `id`                BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `slug`              VARCHAR(80)  NULL,
+    `titolo`            VARCHAR(200) NOT NULL DEFAULT '',
+    `tipo`              VARCHAR(40)  NOT NULL DEFAULT 'lampada',
+    `stato`             VARCHAR(30)  NOT NULL DEFAULT 'IDEA',
+    `descrizione`       TEXT NULL,
+    `materiali`         TEXT NULL,                 -- descrizione PUBBLICA per la listing
+    `scheda_tecnica`    TEXT NULL,
+    `scarto_pct`        DECIMAL(5,2)  NOT NULL DEFAULT 10.00,
+    `costo_produzione`  DECIMAL(10,2) NULL,        -- calcolato: Σ BOM × (1 + scarto)
+    `prezzo_vendita`    DECIMAL(10,2) NULL,
+    `tempo_lavoro`      VARCHAR(80) NULL,
+    `file_congelato_at` DATETIME NULL,             -- click manuale 'congela file'
+    `file_snapshot`     MEDIUMTEXT NULL,           -- JSON: STL + profilo Orca + scheda al congelamento
+    `render_urls`       TEXT NULL,                 -- JSON
+    `cad_urls`          TEXT NULL,                 -- JSON
+    `canali_vendita`    TEXT NULL,                 -- JSON: dove è pubblicato + link annunci
+    `woo_product_id`    BIGINT NULL,
+    `copertina_url`     VARCHAR(500) NULL,
+    `created_at`        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `deleted_at`        DATETIME NULL,
+    INDEX idx_progetti_deleted_updated (deleted_at, updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE progetti");
+
+// Distinta costi (BOM) interna di un progetto. Le voci 'filamento' (g) e 'stampa'
+// (h) si pre-compilano coi numeri di OrcaSlicer; le altre a mano. costo_riga è
+// calcolato (qta × costo_unitario); la somma × scarto alimenta progetti.costo_produzione.
+ddl($pdo, "CREATE TABLE IF NOT EXISTS `progetto_materiali` (
+    `id`             BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `progetto_id`    BIGINT NOT NULL,
+    `categoria`      VARCHAR(30)  NOT NULL DEFAULT 'filamento', -- filamento|stampa|elettrico|ferramenta|finitura|imballo|manodopera
+    `voce`           VARCHAR(200) NOT NULL DEFAULT '',
+    `qta`            DECIMAL(12,3) NOT NULL DEFAULT 0,          -- grammi | ore | pezzi
+    `unita`          VARCHAR(8)   NOT NULL DEFAULT 'pz',        -- g | h | pz
+    `costo_unitario` DECIMAL(12,4) NOT NULL DEFAULT 0,
+    `costo_riga`     DECIMAL(12,2) NOT NULL DEFAULT 0,
+    `note`           TEXT NULL,
+    `created_at`     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_mat_progetto (progetto_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE progetto_materiali");
+
+// Binario R&D: iterazioni del prototipo (v1, v2, v3…) con note di iterazione.
+// Interne di default; 'promossa_a_fase_id' != NULL = promossa a contenuto pubblico.
+ddl($pdo, "CREATE TABLE IF NOT EXISTS `progetto_iterazioni` (
+    `id`                 BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `progetto_id`        BIGINT NOT NULL,
+    `v_num`              INT NOT NULL DEFAULT 1,
+    `note`               TEXT NULL,
+    `foto_urls`          TEXT NULL,                 -- JSON
+    `cad_ref`            VARCHAR(255) NULL,         -- file/profilo CAD-slicer usato
+    `promossa_a_fase_id` BIGINT NULL,
+    `created_at`         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_iter_progetto (progetto_id, v_num)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE progetto_iterazioni");
+
 // ── COLONNE clienti ───────────────────────────────────────────────────────────
 
 $clientiCols = [
@@ -258,10 +320,16 @@ $fasiCols = [
     'ordine'     => "ALTER TABLE fasi ADD COLUMN ordine INT NULL AFTER stato",
     'prezzo'     => "ALTER TABLE fasi ADD COLUMN prezzo DECIMAL(10,2) NULL AFTER ordine",
     'video_urls' => "ALTER TABLE fasi ADD COLUMN video_urls TEXT NULL AFTER foto_urls",
+    // Aggancio della stessa tabella fasi ai progetti di design (vedi PIANO-DASH-DESIGN.md):
+    // una fase appartiene O a un cliente (session_id) O a un progetto (progetto_id).
+    'progetto_id' => "ALTER TABLE fasi ADD COLUMN progetto_id BIGINT NULL AFTER session_id",
 ];
 foreach ($fasiCols as $col => $sql) {
     if (!colExists($pdo, 'fasi', $col)) {
         ddl($pdo, $sql, "fasi.$col");
+        if ($col === 'progetto_id') {
+            ddl($pdo, "CREATE INDEX idx_fasi_progetto ON fasi (progetto_id, ordine)", "INDEX fasi.progetto_id");
+        }
     } else {
         echo "  skip fasi.$col\n"; $skip++;
     }

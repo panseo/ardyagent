@@ -380,6 +380,12 @@ no concorrenza); diventa prioritario con più utenti o se compaiono 504. Refacto
     integrazione Moonraker, stampante in LAN); manodopera €50/h default in config; scarto stampa 10% default;
     margine = prezzo − costo. Campi DB approvati. In coda (dopo Tappa 1): serve Woo al lancio?, CE/sicurezza
     lampade, tariffa oraria macchina. Vedi `PIANO-DASH-DESIGN.md` §2.5.
+  - ⮑ **Tappa 1 AVVIATA (25/06, su branch)**: fondazione pronta — DDL (`progetti`, `progetto_materiali`,
+    `progetto_iterazioni`, `fasi.progetto_id`) in `ardy-migrate.php`; `ardy-progetti-api.php` (CRUD + BOM/
+    costi/margine + iterazioni + stato + congela-file); `ardy-design-app.html` (dash gemella theming-ready,
+    pipeline stato, costi live, iterazioni). Endpoint nel `.htaccess`. ⏭️ **Resta**: wiring reel/social/WP
+    sulle fasi di progetto (estendere `ardy-crea-reel.php`/`ardy-pubblica-social.php` ad accettare
+    `progetto_id`, la colonna c'è già). ⚠️ Da testare dal vivo dopo il deploy (migrate crea le tabelle).
 - **Conoscenza Sole — FASE 2**: datazione fotografica guidata + community + eventuale mini-RAG se la knowledge base cresce troppo.
 - **BIMI (logo avatar mittente Gmail)**: serve DMARC enforcement + VMC (certificato ~1.000+€/anno + marchio registrato). Decisione commerciale.
 - **Codice d'accesso su WhatsApp**: su WA il numero = identità; il codice serve solo per numeri non registrati (raro). Servirebbe marker `[[CERCA:ARD-XXXX]]`.

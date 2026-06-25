@@ -221,11 +221,19 @@ nessun pubblico, prezzo posizionato male**. L'energia di sviluppo va nella **mac
 ## 5. Roadmap a tappe indipendenti
 
 ### Tappa 1 — `progetti` + dash design + fasi su progetto  *(autoconsistente, zero dipendenze esterne)*
-- DDL: tabella `progetti` + colonna `fasi.progetto_id` in `ardy-migrate.php`.
-- `ardy-progetti-api.php` (CRUD progetti) riusando `ardy-db.php`.
-- `ardy-design-app.html` (gemella, theming-ready) con lista progetti + scheda + fasi.
-- Riuso del motore reel/social/WordPress sulle fasi del progetto.
-- **Valore immediato**: racconti il lavoro e produci contenuti da subito. Vende ancora "a mano".
+- [x] **DDL** in `ardy-migrate.php`: tabelle `progetti`, `progetto_materiali`, `progetto_iterazioni`
+      + colonna `fasi.progetto_id` (+ indici). Idempotente, gira al deploy.
+- [x] **`ardy-progetti-api.php`**: CRUD progetti + BOM/costi (ricalcolo margine) + iterazioni proto
+      + cambio stato + congela-file con snapshot. Registrato nel `.htaccess` (Basic Auth).
+- [x] **`ardy-design-app.html`**: dash gemella theming-ready (token brand via `var()`, niente CSS-mostro
+      ereditato) — lista progetti, editor con pipeline di stato, pannello costi/BOM con margine live,
+      iterazioni prototipo, congela-file. Link da/per la dash principale.
+- [ ] **Slice successiva**: wiring del motore **reel/social/WordPress** sulle fasi di progetto. Oggi
+      `ardy-crea-reel.php` / `ardy-pubblica-social.php` ecc. sono agganciati al cliente via `session_id`;
+      vanno estesi per accettare anche `progetto_id` (la colonna c'è già). La dash mostra già le fasi
+      di progetto in sola lettura come placeholder.
+- **Valore immediato**: già da ora crei progetti, tracci prototipi e costi/margine. La produzione di
+  contenuti (reel/social) si sblocca con la slice successiva.
 
 ### Tappa 2 — Scheda prodotto + catalogo interno
 - Pagina prodotto pubblica (anche solo sul tuo sito) generata dal progetto: foto fasi, racconto,
