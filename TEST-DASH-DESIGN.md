@@ -71,7 +71,8 @@
 - [ ] Fase con testo + foto → "🌐 Pubblica su WordPress" → si apre il **post** con la fase (foto + testo); la fase mostra "✓ Su WordPress".
 - [ ] Pubblico una **seconda fase** dello stesso progetto → si **aggiunge** allo stesso post (non ne crea uno nuovo).
 - [ ] La **prima foto** diventa l'immagine in evidenza; le foto su disco/anteprime della dash NON cambiano (reel ancora ok).
-- [ ] "📣 Pubblica sui social" su una fase già pubblicata → arriva su FB/IG con le foto (URL pubblici WP).
+- [ ] Nel form fase: "✨ Genera caption social" → caption breve con hashtag (diversa dal post lungo); editabile; si salva.
+- [ ] "📣 Pubblica sui social" su una fase già pubblicata → arriva su FB/IG con le foto (URL pubblici WP) e usa la **caption social** se presente (altrimenti il testo del post).
 - [ ] (Opz.) Imposto `ARDY_WP_CAT_PROGETTI` → il post va nella categoria progetti, non tra i clienti.
 - [ ] NON-REGRESSIONE: il publish dei **clienti** (`ardy-pubblica-lavorazione.php`) non è toccato e funziona come prima.
 

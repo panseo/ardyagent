@@ -7,7 +7,8 @@
 // Stesso pattern Claude del resto del repo (ARDY_API_KEY, claude-sonnet-4-6).
 // Vedi PIANO-DASH-DESIGN.md (binario racconto).
 //
-//   POST {mode:'genera_post', progetto_id, fase_nome?, bozza} → {success, testo}
+//   POST {mode:'genera_post',   progetto_id, fase_nome?, bozza} → {success, testo}  (post lungo: WordPress)
+//   POST {mode:'genera_social', progetto_id, fase_nome?, bozza} → {success, testo}  (caption breve + hashtag: FB/IG)
 //
 // Protetto via .htaccess (Basic Auth) — elencato nel <FilesMatch>.
 // -----------------------------------------------------------
@@ -58,7 +59,7 @@ try {
     $in   = json_decode(file_get_contents('php://input'), true) ?: [];
     $mode = $in['mode'] ?? 'genera_post';
 
-    if ($mode !== 'genera_post') { echo json_encode(['success' => false, 'error' => 'mode non valido']); exit(); }
+    if (!in_array($mode, ['genera_post', 'genera_social'], true)) { echo json_encode(['success' => false, 'error' => 'mode non valido']); exit(); }
 
     $progettoId = (int) ($in['progetto_id'] ?? 0);
     $faseNome   = trim((string) ($in['fase_nome'] ?? ''));
@@ -95,16 +96,29 @@ try {
     if ($descr     !== '') $ctx .= "Concept del progetto: $descr\n";
     if ($materiali !== '') $ctx .= "Materiali dichiarati: $materiali\n";
 
-    $userMsg =
-        ($ctx !== '' ? "Contesto:\n$ctx\n" : '')
-      . "Bozza dell'autore (poche righe):\n\"\"\"\n$bozza\n\"\"\"\n\n"
-      . "Riscrivi la bozza in un POST pronto per la pubblicazione. Regole:\n"
-      . "- Resta fedele alla bozza; non aggiungere fatti, materiali o numeri non presenti.\n"
-      . "- 1-3 paragrafi brevi, niente elenchi puntati.\n"
-      . "- Nessun prezzo inventato; nessuna promessa esagerata.\n"
-      . "- Chiusura naturale (es. invito a seguire/scoprire), senza risultare markettara.\n"
-      . "- Niente hashtag, niente emoji invadenti (al massimo uno, se calza).\n"
-      . "Rispondi SOLO con il testo del post, senza introduzioni né virgolette.";
+    if ($mode === 'genera_social') {
+        // Caption breve per Instagram/Facebook a partire dal testo (o dalla bozza).
+        $userMsg =
+            ($ctx !== '' ? "Contesto:\n$ctx\n" : '')
+          . "Testo di partenza:\n\"\"\"\n$bozza\n\"\"\"\n\n"
+          . "Scrivi una CAPTION per Instagram e Facebook. Regole:\n"
+          . "- Breve: 2-4 righe, incisiva, scroll-stopping ma non urlata.\n"
+          . "- Fedele al testo; non aggiungere fatti, materiali, misure o prezzi non presenti.\n"
+          . "- Tono brand professionale e caldo; al massimo 1-2 emoji se calzano.\n"
+          . "- Chiudi con 4-6 hashtag pertinenti (design, arredo, fatto a mano, stampa 3D, ecc.), su una riga.\n"
+          . "Rispondi SOLO con la caption, senza introduzioni né virgolette.";
+    } else {
+        $userMsg =
+            ($ctx !== '' ? "Contesto:\n$ctx\n" : '')
+          . "Bozza dell'autore (poche righe):\n\"\"\"\n$bozza\n\"\"\"\n\n"
+          . "Riscrivi la bozza in un POST pronto per la pubblicazione. Regole:\n"
+          . "- Resta fedele alla bozza; non aggiungere fatti, materiali o numeri non presenti.\n"
+          . "- 1-3 paragrafi brevi, niente elenchi puntati.\n"
+          . "- Nessun prezzo inventato; nessuna promessa esagerata.\n"
+          . "- Chiusura naturale (es. invito a seguire/scoprire), senza risultare markettara.\n"
+          . "- Niente hashtag, niente emoji invadenti (al massimo uno, se calza).\n"
+          . "Rispondi SOLO con il testo del post, senza introduzioni né virgolette.";
+    }
 
     $testo = progettoAiClaude($system, $userMsg);
     $testo = ardy_strip_tool_syntax($testo); // rete di sicurezza sull'output del modello

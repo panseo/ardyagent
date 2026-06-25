@@ -421,7 +421,13 @@ function fasiFormHtml(){
       <label>Testo (racconto breve)</label>
       <textarea id="ff_breve" placeholder="Butta giù due-tre righe; poi 'Scrivi con AI' le trasforma in un post professionale">${esc(ff.testo_breve)}</textarea>
       <div style="margin-top:6px"><button class="sm" id="aiBtn" onclick="generaPostAi()">✨ Scrivi con AI</button>
-        <span class="muted" style="margin-left:6px">Tono professionale di brand. Rivedi sempre prima di pubblicare.</span></div>
+        <span class="muted" style="margin-left:6px">Post lungo per WordPress. Rivedi sempre prima di pubblicare.</span></div>
+    </div>
+    <div class="field">
+      <label>Caption social (FB/IG)</label>
+      <textarea id="ff_social" placeholder="Caption breve con hashtag per i social (opzionale)">${esc(ff.testo_social)}</textarea>
+      <div style="margin-top:6px"><button class="sm" id="aiSocialBtn" onclick="generaSocialAi()">✨ Genera caption social</button>
+        <span class="muted" style="margin-left:6px">Breve, con hashtag. Se vuota, il social userà il testo del post.</span></div>
     </div>
     <div class="field"><label>Foto</label>
       <div class="thumbs">
@@ -449,16 +455,30 @@ async function generaPostAi(){
     else { toast(d.error||'Errore generazione'); if(btn){ btn.disabled=false; btn.textContent='✨ Scrivi con AI'; } }
   } catch(e){ toast('Errore di rete'); if(btn){ btn.disabled=false; btn.textContent='✨ Scrivi con AI'; } }
 }
+async function generaSocialAi(){
+  captureFaseForm();
+  const base = (stato.faseForm.testo_breve||'').trim() || (stato.faseForm.testo_social||'').trim();
+  if (!base){ toast('Scrivi prima il testo del post'); return; }
+  const btn = document.getElementById('aiSocialBtn');
+  if (btn){ btn.disabled = true; btn.textContent = '✨ Genero…'; }
+  try {
+    const d = await fetch('ardy-progetti-ai.php', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ mode:'genera_social', progetto_id:stato.dettaglio.progetto.id, fase_nome:stato.faseForm.fase_nome, bozza:base }) }).then(r=>r.json());
+    if (d.success && d.testo){ stato.faseForm.testo_social = d.testo; renderDettaglio(); toast('Caption generata — rivedila'); }
+    else { toast(d.error||'Errore generazione'); if(btn){ btn.disabled=false; btn.textContent='✨ Genera caption social'; } }
+  } catch(e){ toast('Errore di rete'); if(btn){ btn.disabled=false; btn.textContent='✨ Genera caption social'; } }
+}
 function captureFaseForm(){
   if (!stato.faseForm) return;
-  const n=document.getElementById('ff_nome'), b=document.getElementById('ff_breve');
+  const n=document.getElementById('ff_nome'), b=document.getElementById('ff_breve'), s=document.getElementById('ff_social');
   if (n) stato.faseForm.fase_nome = n.value;
   if (b) stato.faseForm.testo_breve = b.value;
+  if (s) stato.faseForm.testo_social = s.value;
 }
-function nuovaFase(){ stato.faseForm = { id:0, fase_nome:'', testo_breve:'', fotoEsistenti:[], fotoNuove:[] }; renderDettaglio(); }
+function nuovaFase(){ stato.faseForm = { id:0, fase_nome:'', testo_breve:'', testo_social:'', fotoEsistenti:[], fotoNuove:[] }; renderDettaglio(); }
 function editFase(id){
   const f = stato.dettaglio.fasi.find(x=>x.id===id); if (!f) return;
-  stato.faseForm = { id:f.id, fase_nome:f.fase_nome||'', testo_breve:f.testo_breve||'', fotoEsistenti:(f.foto_urls||[]).slice(), fotoNuove:[] };
+  stato.faseForm = { id:f.id, fase_nome:f.fase_nome||'', testo_breve:f.testo_breve||'', testo_social:f.testo_generato||'', fotoEsistenti:(f.foto_urls||[]).slice(), fotoNuove:[] };
   renderDettaglio();
 }
 function annullaFase(){ stato.faseForm = null; renderDettaglio(); }
@@ -482,7 +502,7 @@ async function salvaFase(){
   if (!ff.fase_nome.trim() && !ff.testo_breve.trim()){ toast('Servono titolo o testo'); return; }
   const immagini = [...ff.fotoEsistenti, ...ff.fotoNuove];
   const d = await fetch(FASI_API, { method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ mode:'salva', progetto_id:stato.dettaglio.progetto.id, id:ff.id, fase_nome:ff.fase_nome, testo_breve:ff.testo_breve, immagini }) }).then(r=>r.json());
+    body: JSON.stringify({ mode:'salva', progetto_id:stato.dettaglio.progetto.id, id:ff.id, fase_nome:ff.fase_nome, testo_breve:ff.testo_breve, testo_generato:ff.testo_social, immagini }) }).then(r=>r.json());
   if (d.success){ toast('Fase salvata'); stato.faseForm=null; apri(stato.dettaglio.progetto.id); }
   else toast(d.error||'Errore');
 }
@@ -513,7 +533,7 @@ async function pubblicaSocial(faseId){
   toast('Invio ai social…');
   try {
     const d = await fetch('ardy-pubblica-social.php', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ testo_social:f.testo_breve, testo:f.testo_breve, fase:f.fase_nome,
+      body: JSON.stringify({ testo_social:(f.testo_generato||f.testo_breve), testo:(f.testo_generato||f.testo_breve), fase:f.fase_nome,
         mobile:stato.dettaglio.progetto.titolo, immagini:f.wp_foto_urls||[], piattaforme:['facebook','instagram'] }) }).then(r=>r.json());
     if (d.success) toast('Inviato ai social ('+(d.piattaforme||[]).join(', ')+')');
     else toast(d.error||'Errore social');

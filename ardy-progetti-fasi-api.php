@@ -84,6 +84,7 @@ try {
         if ($progettoId <= 0) { echo json_encode(['success' => false, 'error' => 'progetto mancante']); exit(); }
         $faseNome  = trim((string) ($in['fase_nome']   ?? ''));
         $breve     = trim((string) ($in['testo_breve'] ?? ''));
+        $generato  = trim((string) ($in['testo_generato'] ?? ''));   // caption social (FB/IG)
         $id        = (int) ($in['id'] ?? 0);
         $immagini  = is_array($in['immagini']   ?? null) ? array_values($in['immagini'])   : [];
         $videoUrls = is_array($in['video_urls'] ?? null) ? array_values($in['video_urls']) : [];
@@ -153,11 +154,12 @@ try {
         }
 
         $db->prepare(
-            "UPDATE fasi SET fase_nome = :nome, testo_breve = :breve, foto_urls = :foto, video_urls = :video
+            "UPDATE fasi SET fase_nome = :nome, testo_breve = :breve, testo_generato = :gen, foto_urls = :foto, video_urls = :video
              WHERE id = :id AND progetto_id = :pid"
         )->execute([
             ':nome'  => $faseNome,
             ':breve' => $breve,
+            ':gen'   => $generato,
             ':foto'  => json_encode($fotoFiles),
             ':video' => json_encode($videoClean),
             ':id'    => $id,
