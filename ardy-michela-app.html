@@ -92,6 +92,16 @@
     <div class="main-empty" id="emptyState">
       <div class="big-letter">A</div>
       <p>SELEZIONA UN CLIENTE</p>
+
+      <!-- 🗒️ Nota settimanale "cose da fare" — stessa lista di Sole su WhatsApp -->
+      <div class="nota-card" id="notaCard">
+        <div class="nota-card-head">
+          <span class="nota-card-title">🗒️ Cose da fare questa settimana</span>
+          <span class="nota-card-meta" id="notaMeta"></span>
+        </div>
+        <div class="nota-card-body" id="notaPreview">Caricamento…</div>
+        <button type="button" class="nota-card-edit" onclick="apriNotaEditor()">✏️ Modifica</button>
+      </div>
     </div>
 
     <!-- Detail panel -->
@@ -611,6 +621,7 @@ function escJs(s) {
 
 // ─── INIT ─────────────────────────────────────────────────
 loadLeads();
+caricaNotaSettimanale();
 document.addEventListener('DOMContentLoaded', () => {
   ['lavFotoCamera', 'lavFotoInput'].forEach(id => {
     const input = document.getElementById(id);
@@ -1090,6 +1101,75 @@ function chiudiDateLav(applica) {
     markDirty();
   }
   document.getElementById('dateLavOverlay').classList.remove('open');
+}
+
+// ─── NOTA SETTIMANALE "cose da fare" ──────────────────────
+// Stessa fonte di Sole su WhatsApp (tabella note_staff): qui in dashboard è un
+// pannello nella home + editor modale. Legge la più recente, salva una riga nuova.
+let _notaCorrente = '';
+function _notaEsc(s) {
+  return String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+}
+async function caricaNotaSettimanale() {
+  const prev = document.getElementById('notaPreview');
+  const meta = document.getElementById('notaMeta');
+  if (!prev) return;
+  try {
+    const r = await fetch('ardy-nota-settimanale-api.php');
+    const d = await r.json();
+    _notaCorrente = (d && d.success && d.testo) ? d.testo : '';
+    if (_notaCorrente.trim() === '') {
+      prev.className = 'nota-card-body empty';
+      prev.textContent = 'Nessuna nota: scrivi le cose da fare questa settimana.';
+      if (meta) meta.textContent = '';
+    } else {
+      prev.className = 'nota-card-body';
+      prev.innerHTML = _notaEsc(_notaCorrente).replace(/\r\n|\r|\n/g, '<br>');
+      if (meta && d.created_at) {
+        const dt = new Date(d.created_at.replace(' ', 'T'));
+        meta.textContent = isNaN(dt) ? '' : 'agg. ' + dt.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+      }
+    }
+  } catch (e) {
+    prev.className = 'nota-card-body empty';
+    prev.textContent = 'Nota non disponibile (riprova più tardi).';
+  }
+}
+function apriNotaEditor() {
+  document.getElementById('notaTextarea').value = _notaCorrente;
+  document.getElementById('notaEditorOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('notaTextarea').focus(), 50);
+}
+function chiudiNotaEditor() {
+  document.getElementById('notaEditorOverlay').classList.remove('open');
+}
+async function salvaNotaSettimanale() {
+  const btn = document.getElementById('notaSaveBtn');
+  const testo = document.getElementById('notaTextarea').value.trim();
+  if (testo === '') {
+    showToast('La nota è vuota.', 'error');
+    return;
+  }
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Salvo…';
+  try {
+    const r = await fetch('ardy-nota-settimanale-api.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ testo }),
+    });
+    const d = await r.json();
+    if (!d || !d.success) throw new Error(d && d.error ? d.error : 'errore');
+    chiudiNotaEditor();
+    showToast('Nota salvata ✅', 'success');
+    await caricaNotaSettimanale();
+  } catch (e) {
+    showToast('Errore nel salvataggio.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = old;
+  }
 }
 
 // ─── DIRTY ────────────────────────────────────────────────
@@ -4547,6 +4627,24 @@ async function archiviaPersi() {
     <div class="modal-lg-actions">
       <button class="btn-cancel" onclick="chiudiDateLav(false)">SALTA</button>
       <button class="btn-save" onclick="chiudiDateLav(true)">✓ IMPOSTA DATE</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NOTA SETTIMANALE "cose da fare" -->
+<div class="modal-overlay" id="notaEditorOverlay" onclick="if(event.target===this)chiudiNotaEditor()">
+  <div class="modal-lg" onclick="event.stopPropagation()" style="width:min(560px,94vw);">
+    <div class="modal-lg-head">
+      <h3>🗒️ COSE DA FARE QUESTA SETTIMANA</h3>
+      <button class="modal-lg-close" onclick="chiudiNotaEditor()">✕</button>
+    </div>
+    <div class="modal-lg-body">
+      <p style="font-size:12px;color:var(--text-dim);margin:0 0 12px;">Promemoria libero della settimana (sopralluoghi, materiali da ordinare, montaggi…). È la stessa lista che leggi e aggiorni con Sole su WhatsApp.</p>
+      <textarea id="notaTextarea" style="width:100%;min-height:260px;background:#1a1a1a;border:1px solid var(--border);color:var(--text);border-radius:6px;padding:12px;font-family:'DM Mono',monospace;font-size:13px;line-height:1.6;resize:vertical;box-sizing:border-box;" placeholder="- Ordinare la stoffa per il divano di Alberto&#10;- Montaggio armadio Mottini venerdì&#10;- Richiamare il falegname"></textarea>
+    </div>
+    <div class="modal-lg-actions">
+      <button class="btn-cancel" onclick="chiudiNotaEditor()">ANNULLA</button>
+      <button class="btn-save" id="notaSaveBtn" onclick="salvaNotaSettimanale()">💾 SALVA</button>
     </div>
   </div>
 </div>

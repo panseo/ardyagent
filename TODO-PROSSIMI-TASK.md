@@ -108,11 +108,18 @@ La direzione che vogliamo dare allo strumento, da affrontare per prossimi step:
    `ardy-proxy-lavorazione.php` → chat lavorazione). ⚠️ Verificare dal vivo dopo deploy che la riga compaia in
    un'email reale e che Sole sappia esporre il codice etico se richiesto.
 
-### 👥 Outreach — Import clienti AUTOMATICO post-Acconto
-L'import **manuale** dei clienti CRM è LIVE. Resta l'**automatico**: aggiungere il cliente all'outreach
-(categoria `clienti`) **dopo la fase Acconto** (firma + avvio reale), via hook nel punto del CRM dove lo
-stato passa ad acconto/in lavorazione. ⚠️ Privacy/consenso: per comunicazioni di servizio ok; per marketing
-serve consenso. Tenere stato/categoria distinti dai lead freddi.
+### 👥 Outreach — Import clienti AUTOMATICO post-Acconto — ✅ FATTO (in codice, da deployare)
+L'import **manuale** dei clienti CRM era già LIVE. Aggiunto l'**automatico**: quando un cliente entra per la
+prima volta in uno stato "impegnato" (`ACCONTO`, `RITIRATI`, `IN_LAVORAZIONE`, `COMPLETATO`, `CONSEGNATO`,
+`PAGATO` — gestisce anche il salto diretto Acconto→Ritirati/Lavorazione), viene aggiunto ai contatti outreach
+in **categoria `clienti`** con **stato `cliente`** (NON `da_contattare`), così resta **distinto dai lead freddi**
+e **fuori dalle campagne cold** (che targetizzano solo `da_contattare`) → privacy ok: è servizio/riattivazione,
+non cold-marketing. Hook in `ardy-update-lead.php` (riusa `$statoVecchio` già letto), logica in nuova lib
+condivisa `ardy-outreach-lib.php` (`ardy_outreach_aggiungi_cliente()`), **idempotente** (dedup per email/nome
+come l'import manuale, richiede email). Lib aggiunta al blocco deny del `.htaccess` (interna, non API).
+**Nota:** l'import *manuale* continua a usare stato `da_contattare` (azione esplicita di Michela); l'*automatico*
+usa `cliente` di proposito. ⚠️ Da verificare dal vivo: portare un cliente con email su ACCONTO → compare in
+Outreach categoria "clienti" con badge "cliente"; ri-salvare/altre transizioni NON creano doppioni.
 
 ### 🔌 Outreach — Altre fonti dati (VIES / P.IVA) — NOTA
 Portali aziendali IT quasi tutti gated → niente scraping. Vie aperte utili: **VIES** (ec.europa.eu, gratis,
@@ -179,6 +186,50 @@ Non sollecitare; attendere esito su `ardy.documenti`.
 
 ## 📋 TASK DA SVILUPPARE (aperti)
 
+### ☁️ Media su Backblaze B2 — off-load disco + semilavorato migrazione (PIANIFICATO 24/06)
+**Obiettivo doppio:** togliere i media dal disco del server attuale (oggi si "intasa") **e**, nello stesso
+gesto, pre-staggiare i media su B2 così che alla migrazione sul nuovo VPS (vedi `PIANO-MIGRAZIONE.md`
+Fase 3/5) **non** si debba ri-trasferire tutto al cutover — la nuova app punta allo stesso bucket. È la
+Fase 5 del piano ("upload diretti su B2") anticipata sull'infra attuale, come già fatto per il backup off-site.
+
+**Decisioni prese (24/06):**
+- **Scope v1 = foto private (scheda + chat) + video/reel** (i veri mangia-disco). Restano **fuori**: le foto
+  di fase **già pubblicate su WP Media Library** (pubbliche, gestite da WP) e — per ora — la cache PDF
+  preventivi (rigenerabile; eventuale fase 2).
+- **Semilavorato = sync continuo via cron** (backfill iniziale + cron che tiene B2 allineato al disco):
+  a fine migrazione è sempre aggiornato e funge anche da **backup media off-site continuo**.
+
+**Architettura (privacy invariata):**
+- Bucket **`ardy-media` PRIVATO** + app key **ristretta a quel bucket** (creazione manuale in console B2 —
+  prerequisito infra, non da codice). Riusa l'account B2 esistente.
+- **B2 via API nativa** in un piccolo `ardy-b2.php` (curl: `b2_authorize_account` → token in cache ~24h →
+  `b2_upload_file`/`b2_download_file_by_name`/`b2_delete`). Niente SDK pesante (composer ha solo mpdf),
+  coerente con lo stile del repo. (Alternativa S3-compatibile scartata: servirebbe SigV4/aws-sdk.)
+- **Le immagini restano private**: gli script che oggi le servono (`ardy-lead-foto.php`, immagini chat in
+  `ardy-proxy.php`, ecc.) diventano **proxy** che leggono da B2 e streammano dietro Basic Auth → **zero URL
+  pubblici, zero modifiche al frontend**.
+- **Layer di astrazione `ardy-storage.php`** (`put/get/delete/exists`) così i chiamanti non sanno se è disco
+  o B2 → migrazione incrementale e reversibile.
+
+**Fasi (a basso rischio, reversibili):**
+1. Console B2: creare bucket `ardy-media` privato + app key ristretta → costanti in `ardy-config.php`
+   (`ARDY_B2_KEY_ID`, `ARDY_B2_APP_KEY`, `ARDY_B2_BUCKET`, `ARDY_B2_BUCKET_ID`, flag `ARDY_B2_ENABLED` per
+   rollout graduale). Aggiungere `ardy-b2.php`/`ardy-storage.php` al deny `.htaccess` (interne, non API).
+2. `ardy-b2.php` (auth+cache token) + `ardy-storage.php` (astrazione disco/B2).
+3. **Backfill** one-shot: sincronizza i media esistenti (`ARDY_UPLOAD_DIR/<session>/`, `lavorazioni/`, reel)
+   su B2 con manifest. = il "semilavorato".
+4. **Write path**: i nuovi upload (foto scheda/chat, video, reel) scrivono su B2; opzionale dual-write su
+   disco per i primi giorni di sicurezza.
+5. **Read path**: i serve-script provano B2 → **fallback a disco** (niente si rompe in transizione).
+6. **Cron sync** continuo (allinea disco→B2, riconcilia eventuali delta) + **flip** a B2-only e reclaim del
+   disco quando stabile.
+
+**Note/attenzioni:** i reel sono intermedi (poi vanno su social/WP) — valutare se off-loadarli o cancellarli
+post-pubblicazione; coordinare con `ardy-archivia-persi.php` (oggi sposta foto/reel dei PERSI in
+`_da_liberare/`) e con `ardy-elimina-cliente.php` (cancella `ARDY_UPLOAD_DIR/<session>`) perché dovranno
+agire anche su B2. ⚠️ Sul nuovo VPS no-panel il backup B2 va comunque rifatto in chiave no-cPanel (dump DB
+cron + sync media) — questo task copre proprio il lato media.
+
 ### 🪑 Nuovo stato cliente "RITIRATI" — FATTO (in codice, da deployare)
 Stato per i mobili **già prelevati e in laboratorio**, ma con **lavori non ancora avviati** (limbo tra
 ACCONTO e IN_LAVORAZIONE). Implementato: posizione **tra ACCONTO e IN_LAVORAZIONE** nel flusso e nel filtro
@@ -228,8 +279,19 @@ Nuovo utente: `htpasswd -B <path> dipendente` (mai `-c`).
 - **Filtro sidebar default su ACCONTO/IN_LAVORAZIONE** invece di TUTTI (da decidere sull'uso reale).
 - **Briefing del mattino** (opzionale): salvare data ultimo briefing per numero così il riepilogo lungo parte
   da solo al primo "buongiorno" (oggi parte quando Michela chiede "come va oggi?").
-- **Widget WordPress**: il pulsante flottante dice ancora "Chatta con **Ardy**" (aria-label già "Sole") → uniformare a "Sole" nello snippet WPCode.
-- **Nota settimanale "cose da fare" in dashboard**: oggi vive solo su WhatsApp (tabella `note_staff`); mostrarla anche in dashboard come pannello modificabile. ⚠️ Per Andrea la nota condivisa funziona solo se il suo numero è in `WA_ANDREA_NUMBER` (`ardy-config.php`) — verificare che sia impostato.
+- **Widget WordPress** — ✅ FATTO nel backup repo (`wordpress-snippets/pulsante-flottante-ovunque.php`:
+  testo del pulsante ora "Chatta con **Sole**", aria-label già "Sole"). ⚠️ Lo snippet repo è SOLO un backup:
+  per renderlo live va re-incollato nel WPCode id 15243 ("Pulsante flottante ovunque") da WordPress.
+- **Nota settimanale "cose da fare" in dashboard** — ✅ FATTO (DEPLOYATO 24/06, test live pendente). Pannello
+  nella home (empty state, quando nessun cliente è selezionato): mostra la nota più recente a colpo
+  d'occhio + "✏️ Modifica" → editor modale → salva. Stessa fonte di Sole su WhatsApp (tabella
+  `note_staff`, si legge l'ultima per id, ogni salvataggio è una riga nuova con `settimana` ISO), quindi
+  resta allineata col briefing del mattino. Nuovo endpoint `ardy-nota-settimanale-api.php` (GET = ultima,
+  POST `{testo}` = salva), aggiunto al `<FilesMatch>` del `.htaccess`. Niente migrazione DB (tabella già
+  esistente). ⚠️ Da verificare dal vivo: aprire la dashboard senza selezionare un cliente → la nota appare;
+  modificarla e salvare → ricompare aggiornata e Sole su WhatsApp legge la stessa versione. ⚠️ La home/empty
+  state si rivede solo a refresh pagina (l'app non ha un bottone "home"); ampliarlo è un eventuale follow-up.
+  ⚠️ Per Andrea la nota condivisa funziona solo se il suo numero è in `WA_ANDREA_NUMBER` (`ardy-config.php`).
 - **Estrarre JS inline (~3.400 righe) dalla dashboard** in `ardy-michela-app.js` (CSS già esterno): win di caching, refactor delicato.
 
 ### ⚡ Reel async (`ardy-crea-reel.php`) — priorità media
