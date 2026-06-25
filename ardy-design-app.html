@@ -408,7 +408,12 @@ function fasiFormHtml(){
   return `
   <div class="panel" style="background:var(--surface2);margin-top:12px">
     <div class="field"><label>Titolo fase</label><input id="ff_nome" value="${esc(ff.fase_nome)}" placeholder="Es. Stampa del corpo lampada"></div>
-    <div class="field"><label>Testo (racconto breve)</label><textarea id="ff_breve" placeholder="Cosa succede in questa fase">${esc(ff.testo_breve)}</textarea></div>
+    <div class="field">
+      <label>Testo (racconto breve)</label>
+      <textarea id="ff_breve" placeholder="Butta giù due-tre righe; poi 'Scrivi con AI' le trasforma in un post professionale">${esc(ff.testo_breve)}</textarea>
+      <div style="margin-top:6px"><button class="sm" id="aiBtn" onclick="generaPostAi()">✨ Scrivi con AI</button>
+        <span class="muted" style="margin-left:6px">Tono professionale di brand. Rivedi sempre prima di pubblicare.</span></div>
+    </div>
     <div class="field"><label>Foto</label>
       <div class="thumbs">
         ${ff.fotoEsistenti.map((fn,i)=>`<div class="thumbwrap"><img class="thumb" src="${fotoUrlFase(ff.id,fn)}"><button class="x" onclick="rimuoviFotoEsistente(${i})">✕</button></div>`).join('')}
@@ -421,6 +426,19 @@ function fasiFormHtml(){
       <button class="ghost" onclick="annullaFase()">Annulla</button>
     </div>
   </div>`;
+}
+async function generaPostAi(){
+  captureFaseForm();
+  const bozza = (stato.faseForm.testo_breve||'').trim();
+  if (!bozza){ toast('Scrivi prima due-tre righe'); return; }
+  const btn = document.getElementById('aiBtn');
+  if (btn){ btn.disabled = true; btn.textContent = '✨ Scrivo…'; }
+  try {
+    const d = await fetch('ardy-progetti-ai.php', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ mode:'genera_post', progetto_id:stato.dettaglio.progetto.id, fase_nome:stato.faseForm.fase_nome, bozza }) }).then(r=>r.json());
+    if (d.success && d.testo){ stato.faseForm.testo_breve = d.testo; renderDettaglio(); toast('Post generato — rivedilo'); }
+    else { toast(d.error||'Errore generazione'); if(btn){ btn.disabled=false; btn.textContent='✨ Scrivi con AI'; } }
+  } catch(e){ toast('Errore di rete'); if(btn){ btn.disabled=false; btn.textContent='✨ Scrivi con AI'; } }
 }
 function captureFaseForm(){
   if (!stato.faseForm) return;

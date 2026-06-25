@@ -50,6 +50,12 @@
 - [ ] Con **meno di 2 foto** → messaggio d'errore chiaro ("Servono almeno 2 foto…"), nessun crash.
 - [ ] Il video è verticale 9:16, mostra le foto delle fasi; il file sta in `/reels/`.
 
+## 8b. Generazione AI del testo
+- [ ] Nel form fase scrivo 2-3 righe grezze → "✨ Scrivi con AI" → il testo diventa un **post professionale** (tono brand, non cliente), fedele alla bozza.
+- [ ] Il testo generato è **modificabile** prima di "Salva fase".
+- [ ] Con il campo testo vuoto → "Scrivi prima due-tre righe" (nessuna chiamata sprecata).
+- [ ] (Se `ARDY_API_KEY` non è configurata → errore pulito "Generazione non riuscita", niente crash.)
+
 ## 9. NON-REGRESSIONE lato cliente (importante: ho toccato `ardy-crea-reel.php`)
 - [ ] Creo un **reel da un CLIENTE** dalla dash principale come sempre → funziona identico a prima.
 - [ ] Le **fasi dei clienti** (lista, pubblicazione, foto) non sono cambiate.

@@ -234,6 +234,10 @@ nessun pubblico, prezzo posizionato male**. L'energia di sviluppo va nella **mac
 - [x] **Reel da progetto** (`ardy-crea-reel.php`): aggiunto un ramo `progetto_id` che **legge le foto
       dal disco** (le foto di progetto stanno dietro Basic Auth, non scaricabili via HTTP — decisione A
       del 25/06). Ramo cliente invariato (helper `reelLeggiFoto`). Pulsante "Crea reel" nella dash.
+- [x] **Generazione AI dei contenuti** (`ardy-progetti-ai.php`): l'autore scrive poche righe → Claude
+      (`claude-sonnet-4-6`, stesso pattern del repo) le riscrive in un **post professionale di brand**
+      (non comunicazione cliente), fedele alla bozza, da rivedere prima di pubblicare. Pulsante
+      "✨ Scrivi con AI" nel form fase.
 - [ ] **Slice successiva — clone publish WP + social** (decisione 25/06: *le fasi di lavoro sono il clone
       di quelle della dash principale*). Estendere `ardy-pubblica-lavorazione.php` / `ardy-pubblica-social.php`
       ad accettare `progetto_id`, **senza il guscio cliente** (niente codici/email/WhatsApp): la pubblicazione
