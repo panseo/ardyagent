@@ -144,12 +144,10 @@ try {
         if ($titolo === '') { echo json_encode(['success' => false, 'error' => 'Titolo mancante']); exit(); }
 
         $tipo  = in_array($in['tipo'] ?? '', PROGETTO_TIPI, true) ? $in['tipo'] : 'lampada';
-        $stato = in_array($in['stato'] ?? '', PROGETTO_STATI, true) ? $in['stato'] : 'IDEA';
 
         $fields = [
             'titolo'         => $titolo,
             'tipo'           => $tipo,
-            'stato'          => $stato,
             'descrizione'    => trim((string) ($in['descrizione'] ?? '')),
             'materiali'      => trim((string) ($in['materiali'] ?? '')),
             'scheda_tecnica' => trim((string) ($in['scheda_tecnica'] ?? '')),
@@ -157,6 +155,15 @@ try {
             'prezzo_vendita' => isset($in['prezzo_vendita']) && $in['prezzo_vendita'] !== '' ? progettoParseNum($in['prezzo_vendita']) : null,
             'tempo_lavoro'   => trim((string) ($in['tempo_lavoro'] ?? '')),
         ];
+
+        // Lo stato si imposta SOLO alla creazione (default IDEA) o se fornito ed è
+        // valido: il salvataggio della scheda NON deve azzerare il ciclo di vita
+        // (che si cambia dalla pipeline). Altrimenti ogni "Salva" riportava a IDEA.
+        if ($id <= 0) {
+            $fields['stato'] = in_array($in['stato'] ?? '', PROGETTO_STATI, true) ? $in['stato'] : 'IDEA';
+        } elseif (isset($in['stato']) && in_array($in['stato'], PROGETTO_STATI, true)) {
+            $fields['stato'] = $in['stato'];
+        }
 
         if ($id > 0) {
             $set = implode(', ', array_map(fn($k) => "`$k` = :$k", array_keys($fields)));

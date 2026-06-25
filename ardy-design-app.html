@@ -232,7 +232,7 @@ function val(id){ const e=document.getElementById(id); return e?e.value:''; }
 
 async function salvaProgetto(){
   const body = {
-    mode:'save', id: stato.dettaglio.progetto.id,
+    mode:'save', id: stato.dettaglio.progetto.id, stato: stato.dettaglio.progetto.stato,
     titolo:val('f_titolo'), tipo:val('f_tipo'), descrizione:val('f_descrizione'),
     materiali:val('f_materiali'), scheda_tecnica:val('f_scheda_tecnica'),
     tempo_lavoro:val('f_tempo_lavoro'), prezzo_vendita:val('f_prezzo_vendita'), scarto_pct:val('f_scarto_pct')
