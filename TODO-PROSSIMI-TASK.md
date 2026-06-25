@@ -228,12 +228,17 @@ finestra 24h di Meta non garantirebbe la consegna fuori sessione e un template n
   2. **Cron** (fuso Europe/Rome): `0 9 * * 1-5 curl -s -H "X-Ardy-Secret: <WA_LOOKUP_SECRET>" https://ardyagent.ardy-lab.it/ardy-briefing-mattino.php >/dev/null 2>&1`
   3. Test: chiamare l'endpoint con `?force=1` + segreto e verificare che l'email arrivi e i blocchi siano giusti.
 
-### 🔁 Rollover settimanale della nota "Cose da fare" (lunedì) — DA SVILUPPARE (approvato, design deciso)
-La settimana è lun→dom. Il lunedì un job legge l'ultima `note_staff`, **elimina le righe marcate fatte (✔/✓)**
-e **riporta le non evase** salvando una riga nuova con la nuova settimana ISO (si incastra col modello
-append-only). v1 su **testo libero + marcatore ✔** (zero AI), no refactor a task strutturati. Serve un
-**trigger del lunedì** (cron/n8n) e definire bene il marcatore "fatto". ⚠️ Caveat: se nessuno spunta col ✔,
-il lunedì si riporta tutto (comportamento sicuro, ma non "pulisce" da solo).
+### 🔁 Rollover settimanale della nota "Cose da fare" (lunedì) — FATTO in codice (branch), da cron+deploy
+La settimana è lun→dom. Il lunedì il job legge l'ultima `note_staff`, **elimina le righe marcate fatte**
+(✔ ✓ ✅ oppure `[x]`/`[X]`) e **riporta le non evase** salvando una riga nuova con la settimana ISO corrente
+(stessa codifica `date('o-\WW')` dei salvataggi). v1 su **testo libero + spunta** (zero AI), nessun refactor.
+- Nuovo endpoint **`ardy-rollover-nota.php`**, protetto da `WA_LOOKUP_SECRET`, NIENTE Basic Auth. **Idempotente**:
+  se l'ultima nota è già della settimana corrente non fa nulla (`?force=1` per i test). Logica pura in
+  `ardy-briefing-lib.php` → `ardy_nota_strip_fatte()` (testata: header tenuti, voci ✔/`[x]` rimosse).
+- Hint nell'editor nota in dashboard: "metti ✔ sulle voci fatte, il lunedì spariscono".
+- ⚠️ **Cron da impostare** (Europe/Rome), lunedì 06:00 (prima del briefing delle 9):
+  `0 6 * * 1 curl -s -H "X-Ardy-Secret: <WA_LOOKUP_SECRET>" https://ardyagent.ardy-lab.it/ardy-rollover-nota.php >/dev/null 2>&1`
+- ⚠️ Caveat (atteso): se nessuno spunta col ✔, il lunedì si riporta tutto — comportamento sicuro, non "pulisce" da solo.
 
 ### ☁️ Media su Backblaze B2 — off-load disco + semilavorato migrazione (PIANIFICATO 24/06)
 **Obiettivo doppio:** togliere i media dal disco del server attuale (oggi si "intasa") **e**, nello stesso

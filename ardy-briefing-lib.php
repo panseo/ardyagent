@@ -358,3 +358,24 @@ function ardy_briefing_email_html(string $testo): string {
     }
     return $html;
 }
+
+// Rollover settimanale della nota "cose da fare": dato il testo della nota,
+// rimuove le righe marcate FATTE (✔ ✓ ✅ oppure "[x]"/"[X]") e tiene le altre.
+// Ritorna ['testo'=>nuovoTesto, 'totali'=>righeAttività, 'rimosse'=>righeFatte].
+// "totali" conta solo le righe con contenuto (le righe vuote non contano).
+function ardy_nota_strip_fatte(string $testo): array {
+    $righe   = preg_split('/\r\n|\r|\n/', $testo);
+    $tenute  = [];
+    $totali  = 0;
+    $rimosse = 0;
+    foreach ($righe as $r) {
+        if (trim($r) === '') { $tenute[] = ''; continue; } // preserva la spaziatura
+        $totali++;
+        $fatta = (bool) preg_match('/[\x{2714}\x{2713}\x{2705}]/u', $r)  // ✔ ✓ ✅
+              || (bool) preg_match('/^\s*\[\s*[xX]\s*\]/', $r);          // [x] / [X]
+        if ($fatta) { $rimosse++; continue; }
+        $tenute[] = $r;
+    }
+    $nuovo = preg_replace("/\n{3,}/", "\n\n", trim(implode("\n", $tenute)));
+    return ['testo' => (string) $nuovo, 'totali' => $totali, 'rimosse' => $rimosse];
+}
