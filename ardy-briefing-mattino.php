@@ -97,7 +97,7 @@ $intro   = 'Buongiorno! Ecco la situazione di oggi (' . $oggi . ').';
 // CTA: modifica delle "Cose da fare questa settimana" dalla dashboard.
 $dashUrl = defined('ARDY_DASHBOARD_URL') && ARDY_DASHBOARD_URL !== ''
     ? ARDY_DASHBOARD_URL
-    : 'https://ardyagent.ardy-lab.it/ardy-michela-app.html';
+    : 'https://ardyagent.ardy-lab.it/';
 $ctaHtml = '
   <div style="margin:28px 0 8px;padding:16px;background:#faf7f1;border:1px solid #ece3d3;border-radius:8px;">
     <div style="font-size:14px;color:#555;margin-bottom:12px;">✏️ Vuoi aggiornare le «Cose da fare questa settimana»? Modificale dalla tua dashboard.</div>

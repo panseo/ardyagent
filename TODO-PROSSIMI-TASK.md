@@ -220,11 +220,11 @@ finestra 24h di Meta non garantirebbe la consegna fuori sessione e un template n
   WhatsApp invariato). Lib aggiunta al deny `.htaccess`.
 - Invio via SMTP Brevo (stesso pattern di solleciti/trasporti), email HTML col logo. Include un **CTA**
   "Apri la dashboard" per modificare le «Cose da fare questa settimana» (link `ARDY_DASHBOARD_URL`,
-  default `https://ardyagent.ardy-lab.it/ardy-michela-app.html`).
+  default `https://ardyagent.ardy-lab.it/` — unico accesso alla dashboard di Michela).
 - **Destinatario deciso:** solo `michelapanella1999@gmail.com` (Andrea non lo vuole). Niente migrazione DB.
 - ⚠️ **AZIONI MANUALI per renderlo live** (lato server, non da repo):
   1. In `ardy-config.php`: `define('ARDY_BRIEFING_EMAILS', 'michelapanella1999@gmail.com');`
-     (opzionale `define('ARDY_DASHBOARD_URL', 'https://ardyagent.ardy-lab.it/ardy-michela-app.html');`).
+     (opzionale `define('ARDY_DASHBOARD_URL', 'https://ardyagent.ardy-lab.it/');`).
   2. **Cron** (fuso Europe/Rome): `0 9 * * 1-5 curl -s -H "X-Ardy-Secret: <WA_LOOKUP_SECRET>" https://ardyagent.ardy-lab.it/ardy-briefing-mattino.php >/dev/null 2>&1`
   3. Test: chiamare l'endpoint con `?force=1` + segreto e verificare che l'email arrivi e i blocchi siano giusti.
 
