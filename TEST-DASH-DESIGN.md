@@ -65,6 +65,16 @@
 - [ ] (Promemoria) alla migrazione su **Backblaze B2** cambiano solo path di scrittura + serving `?file=`,
       il DB salva solo i nomi file. Nessun blocco previsto.
 
+## 11. Publish WordPress + social (branch `claude/dash-design-publish`, da rivedere)
+> Richiede WP + credenziali + webhook n8n: testabile solo dal vivo dopo il deploy del branch.
+- [ ] Migrate: OK per `progetti.wp_post_id`, `fasi.wp_pubblicata_at`, `fasi.wp_foto_urls`.
+- [ ] Fase con testo + foto → "🌐 Pubblica su WordPress" → si apre il **post** con la fase (foto + testo); la fase mostra "✓ Su WordPress".
+- [ ] Pubblico una **seconda fase** dello stesso progetto → si **aggiunge** allo stesso post (non ne crea uno nuovo).
+- [ ] La **prima foto** diventa l'immagine in evidenza; le foto su disco/anteprime della dash NON cambiano (reel ancora ok).
+- [ ] "📣 Pubblica sui social" su una fase già pubblicata → arriva su FB/IG con le foto (URL pubblici WP).
+- [ ] (Opz.) Imposto `ARDY_WP_CAT_PROGETTI` → il post va nella categoria progetti, non tra i clienti.
+- [ ] NON-REGRESSIONE: il publish dei **clienti** (`ardy-pubblica-lavorazione.php`) non è toccato e funziona come prima.
+
 ---
 ### Esito
 - Annotare qui sotto cosa non torna (con quale passo) → poi si sistema prima della slice publish WP/social.

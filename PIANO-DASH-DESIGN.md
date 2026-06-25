@@ -238,10 +238,17 @@ nessun pubblico, prezzo posizionato male**. L'energia di sviluppo va nella **mac
       (`claude-sonnet-4-6`, stesso pattern del repo) le riscrive in un **post professionale di brand**
       (non comunicazione cliente), fedele alla bozza, da rivedere prima di pubblicare. Pulsante
       "✨ Scrivi con AI" nel form fase.
-- [ ] **Slice successiva — clone publish WP + social** (decisione 25/06: *le fasi di lavoro sono il clone
-      di quelle della dash principale*). Estendere `ardy-pubblica-lavorazione.php` / `ardy-pubblica-social.php`
-      ad accettare `progetto_id`, **senza il guscio cliente** (niente codici/email/WhatsApp): la pubblicazione
-      è contenuto di brand (portfolio/social), non una pagina-lavorazione privata.
+- [x] **Clone publish WP + social** (branch `claude/dash-design-publish`, NON ancora mergiato):
+      `ardy-progetti-pubblica.php` è un clone **snello e decoupled** di `ardy-pubblica-lavorazione.php`
+      (niente codici/email/WhatsApp): bootstrap WP in-process, sideload delle foto **dal disco** →
+      Media Library (URL pubblici), crea/aggiorna **un post portfolio per progetto** (`progetti.wp_post_id`),
+      featured image. Marca la fase (`fasi.wp_pubblicata_at`, `wp_foto_urls`). Il **social riusa
+      `ardy-pubblica-social.php` così com'è** (webhook n8n) con gli URL pubblici WP. Pulsanti
+      "Pubblica su WordPress" / "Pubblica sui social" per fase nella dash.
+      - ⚙️ Config opzionale `ARDY_WP_CAT_PROGETTI` (categoria WP dei progetti; se assente → categoria
+        di default, NON la 102 dei clienti).
+      - ⚠️ **Da testare dal vivo**: richiede WP (`wp-load.php`) + credenziali e il webhook n8n — non
+        verificabile in locale. Vedi `TEST-DASH-DESIGN.md` §11.
 - [ ] **Invio al catalogo**: a **fine ciclo** (stato A_CATALOGO → Tappa 2/3), separato dal flusso fasi.
 
 > **Storage foto → Backblaze B2 (alla migrazione)**: il DB salva solo i *nomi* file (`foto_urls`), le

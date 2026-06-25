@@ -107,6 +107,9 @@
   .thumbwrap { position:relative; }
   .thumbwrap .x { position:absolute; top:-6px; right:-6px; width:20px; height:20px; padding:0; border-radius:50%; background:var(--red); color:#fff; border:none; font-size:11px; line-height:1; cursor:pointer; }
 
+  .pubrow { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:10px; padding-top:8px; border-top:1px solid var(--surface2); }
+  .pubok { font-size:12px; color:var(--green); }
+
   .empty { color:var(--text-dim); text-align:center; padding:60px 20px; }
   .muted { color:var(--text-dim); font-size:12px; }
   .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--surface2); border:1px solid var(--accent); color:var(--text); padding:10px 18px; border-radius:var(--radius-sm); box-shadow:var(--shadow); opacity:0; transition:.2s; pointer-events:none; z-index:300; }
@@ -373,6 +376,12 @@ function fasiPanel(){
                 <button class="sm ghost danger" onclick="eliminaFase(${f.id})">✕</button></span></div>
         ${f.testo_breve?`<div class="muted">${esc(f.testo_breve)}</div>`:''}
         ${(f.foto_urls&&f.foto_urls.length)?`<div class="thumbs">${f.foto_urls.map(fn=>`<img class="thumb" src="${fotoUrlFase(f.id,fn)}" alt="">`).join('')}</div>`:''}
+        <div class="pubrow">
+          ${f.wp_pubblicata_at
+            ? `<span class="pubok">✓ Su WordPress</span>
+               <button class="sm" onclick="pubblicaSocial(${f.id})">📣 Pubblica sui social</button>`
+            : `<button class="sm" onclick="pubblicaWp(${f.id})">🌐 Pubblica su WordPress</button>`}
+        </div>
       </div>`).join('') : '<div class="muted">Nessuna fase-contenuto ancora.</div>'}
 
     ${stato.faseForm ? fasiFormHtml() : `<button class="primary" style="margin-top:8px" onclick="nuovaFase()">+ Aggiungi fase</button>`}
@@ -481,6 +490,34 @@ async function eliminaFase(id){
   if (!confirm('Eliminare questa fase e le sue foto?')) return;
   await fetch(FASI_API, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode:'delete', id }) });
   apri(stato.dettaglio.progetto.id);
+}
+// Pubblica una fase su WordPress (post portfolio del progetto). Le foto vengono
+// caricate sulla Media Library di WP e ne tornano gli URL pubblici (per i social).
+async function pubblicaWp(faseId){
+  const f = stato.dettaglio.fasi.find(x=>x.id===faseId); if (!f) return;
+  if (!(f.testo_breve||'').trim()){ toast('Scrivi il testo della fase prima di pubblicare'); return; }
+  if (!confirm('Pubblicare questa fase su WordPress?')) return;
+  toast('Pubblico su WordPress…');
+  try {
+    const d = await fetch('ardy-progetti-pubblica.php', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ progetto_id:stato.dettaglio.progetto.id, fase_id:faseId, testo:f.testo_breve }) }).then(r=>r.json());
+    if (d.success){ toast('Pubblicata su WordPress'); if (d.post_link) window.open(d.post_link,'_blank','noopener'); apri(stato.dettaglio.progetto.id); }
+    else toast(d.error||'Errore pubblicazione');
+  } catch(e){ toast('Errore di rete'); }
+}
+// Pubblica sui social (FB/IG) riusando l'endpoint esistente con gli URL pubblici WP.
+async function pubblicaSocial(faseId){
+  const f = stato.dettaglio.fasi.find(x=>x.id===faseId); if (!f) return;
+  if (!f.wp_pubblicata_at){ toast('Pubblica prima su WordPress'); return; }
+  if (!confirm('Pubblicare questo post su Facebook e Instagram?')) return;
+  toast('Invio ai social…');
+  try {
+    const d = await fetch('ardy-pubblica-social.php', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ testo_social:f.testo_breve, testo:f.testo_breve, fase:f.fase_nome,
+        mobile:stato.dettaglio.progetto.titolo, immagini:f.wp_foto_urls||[], piattaforme:['facebook','instagram'] }) }).then(r=>r.json());
+    if (d.success) toast('Inviato ai social ('+(d.piattaforme||[]).join(', ')+')');
+    else toast(d.error||'Errore social');
+  } catch(e){ toast('Errore di rete'); }
 }
 
 caricaLista();

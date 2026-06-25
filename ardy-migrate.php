@@ -240,6 +240,7 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `progetti` (
     `cad_urls`          TEXT NULL,                 -- JSON
     `canali_vendita`    TEXT NULL,                 -- JSON: dove è pubblicato + link annunci
     `woo_product_id`    BIGINT NULL,
+    `wp_post_id`        BIGINT NULL,               -- post WordPress portfolio del progetto
     `copertina_url`     VARCHAR(500) NULL,
     `created_at`        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at`        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -323,6 +324,10 @@ $fasiCols = [
     // Aggancio della stessa tabella fasi ai progetti di design (vedi PIANO-DASH-DESIGN.md):
     // una fase appartiene O a un cliente (session_id) O a un progetto (progetto_id).
     'progetto_id' => "ALTER TABLE fasi ADD COLUMN progetto_id BIGINT NULL AFTER session_id",
+    // Pubblicazione WordPress delle fasi di progetto (binario racconto, dash design):
+    // marker "pubblicata" e URL pubblici delle foto su WP (riusati per il post social).
+    'wp_pubblicata_at' => "ALTER TABLE fasi ADD COLUMN wp_pubblicata_at DATETIME NULL",
+    'wp_foto_urls'     => "ALTER TABLE fasi ADD COLUMN wp_foto_urls TEXT NULL",
 ];
 foreach ($fasiCols as $col => $sql) {
     if (!colExists($pdo, 'fasi', $col)) {
@@ -348,6 +353,18 @@ if ($sidCol && strtoupper($sidCol['IS_NULLABLE']) === 'NO') {
     ddl($pdo, "ALTER TABLE fasi MODIFY `session_id` {$sidCol['COLUMN_TYPE']} NULL", "fasi.session_id nullable");
 } else {
     echo "  skip fasi.session_id nullable\n"; $skip++;
+}
+
+// ── COLONNE progetti (aggiunte dopo il primo deploy della dash design) ───────
+$progettiCols = [
+    'wp_post_id' => "ALTER TABLE progetti ADD COLUMN wp_post_id BIGINT NULL AFTER woo_product_id",
+];
+foreach ($progettiCols as $col => $sql) {
+    if (!colExists($pdo, 'progetti', $col)) {
+        ddl($pdo, $sql, "progetti.$col");
+    } else {
+        echo "  skip progetti.$col\n"; $skip++;
+    }
 }
 
 // ── INDICI ───────────────────────────────────────────────────────────────────

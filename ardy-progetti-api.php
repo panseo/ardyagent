@@ -114,7 +114,10 @@ try {
         $fasi = $db->prepare("SELECT * FROM fasi WHERE progetto_id = ? ORDER BY ordine ASC, created_at ASC");
         $fasi->execute([$id]);
         $fasiRows = $fasi->fetchAll();
-        foreach ($fasiRows as &$f) { $f['foto_urls'] = json_decode($f['foto_urls'] ?? '[]', true) ?? []; }
+        foreach ($fasiRows as &$f) {
+            $f['foto_urls']    = json_decode($f['foto_urls'] ?? '[]', true) ?? [];
+            $f['wp_foto_urls'] = json_decode($f['wp_foto_urls'] ?? '[]', true) ?? [];
+        }
         unset($f);
 
         echo json_encode([
