@@ -1,7 +1,7 @@
-# DEM #1 — Ardy Experience per i B&B
+# DEM #1 — Galleria Diffusa per i B&B
 
 > Pronta per il primo invio ai B&B. Il link punta alla pagina
-> `ardy-lab.it/ardy-experience` (dove c'è la webchat di Sole, modalità partner).
+> `ardy-lab.it/galleria-diffusa` (dove c'è la webchat di Sole, modalità partner).
 > Numero diretto di Michela in firma: **+39 379 375 6437** (numero di Sole/eSIM —
 > ⚠️ verificare che riceva anche le chiamate vocali, vedi nota in fondo).
 > **Commissione:** la si può citare; **la percentuale NO** — quella si concorda a voce.
@@ -23,7 +23,7 @@
 Ciao,
 
 ti scrivo da **Ardy Lab**, bottega di restauro a Roma. Abbiamo creato una cosa
-pensata apposta per i B&B come il tuo: si chiama **Ardy Experience**.
+pensata apposta per i B&B come il tuo: si chiama **Galleria Diffusa**.
 
 Funziona così:
 
@@ -45,7 +45,7 @@ Sulla pagina qui sotto trovi tutti i dettagli e puoi parlare subito con **Sole**
 la nostra assistente: ti risponde a ogni dubbio e, se vuoi, ti fissa un
 **appuntamento nel nostro laboratorio** per vedere gli oggetti dal vivo.
 
-👉 **Scopri Ardy Experience:** https://ardy-lab.it/ardy-experience
+👉 **Scopri la Galleria Diffusa:** https://ardy-lab.it/galleria-diffusa
 
 Se invece preferisci due parole a voce, scrivimi o chiamami direttamente:
 sono **Michela**, **+39 379 375 6437**.
@@ -74,4 +74,4 @@ Restauro e rigenerazione mobili · Roma EUR · ardy-lab.it
   WhatsApp Business "cloud", NON squilla come un telefono: in quel caso conviene
   mettere in firma un numero voce diverso. → da verificare prima dell'invio.
 - **Prima dell'invio:** aggiungere la foto/screenshot demo nella pagina (passo 2,
-  TODO in `ardy-experience-page.html`) e verificare il link/disiscrizione.
+  TODO in `galleria-diffusa-page.html`) e verificare il link/disiscrizione.

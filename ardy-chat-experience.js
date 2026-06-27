@@ -1,22 +1,22 @@
 /*
- * Ardy Lab — Widget Chat "Ardy Experience" (per i B&B partner)
+ * Ardy Lab — Widget Chat "Galleria Diffusa" (per i B&B partner)
  * -----------------------------------------------------------
  * FONTE ATTIVA centralizzata: questo file è servito dal nostro server
  *   https://ardyagent.ardy-lab.it/ardy-chat-experience.js
- * e caricato dalla pagina WordPress ardy-lab.it/ardy-experience con un loader
- * di una riga (vedi wordpress-snippets/ardy-experience-page.html):
+ * e caricato dalla pagina WordPress ardy-lab.it/galleria-diffusa con un loader
+ * di una riga (vedi wordpress-snippets/galleria-diffusa-page.html):
  *   <script src="https://ardyagent.ardy-lab.it/ardy-chat-experience.js"></script>
  *
  * Cosa fa: inietta una webchat autoportante (come il widget "Lavori in corso")
- * dove il titolare di un B&B può chiedere info su Ardy Experience, ricevere
+ * dove il titolare di un B&B può chiedere info su Galleria Diffusa, ricevere
  * delucidazioni da Sole, essere invitato a contattare Michela e FISSARE un
  * appuntamento in laboratorio. Riusa il cervello completo di Sole e i tool
  * calendario/CRM via ardy-proxy.php (nessuna modifica PHP).
  *
  * Modificare QUI + deploy aggiorna il sito (niente copia-incolla in WPCode).
  *
- * Si attiva SOLO sulla pagina Ardy Experience: o l'URL contiene
- * "ardy-experience", oppure esiste in pagina un elemento #ardy-experience,
+ * Si attiva SOLO sulla pagina Galleria Diffusa: o l'URL contiene
+ * "galleria-diffusa", oppure esiste in pagina un elemento #galleria-diffusa,
  * oppure è impostato window.ARDY_XP = true. Espone window.ardyXpOpen() così
  * un bottone CTA della pagina può aprire la chat.
  */
@@ -33,11 +33,11 @@
   var chatStarted = false;
   var sessionId   = 'xp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
 
-  // ── Si attiva solo sulla pagina Ardy Experience ──
+  // ── Si attiva solo sulla pagina Galleria Diffusa ──
   function shouldRun() {
     if (window.ARDY_XP === true) return true;
-    if (document.getElementById('ardy-experience')) return true;
-    return /ardy-experience/i.test(location.pathname);
+    if (document.getElementById('galleria-diffusa')) return true;
+    return /galleria-diffusa/i.test(location.pathname);
   }
 
   // ── CSS (palette coerente con gli altri widget Ardy) ──
@@ -146,8 +146,8 @@
   function injectHTML() {
     var toggle = document.createElement('button');
     toggle.id = 'ardy-xp-toggle';
-    toggle.innerHTML = '<span class="ardy-xp-ico">✨</span><span>Parla di Ardy Experience</span>';
-    toggle.title = 'Chiedi info su Ardy Experience per il tuo B&B';
+    toggle.innerHTML = '<span class="ardy-xp-ico">✨</span><span>Scopri la Galleria Diffusa</span>';
+    toggle.title = 'Chiedi info sulla Galleria Diffusa per il tuo B&B';
     toggle.onclick = togglePanel;
     document.body.appendChild(toggle);
 
@@ -157,7 +157,7 @@
       '<div id="ardy-xp-header">' +
         '<span class="ardy-h-ico">✨</span>' +
         '<div>' +
-          '<h3>Ardy Experience — per il tuo B&B</h3>' +
+          '<h3>Galleria Diffusa — per il tuo B&B</h3>' +
           '<p>Chiedi a Sole come funziona la collaborazione</p>' +
         '</div>' +
         '<button id="ardy-xp-close">×</button>' +
@@ -180,17 +180,17 @@
   function startChat() {
     if (chatStarted) return;
     chatStarted = true;
-    // La chat parte con un saluto di Sole già "incorniciato" su Ardy Experience/B&B.
+    // La chat parte con un saluto di Sole già "incorniciato" su Galleria Diffusa/B&B.
     // Mettendolo anche nella history, il modello mantiene il contesto partner per
     // tutte le risposte successive (anche con il system prompt dedicato).
-    var greet = 'Ciao! Sono Sole di Ardy Lab ✨ Mi fa piacere che tu stia pensando ad ' +
-      'Ardy Experience per il tuo B&B. Dimmi pure: vuoi capire come funziona, ' +
+    var greet = 'Ciao! Sono Sole di Ardy Lab ✨ Mi fa piacere che tu stia pensando alla ' +
+      'Galleria Diffusa per il tuo B&B. Dimmi pure: vuoi capire come funziona, ' +
       'le commissioni, o preferisci fissare un appuntamento da noi in laboratorio per ' +
       'vedere gli oggetti dal vivo?';
     addMessage(greet, 'agent');
     history.push({ role: 'assistant', content: greet });
     initSuggestions([
-      'Come funziona Ardy Experience?',
+      'Come funziona la Galleria Diffusa?',
       'Quanto guadagna il B&B?',
       'Vorrei fissare un appuntamento in laboratorio',
       'Posso parlare con Michela?'

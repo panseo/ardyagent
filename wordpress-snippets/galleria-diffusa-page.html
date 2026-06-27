@@ -1,20 +1,20 @@
 <!--
-  ARDY EXPERIENCE — contenuto pagina WordPress  ardy-lab.it/ardy-experience
+  GALLERIA DIFFUSA — contenuto pagina WordPress  ardy-lab.it/galleria-diffusa
   ============================================================================
   Incolla questo in un blocco "HTML personalizzato" della pagina WordPress
-  /ardy-experience (o in un Code Module di Divi).
+  /galleria-diffusa (o in un Code Module di Divi).
 
   Cosa fa già:
-  - imposta il contesto pagina (#ardy-experience) così la webchat di Sole
+  - imposta il contesto pagina (#galleria-diffusa) così la webchat di Sole
     "modalità B&B" si attiva SOLO qui;
   - i bottoni "Parla con Sole" aprono la chat via window.ardyXpOpen().
 
   ⚠️ IL LOADER DEL WIDGET VA IN WPCODE, NON QUI.
   Molti editor/temi (Divi, blocco HTML) RIMUOVONO i tag <script> incollati nel
   contenuto della pagina → il widget non parte. Per questo il loader si mette in
-  uno snippet WPCode (vedi README.md, sezione "Ardy Experience"): un solo
+  uno snippet WPCode (vedi README.md, sezione "Galleria Diffusa"): un solo
   <script src="...ardy-chat-experience.js"> in Site Wide Footer. Il widget si
-  auto-limita alla pagina /ardy-experience (gate sull'URL), quindi non compare
+  auto-limita alla pagina /galleria-diffusa (gate sull'URL), quindi non compare
   altrove. I due <script> qui in fondo restano solo come fallback per editor che
   NON strippano gli script: se usi WPCode, sono inerti.
 
@@ -30,12 +30,12 @@
   deployata).
 -->
 
-<div id="ardy-experience" style="max-width:980px;margin:0 auto;padding:8px 18px 40px;font-family:'DM Sans',sans-serif;color:#2d2d2d;">
+<div id="galleria-diffusa" style="max-width:980px;margin:0 auto;padding:8px 18px 40px;font-family:'DM Sans',sans-serif;color:#2d2d2d;">
 
   <!-- ── HERO ──────────────────────────────────────────────────────── -->
   <section style="text-align:center;padding:40px 0 28px;">
     <p style="letter-spacing:2px;text-transform:uppercase;font-size:13px;color:#a8864a;margin:0 0 10px;">Ardy Lab · per i B&amp;B</p>
-    <h1 style="font-family:'Crimson Pro',serif;font-size:40px;line-height:1.1;margin:0 0 14px;color:#1a1a1a;">Ardy Experience</h1>
+    <h1 style="font-family:'Crimson Pro',serif;font-size:40px;line-height:1.1;margin:0 0 14px;color:#1a1a1a;">Galleria Diffusa</h1>
     <p style="font-size:19px;line-height:1.5;color:#555;max-width:620px;margin:0 auto 26px;">
       Arreda il tuo B&amp;B con oggetti unici, restaurati e rigenerati a mano. Ogni pezzo
       racconta la sua storia: il tuo ospite la inquadra col telefono, l'ascolta e — se
@@ -133,7 +133,7 @@
 
 </div>
 
-<!-- Contesto pagina per il widget (ridondante con #ardy-experience, ma esplicito) -->
+<!-- Contesto pagina per il widget (ridondante con #galleria-diffusa, ma esplicito) -->
 <script>window.ARDY_XP = true;</script>
 
 <!-- LOADER WIDGET (fonte attiva: ardy-chat-experience.js sul nostro server) -->

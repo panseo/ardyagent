@@ -117,7 +117,7 @@ La direzione che vogliamo dare allo strumento, da affrontare per prossimi step:
 1. **Pipeline lead — evoluzioni** (la v1 è live: vista Pipeline + promozione a Cliente/Partner). Idee:
    drag&drop tra fasi; campo "valore/nota trattativa"; collegamento del lead alla **campagna d'origine**;
    notifica a Michela quando un lead passa a "Risposto".
-2. **Campagne con obiettivi diversi + Sole espone il piano** — es. B&B "Ardy Experience": Sole deve saper
+2. **Campagne con obiettivi diversi + Sole espone il piano** — es. B&B "Galleria Diffusa": Sole deve saper
    **esporre il piano marketing del progetto** a tutti i registrati sul CRM, sia su **WhatsApp** sia su una
    **pagina dedicata** (webchat + **codice di verifica**, come il `codice_accesso` cliente esistente).
 3. **Prompt dedicato per campagna** — ogni campagna ha il suo prompt per Sole (contesto/obiettivo), così Sole

@@ -26,7 +26,7 @@ di Ardy Lab: i canali su cui lavora, le mansioni, le regole che segue e i suoi l
 |---|---|---|
 | **Chatbot del sito** | `ardy-lab.it/ardy-agent/` | Visitatori del sito (soprattutto nuovi contatti) |
 | **Widget lavorazione** | Pagine "Lavori in corso" del sito | Clienti con un lavoro in corso (riconosciuti dal telefono) |
-| **Ardy Experience (B&B)** | `ardy-lab.it/ardy-experience` | Titolari di B&B interessati alla partnership Ardy Experience |
+| **Galleria Diffusa (B&B)** | `ardy-lab.it/galleria-diffusa` | Titolari di B&B interessati alla partnership Galleria Diffusa |
 | **WhatsApp** | Numero dedicato **+39 379 375 6437** | Chiunque scriva: lead, clienti, ex clienti |
 
 Su WhatsApp Sole capisce **con chi sta parlando** e si comporta di conseguenza (modalità):
@@ -114,18 +114,18 @@ Michela **e** Andrea possono dettare a Sole la **lista delle cose da fare della 
 
 ---
 
-### 8. Presentare Ardy Experience ai B&B partner (pagina dedicata) — *giu 2026*
-Sulla pagina `ardy-lab.it/ardy-experience` (linkata nella DEM ai B&B) Sole indossa il cappello
+### 8. Presentare Galleria Diffusa ai B&B partner (pagina dedicata) — *giu 2026*
+Sulla pagina `ardy-lab.it/galleria-diffusa` (linkata nella DEM ai B&B) Sole indossa il cappello
 **commerciale B2B**: non tratta il titolare del B&B come un cliente di restauro, ma come un
-**potenziale partner**. Spiega cos'è Ardy Experience (oggetti rigenerati con storia via QR code
+**potenziale partner**. Spiega cos'è Galleria Diffusa (oggetti rigenerati con storia via QR code
 negli ambienti del B&B, l'ospite compra dal telefono, il B&B prende una commissione), dà
 **delucidazioni** sui dubbi, **invita a sentire Michela** direttamente al suo numero e può
 **fissare un appuntamento in laboratorio** per vedere gli oggetti dal vivo (riusa il calendario
 reale: `ottieni_disponibilita_calendario` + `fissa_appuntamento_calendario`, poi salva il partner
 nel CRM). Non promette mai condizioni economiche precise: quelle le concorda Michela.
-> Dove vive: pagina/loader in `wordpress-snippets/ardy-experience-page.html`, widget chat
+> Dove vive: pagina/loader in `wordpress-snippets/galleria-diffusa-page.html`, widget chat
 > autoportante `ardy-chat-experience.js` (→ `ardy-proxy.php`), regole in `ardy-system.txt`
-> (sezione "ARDY EXPERIENCE — PARTNER B&B").
+> (sezione "GALLERIA DIFFUSA — PARTNER B&B").
 
 ---
 

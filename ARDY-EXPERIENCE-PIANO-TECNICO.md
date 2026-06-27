@@ -1,7 +1,10 @@
-# ARDY Experience — Piano Tecnico MVP
+# Galleria Diffusa — Piano Tecnico MVP
 
 > Stato: **proposta da approvare** · Data: 2026-06-06 · Branch: `claude/quirky-davinci-F5LBY`
 > Scope deciso con il committente: **Storytelling + Acquisto** (le altre feature sono roadmap futura).
+>
+> **Nome:** il progetto si chiama **Galleria Diffusa** (ex "Ardy Experience"). Pagina pubblica:
+> `ardy-lab.it/galleria-diffusa`. (Il nome del file resta storico.)
 >
 > **Aggiornamento giu 2026 (lancio):** il collegamento oggetto → storia è **solo via QR code**
 > (l'ospite inquadra e si apre la pagina). Niente altre tecnologie di tag o di "tracciabilità"
