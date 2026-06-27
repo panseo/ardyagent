@@ -8,6 +8,29 @@
 
 ---
 
+## 🔎 APERTO — Arricchimento outreach: email non trovata su sito JS (prossima sessione)
+Caso reale: B&B **`giubbonarisuites-adm.com/contatti`** (gruppo ADM Hospitality). L'arricchimento
+trova il **sito** (via Google Places) ma **NON l'email**, né con Haiku né con Sonnet — anche dopo il
+fix "passo 1c" (visita il sito appena Google lo trova). Sulla pagina `/contatti` a occhio ci sono 2
+email: `Info@adm-hospitality.com` e `giubbonari @adm-hospitality.com` (con uno spazio prima della @).
+
+**Ipotesi da verificare (in ordine):**
+1. **Sito JS-rendered**: `ardySafeHttpGet` scarica l'HTML grezzo; se le email sono iniettate via
+   JavaScript non compaiono nel sorgente → lo scraping non le vede. *Verifica:* logga status code +
+   se la stringa `@adm-hospitality` è presente nell'HTML grezzo di `/contatti`.
+2. **Email offuscate con spazio** (`giubbonari @adm-...`): la regex non le cattura. `Info@adm-...`
+   (senza spazio) invece dovrebbe essere catturata **se** è nell'HTML grezzo (vedi punto 1).
+3. **Dominio diverso / redirect / 403**: il sito da Places potrebbe non essere quello giusto, o
+   bloccare il fetch. *Verifica:* quale URL ha proposto Places e cosa risponde.
+
+**Possibili interventi (da valutare costi):** log diagnostico del fetch; gestire l'offuscamento
+"spazio @"; fallback con rendering headless solo on-demand. File coinvolti: `ardy-enrich.php`
+(`ardyEnrichScrapeSite`, `ardyEnrichExtractEmail`), `ardy-net.php` (`ardySafeHttpGet`).
+
+> Selettore modello AI (Haiku/Sonnet) in dash già fatto e deployato; Haiku è il default economico.
+
+---
+
 ## ⏰ DA CONTROLLARE SUBITO (prossima sessione) — i 2 CRON sono davvero attivi?
 La sessione 25/06 ha deployato briefing mattutino + rollover nota (vedi sotto). Michela ha **impostato i cron
 di corsa** ma NON ha fatto in tempo a verificarli. **Primo task: confermare che siano attivi e che girino.**
