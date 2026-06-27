@@ -101,6 +101,22 @@ function ardyEnrichContact(array $contact, string $apiKey): array {
         }
     }
 
+    // --- 1c) Sito scoperto da Google: visitalo ORA -------------------------
+    // Se all'inizio il sito non c'era, lo scraping (passo 1) è stato saltato.
+    // Ora che Google Places lo ha trovato, vai a leggere la pagina "Contatti":
+    // è lì che di solito sta l'email (mailto:) che ci manca ancora. Gratis e
+    // affidabile → spesso evita anche la chiamata a pagamento dell'agente web.
+    if ($sito === '' && isset($proposte['sito']) && trim((string)$proposte['sito']['valore']) !== '') {
+        $sito = trim((string)$proposte['sito']['valore']);
+        $scraped2 = ardyEnrichScrapeSite($sito);
+        foreach ($scraped2 as $campo => $val) {
+            if (trim((string)($contact[$campo] ?? '')) !== '') continue; // non sovrascrivere il contatto
+            if (isset($proposte[$campo])) continue;                       // né proposte già fatte
+            $proposte[$campo] = $val + ['passo' => 'sito'];
+        }
+        if ($scraped2) $log[] = 'Sito (da Google) visitato: ' . implode(', ', array_keys($scraped2)) . ' trovati';
+    }
+
     // --- 2) Pass agente (web search) per i buchi rimasti -------------------
     // Ricalcola cosa manca dopo i passi gratuiti.
     $ancoraMancanti = [];
