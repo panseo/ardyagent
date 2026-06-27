@@ -13,7 +13,7 @@
 - Un arredo che racconta la sua storia (e ti fa guadagnare)
 - Trasforma una poltrona in un'esperienza per i tuoi ospiti
 
-**Preheader:** Oggetti unici restaurati, una storia da toccare col telefono e una commissione per il tuo B&B.
+**Preheader:** Oggetti unici restaurati, una storia da inquadrare col telefono e una commissione per il tuo B&B.
 
 ---
 
@@ -27,9 +27,9 @@ pensata apposta per i B&B come il tuo: si chiama **Ardy Experience**.
 Funziona così:
 
 1. **Arrediamo il tuo B&B** con oggetti unici, restaurati e rigenerati a mano.
-2. Accanto a ogni pezzo c'è un piccolo **tag**: l'ospite lo tocca col telefono e
-   si apre la **storia dell'oggetto** — audio, materiali, l'impatto ambientale
-   risparmiato e il certificato di autenticità. Nessuna app da scaricare.
+2. Accanto a ogni pezzo c'è un piccolo **QR code**: l'ospite lo inquadra col
+   telefono e si apre la **storia dell'oggetto** — audio, materiali, l'impatto
+   ambientale risparmiato e il certificato di autenticità. Nessuna app da scaricare.
 3. Se l'ospite se ne innamora, può **comprarlo o ordinarne uno su misura** dal
    telefono. E tu **guadagni una commissione** su ogni vendita.
 

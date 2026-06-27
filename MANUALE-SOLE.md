@@ -117,8 +117,8 @@ Michela **e** Andrea possono dettare a Sole la **lista delle cose da fare della 
 ### 8. Presentare Ardy Experience ai B&B partner (pagina dedicata) — *giu 2026*
 Sulla pagina `ardy-lab.it/ardy-experience` (linkata nella DEM ai B&B) Sole indossa il cappello
 **commerciale B2B**: non tratta il titolare del B&B come un cliente di restauro, ma come un
-**potenziale partner**. Spiega cos'è Ardy Experience (oggetti rigenerati con storia via tag
-NFC/QR negli ambienti del B&B, l'ospite compra dal telefono, il B&B prende una commissione), dà
+**potenziale partner**. Spiega cos'è Ardy Experience (oggetti rigenerati con storia via QR code
+negli ambienti del B&B, l'ospite compra dal telefono, il B&B prende una commissione), dà
 **delucidazioni** sui dubbi, **invita a sentire Michela** direttamente al suo numero e può
 **fissare un appuntamento in laboratorio** per vedere gli oggetti dal vivo (riusa il calendario
 reale: `ottieni_disponibilita_calendario` + `fissa_appuntamento_calendario`, poi salva il partner

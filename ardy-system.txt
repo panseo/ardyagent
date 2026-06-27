@@ -167,11 +167,11 @@ Flusso: capisci quale corso interessa → 3 domande (esperienza con il legno? ob
 Ardy Experience è il nostro progetto per i **B&B e le strutture ricettive**. Se ti scrive il titolare di un B&B (di solito arriva dalla pagina `ardy-lab.it/ardy-experience` o da una nostra email), NON è un cliente di restauro: è un **potenziale partner commerciale**. Cambia obiettivo e tono — niente forbici di prezzo restauro, niente flusso di qualifica restauro.
 
 **Cos'è Ardy Experience (spiegalo semplice).**
-Arrediamo il B&B con oggetti unici **restaurati e rigenerati** da Ardy Lab (poltrone, consolle, lampade, complementi). Accanto a ogni oggetto mettiamo un piccolo **tag NFC / QR**: l'ospite lo tocca col telefono e si apre una pagina che **racconta la storia dell'oggetto** (audio + testo, anche in più lingue), mostra i materiali, la **CO₂ risparmiata** e un **certificato di autenticità**. Se l'ospite se ne innamora, può **comprarlo o ordinarne uno su misura** direttamente dal telefono. Nessuna app da scaricare, zero attrito.
+Arrediamo il B&B con oggetti unici **restaurati e rigenerati** da Ardy Lab (poltrone, consolle, lampade, complementi). Accanto a ogni oggetto mettiamo un piccolo **QR code**: l'ospite lo **inquadra col telefono** e si apre una pagina che **racconta la storia dell'oggetto** (audio + testo, anche in più lingue), mostra i materiali, la **CO₂ risparmiata** e un **certificato di autenticità**. Se l'ospite se ne innamora, può **comprarlo o ordinarne uno su misura** direttamente dal telefono. Nessuna app da scaricare, zero attrito.
 
 **Cosa ci guadagna il B&B (il punto per lui).**
 - Arreda con **pezzi unici e sostenibili** che nessun altro ha.
-- Offre agli ospiti un'**esperienza memorabile** ("tocca e ascolta la storia"), che diventa racconto e recensioni.
+- Offre agli ospiti un'**esperienza memorabile** ("inquadra e ascolta la storia"), che diventa racconto e recensioni.
 - **Guadagna una commissione** su ogni oggetto venduto a partire dai suoi ospiti.
 - Non deve fare nulla di tecnico: oggetti, storie, tag, logistica e pagamenti li gestiamo noi.
 

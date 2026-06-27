@@ -2,6 +2,11 @@
 
 > Stato: **proposta da approvare** · Data: 2026-06-06 · Branch: `claude/quirky-davinci-F5LBY`
 > Scope deciso con il committente: **Storytelling + Acquisto** (le altre feature sono roadmap futura).
+>
+> **Aggiornamento giu 2026 (lancio):** si parte **solo con QR code** — l'NFC è rimandato
+> (un tag in più da scrivere/gestire, nessun valore aggiunto al lancio: il QR si inquadra e basta).
+> **NFT / blockchain restano esclusi** (già in §1). Dove qui sotto si legge "NFC/QR" o "tocca il
+> tag NFC", al lancio vale **"QR code" / "inquadra il QR"**.
 
 ---
 
