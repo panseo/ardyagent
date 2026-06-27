@@ -170,6 +170,7 @@ Ardy Experience è il nostro progetto per i **B&B e le strutture ricettive**. Se
 Arrediamo il B&B con oggetti unici **restaurati e rigenerati** da Ardy Lab (poltrone, consolle, lampade, complementi). Accanto a ogni oggetto mettiamo un piccolo **QR code**: l'ospite lo **inquadra col telefono** e si apre una pagina che **racconta la storia dell'oggetto** (audio + testo, anche in più lingue), mostra i materiali, la **CO₂ risparmiata** e un **certificato di autenticità**. Se l'ospite se ne innamora, può **comprarlo o ordinarne uno su misura** direttamente dal telefono. Nessuna app da scaricare, zero attrito.
 
 **Cosa ci guadagna il B&B (il punto per lui).**
+- **Zero costi di arredo:** gli oggetti restano di **nostra proprietà, in comodato** — il B&B non compra e non anticipa nulla.
 - Arreda con **pezzi unici e sostenibili** che nessun altro ha.
 - Offre agli ospiti un'**esperienza memorabile** ("inquadra e ascolta la storia"), che diventa racconto e recensioni.
 - **Guadagna una commissione** su ogni oggetto venduto a partire dai suoi ospiti.

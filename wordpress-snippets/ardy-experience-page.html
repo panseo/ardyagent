@@ -1,15 +1,20 @@
 <!--
-  ARDY EXPERIENCE — scheletro pagina WordPress  ardy-lab.it/ardy-experience
+  ARDY EXPERIENCE — contenuto pagina WordPress  ardy-lab.it/ardy-experience
   ============================================================================
-  STATO: BOZZA / SCHELETRO da riempire insieme (i blocchi [DA RIEMPIRE] sono
-  segnaposto). Incolla questo in un blocco "HTML personalizzato" della pagina
-  WordPress /ardy-experience (o in un Code Module di Divi).
+  Incolla questo in un blocco "HTML personalizzato" della pagina WordPress
+  /ardy-experience (o in un Code Module di Divi).
 
   Cosa fa già:
   - imposta il contesto pagina (#ardy-experience + window.ARDY_XP) così la
     webchat di Sole "modalità B&B" si attiva SOLO qui;
   - carica il widget chat dal nostro server (loader di una riga, in fondo);
   - i bottoni "Parla con Sole" aprono la chat via window.ardyXpOpen().
+
+  DA COMPLETARE quando i dati sono decisi (cercare "TODO" qui sotto):
+  - inserire una foto/screenshot della pagina-storia di un oggetto (passo 2);
+  - se si decide una commissione fissa, sostituire "concordata insieme" col numero;
+  - eventuale testimonianza di un B&B pilota (sezione voci, ora omessa: niente
+    citazioni inventate).
 
   Fonte attiva del widget: ../ardy-chat-experience.js (servito da
   https://ardyagent.ardy-lab.it/ardy-chat-experience.js). Questo file HTML è
@@ -24,10 +29,10 @@
     <p style="letter-spacing:2px;text-transform:uppercase;font-size:13px;color:#a8864a;margin:0 0 10px;">Ardy Lab · per i B&amp;B</p>
     <h1 style="font-family:'Crimson Pro',serif;font-size:40px;line-height:1.1;margin:0 0 14px;color:#1a1a1a;">Ardy Experience</h1>
     <p style="font-size:19px;line-height:1.5;color:#555;max-width:620px;margin:0 auto 26px;">
-      Arreda il tuo B&amp;B con oggetti unici, restaurati e rigenerati. Ogni pezzo
+      Arreda il tuo B&amp;B con oggetti unici, restaurati e rigenerati a mano. Ogni pezzo
       racconta la sua storia: il tuo ospite la inquadra col telefono, l'ascolta e — se
       se ne innamora — può portarsela a casa. Tu offri un'esperienza memorabile e
-      guadagni su ogni vendita.
+      guadagni su ogni vendita, senza spendere un euro in arredo.
     </p>
     <button onclick="window.ardyXpOpen && window.ardyXpOpen()"
       style="background:linear-gradient(135deg,#c8a96e,#a8864a);color:#fff;border:none;border-radius:30px;padding:15px 30px;font-size:16px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;box-shadow:0 4px 18px rgba(200,169,110,0.4);">
@@ -38,7 +43,7 @@
     </p>
   </section>
 
-  <!-- ── COME FUNZIONA (3 passi) — [DA RIEMPIRE/RIVEDERE] ───────────── -->
+  <!-- ── COME FUNZIONA (3 passi) ────────────────────────────────────── -->
   <section style="padding:30px 0;border-top:1px solid #eee;">
     <h2 style="font-family:'Crimson Pro',serif;font-size:28px;text-align:center;margin:0 0 26px;color:#1a1a1a;">Come funziona</h2>
     <div style="display:flex;flex-wrap:wrap;gap:20px;justify-content:center;">
@@ -46,36 +51,61 @@
         <div style="font-size:30px;">🛋️</div>
         <h3 style="font-family:'Crimson Pro',serif;font-size:19px;margin:10px 0 6px;">1 · Gli oggetti nel tuo B&amp;B</h3>
         <p style="font-size:15px;line-height:1.5;color:#666;margin:0;">
-          Portiamo noi pezzi unici restaurati e rigenerati. <em>[DA RIEMPIRE: comodato/condizioni, quali oggetti, quanti.]</em>
+          Portiamo noi pezzi unici restaurati e rigenerati: poltrone, consolle, lampade,
+          specchiere, complementi. Restano di <strong>nostra proprietà, in comodato</strong>:
+          tu non compri e non anticipi nulla. Scegliamo insieme i pezzi giusti per i tuoi ambienti.
         </p>
       </div>
       <div style="flex:1;min-width:230px;background:#faf9f6;border:1px solid #eee;border-radius:14px;padding:22px;">
         <div style="font-size:30px;">📲</div>
         <h3 style="font-family:'Crimson Pro',serif;font-size:19px;margin:10px 0 6px;">2 · L'ospite inquadra e ascolta</h3>
         <p style="font-size:15px;line-height:1.5;color:#666;margin:0;">
-          Un QR code accanto all'oggetto apre la sua storia (audio + testo, multilingua), i materiali, la CO₂ risparmiata e il certificato di autenticità. <em>[DA RIEMPIRE: foto/screenshot demo.]</em>
+          Un <strong>QR code</strong> accanto all'oggetto apre la sua storia: audio + testo
+          (anche in inglese), i materiali, l'impatto ambientale risparmiato e il certificato di
+          autenticità. Nessuna app da scaricare: si inquadra e basta.
         </p>
+        <!-- TODO: inserire qui una foto/screenshot della pagina-storia di un oggetto.
+             Esempio: <img src="URL" alt="La storia di un oggetto Ardy" style="width:100%;border-radius:10px;margin-top:12px;"> -->
       </div>
       <div style="flex:1;min-width:230px;background:#faf9f6;border:1px solid #eee;border-radius:14px;padding:22px;">
         <div style="font-size:30px;">🤝</div>
         <h3 style="font-family:'Crimson Pro',serif;font-size:19px;margin:10px 0 6px;">3 · Vende, tu guadagni</h3>
         <p style="font-size:15px;line-height:1.5;color:#666;margin:0;">
-          L'ospite può comprare il pezzo o ordinarne uno su misura dal telefono. Tu prendi una commissione. <em>[DA RIEMPIRE: % commissione / range.]</em>
+          Se l'ospite se ne innamora, può <strong>comprare il pezzo o ordinarne uno su misura</strong>
+          direttamente dal telefono. Su ogni vendita che nasce dai tuoi ospiti ricevi una
+          <strong>commissione</strong>, concordata insieme. Pensiamo noi a logistica e pagamenti.
         </p>
       </div>
     </div>
   </section>
 
-  <!-- ── PERCHÉ CONVIENE — [DA RIEMPIRE] ────────────────────────────── -->
+  <!-- ── PERCHÉ CONVIENE ────────────────────────────────────────────── -->
   <section style="padding:30px 0;border-top:1px solid #eee;">
     <h2 style="font-family:'Crimson Pro',serif;font-size:28px;text-align:center;margin:0 0 22px;color:#1a1a1a;">Perché conviene al tuo B&amp;B</h2>
-    <ul style="font-size:16px;line-height:1.7;color:#555;max-width:680px;margin:0 auto;padding-left:20px;">
-      <li>Arredo distintivo e sostenibile che nessun'altra struttura ha.</li>
-      <li>Esperienza memorabile per gli ospiti → racconti e recensioni.</li>
-      <li>Una commissione su ogni vendita generata dai tuoi ospiti.</li>
-      <li>Zero pensieri tecnici: oggetti, storie, tag, logistica e pagamenti li gestiamo noi.</li>
-      <li><em>[DA RIEMPIRE: esclusiva di zona, eventuali numeri, testimonianza pilota.]</em></li>
+    <ul style="font-size:16px;line-height:1.7;color:#555;max-width:700px;margin:0 auto;padding-left:20px;">
+      <li><strong>Zero costi di arredo:</strong> gli oggetti sono nostri, in comodato. Tu non investi nulla.</li>
+      <li><strong>Arredo distintivo e sostenibile</strong> che nessun'altra struttura ha: pezzi unici, rigenerati a mano.</li>
+      <li><strong>Un'esperienza che gli ospiti ricordano</strong> e raccontano — fa bene anche alle recensioni.</li>
+      <li><strong>Un ricavo in più:</strong> una commissione su ogni vendita generata dai tuoi ospiti.</li>
+      <li><strong>Nessun pensiero tecnico:</strong> oggetti, storie, QR, logistica e pagamenti li gestiamo noi.</li>
+      <li><strong>Zona riservata:</strong> lavoriamo con poche strutture per area, così la proposta resta esclusiva.</li>
     </ul>
+  </section>
+
+  <!-- ── DOMANDE FREQUENTI ──────────────────────────────────────────── -->
+  <section style="padding:30px 0;border-top:1px solid #eee;">
+    <h2 style="font-family:'Crimson Pro',serif;font-size:28px;text-align:center;margin:0 0 22px;color:#1a1a1a;">Domande frequenti</h2>
+    <div style="max-width:720px;margin:0 auto;font-size:15px;line-height:1.6;color:#555;">
+      <p style="margin:0 0 16px;"><strong>Quanto mi costa?</strong><br>
+        Nulla. Gli oggetti restano di nostra proprietà, in comodato: non compri arredo e non anticipi spese.</p>
+      <p style="margin:0 0 16px;"><strong>Quanti oggetti e quali?</strong><br>
+        Li scegliamo insieme in base ai tuoi spazi e al tuo stile — da un singolo pezzo d'effetto a più ambienti.</p>
+      <p style="margin:0 0 16px;"><strong>E se un ospite compra un pezzo?</strong><br>
+        Lo gestiamo noi (consegna e pagamento) e a te arriva la commissione. Se serve, sostituiamo il pezzo venduto.</p>
+      <p style="margin:0;"><strong>Come parto?</strong><br>
+        Parla con Sole qui sotto o senti Michela: il passo più semplice è un appuntamento nel nostro laboratorio
+        per vedere gli oggetti dal vivo.</p>
+    </div>
   </section>
 
   <!-- ── CTA FINALE ─────────────────────────────────────────────────── -->
