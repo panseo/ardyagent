@@ -185,14 +185,14 @@
     // tutte le risposte successive (anche con il system prompt dedicato).
     var greet = 'Ciao! Sono Sole di Ardy Lab ✨ Mi fa piacere che tu stia pensando alla ' +
       'Galleria Diffusa per il tuo B&B. Dimmi pure: vuoi capire come funziona, ' +
-      'le commissioni, o preferisci fissare un appuntamento da noi in laboratorio per ' +
-      'vedere gli oggetti dal vivo?';
+      'le commissioni, o preferisci prenotare una chiamata, un incontro in laboratorio o ' +
+      'un sopralluogo nella tua struttura?';
     addMessage(greet, 'agent');
     history.push({ role: 'assistant', content: greet });
     initSuggestions([
       'Come funziona la Galleria Diffusa?',
       'Quanto guadagna il B&B?',
-      'Vorrei fissare un appuntamento in laboratorio',
+      'Vorrei prenotare una chiamata o un sopralluogo',
       'Posso parlare con Michela?'
     ]);
   }
