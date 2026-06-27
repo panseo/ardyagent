@@ -23,9 +23,10 @@
 
 Gentile {{nome}},
 
-a Roma ci sono oltre 28.000 strutture extralberghiere: la vera sfida non è
-riempire le camere, è **farsi ricordare**. E se potessi distinguerti trasformando
-una delle tue voci di costo più pesanti — l'**arredo** — in una fonte di guadagno?
+a Roma ci sono ormai decine di migliaia di strutture extralberghiere: la vera
+sfida non è riempire le camere, è **farsi ricordare**. E se potessi distinguerti
+trasformando una delle tue voci di costo più pesanti — l'**arredo** — in una
+fonte di guadagno?
 
 Ti presentiamo la **Galleria Diffusa di Ardy Lab**: la prima galleria d'arte
 diffusa nei B&B di Roma.
@@ -62,9 +63,10 @@ A presto,
 Michela — Ardy Lab
 Roma · Restauro, design e ospitalità sostenibile · ardy-lab.it
 
----
-
-*Non vuoi più ricevere queste email? [Disiscriviti].*  ← collegare a `ardy-unsubscribe.php`
+> ℹ️ **Non aggiungere a mano il link "Disiscriviti".** Se invii con lo strumento
+> **Ardy Outreach**, il footer con la disiscrizione (link firmato e personalizzato
+> per ogni destinatario) e il pulsante WhatsApp vengono **aggiunti in automatico**
+> da `brevoSend` (`ardy-outreach-api.php`). Incolla solo il corpo qui sopra.
 
 ---
 
@@ -75,10 +77,9 @@ Roma · Restauro, design e ospitalità sostenibile · ardy-lab.it
   Sulle commissioni Sole conferma che c'è, ma **non dà percentuali** (a voce con Michela).
 - **Mittente:** firmato **Michela** (più caldo e coerente con la pagina/Sole). Se
   preferisci un tono istituzionale, sostituisci con "Il Team di Ardy Lab".
-- **Stat "28.000 strutture":** verificare/aggiornare il dato prima dell'invio (o
-  ammorbidire in "decine di migliaia").
+- **Disiscrizione e WhatsApp:** li aggiunge in automatico lo strumento di invio
+  (vedi nota sopra). Non inserirli nel corpo.
 - **Numero in firma (+39 379 375 6437):** è il numero di Sole (eSIM sul telefono di
   Michela). WhatsApp h24; alle **chiamate vocali** risponde Michela solo se quella
   eSIM è una linea voce normale (di norma sì) → verificare con una prova.
-- **Prima dell'invio:** slug pagina = `galleria-diffusa`, foto demo nel passo 2,
-  link disiscrizione attivo.
+- **Prima dell'invio:** slug pagina = `galleria-diffusa` e foto demo nel passo 2.
