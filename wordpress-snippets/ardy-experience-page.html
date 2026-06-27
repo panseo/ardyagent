@@ -5,10 +5,18 @@
   /ardy-experience (o in un Code Module di Divi).
 
   Cosa fa già:
-  - imposta il contesto pagina (#ardy-experience + window.ARDY_XP) così la
-    webchat di Sole "modalità B&B" si attiva SOLO qui;
-  - carica il widget chat dal nostro server (loader di una riga, in fondo);
+  - imposta il contesto pagina (#ardy-experience) così la webchat di Sole
+    "modalità B&B" si attiva SOLO qui;
   - i bottoni "Parla con Sole" aprono la chat via window.ardyXpOpen().
+
+  ⚠️ IL LOADER DEL WIDGET VA IN WPCODE, NON QUI.
+  Molti editor/temi (Divi, blocco HTML) RIMUOVONO i tag <script> incollati nel
+  contenuto della pagina → il widget non parte. Per questo il loader si mette in
+  uno snippet WPCode (vedi README.md, sezione "Ardy Experience"): un solo
+  <script src="...ardy-chat-experience.js"> in Site Wide Footer. Il widget si
+  auto-limita alla pagina /ardy-experience (gate sull'URL), quindi non compare
+  altrove. I due <script> qui in fondo restano solo come fallback per editor che
+  NON strippano gli script: se usi WPCode, sono inerti.
 
   DA COMPLETARE quando i dati sono decisi (cercare "TODO" qui sotto):
   - inserire una foto/screenshot della pagina-storia di un oggetto (passo 2);

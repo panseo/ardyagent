@@ -52,13 +52,26 @@ base per la **centralizzazione** dei widget front-end (vedi sotto).
 |---|---|---|---|
 | `ardychat` | `../ardy-chat-site.js` | `https://ardyagent.ardy-lab.it/ardy-chat-site.js` | snippet HTML (footer) con `<script src=...>` |
 | `Chat per i corsi` | `../ardy-chat-corsi.js` | `https://ardyagent.ardy-lab.it/ardy-chat-corsi.js` | snippet HTML (footer) con `<script src=...>` |
-| `Ardy Experience (B&B)` | `../ardy-chat-experience.js` | `https://ardyagent.ardy-lab.it/ardy-chat-experience.js` | dentro la **pagina** `/ardy-experience` (vedi `ardy-experience-page.html`), NON site-wide |
+| `Ardy Experience (B&B)` | `../ardy-chat-experience.js` | `https://ardyagent.ardy-lab.it/ardy-chat-experience.js` | snippet HTML in **Site Wide Footer** (il widget si auto-limita a `/ardy-experience`) |
 
 > **Ardy Experience:** widget chat **autoportante** (inietta UI propria, come quello
 > "Lavori in corso") che mette Sole in *modalità partner B&B* e usa `ardy-proxy.php`
 > (stessi tool calendario/CRM). Si attiva SOLO sulla pagina `/ardy-experience`
-> (riconosce l'URL, l'elemento `#ardy-experience` o `window.ARDY_XP`). Il contenuto
-> della pagina (scheletro da riempire) + il loader stanno in `ardy-experience-page.html`.
+> (riconosce l'URL, l'elemento `#ardy-experience` o `window.ARDY_XP`). Il **contenuto**
+> della pagina sta in `ardy-experience-page.html` (da incollare nella pagina WP).
+>
+> ⚠️ **Il loader NON va incollato nella pagina**: il blocco HTML / Divi Code spesso
+> **rimuove i `<script>`** e il widget non parte (sintomo: pagina ok, nessuna pillola
+> dorata in basso a destra). Va messo in un **snippet WPCode dedicato**:
+> 1. WPCode → **Add Snippet → Add Your Custom Code** → tipo **HTML Snippet**.
+> 2. Nome es. "Ardy Experience chat"; **Insert Location: Site Wide Footer**.
+> 3. Contenuto (una riga):
+> ```html
+> <script src="https://ardyagent.ardy-lab.it/ardy-chat-experience.js"></script>
+> ```
+> 4. **Save + Active.** Site-wide è sicuro: il widget si attiva solo sull'URL
+> `/ardy-experience` (gate interno), non compare altrove. **Non** mettere qui
+> `window.ARDY_XP=true` (lo attiverebbe ovunque).
 
 **Loader da incollare in WPCode** (snippet "ardychat"):
 1. Cambia il **tipo** dello snippet da *JavaScript* a **HTML Snippet**.
