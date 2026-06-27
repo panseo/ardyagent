@@ -280,7 +280,9 @@ function ardyEnrichAgent(array $contact, array $mancanti, string $sito, string $
 /** Chiamata diretta alle Messages API con tool server-side (web search). */
 function ardyEnrichCallAnthropic(string $system, string $user, array $tools, string $apiKey): array {
     $payload = json_encode([
-        'model'      => 'claude-sonnet-4-6',
+        // Haiku 4.5: ~3x piu' economico di Sonnet ($1/$5 vs $3/$15 per Mtok) e
+        // piu' che sufficiente per estrarre campi strutturati dai risultati web.
+        'model'      => 'claude-haiku-4-5',
         'max_tokens' => 1500,
         'system'     => $system,
         'tools'      => $tools,
