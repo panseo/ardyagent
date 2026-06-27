@@ -31,6 +31,22 @@ email: `Info@adm-hospitality.com` e `giubbonari @adm-hospitality.com` (con uno s
 
 ---
 
+## 🗺️ STANDBY — Ricerca OSM: timeout Overpass su raggi ampi (deciso di rimandare)
+**Confermato:** con **raggio 1 km la ricerca OSM funziona**; su raggi ampi (es. 10 km su Roma) Overpass
+va in **timeout** e il tool mostrava "0 trovati / Servizio non raggiungibile". **Google funziona bene.**
+Fix già deployato (`ardy-outreach-api.php`): riconosce il `remark` di timeout, ritenta sul mirror
+`overpass.kumi.systems`, e dà un messaggio che invita a ridurre il raggio (3–5 km).
+
+**Workaround attuale:** usare raggi piccoli (1–5 km) per quartiere, o la fonte **Google** per zone ampie.
+
+**Da valutare alla ripresa (se serve coprire aree grandi su OSM):**
+- query più leggera (solo `node`? togliere `tourism=bed_and_breakfast`, raro, e tenere `guest_house`);
+- "chunking" automatico dell'area in più celle piccole con merge dei risultati;
+- istanza Overpass dedicata/a pagamento, oppure preferire Google per i raggi grandi;
+- verificare se il mirror kumi è raggiungibile dal host (firewall — vedi `ANALISI-FIREWALL-HOST.md`).
+
+---
+
 ## ⏰ DA CONTROLLARE SUBITO (prossima sessione) — i 2 CRON sono davvero attivi?
 La sessione 25/06 ha deployato briefing mattutino + rollover nota (vedi sotto). Michela ha **impostato i cron
 di corsa** ma NON ha fatto in tempo a verificarli. **Primo task: confermare che siano attivi e che girino.**
