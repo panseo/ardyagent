@@ -30,6 +30,20 @@
   deployata).
 -->
 
+<style>
+  #galleria-diffusa, #galleria-diffusa * { box-sizing:border-box; }
+  /* MOBILE: allarga la view del testo — meno padding del contenitore e delle
+     card, e le card non hanno più una larghezza minima che le strozza.
+     !important perché deve vincere sugli stili inline. */
+  @media (max-width:600px) {
+    #galleria-diffusa { padding-left:6px !important; padding-right:6px !important; }
+    #galleria-diffusa .gd-grid { gap:12px !important; }
+    #galleria-diffusa .gd-card { min-width:0 !important; padding:16px 14px !important; }
+    #galleria-diffusa h1 { font-size:32px !important; }
+    #galleria-diffusa section { padding-left:0 !important; padding-right:0 !important; }
+  }
+</style>
+
 <div id="galleria-diffusa" style="max-width:980px;margin:0 auto;padding:8px 18px 40px;font-family:'DM Sans',sans-serif;color:#2d2d2d;">
 
   <!-- ── HERO ──────────────────────────────────────────────────────── -->
@@ -54,8 +68,8 @@
   <!-- ── COME FUNZIONA (3 passi) ────────────────────────────────────── -->
   <section style="padding:30px 0;border-top:1px solid #eee;">
     <h2 style="font-family:'Crimson Pro',serif;font-size:28px;text-align:center;margin:0 0 26px;color:#1a1a1a;">Come funziona</h2>
-    <div style="display:flex;flex-wrap:wrap;gap:20px;justify-content:center;">
-      <div style="flex:1;min-width:230px;background:#faf9f6;border:1px solid #eee;border-radius:14px;padding:22px;">
+    <div class="gd-grid" style="display:flex;flex-wrap:wrap;gap:20px;justify-content:center;">
+      <div class="gd-card" style="flex:1;min-width:230px;background:#faf9f6;border:1px solid #eee;border-radius:14px;padding:22px;">
         <div style="font-size:30px;">🛋️</div>
         <h3 style="font-family:'Crimson Pro',serif;font-size:19px;margin:10px 0 6px;">1 · Gli oggetti nel tuo B&amp;B</h3>
         <p style="font-size:15px;line-height:1.5;color:#666;margin:0;">
@@ -64,7 +78,7 @@
           tu non compri e non anticipi nulla. Scegliamo insieme i pezzi giusti per i tuoi ambienti.
         </p>
       </div>
-      <div style="flex:1;min-width:230px;background:#faf9f6;border:1px solid #eee;border-radius:14px;padding:22px;">
+      <div class="gd-card" style="flex:1;min-width:230px;background:#faf9f6;border:1px solid #eee;border-radius:14px;padding:22px;">
         <div style="font-size:30px;">📲</div>
         <h3 style="font-family:'Crimson Pro',serif;font-size:19px;margin:10px 0 6px;">2 · L'ospite inquadra e ascolta</h3>
         <p style="font-size:15px;line-height:1.5;color:#666;margin:0;">
@@ -75,7 +89,7 @@
         <!-- TODO: inserire qui una foto/screenshot della pagina-storia di un oggetto.
              Esempio: <img src="URL" alt="La storia di un oggetto Ardy" style="width:100%;border-radius:10px;margin-top:12px;"> -->
       </div>
-      <div style="flex:1;min-width:230px;background:#faf9f6;border:1px solid #eee;border-radius:14px;padding:22px;">
+      <div class="gd-card" style="flex:1;min-width:230px;background:#faf9f6;border:1px solid #eee;border-radius:14px;padding:22px;">
         <div style="font-size:30px;">🤝</div>
         <h3 style="font-family:'Crimson Pro',serif;font-size:19px;margin:10px 0 6px;">3 · Vende, tu guadagni</h3>
         <p style="font-size:15px;line-height:1.5;color:#666;margin:0;">
