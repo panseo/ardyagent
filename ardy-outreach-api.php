@@ -487,7 +487,12 @@ try {
             } else {
                 $results = osmOverpass($cat, $geo['lat'], $geo['lon'], $raggio * 1000);
             }
-            if ($results === null) { echo json_encode(['success' => false, 'error' => 'Servizio di ricerca non raggiungibile, riprova']); break; }
+            if ($results === null) {
+                $msg = $fonte === 'osm'
+                    ? 'OpenStreetMap è sovraccarico o la zona è troppo ampia: riprova tra poco, oppure riduci il raggio (es. 3–5 km).'
+                    : 'Servizio di ricerca non raggiungibile, riprova.';
+                echo json_encode(['success' => false, 'error' => $msg]); break;
+            }
 
             // Marca i contatti già presenti (per nome o sito).
             $existing = $db->query("SELECT LOWER(nome) AS n, LOWER(COALESCE(sito,'')) AS s FROM outreach_contatti")->fetchAll();
@@ -705,10 +710,10 @@ function brevoSend(string $toEmail, string $toName, string $oggetto, string $cor
 // ============================================================
 // RICERCA OSM — Geocoding (Nominatim) + attività (Overpass)
 // ============================================================
-function osmHttpGet(string $url): ?string {
+function osmHttpGet(string $url, int $timeout = 45): ?string {
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT,        45);
+    curl_setopt($ch, CURLOPT_TIMEOUT,        $timeout);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Accept: application/json']);
     // Nominatim/Overpass richiedono uno User-Agent identificativo
@@ -733,6 +738,34 @@ function osmGeocode(string $query): ?array {
     ];
 }
 
+/**
+ * Esegue una query Overpass provando più istanze (mirror). L'istanza pubblica
+ * principale va spesso in TIMEOUT su zone ampie e risponde 200 con `elements`
+ * vuoto + un campo `remark` ("runtime error: Query timed out..."): senza
+ * riconoscerlo sembrerebbe "0 risultati". Qui lo riconosciamo e passiamo al
+ * mirror successivo. Ritorna ['ok'=>bool, 'elements'=>array]: ok=false SOLO se
+ * tutti i mirror falliscono (timeout/irraggiungibili) — da distinguere dallo
+ * zero risultati vero (ok=true, elements=[]).
+ */
+function osmOverpassQuery(string $query): array {
+    $endpoints = [
+        'https://overpass-api.de/api/interpreter',
+        'https://overpass.kumi.systems/api/interpreter',
+    ];
+    foreach ($endpoints as $ep) {
+        $res = osmHttpGet($ep . '?data=' . urlencode($query), 30);
+        if ($res === null) continue;                      // mirror irraggiungibile
+        $data = json_decode($res, true);
+        if (!is_array($data) || !isset($data['elements'])) continue;
+        $remark = (string)($data['remark'] ?? '');
+        if ($remark !== '' && (stripos($remark, 'timed out') !== false || stripos($remark, 'error') !== false)) {
+            continue;                                      // query non completata → prova il prossimo
+        }
+        return ['ok' => true, 'elements' => $data['elements']];
+    }
+    return ['ok' => false, 'elements' => []];
+}
+
 // Mappa categoria Ardy -> filtri OSM (tag) per Overpass
 function osmCategoryFilters(string $cat): array {
     switch ($cat) {
@@ -751,11 +784,10 @@ function osmOverpass(string $cat, float $lat, float $lon, int $radiusMeters): ?a
         // nwr = node + way + relation, con nome obbligatorio
         $parts .= "nwr{$f}[\"name\"](around:{$radiusMeters},{$lat},{$lon});";
     }
-    $query = "[out:json][timeout:40];({$parts});out center tags 80;";
-    $res = osmHttpGet('https://overpass-api.de/api/interpreter?data=' . urlencode($query));
-    if (!$res) return null;
-    $data = json_decode($res, true);
-    if (!isset($data['elements'])) return [];
+    $query = "[out:json][timeout:25];({$parts});out center tags 80;";
+    $r = osmOverpassQuery($query);
+    if (!$r['ok']) return null;        // timeout/sovraccarico su tutti i mirror
+    $data = ['elements' => $r['elements']];
 
     $out  = [];
     $seen = [];
