@@ -39,7 +39,7 @@ const ARDY_FREE_MAIL = [
  * @param string $apiKey   Anthropic API key
  * @return array  ['campi' => [campo => ['valore','fonte','confidenza','passo']], 'log' => [...]]
  */
-function ardyEnrichContact(array $contact, string $apiKey): array {
+function ardyEnrichContact(array $contact, string $apiKey, string $model = 'claude-haiku-4-5'): array {
     $log    = [];
     $proposte = []; // campo => ['valore','fonte','confidenza','passo']
 
@@ -127,7 +127,7 @@ function ardyEnrichContact(array $contact, string $apiKey): array {
     }
 
     if (!empty($ancoraMancanti) && $apiKey !== '') {
-        $agent = ardyEnrichAgent($contact, $ancoraMancanti, $sito, $apiKey);
+        $agent = ardyEnrichAgent($contact, $ancoraMancanti, $sito, $apiKey, $model);
         if (!empty($agent['error'])) {
             $log[] = 'Agente web: ' . $agent['error'];
         } else {
@@ -234,7 +234,7 @@ function ardyEnrichCleanPhone(string $raw): string {
  * Pass agente: Claude con web search completa i campi mancanti.
  * Ritorna ['campi' => [campo => ['valore','fonte','confidenza']]] oppure ['error'=>...].
  */
-function ardyEnrichAgent(array $contact, array $mancanti, string $sito, string $apiKey): array {
+function ardyEnrichAgent(array $contact, array $mancanti, string $sito, string $apiKey, string $model = 'claude-haiku-4-5'): array {
     $noti = [];
     foreach (['nome', 'indirizzo', 'sito', 'email', 'telefono', 'categoria'] as $f) {
         $v = trim((string)($contact[$f] ?? ''));
@@ -266,7 +266,7 @@ function ardyEnrichAgent(array $contact, array $mancanti, string $sito, string $
         ['type' => 'web_search_20250305', 'name' => 'web_search', 'max_uses' => 5],
     ];
 
-    $resp = ardyEnrichCallAnthropic($system, $user, $tools, $apiKey);
+    $resp = ardyEnrichCallAnthropic($system, $user, $tools, $apiKey, $model);
     if (!empty($resp['error'])) return ['error' => $resp['error']];
 
     // Concatena i blocchi di testo della risposta ed estrai il JSON.
@@ -294,11 +294,11 @@ function ardyEnrichAgent(array $contact, array $mancanti, string $sito, string $
 }
 
 /** Chiamata diretta alle Messages API con tool server-side (web search). */
-function ardyEnrichCallAnthropic(string $system, string $user, array $tools, string $apiKey): array {
+function ardyEnrichCallAnthropic(string $system, string $user, array $tools, string $apiKey, string $model = 'claude-haiku-4-5'): array {
     $payload = json_encode([
-        // Haiku 4.5: ~3x piu' economico di Sonnet ($1/$5 vs $3/$15 per Mtok) e
-        // piu' che sufficiente per estrarre campi strutturati dai risultati web.
-        'model'      => 'claude-haiku-4-5',
+        // Modello scelto dalla dash. Default Haiku 4.5: ~3x piu' economico di
+        // Sonnet ($1/$5 vs $3/$15 per Mtok) e sufficiente per estrarre i campi.
+        'model'      => $model,
         'max_tokens' => 1500,
         'system'     => $system,
         'tools'      => $tools,

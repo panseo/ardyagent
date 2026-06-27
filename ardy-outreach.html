@@ -349,6 +349,10 @@
             <div class="detail-sub" id="detSub">—</div>
           </div>
           <div class="detail-actions">
+            <select id="enrichModel" class="btn-sm" title="Modello AI dell'arricchimento: Haiku costa meno, Sonnet è più accurato sui contatti difficili" style="padding:4px 8px;">
+              <option value="claude-haiku-4-5">AI: Haiku (economico)</option>
+              <option value="claude-sonnet-4-6">AI: Sonnet (accurato)</option>
+            </select>
             <button class="btn-sm primary" id="btnEnrich" onclick="enrichContact()" title="Cerca in rete i dati mancanti">✨ ARRICCHISCI</button>
             <button class="btn-sm" onclick="promoteToPartner()" title="Sposta tra i Partner">🤝 PARTNER</button>
             <button class="btn-sm" onclick="promoteToClient()" title="Crea la scheda nel CRM di Sole">⬆ A CLIENTE</button>
@@ -1025,12 +1029,18 @@ function closeMobileDetail() {
 const ENRICH_LABELS = { sito:'SITO', email:'EMAIL', telefono:'TELEFONO', indirizzo:'INDIRIZZO', referente:'REFERENTE' };
 let enrichProposal = {};
 
+// Modello AI scelto nella dash per l'arricchimento (default: Haiku, economico).
+function getEnrichModel() {
+  const s = document.getElementById('enrichModel');
+  return (s && s.value) || 'claude-haiku-4-5';
+}
+
 async function enrichContact() {
   if (!currentContact) return;
   const btn = document.getElementById('btnEnrich');
   btn.disabled = true; btn.textContent = '🔎 Cerco...';
   let r;
-  try { r = await api('enrich_contact', { id: currentContact.id }); }
+  try { r = await api('enrich_contact', { id: currentContact.id, model: getEnrichModel() }); }
   catch(e) { r = { success:false, error:'rete' }; }
   btn.disabled = false; btn.textContent = '✨ ARRICCHISCI';
   if (!r.success) { toast('Errore: ' + (r.error||'sconosciuto'), 'err'); return; }
@@ -1139,7 +1149,7 @@ async function runBulkEnrich(candidati) {
     bar.style.width = ((i)/candidati.length*100) + '%';
 
     let r;
-    try { r = await api('enrich_contact', { id: c.id }); }
+    try { r = await api('enrich_contact', { id: c.id, model: getEnrichModel() }); }
     catch(e) { r = { success:false, error:'rete' }; }
     if (!r || !r.success) { log(`✗ ${c.nome}: ${r&&r.error||'errore'}`, 'var(--orange,#e90)'); continue; }
 

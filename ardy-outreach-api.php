@@ -553,7 +553,10 @@ try {
             if (!$contact) { echo json_encode(['success' => false, 'error' => 'Contatto non trovato']); break; }
 
             $apiKey = defined('ARDY_API_KEY') ? ARDY_API_KEY : '';
-            $res = ardyEnrichContact($contact, $apiKey);
+            // Modello scelto dalla dash, con whitelist (default Haiku, economico).
+            $modelliOk = ['claude-haiku-4-5', 'claude-sonnet-4-6'];
+            $model = in_array(($input['model'] ?? ''), $modelliOk, true) ? $input['model'] : 'claude-haiku-4-5';
+            $res = ardyEnrichContact($contact, $apiKey, $model);
 
             // Per ogni campo proposto, allega anche il valore attuale (per il diff in UI).
             $proposte = [];
