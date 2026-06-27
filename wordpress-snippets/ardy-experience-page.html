@@ -1,0 +1,101 @@
+<!--
+  ARDY EXPERIENCE — scheletro pagina WordPress  ardy-lab.it/ardy-experience
+  ============================================================================
+  STATO: BOZZA / SCHELETRO da riempire insieme (i blocchi [DA RIEMPIRE] sono
+  segnaposto). Incolla questo in un blocco "HTML personalizzato" della pagina
+  WordPress /ardy-experience (o in un Code Module di Divi).
+
+  Cosa fa già:
+  - imposta il contesto pagina (#ardy-experience + window.ARDY_XP) così la
+    webchat di Sole "modalità B&B" si attiva SOLO qui;
+  - carica il widget chat dal nostro server (loader di una riga, in fondo);
+  - i bottoni "Parla con Sole" aprono la chat via window.ardyXpOpen().
+
+  Fonte attiva del widget: ../ardy-chat-experience.js (servito da
+  https://ardyagent.ardy-lab.it/ardy-chat-experience.js). Questo file HTML è
+  solo un BACKUP del contenuto pagina (la cartella wordpress-snippets non viene
+  deployata).
+-->
+
+<div id="ardy-experience" style="max-width:980px;margin:0 auto;padding:8px 18px 40px;font-family:'DM Sans',sans-serif;color:#2d2d2d;">
+
+  <!-- ── HERO ──────────────────────────────────────────────────────── -->
+  <section style="text-align:center;padding:40px 0 28px;">
+    <p style="letter-spacing:2px;text-transform:uppercase;font-size:13px;color:#a8864a;margin:0 0 10px;">Ardy Lab · per i B&amp;B</p>
+    <h1 style="font-family:'Crimson Pro',serif;font-size:40px;line-height:1.1;margin:0 0 14px;color:#1a1a1a;">Ardy Experience</h1>
+    <p style="font-size:19px;line-height:1.5;color:#555;max-width:620px;margin:0 auto 26px;">
+      Arreda il tuo B&amp;B con oggetti unici, restaurati e rigenerati. Ogni pezzo
+      racconta la sua storia: il tuo ospite la tocca col telefono, l'ascolta e — se
+      se ne innamora — può portarsela a casa. Tu offri un'esperienza memorabile e
+      guadagni su ogni vendita.
+    </p>
+    <button onclick="window.ardyXpOpen && window.ardyXpOpen()"
+      style="background:linear-gradient(135deg,#c8a96e,#a8864a);color:#fff;border:none;border-radius:30px;padding:15px 30px;font-size:16px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;box-shadow:0 4px 18px rgba(200,169,110,0.4);">
+      ✨ Parla con Sole della collaborazione
+    </button>
+    <p style="font-size:14px;color:#888;margin:16px 0 0;">
+      Oppure scrivi o chiama Michela direttamente: <strong>+39 379 375 6437</strong>
+    </p>
+  </section>
+
+  <!-- ── COME FUNZIONA (3 passi) — [DA RIEMPIRE/RIVEDERE] ───────────── -->
+  <section style="padding:30px 0;border-top:1px solid #eee;">
+    <h2 style="font-family:'Crimson Pro',serif;font-size:28px;text-align:center;margin:0 0 26px;color:#1a1a1a;">Come funziona</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:20px;justify-content:center;">
+      <div style="flex:1;min-width:230px;background:#faf9f6;border:1px solid #eee;border-radius:14px;padding:22px;">
+        <div style="font-size:30px;">🛋️</div>
+        <h3 style="font-family:'Crimson Pro',serif;font-size:19px;margin:10px 0 6px;">1 · Gli oggetti nel tuo B&amp;B</h3>
+        <p style="font-size:15px;line-height:1.5;color:#666;margin:0;">
+          Portiamo noi pezzi unici restaurati e rigenerati. <em>[DA RIEMPIRE: comodato/condizioni, quali oggetti, quanti.]</em>
+        </p>
+      </div>
+      <div style="flex:1;min-width:230px;background:#faf9f6;border:1px solid #eee;border-radius:14px;padding:22px;">
+        <div style="font-size:30px;">📲</div>
+        <h3 style="font-family:'Crimson Pro',serif;font-size:19px;margin:10px 0 6px;">2 · L'ospite tocca e ascolta</h3>
+        <p style="font-size:15px;line-height:1.5;color:#666;margin:0;">
+          Un tag NFC/QR accanto all'oggetto apre la sua storia (audio + testo, multilingua), i materiali, la CO₂ risparmiata e il certificato di autenticità. <em>[DA RIEMPIRE: foto/screenshot demo.]</em>
+        </p>
+      </div>
+      <div style="flex:1;min-width:230px;background:#faf9f6;border:1px solid #eee;border-radius:14px;padding:22px;">
+        <div style="font-size:30px;">🤝</div>
+        <h3 style="font-family:'Crimson Pro',serif;font-size:19px;margin:10px 0 6px;">3 · Vende, tu guadagni</h3>
+        <p style="font-size:15px;line-height:1.5;color:#666;margin:0;">
+          L'ospite può comprare il pezzo o ordinarne uno su misura dal telefono. Tu prendi una commissione. <em>[DA RIEMPIRE: % commissione / range.]</em>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── PERCHÉ CONVIENE — [DA RIEMPIRE] ────────────────────────────── -->
+  <section style="padding:30px 0;border-top:1px solid #eee;">
+    <h2 style="font-family:'Crimson Pro',serif;font-size:28px;text-align:center;margin:0 0 22px;color:#1a1a1a;">Perché conviene al tuo B&amp;B</h2>
+    <ul style="font-size:16px;line-height:1.7;color:#555;max-width:680px;margin:0 auto;padding-left:20px;">
+      <li>Arredo distintivo e sostenibile che nessun'altra struttura ha.</li>
+      <li>Esperienza memorabile per gli ospiti → racconti e recensioni.</li>
+      <li>Una commissione su ogni vendita generata dai tuoi ospiti.</li>
+      <li>Zero pensieri tecnici: oggetti, storie, tag, logistica e pagamenti li gestiamo noi.</li>
+      <li><em>[DA RIEMPIRE: esclusiva di zona, eventuali numeri, testimonianza pilota.]</em></li>
+    </ul>
+  </section>
+
+  <!-- ── CTA FINALE ─────────────────────────────────────────────────── -->
+  <section style="text-align:center;padding:36px 24px;margin-top:24px;background:#1a1a1a;border-radius:18px;color:#fff;">
+    <h2 style="font-family:'Crimson Pro',serif;font-size:26px;margin:0 0 10px;color:#c8a96e;">Vuoi vedere gli oggetti dal vivo?</h2>
+    <p style="font-size:16px;color:rgba(255,255,255,0.8);max-width:560px;margin:0 auto 22px;">
+      Chiacchiera con Sole: ti spiega tutto e può fissarti un appuntamento nel nostro
+      laboratorio a Roma (Via James Joyce 4, EUR). Oppure senti direttamente Michela.
+    </p>
+    <button onclick="window.ardyXpOpen && window.ardyXpOpen()"
+      style="background:linear-gradient(135deg,#c8a96e,#a8864a);color:#fff;border:none;border-radius:30px;padding:15px 30px;font-size:16px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+      ✨ Apri la chat con Sole
+    </button>
+    <p style="font-size:14px;color:rgba(255,255,255,0.6);margin:16px 0 0;">Michela · +39 379 375 6437</p>
+  </section>
+
+</div>
+
+<!-- Contesto pagina per il widget (ridondante con #ardy-experience, ma esplicito) -->
+<script>window.ARDY_XP = true;</script>
+
+<!-- LOADER WIDGET (fonte attiva: ardy-chat-experience.js sul nostro server) -->
+<script src="https://ardyagent.ardy-lab.it/ardy-chat-experience.js"></script>

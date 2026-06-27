@@ -52,6 +52,13 @@ base per la **centralizzazione** dei widget front-end (vedi sotto).
 |---|---|---|---|
 | `ardychat` | `../ardy-chat-site.js` | `https://ardyagent.ardy-lab.it/ardy-chat-site.js` | snippet HTML (footer) con `<script src=...>` |
 | `Chat per i corsi` | `../ardy-chat-corsi.js` | `https://ardyagent.ardy-lab.it/ardy-chat-corsi.js` | snippet HTML (footer) con `<script src=...>` |
+| `Ardy Experience (B&B)` | `../ardy-chat-experience.js` | `https://ardyagent.ardy-lab.it/ardy-chat-experience.js` | dentro la **pagina** `/ardy-experience` (vedi `ardy-experience-page.html`), NON site-wide |
+
+> **Ardy Experience:** widget chat **autoportante** (inietta UI propria, come quello
+> "Lavori in corso") che mette Sole in *modalità partner B&B* e usa `ardy-proxy.php`
+> (stessi tool calendario/CRM). Si attiva SOLO sulla pagina `/ardy-experience`
+> (riconosce l'URL, l'elemento `#ardy-experience` o `window.ARDY_XP`). Il contenuto
+> della pagina (scheletro da riempire) + il loader stanno in `ardy-experience-page.html`.
 
 **Loader da incollare in WPCode** (snippet "ardychat"):
 1. Cambia il **tipo** dello snippet da *JavaScript* a **HTML Snippet**.
