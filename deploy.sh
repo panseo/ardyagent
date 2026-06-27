@@ -19,6 +19,13 @@ SRC="$(cd "$(dirname "$0")" && pwd)/"
 echo "Deploy da: $SRC"
 echo "Deploy in: $DEPLOYPATH"
 
+# Controllo sintassi: blocca il deploy se un .php ha errori (eviterebbe un 500
+# in produzione appena l'endpoint viene chiamato). vendor/ e phpmailer/ esclusi.
+echo "Controllo sintassi PHP..."
+find "$SRC" -name '*.php' -not -path '*/vendor/*' -not -path '*/phpmailer/*' -print0 \
+  | xargs -0 -n1 php -l >/dev/null
+echo "Sintassi OK."
+
 rsync -av \
   --exclude='.git/' \
   --exclude='.gitignore' \
