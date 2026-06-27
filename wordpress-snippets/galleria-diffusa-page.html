@@ -37,8 +37,9 @@
      !important perché deve vincere sugli stili inline. */
   @media (max-width:600px) {
     #galleria-diffusa { padding-left:6px !important; padding-right:6px !important; }
-    #galleria-diffusa .gd-grid { gap:12px !important; }
-    #galleria-diffusa .gd-card { min-width:0 !important; padding:16px 14px !important; }
+    /* le 3 card si impilano una per riga, a tutta larghezza */
+    #galleria-diffusa .gd-grid { flex-direction:column !important; gap:12px !important; }
+    #galleria-diffusa .gd-card { min-width:0 !important; width:100% !important; padding:18px 16px !important; }
     #galleria-diffusa h1 { font-size:32px !important; }
     #galleria-diffusa section { padding-left:0 !important; padding-right:0 !important; }
     /* meno spazio vuoto sopra il titolo su mobile */
