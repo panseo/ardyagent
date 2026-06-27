@@ -168,7 +168,7 @@ try {
             $system = "Sei il copywriter di Ardy Lab, bottega artigianale di Roma EUR (fondatrice Michela Panella) "
                 . "specializzata in: restauro conservativo e completo di mobili antichi, patinature e laccature decorative, "
                 . "doratura a foglia oro, restauro di cornici e specchiere, complementi d'arredo su misura anche con stampa 3D, "
-                . "boiserie. Progetto 'Living Galleries': arredi in comodato dentro B&B con tag NFC, l'ospite scopre la storia "
+                . "boiserie. Progetto 'Ardy Experience': arredi in comodato dentro B&B con un QR code, l'ospite inquadra e scopre la storia "
                 . "del pezzo e può acquistarlo. Contatti: ardy-lab.it, WhatsApp +39 377 659 5547.\n"
                 . "Scrivi un messaggio di outreach B2B, in ITALIANO, per il canale {$canale}.\n"
                 . "Regole:\n"
@@ -359,7 +359,7 @@ try {
                     'nome' => 'B&B — Progetto Living Galleries',
                     'categoria' => 'bb',
                     'oggetto' => 'Ardy Lab — Le vostre camere diventano una galleria d\'arte vivente | Proposta',
-                    'corpo' => "Gentile {{nome}},\n\nmi chiamo Michela Panella, fondatrice di Ardy Lab, bottega artigianale di Roma EUR specializzata nel restauro di mobili antichi e nella produzione di complementi d'arredo unici.\n\nVi scrivo per una proposta che potrebbe rendere il vostro B&B ancora più memorabile per i vostri ospiti.\n\nSi chiama Living Galleries:\n\n— Arrediamo le vostre camere con pezzi restaurati e complementi artigianali del nostro laboratorio\n— Ogni pezzo ha un tag NFC: l'ospite avvicina lo smartphone e scopre la storia dell'oggetto e del restauro\n— L'ospite può acquistare il pezzo o ordinarne una versione personalizzata\n— Voi non acquistate nulla: gli arredi restano di nostra proprietà in comodato\n\nPer voi è un'esperienza unica da offrire senza costi di arredamento. Per noi è una vetrina nel cuore di Roma.\n\nSarei felice di incontrarvi per mostrarvi qualche esempio concreto.\n\nCordiali saluti,\nMichela Panella\nArdy Lab · ardy-lab.it · +39 377 659 5547"
+                    'corpo' => "Gentile {{nome}},\n\nmi chiamo Michela Panella, fondatrice di Ardy Lab, bottega artigianale di Roma EUR specializzata nel restauro di mobili antichi e nella produzione di complementi d'arredo unici.\n\nVi scrivo per una proposta che potrebbe rendere il vostro B&B ancora più memorabile per i vostri ospiti.\n\nSi chiama Living Galleries:\n\n— Arrediamo le vostre camere con pezzi restaurati e complementi artigianali del nostro laboratorio\n— Ogni pezzo ha un QR code: l'ospite lo inquadra col telefono e scopre la storia dell'oggetto e del restauro\n— L'ospite può acquistare il pezzo o ordinarne una versione personalizzata\n— Voi non acquistate nulla: gli arredi restano di nostra proprietà in comodato\n\nPer voi è un'esperienza unica da offrire senza costi di arredamento. Per noi è una vetrina nel cuore di Roma.\n\nSarei felice di incontrarvi per mostrarvi qualche esempio concreto.\n\nCordiali saluti,\nMichela Panella\nArdy Lab · ardy-lab.it · +39 377 659 5547"
                 ],
             ];
             $stmt = $db->prepare("INSERT INTO outreach_template (nome,categoria,oggetto,corpo) VALUES (:nome,:cat,:ogg,:corpo)");

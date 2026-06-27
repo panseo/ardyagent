@@ -3,21 +3,20 @@
 > Stato: **proposta da approvare** · Data: 2026-06-06 · Branch: `claude/quirky-davinci-F5LBY`
 > Scope deciso con il committente: **Storytelling + Acquisto** (le altre feature sono roadmap futura).
 >
-> **Aggiornamento giu 2026 (lancio):** si parte **solo con QR code** — l'NFC è rimandato
-> (un tag in più da scrivere/gestire, nessun valore aggiunto al lancio: il QR si inquadra e basta).
-> **NFT / blockchain restano esclusi** (già in §1). Dove qui sotto si legge "NFC/QR" o "tocca il
-> tag NFC", al lancio vale **"QR code" / "inquadra il QR"**.
+> **Aggiornamento giu 2026 (lancio):** il collegamento oggetto → storia è **solo via QR code**
+> (l'ospite inquadra e si apre la pagina). Niente altre tecnologie di tag o di "tracciabilità"
+> complessa: si punta alla massima semplicità.
 
 ---
 
 ## 0. In una riga
 
-Una **web app mobile-first** che si apre toccando un tag NFC (o scansionando un QR) accanto a un
+Una **web app mobile-first** che si apre scansionando un **QR code** accanto a un
 oggetto in un B&B, racconta la storia dell'oggetto (audio + testo multilingua), mostra materiali e
 CO₂ risparmiata + certificato di autenticità, e permette di **comprarlo o ordinarlo su misura** con
-pagamento reale. Più un **backoffice** per caricare oggetti, generare i tag e gestire ordini.
+pagamento reale. Più un **backoffice** per caricare oggetti, generare i QR e gestire ordini.
 
-**Non è un'app da App Store.** Si apre da URL via NFC/QR: zero download, zero attrito. Questo è
+**Non è un'app da App Store.** Si apre da URL via **QR code**: zero download, zero attrito. Questo è
 voluto e coerente con lo storyboard (App Clip/WebApp).
 
 ---
@@ -28,14 +27,13 @@ Decisioni nette, prese consapevolmente per non bruciare budget e tempo:
 
 | Escluso dall'MVP | Perché | Quando |
 |---|---|---|
-| **NFT / blockchain / minting** | Complessità e costi enormi, valore nullo per il cliente che vuole l'oggetto. La "autenticità" si ottiene con un certificato firmato + pagina pubblica verificabile. | Fase 3, solo se i dati lo giustificano |
 | **Marketplace secondario + royalties** | Non esiste un mercato finché non hai venduto il primo pezzo. | Fase 3+ |
 | **Visualizzatore AR** | Costoso, marginale per la conversione iniziale. | Fase 3 |
 | **Traduzione "AI naturale" runtime** | Bastano traduzioni curate salvate in DB. L'AI serve eventualmente in fase di caricamento, non in produzione. | Caricamento (Fase 2) |
 | **Green dashboard personale utente** | Richiede account utente persistenti. L'MVP è anonimo/guest. | Fase 2-3 |
 
 Il certificato di autenticità nell'MVP = **pagina pubblica `/cert/{codice}` con dati firmati
-(hash) + PDF**. Stesso valore percepito di "tracciabilità", 1% della complessità di una blockchain.
+(hash) + PDF**. Dà il valore percepito di "tracciabilità" con la massima semplicità.
 
 ---
 
@@ -48,8 +46,8 @@ Riutilizziamo esattamente le fondamenta già presenti, niente tecnologie estrane
 - **Email:** PHPMailer (già nel repo) per conferme ordine.
 - **Pagamenti:** **Stripe Checkout** (redirect hosted) — PCI a carico di Stripe, zero dati carta sul
   nostro server. Webhook Stripe → PHP per confermare l'ordine.
-- **NFC/QR:** tag NTAG213/215 scrivibili con URL; QR generato come fallback. Lo scrivere il tag è
-  operazione fisica fatta dal backoffice che genera l'URL.
+- **QR code:** generato dal backoffice con l'URL dell'oggetto (`/o/{slug}`) e stampato su
+  targhetta/etichetta accanto al pezzo. Nessun hardware da scrivere: si inquadra e basta.
 - **Hosting:** lo stesso cPanel/WHM esistente. Sottocartella/sottodominio dedicato, es.
   `experience.ardy-lab.it` o path `/x/`.
 
@@ -63,7 +61,7 @@ Costo tech reale dell'MVP: **vicino a zero in licenze** (solo le fee Stripe per 
 -- Oggetti rigenerati
 CREATE TABLE ardy_x_objects (
   id            INT AUTO_INCREMENT PRIMARY KEY,
-  slug          VARCHAR(64) UNIQUE,        -- usato nell'URL NFC: /o/{slug}
+  slug          VARCHAR(64) UNIQUE,        -- usato nell'URL del QR: /o/{slug}
   status        ENUM('draft','available','reserved','sold') DEFAULT 'draft',
   title         VARCHAR(160),
   bnb_id        INT NULL,                  -- in quale B&B si trova
@@ -139,7 +137,7 @@ CREATE TABLE ardy_x_orders (
 
 **Backoffice (riservato, dietro login esistente)**
 - `ardy-x-admin.html` — pannello: crea/modifica oggetti, carica foto/audio, scrive testo per
-  lingua, genera slug + URL NFC/QR, vede stato ordini e commissioni B&B.
+  lingua, genera slug + QR code, vede stato ordini e commissioni B&B.
 - `ardy-x-admin-api.php` — CRUD oggetti/contenuti/media/ordini.
 
 Routing pulito (`/o/{slug}`, `/cert/{code}`) via `.htaccess` (già presente nel repo).
@@ -149,7 +147,7 @@ Routing pulito (`/o/{slug}`, `/cert/{code}`) via `.htaccess` (già presente nel 
 ## 5. Flussi principali
 
 **A. Scoperta → Storytelling (ospite)**
-1. Ospite tocca il tag NFC → si apre `https://experience.ardy-lab.it/o/poltrona-monti-01`.
+1. Ospite inquadra il QR code → si apre `https://experience.ardy-lab.it/o/poltrona-monti-01`.
 2. `ardy-x-object.html` chiama `ardy-x-object-api.php`, rileva lingua (browser/selettore).
 3. Mostra foto + player audio + storia + materiali + CO₂ + link "Vedi certificato".
 
@@ -190,7 +188,7 @@ Stripe Checkout + webhook · email conferma (ospite + B&B) · custom order form 
 ordini e commissioni nel backoffice.
 
 **Fase 3 — Solo se i numeri lo chiedono**
-Account utente + green dashboard · AR preview · valutazione certificazione on-chain.
+Account utente + green dashboard · AR preview.
 
 ---
 
@@ -206,6 +204,6 @@ Account utente + green dashboard · AR preview · valutazione certificazione on-
 ## 9. Verdetto onesto
 
 Il progetto su carta vuole essere 6 prodotti insieme con un budget da uno. Questo piano taglia il
-70% della complessità (NFT/AR/marketplace) che porta lo 0% del valore iniziale, e costruisce il 90%
+70% della complessità (AR/marketplace) che porta lo 0% del valore iniziale, e costruisce il 90%
 del valore percepito — *"Touch to hear my story" + compralo* — in ~4 settimane sullo stack che già
 hai. Tutto il resto resta nella roadmap, da fare quando ci saranno vendite reali a giustificarlo.
