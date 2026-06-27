@@ -8,9 +8,10 @@
  */
 
 add_action('wp_footer', function () {
-    // Salta le pagine "Lavori in corso": hanno già la chat dedicata al cliente
+    // Salta le pagine con chat dedicata: "Lavori in corso" (cliente) e
+    // "Ardy Experience" (widget partner B&B) — lì il bottone lead confonde.
     $uri = $_SERVER['REQUEST_URI'] ?? '';
-    if (is_singular() && (in_category(102) || strpos($uri, '/lavori-in-corso/') !== false || strpos($uri, '/project/') !== false)) {
+    if (is_singular() && (in_category(102) || strpos($uri, '/lavori-in-corso/') !== false || strpos($uri, '/project/') !== false || strpos($uri, '/ardy-experience') !== false)) {
         return;
     }
     ?>
