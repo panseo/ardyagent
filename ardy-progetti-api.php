@@ -117,12 +117,20 @@ try {
         foreach ($fasiRows as &$f) { $f['foto_urls'] = json_decode($f['foto_urls'] ?? '[]', true) ?? []; }
         unset($f);
 
+        // Archivio file di stampa/CAD (metadati; i binari si scaricano da ardy-progetti-file-api.php).
+        $file = $db->prepare(
+            "SELECT id, categoria, nome_originale, dimensione, note, created_at
+             FROM progetto_file WHERE progetto_id = ? ORDER BY created_at DESC, id DESC"
+        );
+        $file->execute([$id]);
+
         echo json_encode([
             'success'    => true,
             'progetto'   => $p,
             'materiali'  => $mat->fetchAll(),
             'iterazioni' => $iterRows,
             'fasi'       => $fasiRows,
+            'file'       => $file->fetchAll(),
             'config'     => [
                 'stati'             => PROGETTO_STATI,
                 'tipi'              => PROGETTO_TIPI,
