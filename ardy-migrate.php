@@ -286,13 +286,26 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `progetto_file` (
     `id`             BIGINT AUTO_INCREMENT PRIMARY KEY,
     `progetto_id`    BIGINT NOT NULL,
     `categoria`      VARCHAR(20)  NOT NULL DEFAULT 'stl',   -- stl|3mf|gcode|cad|altro
+    `storage`        VARCHAR(10)  NOT NULL DEFAULT 'local', -- local|b2 (dove vive il binario)
     `nome_file`      VARCHAR(255) NOT NULL,                 -- nome su disco (univoco)
+    `storage_key`    VARCHAR(300) NULL,                     -- object key su B2 (se storage=b2)
     `nome_originale` VARCHAR(255) NOT NULL,                 -- nome scelto dall'utente
     `dimensione`     BIGINT       NOT NULL DEFAULT 0,       -- byte
     `note`           VARCHAR(500) NULL,
     `created_at`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_file_progetto (progetto_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE progetto_file");
+
+// Colonne aggiunte dopo l'intro della tabella (installazioni dove esiste già senza
+// lo strato storage): dove vive il binario (local|b2) e la sua object key su B2.
+$progettoFileCols = [
+    'storage'     => "ALTER TABLE progetto_file ADD COLUMN storage VARCHAR(10) NOT NULL DEFAULT 'local' AFTER categoria",
+    'storage_key' => "ALTER TABLE progetto_file ADD COLUMN storage_key VARCHAR(300) NULL AFTER nome_file",
+];
+foreach ($progettoFileCols as $col => $sql) {
+    if (!colExists($pdo, 'progetto_file', $col)) { ddl($pdo, $sql, "progetto_file.$col"); }
+    else { echo "  skip progetto_file.$col\n"; $skip++; }
+}
 
 // ── COLONNE clienti ───────────────────────────────────────────────────────────
 
