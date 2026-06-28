@@ -278,6 +278,22 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `progetto_iterazioni` (
     INDEX idx_iter_progetto (progetto_id, v_num)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE progetto_iterazioni");
 
+// Archivio file di stampa/CAD del progetto: i file veri (STL, 3MF, G-code, STEP…)
+// che poi si prelevano e si stampano. Il DB salva solo i NOMI file (su disco) + i
+// metadati; i binari vivono in ARDY_UPLOAD_DIR/progetti/<id>/file/ e si scaricano via
+// ardy-progetti-file-api.php (?download=). Stesso seam delle foto (migrabile a B2).
+ddl($pdo, "CREATE TABLE IF NOT EXISTS `progetto_file` (
+    `id`             BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `progetto_id`    BIGINT NOT NULL,
+    `categoria`      VARCHAR(20)  NOT NULL DEFAULT 'stl',   -- stl|3mf|gcode|cad|altro
+    `nome_file`      VARCHAR(255) NOT NULL,                 -- nome su disco (univoco)
+    `nome_originale` VARCHAR(255) NOT NULL,                 -- nome scelto dall'utente
+    `dimensione`     BIGINT       NOT NULL DEFAULT 0,       -- byte
+    `note`           VARCHAR(500) NULL,
+    `created_at`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_file_progetto (progetto_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE progetto_file");
+
 // ── COLONNE clienti ───────────────────────────────────────────────────────────
 
 $clientiCols = [
