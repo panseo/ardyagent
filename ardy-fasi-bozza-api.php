@@ -58,10 +58,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['file'])) {
         readfile($path);
         exit();
     }
-    // Non su disco → la foto vive su B2: redirect a URL firmato (inline).
+    // Non su disco → la foto vive su B2. La servo come PROXY same-origin (non un
+    // redirect): così funziona sia <img> sia il fetch()→blob() della dash (niente CORS).
     if (ardyB2Configured()) {
-        $url = ardyStoragePresignedGet(ardyBozzaB2Key($session, $id, $file), 300);
-        if ($url !== '') { header('Location: ' . $url); exit(); }
+        $bytes = ardyStorageGet(ardyBozzaB2Key($session, $id, $file));
+        if ($bytes !== null) {
+            $allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            $mime = (new finfo(FILEINFO_MIME_TYPE))->buffer($bytes);
+            if (!in_array($mime, $allowed, true)) { http_response_code(403); exit(); }
+            header('Content-Type: ' . $mime);
+            header('Content-Length: ' . strlen($bytes));
+            header('Cache-Control: private, max-age=3600');
+            echo $bytes;
+            exit();
+        }
     }
     http_response_code(404);
     exit();
