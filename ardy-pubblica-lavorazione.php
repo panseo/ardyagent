@@ -15,6 +15,7 @@ require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-net.php';
 require_once __DIR__ . '/ardy-email.php';
+require_once __DIR__ . '/ardy-storage.php';   // pulizia copie bozza su B2 dopo il publish
 
 // -----------------------------------------------------------
 // 2. CORS E PREFLIGHT (deve rispondere PRIMA di caricare WP)
@@ -313,6 +314,17 @@ try {
     $db = ardyDB();
     ardyEnsureFasiStatoOrdine($db);
 
+    // Cattura i nomi delle foto bozza PRIMA di sovrascrivere foto_urls con gli URL WP:
+    // servono per ripulire le copie bozza su B2 dopo la pubblicazione.
+    $bozzaFotoPrev = [];
+    if ($faseId) {
+        try {
+            $bp = $db->prepare("SELECT foto_urls FROM fasi WHERE id = ? AND session_id = ?");
+            $bp->execute([$faseId, $sessionId]);
+            $bozzaFotoPrev = json_decode((string) $bp->fetchColumn() ?: '[]', true) ?: [];
+        } catch (PDOException $e) { /* best effort */ }
+    }
+
     if ($faseId) {
         // Pubblica una bozza pre-compilata da template: aggiorna la riga esistente
         // invece di crearne una nuova, mantenendo il suo "ordine" di lavoro.
@@ -355,6 +367,15 @@ if ($faseId && defined('ARDY_UPLOAD_DIR')) {
     if (is_dir($bozzaDir)) {
         foreach (glob($bozzaDir . '*') as $f) { if (is_file($f)) @unlink($f); }
         @rmdir($bozzaDir);
+    }
+    // Copie bozza su B2 (il glob non le vede): cancellale dai nomi salvati prima del publish.
+    if (ardyB2Configured()) {
+        foreach ($bozzaFotoPrev as $fn) {
+            $fn = basename((string) $fn);
+            if ($fn !== '' && preg_match('/^[A-Za-z0-9_.\-]+$/', $fn)) {
+                ardyStorageDelete('clienti/' . $cleanSession . '/fasi-bozza/' . (int) $faseId . '/' . $fn);
+            }
+        }
     }
 }
 
