@@ -379,6 +379,8 @@ $fasiCols = [
     // Aggancio della stessa tabella fasi ai progetti di design (vedi PIANO-DASH-DESIGN.md):
     // una fase appartiene O a un cliente (session_id) O a un progetto (progetto_id).
     'progetto_id' => "ALTER TABLE fasi ADD COLUMN progetto_id BIGINT NULL AFTER session_id",
+    // Quando una fase-racconto di progetto è stata pubblicata (append) sull'articolo WP.
+    'wp_pubblicata_at' => "ALTER TABLE fasi ADD COLUMN wp_pubblicata_at DATETIME NULL",
 ];
 foreach ($fasiCols as $col => $sql) {
     if (!colExists($pdo, 'fasi', $col)) {

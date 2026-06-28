@@ -638,7 +638,11 @@ function fasiPanel(){
     ${fasi.length ? fasi.map(f=>`
       <div class="iter">
         <div class="h"><b>${esc(f.fase_nome)||'(senza titolo)'}</b>
-          <span><button class="sm" onclick="editFase(${f.id})">Modifica</button>
+          <span>
+                ${f.wp_pubblicata_at
+                  ? `<span class="badge" style="color:var(--green);border-color:var(--green)">✅ su WP</span>`
+                  : (stato.dettaglio.progetto.wp_post_link ? `<button class="sm" onclick="pubblicaFaseWp(${f.id})">📝 Pubblica su WP</button>` : '')}
+                <button class="sm" onclick="editFase(${f.id})">Modifica</button>
                 <button class="sm ghost danger" onclick="eliminaFase(${f.id})">✕</button></span></div>
         ${f.testo_breve?`<div class="muted">${esc(f.testo_breve)}</div>`:''}
         ${(f.foto_urls&&f.foto_urls.length)?`<div class="thumbs">${f.foto_urls.map(fn=>`<img class="thumb" src="${fotoUrlFase(f.id,fn)}" alt="">`).join('')}</div>`:''}
@@ -753,6 +757,16 @@ async function eliminaFase(id){
   if (!confirm('Eliminare questa fase e le sue foto?')) return;
   await fetch(FASI_API, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode:'delete', id }) });
   apri(stato.dettaglio.progetto.id);
+}
+// Pubblica una fase-racconto in append all'articolo WordPress del progetto.
+async function pubblicaFaseWp(id){
+  if (!confirm('Pubblicare questa fase sull\'articolo del progetto?')) return;
+  try {
+    const d = await fetch('ardy-pubblica-fase-progetto.php', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ progetto_id: stato.dettaglio.progetto.id, fase_id: id }) }).then(r=>r.json());
+    if (d.success){ toast('Fase pubblicata sull\'articolo'); apri(stato.dettaglio.progetto.id); }
+    else toast(d.error||'Errore');
+  } catch(e){ toast('Errore di rete'); }
 }
 
 caricaLista();
