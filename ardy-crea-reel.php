@@ -11,6 +11,7 @@ set_time_limit(600);
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-net.php';
+require_once __DIR__ . '/ardy-storage.php';   // foto di progetto su B2 (fallback disco)
 
 header('Access-Control-Allow-Origin: https://ardyagent.ardy-lab.it');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -53,9 +54,20 @@ function runCmd(string $cmd, ?array &$out = null): int {
 // non sono scaricabili via HTTP — vedi PIANO-DASH-DESIGN.md, reel decisione A).
 function reelLeggiFoto(array $it): ?string {
     if (!empty($it['path'])) {
-        if (!is_file($it['path'])) return null;
-        $b = @file_get_contents($it['path']);
-        return ($b !== false && strlen($b) >= 100) ? $b : null;
+        if (is_file($it['path'])) {
+            $b = @file_get_contents($it['path']);
+            return ($b !== false && strlen($b) >= 100) ? $b : null;
+        }
+        // Non su disco → la foto vive su B2: scaricala via URL firmato.
+        if (!empty($it['b2key']) && ardyB2Configured()) {
+            $url = ardyStoragePresignedGet($it['b2key'], 300);
+            if ($url !== '') {
+                $resp = ardySafeHttpGet($url, 20, 3, 26214400);
+                $b = $resp['body'] ?? null;
+                return (is_string($b) && strlen($b) >= 100) ? $b : null;
+            }
+        }
+        return null;
     }
     $resp = ardySafeHttpGet($it['url'] ?? '', 20, 3, 26214400); // max 25 MB, anti-SSRF
     return $resp['body'] ?? null;
@@ -155,8 +167,10 @@ foreach ($rows as $r) {
     foreach ($urls as $u) {
         if (!is_string($u) || $u === '') continue;
         if ($progettoId > 0) {
-            // foto_urls di progetto = nomi file su disco → path locale (no HTTP).
-            $items[] = ['path' => rtrim(ARDY_UPLOAD_DIR, '/') . '/progetti/' . $progettoId . '/fasi/' . ((int) $r['id']) . '/' . basename($u), 'fase' => $fn];
+            // foto_urls di progetto = nomi file. Su disco (path locale) o, se assenti,
+            // su B2 (b2key → URL firmato in reelLeggiFoto). Stesso layout di cartella.
+            $rel = 'progetti/' . $progettoId . '/fasi/' . ((int) $r['id']) . '/' . basename($u);
+            $items[] = ['path' => rtrim(ARDY_UPLOAD_DIR, '/') . '/' . $rel, 'b2key' => $rel, 'fase' => $fn];
         } else {
             $items[] = ['url' => $u, 'fase' => $fn];
         }
