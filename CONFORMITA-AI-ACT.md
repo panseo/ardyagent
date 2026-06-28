@@ -1,0 +1,134 @@
+# Conformità AI Act (Reg. UE 2024/1689) — Ardy Lab
+
+> **Nota:** documento tecnico-organizzativo interno, **non un parere legale**.
+> Fotografa come il sistema "Ardy/Sole" si colloca rispetto all'AI Act e cosa
+> fare entro il **2 agosto 2026**. Per la firma finale far validare da un legale.
+>
+> Ultimo aggiornamento: 27/06/2026 · Titolare: Ardy di Michela Panella (P.IVA 17633931005)
+
+---
+
+## TL;DR
+
+**Siamo sostanzialmente in regola.** Il sistema AI di Ardy Lab ("Sole") è a
+**rischio limitato** (limited risk): **non** è vietato e **non** è ad alto
+rischio. Gli unici obblighi che ci riguardano sono **leggeri**:
+
+1. **Trasparenza** (art. 50): dire chiaramente che si parla con un'AI. → Già fatto, va solo rafforzato nel primo messaggio.
+2. **Alfabetizzazione AI** (art. 4): chi usa il sistema deve sapere come funziona. → Basta una nota interna (vedi sotto), già pronta in fondo.
+
+Nessun obbligo di registrazione UE, valutazione di conformità, marcatura CE,
+DPIA AI o sistema di gestione del rischio: quelli valgono solo per i sistemi
+**ad alto rischio**, che non è il nostro caso.
+
+---
+
+## 1. Le date dell'AI Act (e quale ci riguarda)
+
+| Data | Cosa diventa applicabile | Ci riguarda? |
+|---|---|---|
+| 1 ago 2024 | Entrata in vigore | — |
+| **2 feb 2025** | Pratiche **vietate** (art. 5) + **alfabetizzazione AI** (art. 4) | ✅ Sì (art. 4) — già applicabile |
+| 2 ago 2025 | Obblighi sui **modelli GPAI** + governance + sanzioni | Riguarda **Anthropic** (fornitore del modello), non noi |
+| **2 ago 2026** | **Obblighi di trasparenza (art. 50)** + sistemi ad alto rischio Allegato III | ✅ Sì (art. 50) — **questa è la nostra scadenza** |
+| 2 ago 2027 | Alto rischio Allegato I (prodotti regolamentati) | No |
+
+> La "scadenza del 2 agosto" che conta per Ardy Lab è il **2 agosto 2026**:
+> da quel giorno scattano gli obblighi di **trasparenza** dell'art. 50.
+
+---
+
+## 2. Classificazione del nostro sistema
+
+**Cos'è:** "Sole", assistente AI conversazionale (chatbot sito + widget
+lavorazioni + WhatsApp) basato sul modello **Claude di Anthropic** (un modello
+GPAI). Usi: informazioni, qualifica lead, supporto clienti, bozze testi/email,
+generazione reel/post.
+
+**Ruoli ai sensi dell'AI Act:**
+- **Anthropic** = fornitore del modello GPAI (ha i suoi obblighi dal 2 ago 2025, non nostri).
+- **Ardy Lab** = **deployer** (utilizzatore) e, avendo messo "Sole" a disposizione del pubblico sotto il proprio nome, anche **provider del sistema AI** a valle. In entrambi i ruoli, per un sistema a rischio limitato, gli obblighi si riducono alla **trasparenza**.
+
+**Livello di rischio: LIMITATO.** Verifica voce per voce:
+
+| Categoria AI Act | Si applica? | Perché |
+|---|---|---|
+| Pratica **vietata** (art. 5) — manipolazione subliminale, social scoring, ecc. | ❌ No | Sole non fa nulla di tutto questo |
+| **Alto rischio** (Allegato III) — credito, lavoro/selezione personale, biometria, istruzione, servizi essenziali, giustizia | ❌ No | Restauro mobili: nessun ambito dell'Allegato III |
+| Riconoscimento **emozioni** / categorizzazione **biometrica** | ❌ No | Non usato |
+| **Decisioni automatizzate** con effetti giuridici | ❌ No | Prezzi/tempi/accordi sempre confermati da una persona (già scritto nei Termini §3.2 e Privacy §4) |
+| **Rischio limitato** → trasparenza (art. 50) | ✅ **Sì** | È un chatbot che interagisce con persone |
+
+---
+
+## 3. Cosa dobbiamo fare entro il 2 agosto 2026
+
+### ✅ Già a posto
+- **Disclosure "è un'AI"**: i Termini §3.1 e la Privacy §4 dichiarano che Sole è un assistente virtuale basato su AI (Anthropic). Il prompt di Sole contiene un "CODICE ETICO AI" e dichiara la natura artificiale se richiesto.
+- **Niente decisioni automatizzate vincolanti**: dichiarato nei Termini §3.2 e Privacy §4 (coerente anche con l'art. 22 GDPR).
+- **Catena fornitore**: il modello è Anthropic, fornitore GPAI che gestisce i propri obblighi a monte.
+
+### 🔧 Da fare (poco lavoro)
+
+1. **[Trasparenza — art. 50(1)] Disclosure esplicita all'inizio della chat.**
+   La legge chiede che l'utente sia informato di parlare con un'AI **in modo
+   chiaro e al più tardi alla prima interazione**, non solo se lo chiede.
+   - Azione: nel **primo messaggio** del chatbot, del widget e su WhatsApp far
+     dire/scrivere a Sole che è un assistente virtuale (AI). Oggi l'apertura è
+     "Ciao! Sono Sole 👋…": basta aggiungere "—l'assistente virtuale (AI) di
+     Ardy Lab". Costo: una riga in `ardy-system.txt` / messaggio di benvenuto.
+   - In alternativa o in aggiunta: una nota visibile nel widget ("Assistente AI").
+
+2. **[Contenuti generati — art. 50(2) e 50(4)] Etichettatura contenuti AI.**
+   - **Reel** (`ardy-crea-reel.php`): sono montaggi di **foto reali** delle
+     lavorazioni, non immagini sintetiche di persone → l'obbligo "deepfake" non
+     scatta. Nessuna azione obbligatoria; se in futuro si generassero immagini
+     sintetiche realistiche, andranno marcate come "generato con AI".
+   - **Post/FAQ/email** redatti da AI: per un'attività commerciale non rientrano
+     nei "contenuti su temi di interesse pubblico" dell'art. 50(4). Nessun
+     obbligo stretto; resta buona prassi la revisione umana prima della pubblicazione (già nel flusso: pubblicazione social è passo manuale).
+
+3. **[Alfabetizzazione AI — art. 4] Nota interna.** Già obbligatorio da feb 2025.
+   Per una micro-impresa basta che chi usa il sistema (Michela, Andrea) conosca
+   limiti e uso corretto. → Vedi **Allegato A** in fondo: stamparlo/firmarlo e
+   conservarlo. Fatto.
+
+4. **[Documentazione] Tenere questo file aggiornato** come traccia delle scelte
+   di conformità (utile in caso di domande del Garante/autorità).
+
+### ❌ NON serve (sono obblighi solo per l'alto rischio)
+- Valutazione di conformità / marcatura CE
+- Registrazione nella banca dati UE
+- Sistema di gestione del rischio, log automatici, sorveglianza umana formalizzata
+- Valutazione d'impatto sui diritti fondamentali (FRIA)
+
+---
+
+## 4. Note collaterali (NON AI Act, ma emerse nell'analisi)
+
+- **Outreach a freddo + email finder** (`ardy-email-finder.php`, `ardy-enrich.php`,
+  `ardy-outreach-*`): raccolta email da siti e invio di email commerciali a
+  contatti B2B. Questo **non** è un tema AI Act, ma **GDPR/ePrivacy**: verificare
+  base giuridica (legittimo interesse B2B), opt-out funzionante (c'è
+  `ardy-unsubscribe.php`) e niente invii a indirizzi personali senza consenso.
+  Da valutare a parte con il legale.
+- L'Informativa Privacy è già aggiornata e coerente con l'uso dell'AI: ottima base.
+
+---
+
+## Allegato A — Nota di alfabetizzazione AI (art. 4) — Ardy Lab
+
+**Uso dell'AI in Ardy Lab.** Utilizziamo un assistente virtuale ("Sole") basato
+sul modello Claude di Anthropic per: rispondere a clienti e lead su sito e
+WhatsApp, qualificare richieste, preparare bozze di testi/email e generare
+materiale promozionale.
+
+**Limiti che conosciamo e rispettiamo:**
+- L'AI può sbagliare: prezzi, tempi e impegni sono **sempre** confermati da una persona.
+- Nessuna decisione con effetti giuridici è presa solo dall'AI.
+- I dati delle persone sono trattati solo per le finalità dichiarate nell'Informativa Privacy; non si chiedono dati sensibili non necessari.
+- Sole dichiara di essere un'AI; non si spaccia per umano.
+- I contenuti generati dall'AI sono rivisti prima della pubblicazione.
+
+Persone formate: Michela Panella, Andrea (collaboratore).
+Data: ____________  Firma: ____________

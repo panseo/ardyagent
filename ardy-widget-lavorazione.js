@@ -357,7 +357,7 @@
     document.getElementById('ardy-lav-chatarea').classList.add('active');
     var sub = document.querySelector('#ardy-lav-header .ardy-h-text p');
     if (sub) sub.textContent = 'Chiedimi un consiglio sul tuo restauro';
-    addMessage('Ciao! Sono Sole di Ardy Lab 🌿 Raccontami pure: che mobile hai in mente, o su cosa posso darti un consiglio?', 'agent');
+    addMessage('Ciao! Sono Sole, l\'assistente virtuale (AI) di Ardy Lab 🌿 Raccontami pure: che mobile hai in mente, o su cosa posso darti un consiglio?', 'agent');
     initSuggestions([
       'Quanto costa restaurare un mobile?',
       'Come funziona un sopralluogo?',
@@ -408,7 +408,7 @@
 
         // Messaggio di benvenuto personalizzato
         var welcomeName = clientName ? clientName.split(' ')[0] : '';
-        addMessage('Ciao' + (welcomeName ? ' ' + welcomeName : '') + '! Sono Sole, sono qui per aiutarti con la tua lavorazione. Chiedimi pure!', 'agent');
+        addMessage('Ciao' + (welcomeName ? ' ' + welcomeName : '') + '! Sono Sole, l\'assistente virtuale (AI) di Ardy Lab: sono qui per aiutarti con la tua lavorazione. Chiedimi pure!', 'agent');
 
         // Suggerimenti
         initSuggestions([
