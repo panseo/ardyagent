@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Guida — Ardy Design</title>
+<style>
+  @page { margin: 2cm; }
+  body { font-family: 'Liberation Sans', Arial, sans-serif; color: #2b2b2b; font-size: 11pt; line-height: 1.5; max-width: 900px; margin: 0 auto; padding: 24px; }
+  h1 { color: #b9954f; font-size: 22pt; margin-bottom: 2px; }
+  h2 { color: #8b6f3e; font-size: 14pt; margin-top: 22px; border-bottom: 2px solid #e3ddd0; padding-bottom: 3px; }
+  h3 { color: #6b5a33; font-size: 12pt; margin-top: 16px; margin-bottom: 4px; }
+  .sub { color: #888; font-size: 10pt; margin-top: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+  th, td { border: 1px solid #d8d2c4; padding: 6px 9px; text-align: left; font-size: 10.5pt; vertical-align: top; }
+  th { background: #f4efe4; color: #6b5a33; }
+  .tip { background: #fbf7ec; border-left: 4px solid #c8a96e; padding: 8px 12px; margin: 10px 0; font-size: 10.5pt; }
+  .warn { background: #fdf3e6; border-left: 4px solid #e0a83e; padding: 8px 12px; margin: 10px 0; font-size: 10.5pt; }
+  ol, ul { margin: 6px 0 6px 18px; }
+  li { margin: 3px 0; }
+  .url { font-family: 'Liberation Mono', monospace; color: #8b6f3e; }
+  .step { background:#faf7f0; border:1px solid #e3ddd0; border-radius:6px; padding:4px 10px; display:inline-block; margin:2px 2px; font-size:10pt; }
+  .footer { margin-top: 28px; color: #aaa; font-size: 9pt; font-style: italic; border-top: 1px solid #eee; padding-top: 8px; }
+  a.back { color:#8b6f3e; font-size:10pt; text-decoration:none; }
+</style>
+</head>
+<body>
+
+<p><a class="back" href="ardy-design-app.html">← Torna ad Ardy Design</a></p>
+
+<h1>Guida — Ardy Design</h1>
+<p class="sub">Lo spazio dove nascono e maturano i pezzi <b>tuoi</b> (lampade, mobili, complementi, prototipi): dall'idea fino a "pronto per il catalogo". Niente clienti qui — solo i tuoi progetti.</p>
+
+<div class="tip">
+  <b>In due righe:</b> crei un progetto, lo fai avanzare lungo il suo <b>ciclo di vita</b>, ci attacchi i <b>file di stampa</b> (STL/CAD), tieni i <b>costi</b> per sapere il margine, e raccogli <b>foto + testi</b> per i contenuti (reel/social). Quando è pronto e "congelato", va a catalogo (su Woo/Etsy, fuori da qui).
+</div>
+
+<h2>1. Creare un progetto</h2>
+<ol>
+  <li>Clicca <b>+ Nuovo progetto</b> nella colonna a sinistra.</li>
+  <li>Dai un <b>Titolo</b> (es. "Lampada Mikyone") e scegli il <b>Tipo</b> (lampada, mobile, complemento, restyling, prototipo).</li>
+  <li>Premi <b>Crea progetto</b>. Da qui in poi compaiono le sezioni costi, file, prototipo e contenuti.</li>
+</ol>
+
+<h2>2. Il ciclo di vita (la "barra" degli stati)</h2>
+<p>Ogni progetto avanza lungo una sequenza di stati. Per cambiarlo, clicca lo stato nella barra <b>Ciclo di vita</b>.</p>
+<p>
+  <span class="step">IDEA</span> →
+  <span class="step">PROGETTAZIONE</span> →
+  <span class="step">PROTOTIPO</span> →
+  <span class="step">⏟ FILE CONGELATO</span> →
+  <span class="step">PRODUZIONE</span> →
+  <span class="step">FOTOGRAFIA</span> →
+  <span class="step">A CATALOGO</span>
+</p>
+<div class="tip"><b>A CATALOGO</b> è lo stato finale qui: da quel momento stock e vendita vivono su <b>Woo/Etsy</b>, non più nella dash.</div>
+
+<h2>3. I campi della scheda</h2>
+<table>
+  <tr><th>Campo</th><th>A cosa serve</th></tr>
+  <tr><td><b>Descrizione / concept</b></td><td>Il racconto del pezzo (uso interno e spunto per le listing).</td></tr>
+  <tr><td><b>Materiali (testo pubblico)</b></td><td>La descrizione materiali che andrà nella listing di vendita.</td></tr>
+  <tr><td><b>Scheda tecnica</b></td><td>Dimensioni, finiture, e per le lampade: attacco, voltaggio, cavo, peso…</td></tr>
+  <tr><td><b>Tempo lavoro</b></td><td>Indicazione del tempo (es. "6h").</td></tr>
+  <tr><td><b>Prezzo vendita (suggerito)</b></td><td>Prezzo a cui pensi di venderlo: serve a calcolare il margine.</td></tr>
+  <tr><td><b>Scarto stampa %</b></td><td>Percentuale di fallimenti/scarti di stampa (default 10%): gonfia il costo di produzione per essere realistici.</td></tr>
+</table>
+<p>Ricordati di premere <b>Salva modifiche</b>. <span class="warn">Salvare la scheda <b>non</b> cambia lo stato: il ciclo di vita si tocca solo dalla barra.</span></p>
+
+<h2>4. Archivio file di stampa (STL · 3MF · G-code · CAD)</h2>
+<p>È il magazzino dei <b>file veri</b> del pezzo: quelli che poi prelevi e stampi.</p>
+<ul>
+  <li><b>Caricare</b>: scegli categoria (STL/mesh, 3MF slicer, G-code, CAD/STEP, Altro), una nota facoltativa (es. "v3 definitivo · profilo 0.2 PLA"), poi i file (fino a 150 MB l'uno) e premi <b>Carica nell'archivio</b>. Ammessi: STL, OBJ, 3MF, G-code, STEP/CAD, ZIP.</li>
+  <li><b>Scaricare</b> (prelevare per stampare): bottone <b>⬇ Scarica</b> sulla riga del file.</li>
+  <li><b>Eliminare</b>: la ✕ rossa.</li>
+</ul>
+<div class="tip">I file pesanti sono archiviati in cloud (Backblaze), così il server non si intasa. Per te non cambia nulla: carichi e scarichi come sempre.</div>
+
+<h2>5. Congelare il file (la versione di produzione)</h2>
+<p>Quando il design è definitivo e inizi a produrre una serie, <b>congeli</b> la versione: è una "fotografia" di cosa hai usato per quel lotto, anche se poi il CAD va avanti.</p>
+<ol>
+  <li>Premi <b>⏟ Congela file</b>.</li>
+  <li><b>Spunta i file definitivi</b> dall'archivio (quelli con cui produci).</li>
+  <li>Compila (facoltativo) profilo OrcaSlicer, grammi e ore di stampa.</li>
+  <li><b>🔒 Congela questa versione</b>. Compare il riquadro "Versione congelata" con data e file.</li>
+</ol>
+<div class="tip">Non è un controllo automatico: sei tu a decidere quando il pezzo è "pronto". Puoi ri-congelare una nuova versione quando il design cambia.</div>
+
+<h2>6. Costi — distinta materiali (BOM)</h2>
+<p>Uso interno: serve a sapere quanto ti costa il pezzo e quindi il <b>margine</b>.</p>
+<ul>
+  <li>Ogni riga ha <b>categoria</b> (filamento, stampa, elettrico, ferramenta, finitura, imballo, manodopera), <b>voce</b>, <b>quantità</b>, <b>unità</b> e <b>€ unitario</b>. Il € riga si calcola da solo.</li>
+  <li><b>Filamento</b> (grammi) e <b>stampa</b> (ore) si compilano coi numeri che ti dà <b>OrcaSlicer</b> a ogni stampa.</li>
+  <li>La somma × (1 + scarto%) dà il <b>Costo di produzione</b>; <b>Prezzo − Costo = Margine</b>.</li>
+</ul>
+
+<h2>7. Prototipo — iterazioni (il diario R&amp;D)</h2>
+<p>Tieni traccia delle versioni (v1, v2, v3…) con una nota per ognuna ("qui non torna, rifare") e il riferimento CAD/profilo. Serve a <b>ricordarti cosa hai cambiato</b>, non a pubblicare.</p>
+
+<h2>8. Contenuti — fasi racconto (foto + testo per reel/social)</h2>
+<ul>
+  <li><b>Aggiungi fase</b>: titolo, due-tre righe di testo e le <b>foto</b>.</li>
+  <li>Le foto si caricano da <b>📷 Scatta foto</b> (fotocamera del telefono) o <b>🖼️ Dalla galleria</b>.</li>
+  <li><b>✨ Scrivi con AI</b> trasforma le tue due righe in un post professionale (rivedilo sempre prima di pubblicare).</li>
+  <li>Con almeno 2 foto totali puoi premere <b>🎬 Crea reel</b>: monta un video verticale 9:16 con le tue foto.</li>
+</ul>
+<div class="tip">Anche le foto delle fasi sono archiviate in cloud (Backblaze) — le vedi e le usi normalmente.</div>
+
+<div class="footer">Ardy Lab — guida Ardy Design. Aggiornata a giugno 2026.</div>
+
+</body>
+</html>
