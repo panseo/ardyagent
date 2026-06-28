@@ -18,7 +18,8 @@
 // -----------------------------------------------------------
 
 require_once __DIR__ . '/ardy-db.php';
-require_once __DIR__ . '/ardy-net.php';   // ardyHardenUploadDir
+require_once __DIR__ . '/ardy-net.php';       // ardyHardenUploadDir
+require_once __DIR__ . '/ardy-storage.php';   // B2 (S3) con fallback su disco
 
 header('Access-Control-Allow-Origin: https://ardyagent.ardy-lab.it');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
@@ -50,15 +51,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['download'])) {
         $progettoId = (int) ($_GET['progetto_id'] ?? 0);
         $fileId     = (int) ($_GET['file_id'] ?? 0);
         if ($progettoId <= 0 || $fileId <= 0) { http_response_code(400); exit(); }
-        $st = $db->prepare("SELECT nome_file, nome_originale FROM progetto_file WHERE id = ? AND progetto_id = ?");
+        $st = $db->prepare("SELECT storage, nome_file, storage_key, nome_originale FROM progetto_file WHERE id = ? AND progetto_id = ?");
         $st->execute([$fileId, $progettoId]);
         $row = $st->fetch();
         if (!$row) { http_response_code(404); exit(); }
-        $path = progettoFileDir($progettoId) . basename($row['nome_file']);
-        if (!is_file($path)) { http_response_code(404); exit(); }
         // Nome download ripulito (no caratteri di controllo / quote / path).
         $dl = basename((string) $row['nome_originale']);
         $dl = preg_replace('/[^\w.\- ]+/u', '_', $dl) ?: 'file';
+        // Su B2: redirect a un URL firmato a scadenza → download diretto dal bucket.
+        if (($row['storage'] ?? 'local') === 'b2' && $row['storage_key'] && ardyB2Configured()) {
+            $url = ardyStoragePresignedGet($row['storage_key'], 300, $dl);
+            if ($url !== '') { header('Location: ' . $url); exit(); }
+            http_response_code(502); exit();
+        }
+        $path = progettoFileDir($progettoId) . basename($row['nome_file']);
+        if (!is_file($path)) { http_response_code(404); exit(); }
         header('Content-Type: application/octet-stream');
         header('Content-Disposition: attachment; filename="' . $dl . '"');
         header('Content-Length: ' . filesize($path));
@@ -131,26 +138,39 @@ try {
         $note = trim((string) ($_POST['note'] ?? ''));
         if (mb_strlen($note) > 500) $note = mb_substr($note, 0, 500);
 
-        // Cartella + hardening (niente esecuzione script tra i file caricati).
-        $dir = progettoFileDir($progettoId);
-        if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
-            echo json_encode(['success' => false, 'error' => 'cartella non creabile']); exit();
-        }
-        ardyHardenUploadDir(rtrim(ARDY_UPLOAD_DIR, '/'));
-
-        // Nome su disco univoco (l'originale resta solo nei metadati / nel download).
+        // Nome file univoco (l'originale resta solo nei metadati / nel download).
         $diskName = 'p' . $progettoId . '_' . uniqid('', true) . '.' . $ext;
-        if (!move_uploaded_file($f['tmp_name'], $dir . $diskName)) {
-            echo json_encode(['success' => false, 'error' => 'Salvataggio file fallito']); exit();
+
+        // Storage: B2 se configurato (upload diretto al bucket), altrimenti disco.
+        // Se B2 fallisce, fallback su disco per non perdere il file.
+        $storage    = 'local';
+        $storageKey = null;
+        if (ardyB2Configured()) {
+            $objectKey = 'progetti/' . $progettoId . '/file/' . $diskName;
+            if (ardyStoragePutFile($objectKey, $f['tmp_name'])) {
+                $storage = 'b2'; $storageKey = $objectKey;
+            }
+        }
+        if ($storage === 'local') {
+            $dir = progettoFileDir($progettoId);
+            if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
+                echo json_encode(['success' => false, 'error' => 'cartella non creabile']); exit();
+            }
+            ardyHardenUploadDir(rtrim(ARDY_UPLOAD_DIR, '/'));
+            if (!move_uploaded_file($f['tmp_name'], $dir . $diskName)) {
+                echo json_encode(['success' => false, 'error' => 'Salvataggio file fallito']); exit();
+            }
         }
 
         $db->prepare(
-            "INSERT INTO progetto_file (progetto_id, categoria, nome_file, nome_originale, dimensione, note)
-             VALUES (:pid, :cat, :nf, :no, :dim, :note)"
+            "INSERT INTO progetto_file (progetto_id, categoria, storage, nome_file, storage_key, nome_originale, dimensione, note)
+             VALUES (:pid, :cat, :st, :nf, :sk, :no, :dim, :note)"
         )->execute([
             ':pid'  => $progettoId,
             ':cat'  => $categoria,
+            ':st'   => $storage,
             ':nf'   => $diskName,
+            ':sk'   => $storageKey,
             ':no'   => $origName !== '' ? mb_substr($origName, 0, 255) : $diskName,
             ':dim'  => $size,
             ':note' => $note !== '' ? $note : null,
@@ -177,13 +197,17 @@ try {
     if ($mode === 'delete') {
         $id = (int) ($in['id'] ?? 0);
         if ($id <= 0) { echo json_encode(['success' => false, 'error' => 'id mancante']); exit(); }
-        $st = $db->prepare("SELECT progetto_id, nome_file FROM progetto_file WHERE id = ?");
+        $st = $db->prepare("SELECT progetto_id, storage, nome_file, storage_key FROM progetto_file WHERE id = ?");
         $st->execute([$id]);
         $row = $st->fetch();
         if ($row) {
             $db->prepare("DELETE FROM progetto_file WHERE id = ?")->execute([$id]);
-            $path = progettoFileDir((int) $row['progetto_id']) . basename($row['nome_file']);
-            if (is_file($path)) @unlink($path);
+            if (($row['storage'] ?? 'local') === 'b2' && $row['storage_key']) {
+                ardyStorageDelete($row['storage_key']);
+            } else {
+                $path = progettoFileDir((int) $row['progetto_id']) . basename($row['nome_file']);
+                if (is_file($path)) @unlink($path);
+            }
         }
         echo json_encode(['success' => true]);
         exit();
