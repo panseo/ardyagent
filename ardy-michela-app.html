@@ -381,8 +381,15 @@
             </button>
             <div id="nuovaFaseBody" class="lav-form" style="display:none;border:none;border-top:1px solid var(--border);border-radius:0;margin-bottom:0;">
               <div class="lav-row">
-                <input class="lav-input" id="lavFase" placeholder="Nome fase (es. Sverniciatura)">
+                <input class="lav-input" id="lavFase" placeholder="Nome fase — scrivi o scegli dalla libreria" list="dlLibreriaFasi" autocomplete="off" oninput="onFaseNomeInput()">
                 <input class="lav-input" id="lavMobile" placeholder="Mobile (es. Credenza anni 60)">
+              </div>
+              <datalist id="dlLibreriaFasi"></datalist>
+              <div id="faseLibreriaHint" style="display:none;margin:-4px 0 8px;">
+                <button type="button" id="btnAddFaseLibreria" onclick="aggiungiFaseInLibreria()"
+                        style="background:none;border:1px solid var(--border);color:#c8a96e;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:'DM Mono',monospace;">
+                  ＋ Salva «<span id="faseLibreriaNome"></span>» nella libreria
+                </button>
               </div>
               <div class="lav-row">
                 <input class="lav-input" id="lavPrezzo" placeholder="Prezzo fase (interno, es. 350,00)" inputmode="decimal">
@@ -4373,7 +4380,69 @@ async function libLoadRemote() {
     // offline: si usa il fallback locale
     if (!LIB_CACHE) LIB_CACHE = libLoad();
   }
+  popolaDatalistLibreria();   // tiene allineato l'autocomplete del campo "Nome fase"
   return LIB_CACHE || [];
+}
+
+// ── Campo "Nome fase" agganciato alla libreria (autocomplete + aggiunta inline) ──
+// Popola il <datalist> del campo lavFase con le fasi della libreria (nome + categoria).
+function popolaDatalistLibreria() {
+  const dl = document.getElementById('dlLibreriaFasi');
+  if (!dl) return;
+  const lib = LIB_CACHE || libLoad() || [];
+  dl.innerHTML = lib.map(f =>
+    `<option value="${(f.nome || '').replace(/"/g, '&quot;')}">${(f.cat || '').replace(/"/g, '&quot;')}</option>`
+  ).join('');
+}
+// Cerca una fase in libreria per nome (case-insensitive).
+function libTrovaPerNome(nome) {
+  const n = (nome || '').trim().toLowerCase();
+  if (!n) return null;
+  return (LIB_CACHE || libLoad() || []).find(f => (f.nome || '').trim().toLowerCase() === n) || null;
+}
+// Mentre scrivi/scegli: se la fase è in libreria precompila le note (se vuote);
+// altrimenti mostra il bottone "Salva nella libreria".
+function onFaseNomeInput() {
+  const inp = document.getElementById('lavFase');
+  if (!inp) return;
+  const nome = inp.value.trim();
+  const match = libTrovaPerNome(nome);
+  if (match) {
+    const note = document.getElementById('lavNote');
+    if (note && !note.value.trim() && match.desc) note.value = match.desc;
+  }
+  const hint = document.getElementById('faseLibreriaHint');
+  if (hint) {
+    if (nome && !match) {
+      document.getElementById('faseLibreriaNome').textContent = nome;
+      hint.style.display = '';
+    } else {
+      hint.style.display = 'none';
+    }
+  }
+}
+// Aggiunge la fase corrente (nome + note come descrizione) alla libreria condivisa.
+async function aggiungiFaseInLibreria() {
+  const nome = (document.getElementById('lavFase')?.value || '').trim();
+  if (!nome) return;
+  const desc = (document.getElementById('lavNote')?.value || '').trim();
+  const btn = document.getElementById('btnAddFaseLibreria');
+  if (btn) btn.disabled = true;
+  try {
+    const res = await fetch(LIBRERIA_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'save', nome, cat: 'Altro', desc })
+    });
+    const d = await res.json();
+    if (!d.success) throw new Error(d.error || 'errore');
+    await libLoadRemote();      // ricarica + ripopola datalist
+    onFaseNomeInput();          // nasconde il bottone (ora la fase esiste)
+    showToast('📚 Fase aggiunta alla libreria (categoria «Altro», modificabile in Gestione Libreria)', 'success');
+  } catch (e) {
+    showToast('⚠ Errore aggiunta alla libreria', 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 let libCatAttiva = 'Tutte';
