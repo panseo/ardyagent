@@ -206,3 +206,30 @@ function ardyStoragePresignedGet(string $key, int $ttl = 300, ?string $downloadN
 
     return ardyB2BaseUrl() . $uri . '?' . $canonicalQuery . '&X-Amz-Signature=' . $signature;
 }
+
+/**
+ * Scarica i byte di un oggetto da B2 LATO SERVER (via URL firmato + curl). Serve a
+ * fare da proxy same-origin per le immagini: il browser le legge dal nostro dominio
+ * (niente CORS sul redirect a Backblaze), ma il file vive comunque su B2. Null su errore.
+ */
+function ardyStorageGet(string $key): ?string {
+    if (!ardyB2Configured()) return null;
+    $url = ardyStoragePresignedGet($key, 120);
+    if ($url === '') return null;
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FOLLOWLOCATION => false,
+        CURLOPT_TIMEOUT        => 60,
+        CURLOPT_CONNECTTIMEOUT => 20,
+    ]);
+    $body = curl_exec($ch);
+    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err  = curl_error($ch);
+    curl_close($ch);
+
+    if ($code === 200 && is_string($body) && $body !== '') return $body;
+    error_log("ARDY B2 GET $key fallito: HTTP $code $err");
+    return null;
+}
