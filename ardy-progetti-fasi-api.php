@@ -17,7 +17,8 @@
 // -----------------------------------------------------------
 
 require_once __DIR__ . '/ardy-db.php';
-require_once __DIR__ . '/ardy-net.php';   // ardyCompressImage + ardyHardenUploadDir
+require_once __DIR__ . '/ardy-net.php';       // ardyCompressImage + ardyHardenUploadDir
+require_once __DIR__ . '/ardy-storage.php';   // B2 (S3) con fallback su disco
 
 header('Access-Control-Allow-Origin: https://ardyagent.ardy-lab.it');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
@@ -34,6 +35,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit();
 function progettoFaseFotoDir(int $progettoId, int $faseId): string {
     return rtrim(ARDY_UPLOAD_DIR, '/') . '/progetti/' . $progettoId . '/fasi/' . $faseId . '/';
 }
+// Object key su B2 (stesso layout della cartella su disco, senza prefisso assoluto).
+function progettoFaseB2Key(int $progettoId, int $faseId, string $file): string {
+    return 'progetti/' . $progettoId . '/fasi/' . $faseId . '/' . basename($file);
+}
 
 // GET con ?file= → serve una foto da disco (anteprima + ricarico nel form).
 // Dietro Basic Auth (.htaccess). basename() evita path traversal.
@@ -43,14 +48,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['file'])) {
     $file       = basename((string) $_GET['file']);
     if ($progettoId <= 0 || $faseId <= 0 || $file === '') { http_response_code(400); exit(); }
     $path = progettoFaseFotoDir($progettoId, $faseId) . $file;
-    if (!is_file($path)) { http_response_code(404); exit(); }
-    $allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    $mime = (new finfo(FILEINFO_MIME_TYPE))->file($path);
-    if (!in_array($mime, $allowed, true)) { http_response_code(403); exit(); }
-    header('Content-Type: ' . $mime);
-    header('Content-Length: ' . filesize($path));
-    header('Cache-Control: private, max-age=3600');
-    readfile($path);
+    if (is_file($path)) {
+        $allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        $mime = (new finfo(FILEINFO_MIME_TYPE))->file($path);
+        if (!in_array($mime, $allowed, true)) { http_response_code(403); exit(); }
+        header('Content-Type: ' . $mime);
+        header('Content-Length: ' . filesize($path));
+        header('Cache-Control: private, max-age=3600');
+        readfile($path);
+        exit();
+    }
+    // Non su disco → la foto vive su B2: redirect a URL firmato (inline).
+    if (ardyB2Configured()) {
+        $url = ardyStoragePresignedGet(progettoFaseB2Key($progettoId, $faseId, $file), 300);
+        if ($url !== '') { header('Location: ' . $url); exit(); }
+    }
+    http_response_code(404);
     exit();
 }
 
@@ -108,26 +121,35 @@ try {
             $id = (int) $db->lastInsertId();
         }
 
-        // Foto su disco: la lista inviata è quella DEFINITIVA → riscriviamo da zero.
-        $dir = progettoFaseFotoDir($progettoId, $id);
-        if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
-            echo json_encode(['success' => false, 'error' => 'cartella non creabile']);
-            exit();
-        }
-        ardyHardenUploadDir(rtrim(ARDY_UPLOAD_DIR, '/'));
-        // Conserva i file già esistenti citati per nome; rimuovi quelli non più referenziati;
-        // aggiungi i nuovi (base64). Gli "immagini" sono o nomi-file esistenti o data base64.
+        // La lista 'immagini' è quella DEFINITIVA: separa i nomi già salvati (tenuti)
+        // dai nuovi (base64). Le nuove vanno su B2 se configurato, altrimenti su disco.
         $tenuti = [];
         $nuovi  = [];
         foreach ($immagini as $item) {
             if (!is_string($item) || $item === '') continue;
-            // Già un nome file salvato (no base64) → da conservare.
             if (preg_match('/^[A-Za-z0-9_.\-]+\.(?:jpe?g|png|gif|webp)$/i', $item)) { $tenuti[] = basename($item); }
             else { $nuovi[] = $item; }
         }
-        // Rimuovi i file su disco non più tenuti (saranno ri-aggiunti solo i 'tenuti').
-        foreach (glob($dir . '*') as $f) {
-            if (is_file($f) && !in_array(basename($f), $tenuti, true)) @unlink($f);
+
+        $dir = progettoFaseFotoDir($progettoId, $id);
+        $ensureDir = function () use ($dir): bool {
+            if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) return false;
+            ardyHardenUploadDir(rtrim(ARDY_UPLOAD_DIR, '/'));
+            return true;
+        };
+
+        // Rimuovi le foto non più referenziate dallo store dove vivono (disco E/O B2).
+        // Le foto su B2 non compaiono nel glob: uniamo i nomi salvati nel DB.
+        $prevStmt = $db->prepare("SELECT foto_urls FROM fasi WHERE id = ? AND progetto_id = ?");
+        $prevStmt->execute([$id, $progettoId]);
+        $prevFiles = json_decode((string) $prevStmt->fetchColumn() ?: '[]', true) ?: [];
+        $candidati = array_unique(array_merge($prevFiles, array_map('basename', glob($dir . '*') ?: [])));
+        foreach ($candidati as $old) {
+            $old = basename((string) $old);
+            if ($old === '' || in_array($old, $tenuti, true)) continue;
+            $p = $dir . $old;
+            if (is_file($p)) @unlink($p);
+            if (ardyB2Configured()) ardyStorageDelete(progettoFaseB2Key($progettoId, $id, $old));
         }
 
         $allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -142,7 +164,10 @@ try {
             $raw = ardyCompressImage($raw, $mime);
             $ext = $mime === 'image/png' ? 'png' : ($mime === 'image/webp' ? 'webp' : ($mime === 'image/gif' ? 'gif' : 'jpg'));
             $fname = 'f' . $idx . '_' . uniqid() . '.' . $ext;
-            if (file_put_contents($dir . $fname, $raw) !== false) $fotoFiles[] = $fname;
+            // Nuova foto su B2 se configurato; fallback su disco se B2 assente o fallisce.
+            $saved = ardyB2Configured() && ardyStoragePut(progettoFaseB2Key($progettoId, $id, $fname), $raw, $mime);
+            if (!$saved && $ensureDir() && file_put_contents($dir . $fname, $raw) !== false) $saved = true;
+            if ($saved) $fotoFiles[] = $fname;
         }
 
         // Video: URL già caricati a monte → conserviamo i validi.
@@ -171,12 +196,19 @@ try {
     if ($mode === 'delete') {
         $id = (int) ($in['id'] ?? 0);
         if ($id <= 0) { echo json_encode(['success' => false, 'error' => 'id mancante']); exit(); }
-        // Recupera il progetto PRIMA di eliminare, per ripulire la cartella foto.
-        $sg = $db->prepare("SELECT progetto_id FROM fasi WHERE id = ? AND progetto_id IS NOT NULL");
+        // Recupera progetto e foto PRIMA di eliminare, per ripulire disco e/o B2.
+        $sg = $db->prepare("SELECT progetto_id, foto_urls FROM fasi WHERE id = ? AND progetto_id IS NOT NULL");
         $sg->execute([$id]);
-        $pid = (int) $sg->fetchColumn();
+        $frow = $sg->fetch();
+        $pid  = (int) ($frow['progetto_id'] ?? 0);
         $db->prepare("DELETE FROM fasi WHERE id = ? AND progetto_id IS NOT NULL")->execute([$id]);
         if ($pid > 0) {
+            // Foto su B2 (dai nomi salvati nel DB): cancellale dal bucket.
+            if (ardyB2Configured()) {
+                foreach (json_decode($frow['foto_urls'] ?? '[]', true) ?: [] as $fn) {
+                    ardyStorageDelete(progettoFaseB2Key($pid, $id, basename((string) $fn)));
+                }
+            }
             $dir = progettoFaseFotoDir($pid, $id);
             if (is_dir($dir)) {
                 foreach (glob($dir . '*') as $f) { if (is_file($f)) @unlink($f); }

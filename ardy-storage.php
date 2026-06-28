@@ -46,6 +46,28 @@ function ardyB2CanonicalUri(string $key): string {
     return '/' . ardyB2EncodeKey(ARDY_B2_BUCKET) . '/' . ardyB2EncodeKey($key);
 }
 
+/** Header firmati (SigV4) per un PUT. Riusato da put-file (streaming) e put (in RAM). */
+function ardyB2SignPut(string $key, string $payloadHash, string $contentType, string $now): array {
+    $dateStamp = substr($now, 0, 8);
+    $host      = ARDY_B2_ENDPOINT;
+    $uri       = ardyB2CanonicalUri($key);
+    $scope     = "$dateStamp/" . ARDY_B2_REGION . '/s3/aws4_request';
+
+    $signedHeaders    = 'content-type;host;x-amz-content-sha256;x-amz-date';
+    $canonicalHeaders = "content-type:$contentType\nhost:$host\nx-amz-content-sha256:$payloadHash\nx-amz-date:$now\n";
+    $canonicalRequest = "PUT\n$uri\n\n$canonicalHeaders\n$signedHeaders\n$payloadHash";
+    $stringToSign     = "AWS4-HMAC-SHA256\n$now\n$scope\n" . hash('sha256', $canonicalRequest);
+    $signature        = hash_hmac('sha256', $stringToSign, ardyB2SigningKey($dateStamp));
+    $auth = 'AWS4-HMAC-SHA256 Credential=' . ARDY_B2_KEY_ID . "/$scope, SignedHeaders=$signedHeaders, Signature=$signature";
+
+    return [ardyB2BaseUrl() . $uri, [
+        "Authorization: $auth",
+        "Content-Type: $contentType",
+        "x-amz-content-sha256: $payloadHash",
+        "x-amz-date: $now",
+    ]];
+}
+
 /**
  * Carica un file su B2 in streaming (niente file intero in RAM: l'hash si calcola
  * con hash_file e il corpo si invia via CURLOPT_INFILE). Ritorna true su HTTP 200.
@@ -55,35 +77,17 @@ function ardyStoragePutFile(string $key, string $localPath, string $contentType 
 
     $payloadHash = hash_file('sha256', $localPath);
     $size        = filesize($localPath);
-    $now         = gmdate('Ymd\THis\Z');
-    $dateStamp   = substr($now, 0, 8);
-    $host        = ARDY_B2_ENDPOINT;
-    $uri         = ardyB2CanonicalUri($key);
-    $scope       = "$dateStamp/" . ARDY_B2_REGION . '/s3/aws4_request';
-
-    $signedHeaders    = 'content-type;host;x-amz-content-sha256;x-amz-date';
-    $canonicalHeaders = "content-type:$contentType\nhost:$host\nx-amz-content-sha256:$payloadHash\nx-amz-date:$now\n";
-    $canonicalRequest = "PUT\n$uri\n\n$canonicalHeaders\n$signedHeaders\n$payloadHash";
-    $stringToSign     = "AWS4-HMAC-SHA256\n$now\n$scope\n" . hash('sha256', $canonicalRequest);
-    $signature        = hash_hmac('sha256', $stringToSign, ardyB2SigningKey($dateStamp));
-    $auth = 'AWS4-HMAC-SHA256 Credential=' . ARDY_B2_KEY_ID . "/$scope, SignedHeaders=$signedHeaders, Signature=$signature";
+    [$url, $headers] = ardyB2SignPut($key, $payloadHash, $contentType, gmdate('Ymd\THis\Z'));
 
     $fp = fopen($localPath, 'rb');
     if ($fp === false) return false;
-    $ch = curl_init(ardyB2BaseUrl() . $uri);
+    $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_PUT            => true,
         CURLOPT_INFILE         => $fp,
         CURLOPT_INFILESIZE     => $size,
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER     => [
-            "Authorization: $auth",
-            "Content-Type: $contentType",
-            "x-amz-content-sha256: $payloadHash",
-            "x-amz-date: $now",
-            "Content-Length: $size",
-            'Expect:',
-        ],
+        CURLOPT_HTTPHEADER     => array_merge($headers, ["Content-Length: $size", 'Expect:']),
         CURLOPT_TIMEOUT        => 600,
         CURLOPT_CONNECTTIMEOUT => 20,
     ]);
@@ -95,6 +99,32 @@ function ardyStoragePutFile(string $key, string $localPath, string $contentType 
 
     if ($code === 200) return true;
     error_log("ARDY B2 PUT $key fallito: HTTP $code $err " . substr((string) $resp, 0, 500));
+    return false;
+}
+
+/** Carica byte già in memoria su B2 (per file piccoli: foto compresse). HTTP 200 → true. */
+function ardyStoragePut(string $key, string $body, string $contentType = 'application/octet-stream'): bool {
+    if (!ardyB2Configured()) return false;
+
+    $payloadHash = hash('sha256', $body);
+    [$url, $headers] = ardyB2SignPut($key, $payloadHash, $contentType, gmdate('Ymd\THis\Z'));
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_CUSTOMREQUEST  => 'PUT',
+        CURLOPT_POSTFIELDS     => $body,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER     => array_merge($headers, ['Content-Length: ' . strlen($body), 'Expect:']),
+        CURLOPT_TIMEOUT        => 120,
+        CURLOPT_CONNECTTIMEOUT => 20,
+    ]);
+    $resp = curl_exec($ch);
+    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err  = curl_error($ch);
+    curl_close($ch);
+
+    if ($code === 200) return true;
+    error_log("ARDY B2 PUT(mem) $key fallito: HTTP $code $err " . substr((string) $resp, 0, 500));
     return false;
 }
 
