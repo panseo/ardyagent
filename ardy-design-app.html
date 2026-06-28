@@ -158,7 +158,7 @@ const TIPI = ['lampada','mobile','complemento','restyling','prototipo'];
 const STATI = ['IDEA','PROGETTAZIONE','PROTOTIPO','FILE_CONGELATO','PRODUZIONE','FOTOGRAFIA','A_CATALOGO'];
 const CATEGORIE = ['filamento','stampa','elettrico','ferramenta','finitura','imballo','manodopera'];
 const UNITA_DEF = { filamento:'g', stampa:'h', manodopera:'h' };
-let stato = { lista:[], sel:null, dettaglio:null, costoOrario:50, faseForm:null };
+let stato = { lista:[], sel:null, dettaglio:null, costoOrario:50, faseForm:null, congelaForm:null, articoloTesto:'', articoloProgId:null };
 
 const eur = n => (n===null||n===undefined||n==='') ? '—' : Number(n).toLocaleString('it-IT',{style:'currency',currency:'EUR'});
 const esc = s => (s??'').toString().replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -194,6 +194,7 @@ function renderLista(){
 // ── Dettaglio ───────────────────────────────────────────
 async function apri(id){
   stato.sel = id;
+  if (stato.articoloProgId !== id){ stato.articoloTesto = ''; stato.articoloProgId = id; }
   const d = await api('GET', { id });
   if (!d.success){ toast('Errore caricamento'); return; }
   stato.dettaglio = d;
@@ -243,7 +244,7 @@ function renderDettaglio(nuovo=false){
       ${p.id && p.file_congelato_at ? congelatoSummary() : ''}
     </div>
 
-    ${p.id?(stato.congelaForm?congelaFormHtml():'')+galleriaPanel()+filePanel()+bomPanel()+iterPanel()+fasiPanel():'<div class="muted">Salva il progetto per gestire galleria, file, costi, prototipi e contenuti.</div>'}
+    ${p.id?(stato.congelaForm?congelaFormHtml():'')+galleriaPanel()+articoloPanel()+filePanel()+bomPanel()+iterPanel()+fasiPanel():'<div class="muted">Salva il progetto per gestire galleria, file, costi, prototipi e contenuti.</div>'}
   `;
 }
 
@@ -477,6 +478,57 @@ async function eliminaGalleria(id){
   if (!confirm('Eliminare questa immagine dalla galleria?')) return;
   await fetch(GALLERIA_API, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode:'delete', id }) });
   toast('Immagine eliminata'); apri(stato.dettaglio.progetto.id);
+}
+
+// ── Articolo WordPress del progetto (madre delle fasi-racconto) ──
+function articoloPanel(){
+  const p = stato.dettaglio.progetto;
+  if (p.wp_post_link){
+    return `
+    <div class="panel">
+      <h2>Articolo WordPress <small>la pagina pubblica del progetto</small></h2>
+      <div class="frozen"><b>✅ Articolo pubblicato</b>
+        <div style="margin-top:6px"><a href="${esc(p.wp_post_link)}" target="_blank" rel="noopener">↗ Vedi l'articolo</a></div>
+        <div class="muted" style="margin-top:6px">Le fasi-racconto che pubblichi si agganceranno a questo articolo.</div>
+      </div>
+    </div>`;
+  }
+  return `
+  <div class="panel">
+    <h2>Articolo WordPress <small>crea la pagina pubblica del progetto</small></h2>
+    <div class="field"><label>Testo dell'articolo</label>
+      <textarea id="art_testo" style="min-height:120px" oninput="stato.articoloTesto=this.value" placeholder="Scrivi qui, oppure premi ✨ Genera con AI per partire dalla descrizione del progetto">${esc(stato.articoloTesto||'')}</textarea>
+      <div style="margin-top:6px"><button class="sm" id="artAiBtn" onclick="generaArticolo()">✨ Genera con AI</button>
+        <span class="muted" style="margin-left:6px">Parte da concept/materiali/scheda tecnica. Rivedi sempre prima di pubblicare.</span></div>
+    </div>
+    <div class="row" style="align-items:center">
+      <button class="primary" onclick="pubblicaArticolo()">📝 Pubblica articolo</button>
+      <span class="muted">Userà i render e le foto della Galleria qui sopra.</span>
+    </div>
+    <div id="artOut" class="muted" style="margin-top:6px"></div>
+  </div>`;
+}
+async function generaArticolo(){
+  const btn = document.getElementById('artAiBtn');
+  if (btn){ btn.disabled = true; btn.textContent = '✨ Scrivo…'; }
+  try {
+    const d = await fetch('ardy-progetti-ai.php', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ mode:'genera_articolo', progetto_id: stato.dettaglio.progetto.id }) }).then(r=>r.json());
+    if (d.success && d.testo){ stato.articoloTesto = d.testo; renderDettaglio(); toast('Testo generato — rivedilo'); }
+    else { toast(d.error||'Errore generazione'); if(btn){ btn.disabled=false; btn.textContent='✨ Genera con AI'; } }
+  } catch(e){ toast('Errore di rete'); if(btn){ btn.disabled=false; btn.textContent='✨ Genera con AI'; } }
+}
+async function pubblicaArticolo(){
+  const testo = (document.getElementById('art_testo')?.value||'').trim();
+  if (!testo){ toast('Scrivi o genera il testo dell\'articolo'); return; }
+  const out = document.getElementById('artOut');
+  if (out) out.textContent = '⏳ Pubblico su WordPress…';
+  try {
+    const d = await fetch('ardy-pubblica-progetto.php', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ progetto_id: stato.dettaglio.progetto.id, testo }) }).then(r=>r.json());
+    if (d.success){ toast(d.already?'Articolo già pubblicato':'Articolo pubblicato'); stato.articoloTesto=''; apri(stato.dettaglio.progetto.id); }
+    else { if(out) out.innerHTML = `<span class="neg">${esc(d.error||'Errore')}</span>`; toast(d.error||'Errore'); }
+  } catch(e){ if(out) out.innerHTML = '<span class="neg">Errore di rete</span>'; }
 }
 
 // ── BOM / costi ─────────────────────────────────────────

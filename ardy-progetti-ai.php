@@ -58,25 +58,33 @@ try {
     $in   = json_decode(file_get_contents('php://input'), true) ?: [];
     $mode = $in['mode'] ?? 'genera_post';
 
-    if ($mode !== 'genera_post') { echo json_encode(['success' => false, 'error' => 'mode non valido']); exit(); }
+    if (!in_array($mode, ['genera_post', 'genera_articolo'], true)) { echo json_encode(['success' => false, 'error' => 'mode non valido']); exit(); }
 
     $progettoId = (int) ($in['progetto_id'] ?? 0);
     $faseNome   = trim((string) ($in['fase_nome'] ?? ''));
     $bozza      = trim((string) ($in['bozza'] ?? ''));
-    if ($bozza === '') { echo json_encode(['success' => false, 'error' => 'Scrivi prima qualche riga da rielaborare']); exit(); }
+    // genera_post rielabora una bozza dell'autore; genera_articolo scrive l'intro
+    // dell'articolo partendo dalla descrizione del progetto (nessuna bozza richiesta).
+    if ($mode === 'genera_post' && $bozza === '') {
+        echo json_encode(['success' => false, 'error' => 'Scrivi prima qualche riga da rielaborare']); exit();
+    }
 
-    // Contesto dal progetto (per ancorare il post, senza inventare nulla).
-    $titolo = $tipo = $descr = $materiali = '';
+    // Contesto dal progetto (per ancorare il testo, senza inventare nulla).
+    $titolo = $tipo = $descr = $materiali = $scheda = '';
     if ($progettoId > 0) {
         $db = ardyDB();
-        $st = $db->prepare("SELECT titolo, tipo, descrizione, materiali FROM progetti WHERE id = ? AND deleted_at IS NULL");
+        $st = $db->prepare("SELECT titolo, tipo, descrizione, materiali, scheda_tecnica FROM progetti WHERE id = ? AND deleted_at IS NULL");
         $st->execute([$progettoId]);
         if ($p = $st->fetch()) {
             $titolo    = trim((string) ($p['titolo'] ?? ''));
             $tipo      = trim((string) ($p['tipo'] ?? ''));
             $descr     = trim((string) ($p['descrizione'] ?? ''));
             $materiali = trim((string) ($p['materiali'] ?? ''));
+            $scheda    = trim((string) ($p['scheda_tecnica'] ?? ''));
         }
+    }
+    if ($mode === 'genera_articolo' && $descr === '' && $materiali === '' && $scheda === '') {
+        echo json_encode(['success' => false, 'error' => 'Compila prima la descrizione del progetto']); exit();
     }
 
     $system =
@@ -94,17 +102,31 @@ try {
     if ($faseNome  !== '') $ctx .= "Fase di lavorazione: $faseNome\n";
     if ($descr     !== '') $ctx .= "Concept del progetto: $descr\n";
     if ($materiali !== '') $ctx .= "Materiali dichiarati: $materiali\n";
+    if ($mode === 'genera_articolo' && $scheda !== '') $ctx .= "Scheda tecnica: $scheda\n";
 
-    $userMsg =
-        ($ctx !== '' ? "Contesto:\n$ctx\n" : '')
-      . "Bozza dell'autore (poche righe):\n\"\"\"\n$bozza\n\"\"\"\n\n"
-      . "Riscrivi la bozza in un POST pronto per la pubblicazione. Regole:\n"
-      . "- Resta fedele alla bozza; non aggiungere fatti, materiali o numeri non presenti.\n"
-      . "- 1-3 paragrafi brevi, niente elenchi puntati.\n"
-      . "- Nessun prezzo inventato; nessuna promessa esagerata.\n"
-      . "- Chiusura naturale (es. invito a seguire/scoprire), senza risultare markettara.\n"
-      . "- Niente hashtag, niente emoji invadenti (al massimo uno, se calza).\n"
-      . "Rispondi SOLO con il testo del post, senza introduzioni né virgolette.";
+    if ($mode === 'genera_articolo') {
+        // Intro dell'articolo "madre" del progetto: presenta il pezzo finito.
+        $userMsg =
+            ($ctx !== '' ? "Dati del progetto:\n$ctx\n" : '')
+          . "Scrivi l'introduzione dell'articolo che presenta questa creazione sul sito. Regole:\n"
+          . "- Presenta il pezzo finito: cos'è, l'idea dietro, materiali e finiture (solo quelli indicati).\n"
+          . "- 2-4 paragrafi brevi, niente elenchi puntati.\n"
+          . "- Resta fedele ai dati: non inventare materiali, misure, prezzi o tempi non presenti.\n"
+          . "- Questo è l'inizio di un articolo che poi racconterà le fasi di lavoro: chiusura che invita a seguire il racconto.\n"
+          . "- Niente hashtag, niente emoji invadenti (al massimo uno, se calza).\n"
+          . "Rispondi SOLO con il testo dell'articolo, senza titolo, introduzioni o virgolette.";
+    } else {
+        $userMsg =
+            ($ctx !== '' ? "Contesto:\n$ctx\n" : '')
+          . "Bozza dell'autore (poche righe):\n\"\"\"\n$bozza\n\"\"\"\n\n"
+          . "Riscrivi la bozza in un POST pronto per la pubblicazione. Regole:\n"
+          . "- Resta fedele alla bozza; non aggiungere fatti, materiali o numeri non presenti.\n"
+          . "- 1-3 paragrafi brevi, niente elenchi puntati.\n"
+          . "- Nessun prezzo inventato; nessuna promessa esagerata.\n"
+          . "- Chiusura naturale (es. invito a seguire/scoprire), senza risultare markettara.\n"
+          . "- Niente hashtag, niente emoji invadenti (al massimo uno, se calza).\n"
+          . "Rispondi SOLO con il testo del post, senza introduzioni né virgolette.";
+    }
 
     $testo = progettoAiClaude($system, $userMsg);
     $testo = ardy_strip_tool_syntax($testo); // rete di sicurezza sull'output del modello
