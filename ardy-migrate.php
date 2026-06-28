@@ -307,6 +307,33 @@ foreach ($progettoFileCols as $col => $sql) {
     else { echo "  skip progetto_file.$col\n"; $skip++; }
 }
 
+// Galleria del progetto: render e foto della creazione finita (immagini pubbliche
+// per l'articolo WordPress). Distinta dall'archivio file (STL/CAD, interni) e dalle
+// foto delle fasi-racconto. Storage come il resto: nomi su DB, binari su disco/B2.
+ddl($pdo, "CREATE TABLE IF NOT EXISTS `progetto_galleria` (
+    `id`          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `progetto_id` BIGINT NOT NULL,
+    `tipo`        VARCHAR(10)  NOT NULL DEFAULT 'render', -- render | foto
+    `storage`     VARCHAR(10)  NOT NULL DEFAULT 'local',  -- local | b2
+    `nome_file`   VARCHAR(255) NOT NULL,
+    `storage_key` VARCHAR(300) NULL,
+    `dimensione`  BIGINT       NOT NULL DEFAULT 0,
+    `ordine`      INT          NOT NULL DEFAULT 0,
+    `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_galleria_progetto (progetto_id, ordine)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE progetto_galleria");
+
+// Colonne WordPress sul progetto: id e link dell'articolo "madre" (pubblicato dalla
+// galleria + descrizione; le fasi-racconto poi vi si agganciano in append).
+$progettiWpCols = [
+    'wp_post_id'   => "ALTER TABLE progetti ADD COLUMN wp_post_id BIGINT NULL AFTER woo_product_id",
+    'wp_post_link' => "ALTER TABLE progetti ADD COLUMN wp_post_link VARCHAR(500) NULL AFTER wp_post_id",
+];
+foreach ($progettiWpCols as $col => $sql) {
+    if (!colExists($pdo, 'progetti', $col)) { ddl($pdo, $sql, "progetti.$col"); }
+    else { echo "  skip progetti.$col\n"; $skip++; }
+}
+
 // ── COLONNE clienti ───────────────────────────────────────────────────────────
 
 $clientiCols = [
