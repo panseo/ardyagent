@@ -67,19 +67,15 @@ generazione reel/post.
 - **Disclosure "è un'AI"**: i Termini §3.1 e la Privacy §4 dichiarano che Sole è un assistente virtuale basato su AI (Anthropic). Il prompt di Sole contiene un "CODICE ETICO AI" e dichiara la natura artificiale se richiesto.
 - **Niente decisioni automatizzate vincolanti**: dichiarato nei Termini §3.2 e Privacy §4 (coerente anche con l'art. 22 GDPR).
 - **Catena fornitore**: il modello è Anthropic, fornitore GPAI che gestisce i propri obblighi a monte.
+- **[Trasparenza — art. 50(1)] FATTO.** Sole dichiara di essere un'AI nel **primo messaggio** su tutti i canali:
+  - Chat sito `/ardy-agent/`: apertura "Sono Sole, l'assistente AI virtuale di Ardy Lab" + intestazione "Assistente Ardy Lab" + footer "Sole è un assistente AI — le informazioni vengono poi verificate da Michela" (copre anche il "no decisioni solo-AI").
+  - Widget lavorazione, WhatsApp, chat corsi: disclosure nel messaggio di benvenuto (`ardy-widget-lavorazione.js`, `ardy-whatsapp-system.txt`, `ardy-chat-corsi.js`).
+  - Prompt di sistema: regola di trasparenza esplicita in `ardy-system.txt` ("dichiara sempre di essere un'AI nel primo messaggio; non spacciarti per una persona").
+  - Pulsante flottante: "Chatta con Sole, l'assistente AI".
 
 ### 🔧 Da fare (poco lavoro)
 
-1. **[Trasparenza — art. 50(1)] Disclosure esplicita all'inizio della chat.**
-   La legge chiede che l'utente sia informato di parlare con un'AI **in modo
-   chiaro e al più tardi alla prima interazione**, non solo se lo chiede.
-   - Azione: nel **primo messaggio** del chatbot, del widget e su WhatsApp far
-     dire/scrivere a Sole che è un assistente virtuale (AI). Oggi l'apertura è
-     "Ciao! Sono Sole 👋…": basta aggiungere "—l'assistente virtuale (AI) di
-     Ardy Lab". Costo: una riga in `ardy-system.txt` / messaggio di benvenuto.
-   - In alternativa o in aggiunta: una nota visibile nel widget ("Assistente AI").
-
-2. **[Contenuti generati — art. 50(2) e 50(4)] Etichettatura contenuti AI.**
+1. **[Contenuti generati — art. 50(2) e 50(4)] Etichettatura contenuti AI.**
    - **Reel** (`ardy-crea-reel.php`): sono montaggi di **foto reali** delle
      lavorazioni, non immagini sintetiche di persone → l'obbligo "deepfake" non
      scatta. Nessuna azione obbligatoria; se in futuro si generassero immagini
@@ -88,13 +84,17 @@ generazione reel/post.
      nei "contenuti su temi di interesse pubblico" dell'art. 50(4). Nessun
      obbligo stretto; resta buona prassi la revisione umana prima della pubblicazione (già nel flusso: pubblicazione social è passo manuale).
 
-3. **[Alfabetizzazione AI — art. 4] Nota interna.** Già obbligatorio da feb 2025.
+2. **[Alfabetizzazione AI — art. 4] Nota interna.** Già obbligatorio da feb 2025.
    Per una micro-impresa basta che chi usa il sistema (Michela, Andrea) conosca
    limiti e uso corretto. → Vedi **Allegato A** in fondo: stamparlo/firmarlo e
    conservarlo. Fatto.
 
-4. **[Documentazione] Tenere questo file aggiornato** come traccia delle scelte
+3. **[Documentazione] Tenere questo file aggiornato** come traccia delle scelte
    di conformità (utile in caso di domande del Garante/autorità).
+
+> **Stato al 28/06/2026:** trasparenza (art. 50) **implementata e in produzione** su
+> tutti i canali. Restano solo gli adempimenti organizzativi: firmare l'Allegato A
+> (alfabetizzazione AI) e l'eventuale revisione legale del testo.
 
 ### ❌ NON serve (sono obblighi solo per l'alto rischio)
 - Valutazione di conformità / marcatura CE
