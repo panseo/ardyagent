@@ -116,6 +116,9 @@
   .filerow .factions { margin-left:auto; display:flex; gap:6px; white-space:nowrap; }
   .filerow a { text-decoration:none; }
   .badge.filecat { color:var(--accent); border-color:var(--accent2); text-transform:uppercase; }
+  .filebtn { display:inline-block; font-size:13px; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text); padding:8px 14px; border-radius:var(--radius-sm); transition:.15s; }
+  .filebtn:hover { border-color:var(--accent); }
+  .filebtn input { display:none; }
   .frozen { margin-top:12px; padding:10px 12px; border:1px solid var(--accent2); border-radius:var(--radius-sm); background:#1c1810; }
   .frozen b { color:var(--accent); }
 
@@ -575,7 +578,10 @@ function fasiFormHtml(){
         ${ff.fotoEsistenti.map((fn,i)=>`<div class="thumbwrap"><img class="thumb" src="${fotoUrlFase(ff.id,fn)}"><button class="x" onclick="rimuoviFotoEsistente(${i})">✕</button></div>`).join('')}
         ${ff.fotoNuove.map((b64,i)=>`<div class="thumbwrap"><img class="thumb" src="data:image/*;base64,${b64}"><button class="x" onclick="rimuoviFotoNuova(${i})">✕</button></div>`).join('')}
       </div>
-      <input type="file" accept="image/*" multiple onchange="onFotoInput(this)" style="margin-top:8px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <label class="filebtn">📷 Scatta foto<input type="file" accept="image/*" capture="environment" multiple onchange="onFotoInput(this)"></label>
+        <label class="filebtn">🖼️ Dalla galleria<input type="file" accept="image/*" multiple onchange="onFotoInput(this)"></label>
+      </div>
     </div>
     <div class="row">
       <button class="primary" onclick="salvaFase()">Salva fase</button>
