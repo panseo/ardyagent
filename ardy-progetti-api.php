@@ -124,6 +124,13 @@ try {
         );
         $file->execute([$id]);
 
+        // Galleria (render + foto finite) per l'articolo WordPress.
+        $gall = $db->prepare(
+            "SELECT id, tipo, dimensione, ordine, created_at
+             FROM progetto_galleria WHERE progetto_id = ? ORDER BY ordine ASC, id ASC"
+        );
+        $gall->execute([$id]);
+
         echo json_encode([
             'success'    => true,
             'progetto'   => $p,
@@ -131,6 +138,7 @@ try {
             'iterazioni' => $iterRows,
             'fasi'       => $fasiRows,
             'file'       => $file->fetchAll(),
+            'galleria'   => $gall->fetchAll(),
             'config'     => [
                 'stati'             => PROGETTO_STATI,
                 'tipi'              => PROGETTO_TIPI,

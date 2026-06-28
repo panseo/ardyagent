@@ -204,7 +204,7 @@ async function apri(id){
 
 function nuovoProgetto(){
   stato.sel = null;
-  stato.dettaglio = { progetto:{ id:0, titolo:'', tipo:'lampada', stato:'IDEA', descrizione:'', materiali:'', scheda_tecnica:'', scarto_pct:10, prezzo_vendita:'', tempo_lavoro:'', costo_produzione:null, margine:null }, materiali:[], iterazioni:[], fasi:[], file:[] };
+  stato.dettaglio = { progetto:{ id:0, titolo:'', tipo:'lampada', stato:'IDEA', descrizione:'', materiali:'', scheda_tecnica:'', scarto_pct:10, prezzo_vendita:'', tempo_lavoro:'', costo_produzione:null, margine:null }, materiali:[], iterazioni:[], fasi:[], file:[], galleria:[] };
   renderLista();
   renderDettaglio(true);
 }
@@ -243,7 +243,7 @@ function renderDettaglio(nuovo=false){
       ${p.id && p.file_congelato_at ? congelatoSummary() : ''}
     </div>
 
-    ${p.id?(stato.congelaForm?congelaFormHtml():'')+filePanel()+bomPanel()+iterPanel()+fasiPanel():'<div class="muted">Salva il progetto per gestire file, costi, prototipi e contenuti.</div>'}
+    ${p.id?(stato.congelaForm?congelaFormHtml():'')+galleriaPanel()+filePanel()+bomPanel()+iterPanel()+fasiPanel():'<div class="muted">Salva il progetto per gestire galleria, file, costi, prototipi e contenuti.</div>'}
   `;
 }
 
@@ -422,6 +422,61 @@ async function eliminaFile(id){
   if (!confirm('Eliminare questo file dall\'archivio?')) return;
   await fetch(FILE_API, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode:'delete', id }) });
   toast('File eliminato'); apri(stato.dettaglio.progetto.id);
+}
+
+// ── Galleria progetto (render + foto della creazione, per l'articolo WP) ──
+const GALLERIA_API = 'ardy-progetti-galleria-api.php';
+function galleriaUrl(f){ return `${GALLERIA_API}?progetto_id=${stato.dettaglio.progetto.id}&file_id=${f.id}&file=1`; }
+
+function galleriaPanel(){
+  const imgs = stato.dettaglio.galleria || [];
+  const grp = (titolo, arr) => `
+    <div style="margin-bottom:10px">
+      <div class="muted" style="margin-bottom:6px">${titolo} (${arr.length})</div>
+      ${arr.length ? `<div class="thumbs">${arr.map(f=>`
+        <div class="thumbwrap"><img class="thumb" src="${galleriaUrl(f)}" alt="">
+          <button class="x" onclick="eliminaGalleria(${f.id})">✕</button></div>`).join('')}</div>`
+        : '<div class="muted" style="font-size:11px">— nessuna —</div>'}
+    </div>`;
+  return `
+  <div class="panel">
+    <h2>Galleria progetto <small>render + foto della creazione · per l'articolo</small></h2>
+    ${grp('🎨 Render', imgs.filter(i=>i.tipo==='render'))}
+    ${grp('📸 Foto finite', imgs.filter(i=>i.tipo==='foto'))}
+    <div class="row" style="align-items:flex-end;margin-top:6px">
+      <div class="field" style="max-width:200px"><label>Tipo da caricare</label>
+        <select id="gal_tipo"><option value="render">🎨 Render</option><option value="foto">📸 Foto finita</option></select></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <label class="filebtn">📷 Scatta foto<input type="file" accept="image/*" capture="environment" multiple onchange="caricaGalleria(this)"></label>
+        <label class="filebtn">🖼️ Dalla galleria<input type="file" accept="image/*" multiple onchange="caricaGalleria(this)"></label>
+      </div>
+    </div>
+    <div id="galOut" class="muted" style="margin-top:6px">Render e foto del pezzo finito: finiranno nell'articolo del progetto.</div>
+  </div>`;
+}
+async function caricaGalleria(input){
+  const files = Array.from(input.files||[]);
+  if (!files.length) return;
+  const tipo = val('gal_tipo'), out = document.getElementById('galOut');
+  if (out) out.textContent = '⏳ Carico…';
+  let ok=0, fail=0, lastErr='';
+  for (const file of files){
+    const fd = new FormData();
+    fd.append('mode','upload'); fd.append('progetto_id', stato.dettaglio.progetto.id);
+    fd.append('tipo', tipo); fd.append('file', file);
+    try {
+      const d = await fetch(GALLERIA_API, { method:'POST', body: fd }).then(r=>r.json());
+      if (d.success) ok++; else { fail++; lastErr = d.error||'errore'; }
+    } catch(e){ fail++; lastErr = 'Errore di rete'; }
+  }
+  if (fail && out) out.innerHTML = `<span class="neg">${esc(lastErr)}</span>`;
+  toast(ok ? `Caricate ${ok} immagini${fail?` · ${fail} ko`:''}` : 'Upload fallito');
+  apri(stato.dettaglio.progetto.id);
+}
+async function eliminaGalleria(id){
+  if (!confirm('Eliminare questa immagine dalla galleria?')) return;
+  await fetch(GALLERIA_API, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode:'delete', id }) });
+  toast('Immagine eliminata'); apri(stato.dettaglio.progetto.id);
 }
 
 // ── BOM / costi ─────────────────────────────────────────
