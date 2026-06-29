@@ -4,7 +4,11 @@
 // Aggancia (append) la fase all'articolo "madre" creato da ardy-pubblica-progetto.php:
 // testo + foto della fase si aggiungono in coda al post WordPress del progetto.
 //
-//   POST {progetto_id, fase_id}  → append della fase all'articolo; segna wp_pubblicata_at.
+//   POST {progetto_id, fase_id}  → aggancia (o ri-sincronizza) la fase all'articolo; segna wp_pubblicata_at.
+//
+// Idempotente: ogni fase è racchiusa fra marcatori <!-- ardy-fase-ID -->. Alla prima
+// pubblicazione il blocco si aggiunge in coda; ripubblicando (es. dopo aver aggiunto
+// una foto) il blocco già presente viene SOSTITUITO, così non si creano doppioni.
 //
 // Richiede che l'articolo del progetto sia già pubblicato (progetti.wp_post_id).
 // Protetto via .htaccess (Basic Auth) — elencato nel <FilesMatch>.
@@ -92,17 +96,35 @@ foreach (array_slice($foto, 0, 12) as $fn) {
 foreach (glob($tmpDir . '*') as $f) { if (is_file($f)) @unlink($f); }
 @rmdir($tmpDir);
 
-$blocco = '
+// Marcatori HTML per-fase: delimitano il blocco di QUESTA fase dentro l'articolo.
+// Servono a ripubblicare in modo idempotente (sostituire, non duplicare) quando la
+// fase viene modificata — es. l'aggiunta di una foto dopo la prima pubblicazione.
+$mStart = '<!-- ardy-fase-' . $faseId . ' -->';
+$mEnd   = '<!-- /ardy-fase-' . $faseId . ' -->';
+
+$blocco = $mStart . '
 <div style="border-left:3px solid #c8a96e;padding:16px 20px;margin:24px 0;background:#fafaf8;">
   <p style="font-size:12px;color:#999;margin-bottom:8px;font-family:monospace;">' . esc_html(date('d/m/Y')) . ($faseNome !== '' ? ' — ' . esc_html($faseNome) : '') . '</p>'
   . ($testo !== '' ? '<div style="font-size:15px;line-height:1.7;color:#333;">' . nl2br(esc_html($testo)) . '</div>' : '')
   . $fotoHtml . '
-</div>';
+</div>' . $mEnd;
 
 kses_remove_filters();
 $post = get_post($wpPostId);
 if (!$post) { echo json_encode(['success' => false, 'error' => 'Articolo non trovato su WordPress']); exit(); }
-$result = wp_update_post(['ID' => $wpPostId, 'post_content' => $post->post_content . "\n" . $blocco], true);
+
+// Se il blocco di questa fase è già presente (ripubblicazione) lo SOSTITUISCO sul
+// posto; altrimenti lo aggiungo in coda. Niente regex: confronto posizioni dei tag.
+$content = (string) $post->post_content;
+$startPos = strpos($content, $mStart);
+$endPos   = $startPos !== false ? strpos($content, $mEnd, $startPos) : false;
+if ($startPos !== false && $endPos !== false) {
+    $endPos += strlen($mEnd);
+    $newContent = substr($content, 0, $startPos) . $blocco . substr($content, $endPos);
+} else {
+    $newContent = $content . "\n" . $blocco;
+}
+$result = wp_update_post(['ID' => $wpPostId, 'post_content' => $newContent], true);
 if (is_wp_error($result)) {
     error_log('ARDY PUBBLICA FASE PROG WP UPDATE: ' . $result->get_error_message());
     echo json_encode(['success' => false, 'error' => 'Aggiornamento articolo non riuscito']); exit();
