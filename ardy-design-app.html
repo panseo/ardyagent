@@ -127,7 +127,33 @@
   .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--surface2); border:1px solid var(--accent); color:var(--text); padding:10px 18px; border-radius:var(--radius-sm); box-shadow:var(--shadow); opacity:0; transition:.2s; pointer-events:none; z-index:300; }
   .toast.show { opacity:1; }
   .hidden { display:none !important; }
-  @media (max-width:760px){ .layout{grid-template-columns:1fr} .sidebar{border-right:none;border-bottom:1px solid var(--border)} }
+
+  /* Torna alla lista — visibile solo su mobile, in cima al dettaglio */
+  .btn-back-mobile {
+    display:none; align-items:center; gap:8px; background:none; border:none;
+    color:var(--text-dim); font-family:'DM Mono',monospace; font-size:11px;
+    letter-spacing:1px; cursor:pointer; padding:0; margin-bottom:16px;
+  }
+  .btn-back-mobile:hover { color:var(--accent); }
+
+  /* ── Mobile: stessa UX della dash principale ──
+     All'apertura si vede solo l'elenco progetti (sidebar a tutta larghezza).
+     Toccando un progetto, il dettaglio entra da destra; il bottone "lista
+     progetti" riporta indietro. */
+  @media (max-width:760px){
+    .layout { grid-template-columns:1fr; height:calc(100vh - 56px); position:relative; overflow:hidden; }
+    .sidebar {
+      width:100%; height:calc(100vh - 56px); position:absolute; left:0; top:0;
+      border-right:none; transition:transform .3s ease; z-index:10;
+    }
+    .main {
+      position:absolute; inset:0; background:var(--bg); max-width:none;
+      transform:translateX(100%); transition:transform .3s ease; z-index:20; overflow-y:auto;
+    }
+    .mobile-detail-open .sidebar { transform:translateX(-100%); }
+    .mobile-detail-open .main    { transform:translateX(0); }
+    .btn-back-mobile { display:flex; }
+  }
 </style>
 </head>
 <body>
@@ -201,6 +227,16 @@ async function apri(id){
   if (d.config) stato.costoOrario = d.config.costo_orario;
   renderLista();
   renderDettaglio();
+  openMobileDetail();
+}
+
+// Mobile: la sidebar (elenco progetti) e il dettaglio sono due "schermate".
+// Aprendo un progetto si scorre al dettaglio; il bottone back torna alla lista.
+function openMobileDetail(){
+  if (window.innerWidth <= 760) document.querySelector('.layout').classList.add('mobile-detail-open');
+}
+function closeMobileDetail(){
+  document.querySelector('.layout').classList.remove('mobile-detail-open');
 }
 
 function nuovoProgetto(){
@@ -208,12 +244,14 @@ function nuovoProgetto(){
   stato.dettaglio = { progetto:{ id:0, titolo:'', tipo:'lampada', stato:'IDEA', descrizione:'', materiali:'', scheda_tecnica:'', scarto_pct:10, prezzo_vendita:'', tempo_lavoro:'', costo_produzione:null, margine:null }, materiali:[], iterazioni:[], fasi:[], file:[], galleria:[] };
   renderLista();
   renderDettaglio(true);
+  openMobileDetail();
 }
 
 function renderDettaglio(nuovo=false){
   const p = stato.dettaglio.progetto;
   const stepi = STATI.indexOf(p.stato);
   document.getElementById('main').innerHTML = `
+    <button class="btn-back-mobile" onclick="closeMobileDetail()">← LISTA PROGETTI</button>
     <div class="panel">
       <div class="row">
         <div class="field" style="flex:2"><label>Titolo</label><input id="f_titolo" value="${esc(p.titolo)}" placeholder="Es. Lampada Orbit"></div>
@@ -271,6 +309,7 @@ async function eliminaProgetto(){
   await api('POST', { mode:'delete', id:stato.dettaglio.progetto.id });
   stato.sel=null; stato.dettaglio=null;
   document.getElementById('main').innerHTML='<div class="empty">Progetto eliminato.</div>';
+  closeMobileDetail();
   caricaLista();
 }
 // Congelamento: invece dei prompt testuali, scegli QUALI file dell'archivio sono la
