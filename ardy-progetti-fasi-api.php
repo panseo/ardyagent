@@ -187,8 +187,12 @@ try {
             if ($u !== '' && filter_var($u, FILTER_VALIDATE_URL)) $videoClean[] = $u;
         }
 
+        // Azzera wp_pubblicata_at: se la fase era già su WordPress, ora ha modifiche
+        // non ancora pubblicate (es. una foto nuova). Così la dashboard rimostra il
+        // bottone "Pubblica su WP" e la ripubblicazione SOSTITUISCE il blocco (vedi
+        // ardy-pubblica-fase-progetto.php, marcatore per-fase) invece di duplicarlo.
         $db->prepare(
-            "UPDATE fasi SET fase_nome = :nome, testo_breve = :breve, foto_urls = :foto, video_urls = :video
+            "UPDATE fasi SET fase_nome = :nome, testo_breve = :breve, foto_urls = :foto, video_urls = :video, wp_pubblicata_at = NULL
              WHERE id = :id AND progetto_id = :pid"
         )->execute([
             ':nome'  => $faseNome,
