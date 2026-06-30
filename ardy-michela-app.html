@@ -248,9 +248,13 @@
               <input type="date" class="info-value editable" id="dDataConsegna" oninput="markDirty()" style="width:100%;">
             </div>
             <div class="info-cell full">
-              <div class="info-label">📅 Sopralluoghi <small style="color:var(--text-dim);font-size:9px;">(ogni riga è un evento su Google Calendar — si salvano da soli)</small></div>
+              <div class="info-label">📅 Sopralluoghi e ritiri <small style="color:var(--text-dim);font-size:9px;">(ogni riga è un evento su Google Calendar — si salvano da soli; un ritiro = presa in carico → stato RITIRATI)</small></div>
               <div id="soprList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
               <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;border-top:1px dashed var(--border);padding-top:8px;">
+                <select id="soprNewTipo" class="info-value editable" title="Tipo di appuntamento" style="flex:0 0 auto;min-width:120px;">
+                  <option value="sopralluogo">🔎 Sopralluogo</option>
+                  <option value="ritiro">📦 Ritiro</option>
+                </select>
                 <input type="datetime-local" id="soprNewData" class="info-value editable" style="flex:1 1 180px;min-width:160px;">
                 <input type="text" id="soprNewEtichetta" class="info-value editable" placeholder="Etichetta (es. 2° sopralluogo)" style="flex:1 1 160px;min-width:140px;">
                 <button type="button" onclick="aggiungiSopralluogo()" style="background:var(--accent,#c8a96e);color:#1a1a1a;border:none;border-radius:5px;padding:7px 12px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">➕ Aggiungi</button>
@@ -2041,6 +2045,7 @@ async function caricaSopralluoghi(sessionId) {
   // reset del form "aggiungi"
   const nd = document.getElementById('soprNewData');      if (nd) nd.value = '';
   const ne = document.getElementById('soprNewEtichetta'); if (ne) ne.value = '';
+  const nt = document.getElementById('soprNewTipo');      if (nt) nt.value = 'sopralluogo';
   if (!sessionId) { cont.innerHTML = '<div style="color:var(--text-dim);font-size:11px;">Scheda senza sessione.</div>'; return; }
   cont.innerHTML = '<div style="color:var(--text-dim);font-size:11px;">Carico…</div>';
   try {
@@ -2056,19 +2061,40 @@ function renderSopralluoghi(items) {
   const cont = document.getElementById('soprList');
   if (!cont) return;
   if (!items.length) {
-    cont.innerHTML = '<div style="color:var(--text-dim);font-size:11px;">Nessun sopralluogo ancora. Aggiungine uno qui sotto 👇</div>';
+    cont.innerHTML = '<div style="color:var(--text-dim);font-size:11px;">Nessun sopralluogo o ritiro ancora. Aggiungine uno qui sotto 👇</div>';
     return;
   }
   cont.innerHTML = items.map(it => {
-    const val = it.data_ora ? String(it.data_ora).replace(' ', 'T').slice(0, 16) : '';
-    const et  = escHtml(it.etichetta || 'Sopralluogo');
+    const val  = it.data_ora ? String(it.data_ora).replace(' ', 'T').slice(0, 16) : '';
+    const et   = escHtml(it.etichetta || 'Sopralluogo');
+    const tipo = (it.tipo === 'ritiro') ? 'ritiro' : 'sopralluogo';
+    const sel  = (v) => tipo === v ? ' selected' : '';
     return `<div class="sopr-row" data-id="${it.id}" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+      <select data-f="tipo" class="info-value editable" title="Tipo di appuntamento" style="flex:0 0 auto;min-width:120px;">
+        <option value="sopralluogo"${sel('sopralluogo')}>🔎 Sopralluogo</option>
+        <option value="ritiro"${sel('ritiro')}>📦 Ritiro</option>
+      </select>
       <input type="datetime-local" value="${val}" data-f="data" class="info-value editable" style="flex:1 1 180px;min-width:160px;">
       <input type="text" value="${et}" data-f="etichetta" class="info-value editable" style="flex:1 1 160px;min-width:140px;">
       <button type="button" onclick="salvaSopralluogo(${it.id})" title="Salva / sposta" style="background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:5px;padding:6px 9px;font-size:12px;cursor:pointer;">💾</button>
       <button type="button" onclick="eliminaSopralluogo(${it.id})" title="Elimina" style="background:none;border:1px solid var(--border);color:#c87070;border-radius:5px;padding:6px 9px;font-size:12px;cursor:pointer;">🗑</button>
     </div>`;
   }).join('');
+}
+
+// Dopo aver registrato un RITIRO (presa in carico) già avvenuto, proponi di
+// avanzare il cliente a RITIRATI — ma solo se è ancora in uno stato precedente
+// (niente retrocessioni) e l'appuntamento non è nel futuro (è davvero avvenuto).
+function suggerisciRitirati(tipo, dataOraLocale) {
+  if (tipo !== 'ritiro' || !currentLead) return;
+  const PRIMA_DI_RITIRATI = ['LEAD', 'SOPRALLUOGO', 'PREVENTIVO', 'ACCONTO'];
+  const stato = (currentLead.Stato ?? '').toUpperCase();
+  if (!PRIMA_DI_RITIRATI.includes(stato)) return;
+  const quando = dataOraLocale ? new Date(dataOraLocale) : null;
+  if (quando && quando.getTime() > Date.now()) return;   // ritiro solo programmato
+  if (!confirm('Ritiro registrato. Gli oggetti sono in laboratorio: sposto il cliente nello stato RITIRATI?')) return;
+  setStato('RITIRATI');
+  saveLead();
 }
 
 async function soprPost(payload) {
@@ -2082,10 +2108,16 @@ async function aggiungiSopralluogo() {
   if (!soprSessionCorrente) return;
   const data = document.getElementById('soprNewData').value;
   const et   = document.getElementById('soprNewEtichetta').value.trim();
-  if (!data) { showToast('Metti data e ora del sopralluogo', 'error'); return; }
+  const tipo = (document.getElementById('soprNewTipo') || {}).value === 'ritiro' ? 'ritiro' : 'sopralluogo';
+  const cosa = tipo === 'ritiro' ? 'Ritiro' : 'Sopralluogo';
+  if (!data) { showToast('Metti data e ora dell\'appuntamento', 'error'); return; }
   try {
-    const res = await soprPost({ mode: 'salva', session_id: soprSessionCorrente, id: 0, data_ora: data, etichetta: et });
-    if (res && res.success) { showToast('📅 Sopralluogo aggiunto (calendario aggiornato)', 'success'); caricaSopralluoghi(soprSessionCorrente); }
+    const res = await soprPost({ mode: 'salva', session_id: soprSessionCorrente, id: 0, data_ora: data, etichetta: et, tipo: tipo });
+    if (res && res.success) {
+      showToast('📅 ' + cosa + ' aggiunto (calendario aggiornato)', 'success');
+      caricaSopralluoghi(soprSessionCorrente);
+      suggerisciRitirati(tipo, data);
+    }
     else showToast('⚠ ' + ((res && res.error) || 'Errore'), 'error');
   } catch (e) { showToast('⚠ Errore di rete', 'error'); }
 }
@@ -2096,17 +2128,23 @@ async function salvaSopralluogo(id) {
   if (!row) return;
   const data = row.querySelector('[data-f="data"]').value;
   const et   = row.querySelector('[data-f="etichetta"]').value.trim();
+  const tipo = (row.querySelector('[data-f="tipo"]') || {}).value === 'ritiro' ? 'ritiro' : 'sopralluogo';
+  const cosa = tipo === 'ritiro' ? 'Ritiro' : 'Sopralluogo';
   if (!data) { showToast('Metti data e ora', 'error'); return; }
   try {
-    const res = await soprPost({ mode: 'salva', session_id: soprSessionCorrente, id: id, data_ora: data, etichetta: et });
-    if (res && res.success) { showToast('📅 Sopralluogo aggiornato (calendario spostato)', 'success'); caricaSopralluoghi(soprSessionCorrente); }
+    const res = await soprPost({ mode: 'salva', session_id: soprSessionCorrente, id: id, data_ora: data, etichetta: et, tipo: tipo });
+    if (res && res.success) {
+      showToast('📅 ' + cosa + ' aggiornato (calendario spostato)', 'success');
+      caricaSopralluoghi(soprSessionCorrente);
+      suggerisciRitirati(tipo, data);
+    }
     else showToast('⚠ ' + ((res && res.error) || 'Errore'), 'error');
   } catch (e) { showToast('⚠ Errore di rete', 'error'); }
 }
 
 async function eliminaSopralluogo(id) {
   if (!soprSessionCorrente) return;
-  if (!confirm('Eliminare questo sopralluogo? L\'evento sparirà anche da Google Calendar.')) return;
+  if (!confirm('Eliminare questo appuntamento? L\'evento sparirà anche da Google Calendar.')) return;
   try {
     const res = await soprPost({ mode: 'delete', session_id: soprSessionCorrente, id: id });
     if (res && res.success) { showToast('🗑 Sopralluogo eliminato', 'success'); caricaSopralluoghi(soprSessionCorrente); }
