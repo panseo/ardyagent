@@ -6,8 +6,9 @@
 // condivisa con Sole su WhatsApp.
 //
 //   GET  ?session_id=...            → lista sopralluoghi del cliente (ordinati)
-//   POST {mode:'salva', session_id, id?, data_ora, etichetta?, note?}
+//   POST {mode:'salva', session_id, id?, data_ora, tipo?, etichetta?, note?}
 //                                   → crea (id=0) o sposta/aggiorna (id>0)
+//                                   → tipo: 'sopralluogo' (default) | 'ritiro'
 //   POST {mode:'delete', session_id, id}
 //                                   → elimina (+ cancella l'evento gcal)
 //
@@ -56,11 +57,12 @@ try {
     if ($mode === 'salva') {
         $id        = (int) ($in['id'] ?? 0);
         $dataOra   = sopr_norm_data($in['data_ora'] ?? '');
+        $tipo      = ($in['tipo'] ?? '') === 'ritiro' ? 'ritiro' : 'sopralluogo';
         $etichetta = trim((string) ($in['etichetta'] ?? ''));
         $note      = trim((string) ($in['note'] ?? ''));
         if ($dataOra === null) { echo json_encode(['success' => false, 'error' => 'Data/ora non valida']); exit(); }
         $cli = sopr_get_cliente($db, $sid);
-        $res = sopr_salva($db, $sid, $id, $dataOra, $etichetta, $note, $cli);
+        $res = sopr_salva($db, $sid, $id, $dataOra, $etichetta, $note, $cli, $tipo);
         if ($res === null) { echo json_encode(['success' => false, 'error' => 'Sopralluogo non trovato']); exit(); }
         echo json_encode(['success' => true, 'id' => $res['id']]);
         exit();

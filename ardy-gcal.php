@@ -349,7 +349,7 @@ function gcal_is_slot_free($date, $startTime, $durationHours = 2) {
 // -----------------------------------------------------------
 // Sposta un appuntamento esistente (cambia data/ora dell'evento)
 // -----------------------------------------------------------
-function gcal_update_event($eventId, $date, $startTime, $durationHours = 2) {
+function gcal_update_event($eventId, $date, $startTime, $durationHours = 2, $summary = null) {
     global $GCAL_CALENDAR_ID;
 
     $accessToken = gcal_get_access_token();
@@ -363,6 +363,9 @@ function gcal_update_event($eventId, $date, $startTime, $durationHours = 2) {
         'start' => ['dateTime' => $startDt->format(DateTime::RFC3339), 'timeZone' => 'Europe/Rome'],
         'end'   => ['dateTime' => $endDt->format(DateTime::RFC3339),   'timeZone' => 'Europe/Rome'],
     ];
+    // Titolo aggiornato solo se passato (es. cambio tipo sopralluogo↔ritiro): un
+    // PATCH senza 'summary' lascia intatto quello esistente.
+    if ($summary !== null && $summary !== '') $patch['summary'] = $summary;
 
     $url = 'https://www.googleapis.com/calendar/v3/calendars/' .
            urlencode($GCAL_CALENDAR_ID) . '/events/' . urlencode($eventId);

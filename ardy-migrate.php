@@ -186,6 +186,7 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `conoscenza_appresa` (
 ddl($pdo, "CREATE TABLE IF NOT EXISTS `sopralluoghi` (
     `id`            BIGINT AUTO_INCREMENT PRIMARY KEY,
     `session_id`    VARCHAR(64) NOT NULL,
+    `tipo`          VARCHAR(20) NOT NULL DEFAULT 'sopralluogo',
     `data_ora`      DATETIME NOT NULL,
     `etichetta`     VARCHAR(80) NOT NULL DEFAULT 'Sopralluogo',
     `note`          TEXT NULL,
@@ -194,6 +195,13 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `sopralluoghi` (
     `updated_at`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_sopr_session (session_id, data_ora)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE sopralluoghi");
+
+// `tipo` distingue l'appuntamento: 'sopralluogo' (default) o 'ritiro' (presa in
+// carico degli oggetti → fa scattare lo stato RITIRATI). Aggiunta idempotente per
+// gli ambienti dove la tabella sopralluoghi esiste già dalla versione precedente.
+if (!colExists($pdo, 'sopralluoghi', 'tipo')) {
+    ddl($pdo, "ALTER TABLE sopralluoghi ADD COLUMN `tipo` VARCHAR(20) NOT NULL DEFAULT 'sopralluogo' AFTER session_id", "sopralluoghi.tipo");
+}
 
 // Travaso (idempotente): per ogni cliente attivo che ha già un sopralluogo nei
 // vecchi campi ma NESSUNA riga in sopralluoghi, crea la prima riga. Re-eseguibile

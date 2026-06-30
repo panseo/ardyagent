@@ -35,11 +35,19 @@ function sopr_norm_data($raw): ?string {
     return $dt ? $dt->format('Y-m-d H:i:s') : null;
 }
 
-// Titolo evento calendario coerente con quelli creati altrove.
-function sopr_summary(array $cli, string $etichetta): string {
-    $nm = trim(($cli['nome'] ?? '') . ' ' . ($cli['cognome'] ?? ''));
-    $et = ($etichetta !== '' && strcasecmp($etichetta, 'Sopralluogo') !== 0) ? ' (' . $etichetta . ')' : '';
-    return 'Sopralluogo Ardy Lab' . $et
+// Etichetta predefinita per tipo (usata anche per non ripeterla nel titolo evento).
+function sopr_tipo_label(string $tipo): string {
+    return $tipo === 'ritiro' ? 'Ritiro' : 'Sopralluogo';
+}
+
+// Titolo evento calendario coerente con quelli creati altrove. Il tipo decide
+// "Sopralluogo Ardy Lab" vs "Ritiro Ardy Lab"; l'etichetta libera (se diversa dal
+// default del tipo) finisce tra parentesi.
+function sopr_summary(array $cli, string $etichetta, string $tipo = 'sopralluogo'): string {
+    $nm    = trim(($cli['nome'] ?? '') . ' ' . ($cli['cognome'] ?? ''));
+    $label = sopr_tipo_label($tipo);
+    $et = ($etichetta !== '' && strcasecmp($etichetta, $label) !== 0) ? ' (' . $etichetta . ')' : '';
+    return $label . ' Ardy Lab' . $et
          . (!empty($cli['zona']) ? ' — ' . $cli['zona'] : '')
          . ($nm !== '' ? ' / ' . $nm : '');
 }
@@ -89,16 +97,17 @@ function sopr_reconcile(PDO $db, string $sid): void {
         $chk->execute([':sid' => $sid, ':d' => $cli['sopralluogo_at']]);
     }
     if (!$chk->fetch()) {
-        $db->prepare("INSERT INTO sopralluoghi (session_id, data_ora, etichetta, gcal_event_id, created_at, updated_at)
-                      VALUES (:sid, :d, 'Sopralluogo', :e, NOW(), NOW())")
+        // Il mirror legacy (clienti.sopralluogo_at) è sempre un sopralluogo.
+        $db->prepare("INSERT INTO sopralluoghi (session_id, tipo, data_ora, etichetta, gcal_event_id, created_at, updated_at)
+                      VALUES (:sid, 'sopralluogo', :d, 'Sopralluogo', :e, NOW(), NOW())")
            ->execute([':sid' => $sid, ':d' => $cli['sopralluogo_at'], ':e' => $cli['gcal_event_id'] ?: null]);
     }
 }
 
-// Lista dei sopralluoghi del cliente (riconcilia prima, poi ordina per data).
+// Lista dei sopralluoghi/ritiri del cliente (riconcilia prima, poi ordina per data).
 function sopr_list(PDO $db, string $sid): array {
     sopr_reconcile($db, $sid);
-    $st = $db->prepare("SELECT id, data_ora, etichetta, note, gcal_event_id
+    $st = $db->prepare("SELECT id, tipo, data_ora, etichetta, note, gcal_event_id
                           FROM sopralluoghi WHERE session_id = :sid ORDER BY data_ora ASC");
     $st->execute([':sid' => $sid]);
     return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
@@ -107,12 +116,13 @@ function sopr_list(PDO $db, string $sid): array {
 // Upsert di un sopralluogo. $id=0 → nuovo; $id>0 → aggiorna/sposta. Cura l'evento
 // Google Calendar e riallinea il mirror. Ritorna ['id'=>int, 'gcal_event_id'=>?]
 // oppure null se $id>0 ma la riga non esiste per quel cliente.
-function sopr_salva(PDO $db, string $sid, int $id, string $dataOraNorm, string $etichetta, string $note, array $cli): ?array {
-    $etichetta = $etichetta !== '' ? $etichetta : 'Sopralluogo';
+function sopr_salva(PDO $db, string $sid, int $id, string $dataOraNorm, string $etichetta, string $note, array $cli, string $tipo = 'sopralluogo'): ?array {
+    $tipo      = in_array($tipo, ['sopralluogo', 'ritiro'], true) ? $tipo : 'sopralluogo';
+    $etichetta = $etichetta !== '' ? $etichetta : sopr_tipo_label($tipo);
     $dt        = new DateTime($dataOraNorm);
     $dateStr   = $dt->format('Y-m-d');
     $timeStr   = $dt->format('H:i');
-    $summary   = sopr_summary($cli, $etichetta);
+    $summary   = sopr_summary($cli, $etichetta, $tipo);
     $eid       = null;
 
     if ($id > 0) {
@@ -123,23 +133,25 @@ function sopr_salva(PDO $db, string $sid, int $id, string $dataOraNorm, string $
         $eid = $row['gcal_event_id'] ?? null;
         try {
             if (!empty($eid)) {
-                gcal_update_event($eid, $dateStr, $timeStr, 2);
+                // Passo anche il titolo: se cambia il tipo (sopralluogo↔ritiro) o
+                // l'etichetta, l'evento in calendario si aggiorna di conseguenza.
+                gcal_update_event($eid, $dateStr, $timeStr, 2, $summary);
             } else {
                 $ev = gcal_create_event($dateStr, $timeStr, $summary, (string) ($cli['telefono'] ?? ''), (string) ($cli['email'] ?? ''), '', '');
                 if (is_array($ev) && !empty($ev['id'])) $eid = $ev['id'];
             }
         } catch (Throwable $e) { error_log('ARDY SOPR LIB salva gcal(upd): ' . $e->getMessage()); }
-        $db->prepare("UPDATE sopralluoghi SET data_ora = :d, etichetta = :et, note = :nt, gcal_event_id = :e, updated_at = NOW()
+        $db->prepare("UPDATE sopralluoghi SET tipo = :tp, data_ora = :d, etichetta = :et, note = :nt, gcal_event_id = :e, updated_at = NOW()
                        WHERE id = :id AND session_id = :sid")
-           ->execute([':d' => $dataOraNorm, ':et' => $etichetta, ':nt' => ($note !== '' ? $note : null), ':e' => $eid, ':id' => $id, ':sid' => $sid]);
+           ->execute([':tp' => $tipo, ':d' => $dataOraNorm, ':et' => $etichetta, ':nt' => ($note !== '' ? $note : null), ':e' => $eid, ':id' => $id, ':sid' => $sid]);
     } else {
         try {
             $ev = gcal_create_event($dateStr, $timeStr, $summary, (string) ($cli['telefono'] ?? ''), (string) ($cli['email'] ?? ''), '', '');
             if (is_array($ev) && !empty($ev['id'])) $eid = $ev['id'];
         } catch (Throwable $e) { error_log('ARDY SOPR LIB salva gcal(new): ' . $e->getMessage()); }
-        $db->prepare("INSERT INTO sopralluoghi (session_id, data_ora, etichetta, note, gcal_event_id, created_at, updated_at)
-                      VALUES (:sid, :d, :et, :nt, :e, NOW(), NOW())")
-           ->execute([':sid' => $sid, ':d' => $dataOraNorm, ':et' => $etichetta, ':nt' => ($note !== '' ? $note : null), ':e' => $eid]);
+        $db->prepare("INSERT INTO sopralluoghi (session_id, tipo, data_ora, etichetta, note, gcal_event_id, created_at, updated_at)
+                      VALUES (:sid, :tp, :d, :et, :nt, :e, NOW(), NOW())")
+           ->execute([':sid' => $sid, ':tp' => $tipo, ':d' => $dataOraNorm, ':et' => $etichetta, ':nt' => ($note !== '' ? $note : null), ':e' => $eid]);
         $id = (int) $db->lastInsertId();
     }
 
