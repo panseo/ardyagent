@@ -245,7 +245,9 @@ function gcal_list_events(DateTime $fromDt, DateTime $toDt) {
 // -----------------------------------------------------------
 // Crea un appuntamento nel calendario di Michela
 // -----------------------------------------------------------
-function gcal_create_event($date, $startTime, $clientName, $clientPhone, $clientEmail, $address, $notes = '') {
+// $summary: titolo esplicito dell'evento (se null usa "🏠 $kind — $clientName").
+// $kind: etichetta tipo appuntamento ('Sopralluogo' | 'Ritiro') per titolo/descrizione.
+function gcal_create_event($date, $startTime, $clientName, $clientPhone, $clientEmail, $address, $notes = '', $summary = null, $kind = 'Sopralluogo') {
     global $GCAL_CALENDAR_ID;
 
     $accessToken = gcal_get_access_token();
@@ -255,14 +257,14 @@ function gcal_create_event($date, $startTime, $clientName, $clientPhone, $client
     $endDt   = clone $startDt;
     $endDt->modify('+2 hours');
 
-    $description  = "📋 Sopralluogo Ardy Lab\n\n";
+    $description  = "📋 $kind Ardy Lab\n\n";
     $description .= "Cliente: $clientName\n";
     if ($clientPhone) $description .= "Telefono: $clientPhone\n";
     if ($clientEmail) $description .= "Email: $clientEmail\n";
     if ($notes)       $description .= "\nNote: $notes";
 
     $event = [
-        'summary'     => "🏠 Sopralluogo — $clientName",
+        'summary'     => ($summary !== null && $summary !== '') ? $summary : "🏠 $kind — $clientName",
         'description' => $description,
         'location'    => $address,
         'start'       => ['dateTime' => $startDt->format(DateTime::RFC3339), 'timeZone' => 'Europe/Rome'],

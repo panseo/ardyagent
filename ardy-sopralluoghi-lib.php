@@ -123,6 +123,8 @@ function sopr_salva(PDO $db, string $sid, int $id, string $dataOraNorm, string $
     $dateStr   = $dt->format('Y-m-d');
     $timeStr   = $dt->format('H:i');
     $summary   = sopr_summary($cli, $etichetta, $tipo);
+    $kindLabel = sopr_tipo_label($tipo);                                          // 'Sopralluogo' | 'Ritiro' (titolo/descrizione evento)
+    $nomeCli   = trim((string) (($cli['nome'] ?? '') . ' ' . ($cli['cognome'] ?? ''))); // nome reale nella descrizione
     $eid       = null;
 
     if ($id > 0) {
@@ -137,7 +139,7 @@ function sopr_salva(PDO $db, string $sid, int $id, string $dataOraNorm, string $
                 // l'etichetta, l'evento in calendario si aggiorna di conseguenza.
                 gcal_update_event($eid, $dateStr, $timeStr, 2, $summary);
             } else {
-                $ev = gcal_create_event($dateStr, $timeStr, $summary, (string) ($cli['telefono'] ?? ''), (string) ($cli['email'] ?? ''), '', '');
+                $ev = gcal_create_event($dateStr, $timeStr, $nomeCli, (string) ($cli['telefono'] ?? ''), (string) ($cli['email'] ?? ''), '', '', $summary, $kindLabel);
                 if (is_array($ev) && !empty($ev['id'])) $eid = $ev['id'];
             }
         } catch (Throwable $e) { error_log('ARDY SOPR LIB salva gcal(upd): ' . $e->getMessage()); }
@@ -146,7 +148,7 @@ function sopr_salva(PDO $db, string $sid, int $id, string $dataOraNorm, string $
            ->execute([':tp' => $tipo, ':d' => $dataOraNorm, ':et' => $etichetta, ':nt' => ($note !== '' ? $note : null), ':e' => $eid, ':id' => $id, ':sid' => $sid]);
     } else {
         try {
-            $ev = gcal_create_event($dateStr, $timeStr, $summary, (string) ($cli['telefono'] ?? ''), (string) ($cli['email'] ?? ''), '', '');
+            $ev = gcal_create_event($dateStr, $timeStr, $nomeCli, (string) ($cli['telefono'] ?? ''), (string) ($cli['email'] ?? ''), '', '', $summary, $kindLabel);
             if (is_array($ev) && !empty($ev['id'])) $eid = $ev['id'];
         } catch (Throwable $e) { error_log('ARDY SOPR LIB salva gcal(new): ' . $e->getMessage()); }
         $db->prepare("INSERT INTO sopralluoghi (session_id, tipo, data_ora, etichetta, note, gcal_event_id, created_at, updated_at)
