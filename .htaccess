@@ -23,6 +23,12 @@ Options -Indexes
 # via FilesMatch più sotto).
 DirectoryIndex ardy-michela-app.html
 
+# Web App Manifest (icona schermata-home / installazione come app): MIME corretto
+# per .webmanifest. Uso .webmanifest e non .json perché i .json sono bloccati sopra.
+<IfModule mod_mime.c>
+    AddType application/manifest+json .webmanifest
+</IfModule>
+
 # -----------------------------------------------------------
 # GZIP — comprime le risposte testuali (HTML/CSS/JS/JSON) per ridurre il
 # traffico e velocizzare il caricamento. NON tocca le immagini (jpeg/png/webp:
