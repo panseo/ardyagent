@@ -1181,6 +1181,7 @@ async function caricaNotaSettimanale() {
 }
 function apriNotaEditor() {
   notaCostruisciRighe(_notaCorrente);
+  caricaTodoDatati();
   document.getElementById('notaEditorOverlay').classList.add('open');
 }
 // Editor a righe con checkbox "Fatto". Lo STORAGE resta testo libero (tabella
@@ -1293,6 +1294,86 @@ async function salvaNotaSettimanale() {
     btn.disabled = false;
     btn.textContent = old;
   }
+}
+
+// ─── Cose da fare CON data (slot su Google Calendar) ──────
+// Gemello "datato" della nota: ogni voce è un evento su Calendar (endpoint
+// ardy-todo-datati-api.php). Si salvano da sole, indipendenti dal SALVA della
+// lista testuale. Stesso schema dei sopralluoghi.
+async function caricaTodoDatati() {
+  const cont = document.getElementById('todoDatatiRows');
+  if (!cont) return;
+  const nd = document.getElementById('todoNewData');  if (nd) nd.value = '';
+  const nt = document.getElementById('todoNewTesto'); if (nt) nt.value = '';
+  cont.innerHTML = '<div style="color:var(--text-dim);font-size:11px;">Carico…</div>';
+  try {
+    const r = await fetch('ardy-todo-datati-api.php');
+    const d = await r.json();
+    renderTodoDatati((d && d.items) || []);
+  } catch (e) {
+    cont.innerHTML = '<div style="color:#c87070;font-size:11px;">Errore nel caricamento.</div>';
+  }
+}
+
+function renderTodoDatati(items) {
+  const cont = document.getElementById('todoDatatiRows');
+  if (!cont) return;
+  if (!items.length) {
+    cont.innerHTML = '<div style="color:var(--text-dim);font-size:11px;">Nessuna cosa da fare con data. Aggiungine una qui sotto 👇</div>';
+    return;
+  }
+  cont.innerHTML = items.map(it => {
+    const val = it.data_ora ? String(it.data_ora).replace(' ', 'T').slice(0, 16) : '';
+    const tx  = escHtml(it.testo || '');
+    return `<div class="todo-dat-row" data-id="${it.id}" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+      <input type="datetime-local" value="${val}" data-f="data" class="info-value editable" style="flex:1 1 170px;min-width:150px;">
+      <input type="text" value="${tx}" data-f="testo" maxlength="255" class="info-value editable" style="flex:1 1 160px;min-width:140px;">
+      <button type="button" onclick="salvaTodoDatato(${it.id})" title="Salva / sposta" style="background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:5px;padding:6px 9px;font-size:12px;cursor:pointer;">💾</button>
+      <button type="button" onclick="eliminaTodoDatato(${it.id})" title="Elimina" style="background:none;border:1px solid var(--border);color:#c87070;border-radius:5px;padding:6px 9px;font-size:12px;cursor:pointer;">🗑</button>
+    </div>`;
+  }).join('');
+}
+
+async function todoPost(payload) {
+  const r = await fetch('ardy-todo-datati-api.php', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+  });
+  return r.json();
+}
+
+async function aggiungiTodoDatato() {
+  const data  = document.getElementById('todoNewData').value;
+  const testo = document.getElementById('todoNewTesto').value.trim();
+  if (!data)  { showToast('Metti data e ora', 'error'); return; }
+  if (!testo) { showToast('Scrivi cosa c\'è da fare', 'error'); return; }
+  try {
+    const res = await todoPost({ mode: 'salva', id: 0, data_ora: data, testo: testo });
+    if (res && res.success) { showToast('📅 Cosa da fare aggiunta (calendario aggiornato)', 'success'); caricaTodoDatati(); }
+    else showToast('⚠ ' + ((res && res.error) || 'Errore'), 'error');
+  } catch (e) { showToast('⚠ Errore di rete', 'error'); }
+}
+
+async function salvaTodoDatato(id) {
+  const row = document.querySelector('.todo-dat-row[data-id="' + id + '"]');
+  if (!row) return;
+  const data  = row.querySelector('[data-f="data"]').value;
+  const testo = row.querySelector('[data-f="testo"]').value.trim();
+  if (!data)  { showToast('Metti data e ora', 'error'); return; }
+  if (!testo) { showToast('Scrivi cosa c\'è da fare', 'error'); return; }
+  try {
+    const res = await todoPost({ mode: 'salva', id: id, data_ora: data, testo: testo });
+    if (res && res.success) { showToast('📅 Cosa da fare aggiornata (calendario spostato)', 'success'); caricaTodoDatati(); }
+    else showToast('⚠ ' + ((res && res.error) || 'Errore'), 'error');
+  } catch (e) { showToast('⚠ Errore di rete', 'error'); }
+}
+
+async function eliminaTodoDatato(id) {
+  if (!confirm('Eliminare questa cosa da fare? L\'evento sparirà anche da Google Calendar.')) return;
+  try {
+    const res = await todoPost({ mode: 'delete', id: id });
+    if (res && res.success) { showToast('🗑 Eliminata', 'success'); caricaTodoDatati(); }
+    else showToast('⚠ ' + ((res && res.error) || 'Errore'), 'error');
+  } catch (e) { showToast('⚠ Errore di rete', 'error'); }
 }
 
 // ─── DIRTY ────────────────────────────────────────────────
@@ -4860,12 +4941,25 @@ async function archiviaPersi() {
     <div class="modal-lg-body">
       <p style="font-size:12px;color:var(--text-dim);margin:0 0 8px;">Una riga per ogni cosa da fare (sopralluoghi, materiali da ordinare, montaggi…). È la stessa lista che leggi e aggiorni con Sole su WhatsApp.</p>
       <p style="font-size:12px;color:#c8a96e;margin:0 0 12px;">Spunta <strong>«Fatto»</strong> sulle voci chiuse: ogni <strong>lunedì</strong> quelle spuntate spariscono e restano solo le cose ancora da fare. (Su WhatsApp le spunti dicendolo a Sole.)</p>
-      <div id="notaRows" style="display:flex;flex-direction:column;gap:6px;max-height:48vh;overflow:auto;"></div>
+      <div id="notaRows" style="display:flex;flex-direction:column;gap:6px;max-height:38vh;overflow:auto;"></div>
       <button type="button" class="nota-add-btn" onclick="notaAddRow('', false, true)">+ Aggiungi riga</button>
+
+      <!-- Cose da fare CON data: ognuna occupa uno slot su Google Calendar.
+           Si salvano da sole (come i sopralluoghi), indipendenti dal bottone SALVA
+           qui sotto, che vale solo per la lista testuale senza data. -->
+      <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:12px;">
+        <p style="font-size:12px;color:#c8a96e;margin:0 0 8px;font-weight:600;">📅 Con data e ora <small style="color:var(--text-dim);font-size:9px;font-weight:400;">(occupano uno slot su Google Calendar — si salvano da sole)</small></p>
+        <div id="todoDatatiRows" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;max-height:30vh;overflow:auto;"></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;border-top:1px dashed var(--border);padding-top:8px;">
+          <input type="datetime-local" id="todoNewData" class="info-value editable" style="flex:1 1 170px;min-width:150px;">
+          <input type="text" id="todoNewTesto" class="info-value editable" placeholder="Cosa c'è da fare…" maxlength="255" style="flex:1 1 160px;min-width:140px;">
+          <button type="button" onclick="aggiungiTodoDatato()" style="background:var(--accent,#c8a96e);color:#1a1a1a;border:none;border-radius:5px;padding:7px 12px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">➕ Aggiungi</button>
+        </div>
+      </div>
     </div>
     <div class="modal-lg-actions">
       <button class="btn-cancel" onclick="chiudiNotaEditor()">ANNULLA</button>
-      <button class="btn-save" id="notaSaveBtn" onclick="salvaNotaSettimanale()">💾 SALVA</button>
+      <button class="btn-save" id="notaSaveBtn" onclick="salvaNotaSettimanale()">💾 SALVA (lista senza data)</button>
     </div>
   </div>
 </div>

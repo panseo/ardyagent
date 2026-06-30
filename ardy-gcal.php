@@ -303,6 +303,59 @@ function gcal_create_event($date, $startTime, $clientName, $clientPhone, $client
 }
 
 // -----------------------------------------------------------
+// Evento "semplice": titolo + descrizione liberi, durata in ore. Per appuntamenti
+// NON legati a un cliente (es. cose da fare dello staff con slot a calendario).
+// A differenza di gcal_create_event() non forza testi "Sopralluogo". Ritorna
+// l'array dell'evento creato (con 'id') o false.
+function gcal_create_simple($date, $startTime, $summary, $description = '', $durationHours = 1) {
+    global $GCAL_CALENDAR_ID;
+
+    $accessToken = gcal_get_access_token();
+    if (!$accessToken) return false;
+
+    $startDt = new DateTime($date . ' ' . $startTime, new DateTimeZone('Europe/Rome'));
+    $endDt   = clone $startDt;
+    $endDt->modify("+{$durationHours} hours");
+
+    $event = [
+        'summary'     => $summary,
+        'description' => $description,
+        'start'       => ['dateTime' => $startDt->format(DateTime::RFC3339), 'timeZone' => 'Europe/Rome'],
+        'end'         => ['dateTime' => $endDt->format(DateTime::RFC3339),   'timeZone' => 'Europe/Rome'],
+        'reminders'   => [
+            'useDefault' => false,
+            'overrides'  => [
+                ['method' => 'popup', 'minutes' => 60],
+            ],
+        ],
+    ];
+
+    $url = 'https://www.googleapis.com/calendar/v3/calendars/' .
+           urlencode($GCAL_CALENDAR_ID) . '/events';
+
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_POST,           true);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT,        30);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS,     json_encode($event));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Authorization: Bearer ' . $accessToken,
+        'Content-Type: application/json'
+    ]);
+    $response = curl_exec($ch);
+    $err      = curl_error($ch);
+    curl_close($ch);
+
+    if ($err) {
+        error_log('ARDY GCAL CREATE SIMPLE ERROR: ' . $err);
+        return false;
+    }
+    $result = json_decode($response, true);
+    return isset($result['id']) ? $result : false;
+}
+
+// -----------------------------------------------------------
 // Verifica se uno slot specifico è libero (per spostamenti/conferme)
 // Ritorna true (libero), false (occupato) o null (impossibile verificare)
 // -----------------------------------------------------------
