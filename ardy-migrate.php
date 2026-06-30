@@ -224,6 +224,20 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `note_staff` (
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE note_staff");
 
+// Cose da fare CON data: il gemello "datato" della nota settimanale. Le voci senza
+// data restano nel testo libero (note_staff, anche su Sole); queste invece occupano
+// uno slot su Google Calendar (gcal_event_id) come i sopralluoghi, ma sono dello
+// STAFF (nessun cliente). Si gestiscono solo da dashboard (vedi ardy-todo-datati-api.php).
+ddl($pdo, "CREATE TABLE IF NOT EXISTS `todo_datati` (
+    `id`            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `testo`         VARCHAR(255) NOT NULL,
+    `data_ora`      DATETIME NOT NULL,
+    `gcal_event_id` VARCHAR(255) NULL,
+    `created_at`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_todo_data (data_ora)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE todo_datati");
+
 // ── DASH DESIGN (progetti interni) — vedi PIANO-DASH-DESIGN.md ────────────────
 // Progetto interno di design (lampade, mobili, complementi, restyling, prototipi):
 // soggetto della dash design, gemella della dash clienti. Non ha campi "cliente";
