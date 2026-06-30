@@ -54,15 +54,6 @@ try {
     echo json_encode(['success' => false, 'error' => 'Errore database']); exit();
 }
 
-if (!file_exists(ARDY_WP_LOAD)) { echo json_encode(['success' => false, 'error' => 'wp-load.php non trovato']); exit(); }
-$_SERVER['HTTP_HOST']   = 'ardy-lab.it';
-$_SERVER['REQUEST_URI'] = '/';
-if (!defined('WP_USE_THEMES')) define('WP_USE_THEMES', false);
-require_once ARDY_WP_LOAD;
-require_once ABSPATH . 'wp-admin/includes/media.php';
-require_once ABSPATH . 'wp-admin/includes/file.php';
-require_once ABSPATH . 'wp-admin/includes/image.php';
-
 // Byte di una foto della fase (disco-prima, poi B2).
 function faseProgFotoBytes(int $pid, int $fid, string $file): ?string {
     $base = 'progetti/' . $pid . '/fasi/' . $fid . '/' . basename($file);
@@ -72,6 +63,34 @@ function faseProgFotoBytes(int $pid, int $fid, string $file): ?string {
     return null;
 }
 
+// Pre-carico i BYTE delle foto PRIMA di caricare WordPress. Le foto su Backblaze B2
+// si leggono con una richiesta HTTPS in uscita (URL firmato → ardyStorageGet): se
+// quella lettura avviene DOPO require ARDY_WP_LOAD, dentro l'ambiente WordPress la
+// richiesta verso B2 fallisce e la foto non arriva mai all'articolo (il testo sì).
+// Leggendola qui — stesso contesto "pulito" del proxy `?file=` che già mostra le
+// anteprime in dashboard — il problema sparisce. Con le foto su disco (prima della
+// migrazione a B2) file_get_contents funzionava anche dopo wp-load: ecco perché
+// "prima di B2 funzionava".
+$fotoPronte = [];   // [['mime'=>.., 'ext'=>.., 'bytes'=>..], ...] già lette in RAM
+$extMap = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif'];
+foreach (array_slice($foto, 0, 12) as $fn) {
+    if (!is_string($fn) || $fn === '') continue;
+    $bytes = faseProgFotoBytes($progettoId, $faseId, $fn);
+    if (!is_string($bytes) || strlen($bytes) < 12) continue;
+    $mime = (new finfo(FILEINFO_MIME_TYPE))->buffer($bytes);
+    if (!isset($extMap[$mime])) continue;
+    $fotoPronte[] = ['mime' => $mime, 'ext' => $extMap[$mime], 'bytes' => $bytes];
+}
+
+if (!file_exists(ARDY_WP_LOAD)) { echo json_encode(['success' => false, 'error' => 'wp-load.php non trovato']); exit(); }
+$_SERVER['HTTP_HOST']   = 'ardy-lab.it';
+$_SERVER['REQUEST_URI'] = '/';
+if (!defined('WP_USE_THEMES')) define('WP_USE_THEMES', false);
+require_once ARDY_WP_LOAD;
+require_once ABSPATH . 'wp-admin/includes/media.php';
+require_once ABSPATH . 'wp-admin/includes/file.php';
+require_once ABSPATH . 'wp-admin/includes/image.php';
+
 $tmpDir = rtrim(ARDY_UPLOAD_DIR, '/') . '/progetti/' . $progettoId . '/_wp_tmp/';
 if (!is_dir($tmpDir) && !mkdir($tmpDir, 0755, true) && !is_dir($tmpDir)) {
     echo json_encode(['success' => false, 'error' => 'cartella temporanea non creabile']); exit();
@@ -79,21 +98,17 @@ if (!is_dir($tmpDir) && !mkdir($tmpDir, 0755, true) && !is_dir($tmpDir)) {
 ardyHardenUploadDir(rtrim(ARDY_UPLOAD_DIR, '/'));
 
 $fotoHtml = '';
-foreach (array_slice($foto, 0, 12) as $fn) {
-    if (!is_string($fn) || $fn === '') continue;
-    $bytes = faseProgFotoBytes($progettoId, $faseId, $fn);
-    if (!is_string($bytes) || strlen($bytes) < 12) continue;
-    $mime = (new finfo(FILEINFO_MIME_TYPE))->buffer($bytes);
-    $extMap = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif'];
-    if (!isset($extMap[$mime])) continue;
-    $tname = 'f_' . uniqid() . '.' . $extMap[$mime];
+foreach ($fotoPronte as $f) {                 // byte già letti da storage prima di wp-load
+    $bytes = $f['bytes'];
+    $mime  = $f['mime'];
+    $tname = 'f_' . uniqid() . '.' . $f['ext'];
     $tpath = $tmpDir . $tname;
     if (file_put_contents($tpath, $bytes) === false) continue;
     $attachId = media_handle_sideload(['name' => $tname, 'type' => $mime, 'tmp_name' => $tpath, 'error' => 0, 'size' => strlen($bytes)], 0);
     if (is_wp_error($attachId)) { @unlink($tpath); error_log('ARDY PUBBLICA FASE PROG SIDELOAD: ' . $attachId->get_error_message()); continue; }
     $fotoHtml .= '<img src="' . esc_url(wp_get_attachment_url($attachId)) . '" style="max-width:100%;margin:10px 0;border-radius:6px;" />' . "\n";
 }
-foreach (glob($tmpDir . '*') as $f) { if (is_file($f)) @unlink($f); }
+foreach (glob($tmpDir . '*') as $tmpf) { if (is_file($tmpf)) @unlink($tmpf); }
 @rmdir($tmpDir);
 
 // Marcatori HTML per-fase: delimitano il blocco di QUESTA fase dentro l'articolo.

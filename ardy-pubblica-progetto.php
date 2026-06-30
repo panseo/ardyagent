@@ -55,6 +55,33 @@ try {
     echo json_encode(['success' => false, 'error' => 'Errore database']); exit();
 }
 
+/** Byte di un'immagine di galleria (da disco o da B2). */
+function progettoGalleriaBytes(array $row, int $progettoId): ?string {
+    if (($row['storage'] ?? 'local') === 'b2' && $row['storage_key']) {
+        return ardyStorageGet($row['storage_key']);
+    }
+    $path = rtrim(ARDY_UPLOAD_DIR, '/') . '/progetti/' . $progettoId . '/galleria/' . basename($row['nome_file']);
+    if (!is_file($path)) return null;
+    $b = @file_get_contents($path);
+    return $b !== false ? $b : null;
+}
+
+// Pre-carico i BYTE della galleria PRIMA di caricare WordPress. Le foto su Backblaze
+// B2 si leggono con una richiesta HTTPS in uscita (URL firmato → ardyStorageGet): se
+// quella lettura avviene DOPO require ARDY_WP_LOAD, dentro l'ambiente WordPress la
+// richiesta verso B2 fallisce e le immagini non arrivano all'articolo. Leggendole qui,
+// nel contesto "pulito" prima di wp-load, il problema sparisce (stesso fix di
+// ardy-pubblica-fase-progetto.php). Su disco file_get_contents funzionava comunque.
+$galPronte = [];   // [['mime'=>.., 'ext'=>.., 'bytes'=>.., 'tipo'=>.., 'gid'=>..], ...]
+$extMap = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif'];
+foreach (array_slice($galleria, 0, 20) as $g) {
+    $bytes = progettoGalleriaBytes($g, $progettoId);
+    if (!is_string($bytes) || strlen($bytes) < 12) continue;
+    $mime = (new finfo(FILEINFO_MIME_TYPE))->buffer($bytes);
+    if (!isset($extMap[$mime])) continue;
+    $galPronte[] = ['mime' => $mime, 'ext' => $extMap[$mime], 'bytes' => $bytes, 'tipo' => $g['tipo'], 'gid' => $g['id']];
+}
+
 if (!file_exists(ARDY_WP_LOAD)) { echo json_encode(['success' => false, 'error' => 'wp-load.php non trovato']); exit(); }
 $_SERVER['HTTP_HOST']   = 'ardy-lab.it';
 $_SERVER['REQUEST_URI'] = '/';
@@ -72,25 +99,11 @@ if (!is_dir($tmpDir) && !mkdir($tmpDir, 0755, true) && !is_dir($tmpDir)) {
 }
 ardyHardenUploadDir(rtrim(ARDY_UPLOAD_DIR, '/'));
 
-/** Byte di un'immagine di galleria (da disco o da B2). */
-function progettoGalleriaBytes(array $row, int $progettoId): ?string {
-    if (($row['storage'] ?? 'local') === 'b2' && $row['storage_key']) {
-        return ardyStorageGet($row['storage_key']);
-    }
-    $path = rtrim(ARDY_UPLOAD_DIR, '/') . '/progetti/' . $progettoId . '/galleria/' . basename($row['nome_file']);
-    if (!is_file($path)) return null;
-    $b = @file_get_contents($path);
-    return $b !== false ? $b : null;
-}
-
 $immagini = [];   // [{url, id, tipo}]
-foreach (array_slice($galleria, 0, 20) as $g) {
-    $bytes = progettoGalleriaBytes($g, $progettoId);
-    if (!is_string($bytes) || strlen($bytes) < 12) continue;
-    $mime = (new finfo(FILEINFO_MIME_TYPE))->buffer($bytes);
-    $extMap = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif'];
-    if (!isset($extMap[$mime])) continue;
-    $fname = 'g_' . $g['id'] . '_' . uniqid() . '.' . $extMap[$mime];
+foreach ($galPronte as $g) {                  // byte già letti da storage prima di wp-load
+    $bytes = $g['bytes'];
+    $mime  = $g['mime'];
+    $fname = 'g_' . $g['gid'] . '_' . uniqid() . '.' . $g['ext'];
     $fpath = $tmpDir . $fname;
     if (file_put_contents($fpath, $bytes) === false) continue;
     $attachId = media_handle_sideload([
