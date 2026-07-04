@@ -17,6 +17,10 @@ header('Access-Control-Allow-Headers: Content-Type');
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
+// Difesa in profondità: se il Basic Auth a monte (.htaccess) non venisse
+// applicato, questo guard rifiuta comunque le richieste non autenticate.
+require_once __DIR__ . '/ardy-auth.php';
+ardyRequireAuth();
 
 // Fasi predefinite (allineate a FASI_DEFAULT nella dashboard) — usate solo
 // per il seeding iniziale alla creazione della tabella.

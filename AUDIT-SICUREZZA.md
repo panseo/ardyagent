@@ -1,7 +1,15 @@
 # Audit di sicurezza — Sistema Ardy Agent
 
 **Data:** 2026-07-04
-**Ambito:** applicazione PHP in `ardyagent.ardy-lab.it` (endpoint API, proxy AI, webhook WhatsApp, dashboard riservata) con particolare attenzione al trattamento dei **dati degli utenti** (clienti/lead: nome, telefono, email, indirizzo, conversazioni).
+**Ambito:** applicazione PHP in `ardyagent.ardy-lab.it`
+
+> ⚠️ **Stato fix (aggiornamento):** i problemi #1–#4 sono stati **risolti** nello stesso branch.
+> - **#2** `ardyRequireAuth()` aggiunto a tutti gli endpoint riservati (≈37 file). Nei file dual-use (`ardy-dossier`, `ardy-grazie-consegna`, `ardy-conoscenza-appresa`, `ardy-trasporti`) il guard scatta **solo** nel ramo endpoint diretto, non quando sono inclusi come libreria dal proxy/webhook. `ardy-email-finder` resta libero da CLI (uso previsto) ma protetto via web.
+> - **#3** `ardy-wa-lookup.php` e `ardy-wa-memoria.php` resi **fail-closed** sul segreto.
+> - **#1** `ardy-migrate.php` ora eseguibile solo da CLI o con segreto condiviso.
+> - **#4** rimossa l'esposizione di `getMessage()` in `ardy-archivia-persi` e `ardy-chiusura-sessioni`.
+> - **#5 / #6 / #7** (verifica cliente, token/config fuori web-root, retention) restano **aperti**: richiedono scelte operative/infrastrutturali, non solo codice.
+ (endpoint API, proxy AI, webhook WhatsApp, dashboard riservata) con particolare attenzione al trattamento dei **dati degli utenti** (clienti/lead: nome, telefono, email, indirizzo, conversazioni).
 
 > Nota di metodo: l'audit è statico (lettura del codice del repo). Non ho eseguito test dinamici sul server di produzione. Le priorità sono indicative; la verifica sul campo va fatta su `ardyagent.ardy-lab.it`.
 

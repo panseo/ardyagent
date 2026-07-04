@@ -28,14 +28,19 @@ require_once __DIR__ . '/ardy-briefing-lib.php';
 
 header('Content-Type: application/json');
 
-// Protezione opzionale via segreto condiviso (consigliata)
-if (defined('WA_LOOKUP_SECRET') && WA_LOOKUP_SECRET !== '') {
-    $sent = $_SERVER['HTTP_X_ARDY_SECRET'] ?? ($_GET['secret'] ?? '');
-    if (!hash_equals(WA_LOOKUP_SECRET, (string)$sent)) {
-        http_response_code(403);
-        echo json_encode(['success' => false, 'error' => 'non autorizzato']);
-        exit();
-    }
+// Protezione via segreto condiviso — FAIL-CLOSED.
+// Questo endpoint restituisce PII (identità e contesto del cliente dato il
+// numero): se il segreto non è configurato, rifiuta invece di restare aperto.
+if (!defined('WA_LOOKUP_SECRET') || WA_LOOKUP_SECRET === '') {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Configurazione mancante']);
+    exit();
+}
+$sent = $_SERVER['HTTP_X_ARDY_SECRET'] ?? ($_GET['secret'] ?? '');
+if (!hash_equals(WA_LOOKUP_SECRET, (string)$sent)) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => 'non autorizzato']);
+    exit();
 }
 
 // Numero: da querystring (?phone=) o da body JSON {"phone": "..."}

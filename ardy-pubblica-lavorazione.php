@@ -30,6 +30,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
+// Difesa in profondità: se il Basic Auth a monte (.htaccess) non venisse
+// applicato, questo guard rifiuta comunque le richieste non autenticate.
+require_once __DIR__ . '/ardy-auth.php';
+ardyRequireAuth();
+
 // -----------------------------------------------------------
 // 3. INPUT
 // -----------------------------------------------------------

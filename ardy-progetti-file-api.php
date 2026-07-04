@@ -26,6 +26,10 @@ header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
+// Difesa in profondità: se il Basic Auth a monte (.htaccess) non venisse
+// applicato, questo guard rifiuta comunque le richieste non autenticate.
+require_once __DIR__ . '/ardy-auth.php';
+ardyRequireAuth();
 
 // Categorie file e mappa estensione → categoria (whitelist: solo queste si caricano).
 const FILE_CATEGORIE = ['stl', '3mf', 'gcode', 'cad', 'altro'];

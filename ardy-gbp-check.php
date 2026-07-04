@@ -16,6 +16,11 @@
 require_once __DIR__ . '/ardy-config.php'; // costanti ARDY_GCAL_* (caricarlo PRIMA di gcal)
 require_once __DIR__ . '/ardy-gcal.php';   // per gcal_get_access_token()
 
+// Difesa in profondità: se il Basic Auth a monte (.htaccess) non venisse
+// applicato, questo guard rifiuta comunque le richieste non autenticate.
+require_once __DIR__ . '/ardy-auth.php';
+ardyRequireAuth();
+
 header('Content-Type: text/html; charset=utf-8');
 
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }

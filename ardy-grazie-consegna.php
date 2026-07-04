@@ -202,6 +202,15 @@ if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === realpath(__FILE__)) {
     header('Content-Type: application/json');
     if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') { http_response_code(200); exit(); }
 
+    // Difesa in profondità: accetta il segreto interno (chiamate server-to-server)
+    // oppure il Basic Auth della dashboard; se il .htaccess non scattasse, rifiuta.
+    $internalOk = defined('ARDY_INTERNAL_SECRET')
+        && hash_equals(ARDY_INTERNAL_SECRET, (string) ($_SERVER['HTTP_X_ARDY_INTERNAL'] ?? ''));
+    if (!$internalOk) {
+        require_once __DIR__ . '/ardy-auth.php';
+        ardyRequireAuth();
+    }
+
     $body      = json_decode(file_get_contents('php://input'), true) ?: [];
     $sessionId = $body['session_id'] ?? ($_GET['session_id'] ?? '');
     $force     = !empty($body['force']) || !empty($_GET['force']);

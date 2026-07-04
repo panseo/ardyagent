@@ -26,6 +26,10 @@ header('Access-Control-Allow-Headers: Content-Type');
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
+// Difesa in profondità: se il Basic Auth a monte (.htaccess) non venisse
+// applicato, questo guard rifiuta comunque le richieste non autenticate.
+require_once __DIR__ . '/ardy-auth.php';
+ardyRequireAuth();
 
 // Ciclo di vita del progetto (vedi PIANO-DASH-DESIGN.md §3). 'A_CATALOGO' è terminale
 // lato dash: stock/ordini/venduto vivono su Woo/Etsy, non qui.
