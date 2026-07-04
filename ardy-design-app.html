@@ -696,7 +696,8 @@ function fasiPanel(){
       <div id="reelOut" style="margin-top:10px"></div>
       <div style="margin-top:12px">
         <button onclick="inviaFotoB2()" id="b2Btn">☁️ Invia foto a B2 (backup)</button>
-        <span class="muted" style="margin-left:8px">Le foto restano su disco (da lì vanno su WordPress); questo ne carica una copia di backup su Backblaze.</span>
+        <button onclick="liberaSpazio()" id="freeBtn" style="margin-left:8px">🧹 Libera spazio disco</button>
+        <div class="muted" style="margin-top:6px">Backup: copia le foto su Backblaze tenendole su disco. Libera spazio: solo per le fasi già su WordPress (dove la foto vive ormai su WP), fa il backup su B2 e poi rimuove la copia locale.</div>
         <div id="b2Out" style="margin-top:8px"></div>
       </div>
     </div>` : ''}
@@ -732,6 +733,23 @@ async function inviaFotoB2(){
     if (d.success){
       out.innerHTML = `<span class="muted">✅ ${d.inviate} foto inviate a B2${d.errori?` · <span class="neg">${d.errori} errori</span>`:''}</span>`;
       toast('Backup su B2 completato');
+    } else { out.innerHTML = `<span class="neg">${esc(d.error||'Errore')}</span>`; toast(d.error||'Errore'); }
+  } catch(e){ out.innerHTML = `<span class="neg">Errore di rete</span>`; }
+  btn.disabled = false; btn.textContent = txt;
+}
+// Libera spazio su disco: per le fasi già pubblicate su WP, backup su B2 + rimozione locale.
+async function liberaSpazio(){
+  if (!confirm('Liberare lo spazio su disco delle foto già pubblicate su WordPress?\nVengono prima messe al sicuro su B2, poi rimosse dal disco. Le foto sull\'articolo WordPress non cambiano.')) return;
+  const btn = document.getElementById('freeBtn');
+  const out = document.getElementById('b2Out');
+  btn.disabled = true; const txt = btn.textContent; btn.textContent = '🧹 Pulizia in corso…';
+  out.innerHTML = '';
+  try {
+    const d = await fetch(FASI_API, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ mode:'libera_spazio', progetto_id: stato.dettaglio.progetto.id }) }).then(r=>r.json());
+    if (d.success){
+      out.innerHTML = `<span class="muted">🧹 ${d.liberate} foto liberate (${d.kb} KB)${d.errori?` · <span class="neg">${d.errori} errori</span>`:''}</span>`;
+      toast('Spazio liberato'); apri(stato.dettaglio.progetto.id);
     } else { out.innerHTML = `<span class="neg">${esc(d.error||'Errore')}</span>`; toast(d.error||'Errore'); }
   } catch(e){ out.innerHTML = `<span class="neg">Errore di rete</span>`; }
   btn.disabled = false; btn.textContent = txt;
