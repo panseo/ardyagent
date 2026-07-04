@@ -245,18 +245,20 @@ lavorato da Google, oppure è stato inviato per/da un progetto Cloud diverso da 
 attendere l'approvazione — è un passo MANUALE da fare in Cloud Console. Il supporto dice: l'endpoint
 **"Google My Business API"** non è *enabled* nel progetto Cloud (è un'API privata, visibile solo dopo che
 l'account è stato "provisionato" da Google).
-**Da fare (prossima sessione, lato Michela/Andrea — azione manuale, non codice):**
-1. **console.cloud.google.com** → assicurarsi di essere nel progetto Cloud giusto (Project Number
-   **532339794075**, quello del client OAuth usato da Ardy — verificarlo nella console).
-2. Andare sulla pagina **"API Library"** (⚠️ Google stesso avvisa: NON usare la barra di ricerca generale
-   in alto, va seguito il percorso della pagina).
-3. Cercare **"Google My Business API"** e cliccare **"Enable"** se compare.
-4. **Se NON compare/non è visibile** (probabile, essendo privata): rispondere alla mail di Ravi con
-   l'**indirizzo email dell'account Google loggato in quella Cloud Console** (verificare quale sia — non
-   dato per scontato che sia `michelapanella1999@gmail.com`), così Google può "provisionare" l'account e
-   rendere visibile l'API.
-5. Solo dopo che l'API risulta *Enabled*: ri-lanciare `ardy-gbp-check.php`, finché non dà verde ("QUOTA
-   SBLOCCATA").
+**Aggiornamento (04/07, verificato in console):** il progetto Cloud è **`ardy-lab`** (Project Number
+532339794075), account loggato **`ardy.documenti@gmail.com`**. **"Google My Business API" risulta GIÀ
+presente** nella dashboard delle API del progetto (badge "Privato") — quindi il passo "Enable" non è il
+problema. Nonostante questo, `ardy-gbp-check.php` dava ancora 403 "non in allow-list": il blocco è quindi
+sul **provisioning dell'account** lato Google (non sull'enablement dell'API).
+**Fatto (04/07):** risposta inviata alla mail di supporto Google (operatore "Ravi") con i dati per il
+provisioning:
+- Google account: **ardy.documenti@gmail.com**
+- Cloud project: **ardy-lab** (project number 532339794075)
+- Request ID originale: **3-7851000041139**
+**Da fare (prossima sessione):**
+1. Attendere la risposta/il provisioning di Google (può richiedere qualche giorno).
+2. Controllare la mail (anche SPAM) di `ardy.documenti@gmail.com` per l'esito.
+3. Ri-lanciare `ardy-gbp-check.php` dopo la conferma, finché non dà verde ("QUOTA SBLOCCATA").
 
 **Lato codice (già pronto, riabilitare SOLO a check verde):** il toggle Google nel pannello social
 (`ardy-michela-app.html`, `socialDestHtml`) è stato **ri-disattivato** dopo l'esito negativo del check —
