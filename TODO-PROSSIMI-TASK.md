@@ -208,6 +208,13 @@ INI-PEC non automatizzabile (captcha) → PEC via API a pagamento, eventuale tas
   fase "Avvio lavorazione" compare in "📋 Fasi pubblicate", (d) una fase pubblicata dopo dal modulo sotto
   **aggiorna la stessa pagina** (non ne crea una seconda). File: `ardy-michela-app.html` (box date + JS
   `pubblicaAvvioLavoro`/`handleAvvioFotoUpload`/`aggiornaVisibilitaAvvio`).
+- **Rimosse "Fasi previste dal sopralluogo" + badge "📐 da pianificare" (04/07) — DEPLOYATO, verifica veloce dopo
+  deploy.** Su richiesta di Michela: tolto dal box Note il pannello "📐 Fasi previste dal sopralluogo (dalla
+  libreria)" (generava bozze fasi da template scelti durante il sopralluogo — giudicato ridondante) e il badge
+  sidebar "📐 da pianificare" che gli era collegato. Restano invariati il semaforo giallo "Date da pianificare"
+  (date lavoro non impostate) e le altre due vie per creare bozze fasi (💾 SALVA IN BOZZA, estrazione da
+  preventivo PDF). **Verifica dopo deploy:** aprire una scheda in SOPRALLUOGO/ACCONTO con una nota → non deve
+  comparire più né il pannello template nel box Note né il badge "da pianificare" in sidebar.
 - **Date sopralluogo/consegna in dashboard (nuovo) — test dopo deploy:**
   - *Sopralluoghi (lista, Fase 1)*: ✅ deployato; aggiungi/sposta/elimina ci sono e **rispondono bene**
     (test rapido ok). Restano i test funzionali completi: nella scheda, sezione "📅 Sopralluoghi" → **Aggiungi** una visita
