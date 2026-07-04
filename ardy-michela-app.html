@@ -378,6 +378,29 @@
                 </div>
               </div>
               <div id="lavScadenzaHint" class="lav-scadenza-hint" style="display:none;"></div>
+
+              <!-- Avvio pagina lavorazione: crea il PRIMO post WP con foto + notifica cliente.
+                   Sparisce appena esiste già un post (da qui in poi si aggiorna dalle fasi sotto). -->
+              <div id="avvioLavWrap" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+                <div class="lav-title" style="margin-bottom:8px;">✦ Avvia la pagina lavorazione</div>
+                <p style="font-size:11px;color:var(--text-dim);margin:0 0 10px;">Pubblica subito su WordPress il primo aggiornamento (con foto) e avvisa il cliente via email e WhatsApp. Le fasi successive aggiorneranno questa stessa pagina.</p>
+                <textarea class="lav-textarea" id="avvioNote" placeholder="2-3 righe sull'avvio del lavoro (facoltativo)..." style="min-height:60px;"></textarea>
+                <div class="lav-foto-buttons">
+                  <label class="lav-foto-btn" for="avvioFotoCamera">
+                    📷 SCATTA FOTO
+                    <input type="file" id="avvioFotoCamera" accept="image/*" capture="environment" multiple>
+                  </label>
+                  <label class="lav-foto-btn lav-foto-btn-alt" for="avvioFotoInput">
+                    🖼️ DALLA GALLERIA
+                    <input type="file" id="avvioFotoInput" accept="image/*" multiple>
+                  </label>
+                </div>
+                <div class="lav-foto-count" id="avvioFotoCount"></div>
+                <div class="lav-preview" id="avvioPreview"></div>
+                <button class="btn-pubblica" id="btnPubblicaAvvio" onclick="pubblicaAvvioLavoro()">
+                  ✦ PUBBLICA AVVIO LAVORO + NOTIFICA CLIENTE
+                </button>
+              </div>
             </div>
 
             <!-- Fasi previste (bozze precompilate dai template scelti nel box note) -->
@@ -684,6 +707,10 @@ document.addEventListener('DOMContentLoaded', () => {
   ['lavFotoCamera', 'lavFotoInput'].forEach(id => {
     const input = document.getElementById(id);
     if (input) input.addEventListener('change', handleFotoUpload);
+  });
+  ['avvioFotoCamera', 'avvioFotoInput'].forEach(id => {
+    const input = document.getElementById(id);
+    if (input) input.addEventListener('change', handleAvvioFotoUpload);
   });
   ['lavVideoCamera', 'lavVideoInput'].forEach(id => {
     const input = document.getElementById(id);
@@ -1045,6 +1072,11 @@ function aggiornaSezioniVisibili(stato) {
     const linkEl  = document.getElementById('lavPostLink');
     if (lavWpPostLink) { linkEl.href = lavWpPostLink; linkEl.style.display = 'inline'; }
     else { linkEl.style.display = 'none'; }
+    document.getElementById('avvioNote').value = '';
+    document.getElementById('avvioPreview').innerHTML = '';
+    avvioImmagini = [];
+    aggiornaContatoreFotoAvvio();
+    aggiornaVisibilitaAvvio();
     document.getElementById('lavResult').classList.remove('visible');
     document.getElementById('lavPreview').innerHTML = '';
     lavImmagini   = [];
@@ -2047,6 +2079,105 @@ function aggiornaContatoreFoto() {
   count.textContent = lavImmagini.length ? `📸 ${lavImmagini.length} foto pronte da pubblicare` : '';
 }
 
+// ─── AVVIO PAGINA LAVORAZIONE (primo post, dal box "Periodo del lavoro") ──
+let avvioImmagini = []; // array base64, indipendente dalle foto della fase sotto
+
+function handleAvvioFotoUpload(event) {
+  const files   = Array.from(event.target.files);
+  const preview = document.getElementById('avvioPreview');
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const base64 = e.target.result.split(',')[1];
+      avvioImmagini.push(base64);
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      preview.appendChild(img);
+      aggiornaContatoreFotoAvvio();
+    };
+    reader.readAsDataURL(file);
+  });
+  event.target.value = ''; // permette di riaggiungere lo stesso scatto
+}
+
+function aggiornaContatoreFotoAvvio() {
+  const count = document.getElementById('avvioFotoCount');
+  if (count) count.textContent = avvioImmagini.length ? `📸 ${avvioImmagini.length} foto pronte da pubblicare` : '';
+}
+
+// Mostra il box "Avvia la pagina lavorazione" solo finché non esiste ancora un post:
+// da quel momento in poi si aggiorna con "Crea e pubblica nuova fase" più sotto.
+function aggiornaVisibilitaAvvio() {
+  const wrap = document.getElementById('avvioLavWrap');
+  if (wrap) wrap.style.display = lavWpPostId ? 'none' : '';
+}
+
+async function pubblicaAvvioLavoro() {
+  const sessionId = currentLead && currentLead.Session_ID;
+  if (!sessionId) { showToast('⚠ Seleziona prima una scheda valida', 'error'); return; }
+  const note   = document.getElementById('avvioNote').value.trim();
+  const mobile = document.getElementById('lavMobile').value.trim() || (currentLead.Mobile ?? '');
+  const noteFinali = note || 'Il tuo mobile è entrato in lavorazione: a breve i primi aggiornamenti.';
+
+  const btn = document.getElementById('btnPubblicaAvvio');
+  const btnLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ INVIO IN CORSO...';
+
+  const payload = {
+    session_id:  sessionId,
+    tipo:        'fase',
+    fase_nome:   'Avvio lavorazione',
+    note_brevi:  noteFinali,
+    mobile:      mobile,
+    email:       currentLead.Email ?? '',
+    nome:        `${currentLead.Nome ?? ''} ${currentLead.Cognome ?? ''}`.trim(),
+    wp_post_id:  lavWpPostId,
+    immagini:    avvioImmagini,
+    video_urls:  [],
+  };
+
+  try {
+    const res  = await fetch(LAVORAZIONE_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      lavWpPostId   = data.wp_post_id;
+      lavWpPostLink = data.post_link;
+
+      const linkEl = document.getElementById('lavPostLink');
+      linkEl.href = lavWpPostLink;
+      linkEl.style.display = 'inline';
+
+      document.getElementById('avvioNote').value = '';
+      document.getElementById('avvioPreview').innerHTML = '';
+      avvioImmagini = [];
+      aggiornaContatoreFotoAvvio();
+      aggiornaVisibilitaAvvio();
+
+      caricaFasiPubblicate(currentLead.Session_ID ?? '');
+      if (!currentLead.ha_fasi) {
+        currentLead.ha_fasi = true;
+        const hintEl = document.getElementById('notaSenzaFasiHint');
+        if (hintEl) hintEl.style.display = 'none';
+        renderList();
+      }
+      showToast('✓ Pagina lavorazione pubblicata: cliente avvisato', 'success');
+    } else {
+      showToast('⚠ Errore: ' + (data.error ?? 'sconosciuto'), 'error');
+    }
+  } catch (e) {
+    showToast('⚠ Errore di rete', 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = btnLabel;
+}
+
 // ─── VIDEO LAVORAZIONE ────────────────────────────────────
 function apriVideoUpload() {
   const accLav = document.getElementById('acc-lavorazione');
@@ -2566,6 +2697,7 @@ async function pubblicaFase(tipo) {
     if (data.success) {
       lavWpPostId   = data.wp_post_id;
       lavWpPostLink = data.post_link;
+      aggiornaVisibilitaAvvio();
 
       const linkEl = document.getElementById('lavPostLink');
       linkEl.href = lavWpPostLink;
