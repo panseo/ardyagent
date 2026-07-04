@@ -1,7 +1,7 @@
 # Ardy Lab — Task aperti & note utili
 
 > Solo task **aperti** + note operative + verifiche residue. Tutto ciò che è fatto **e deployato**
-> è rimosso (lo storico resta nei commit git). Ultima pulizia: 25/06/2026.
+> è rimosso (lo storico resta nei commit git). Ultima pulizia: 04/07/2026.
 
 > ⚠️ Promemoria sempre valido: se Sole tace su **tutti** i canali insieme (WhatsApp + webchat),
 > sospetta **credito Anthropic esaurito** (capitato il 21/06; si ricarica da Plans & Billing).
@@ -196,6 +196,18 @@ INI-PEC non automatizzabile (captcha) → PEC via API a pagamento, eventuale tas
 ---
 
 ## ⏳ DA VERIFICARE DAL VIVO / AZIONI MANUALI
+- **✦ Avvio pagina lavorazione dal box "Periodo del lavoro" (04/07, da testare) — DEPLOYATO, mai provato dal vivo.**
+  Nel box "📅 Periodo del lavoro" (compare passando un cliente a IN_LAVORAZIONE), sotto le date c'è ora una
+  sezione **"✦ Avvia la pagina lavorazione"**: foto (SCATTA FOTO / DALLA GALLERIA) + bottone **PUBBLICA AVVIO
+  LAVORO + NOTIFICA CLIENTE**. Riusa lo stesso endpoint delle fasi (`ardy-pubblica-lavorazione.php`, `fase_nome`
+  fisso "Avvio lavorazione"): crea il **primo** post WordPress della lavorazione, invia email + WhatsApp al
+  cliente, e il box sparisce da solo una volta creato il post (da lì in poi si aggiorna con "🔨 Crea e pubblica
+  nuova fase" più sotto). Nessuna modifica al backend. **Test da fare:** mettere un cliente reale/di prova su
+  IN_LAVORAZIONE → scattare/scegliere una foto nel nuovo box → pubblicare → verificare (a) il post compare sul
+  sito con foto e testo generato da Claude, (b) email + WhatsApp arrivano al cliente, (c) il box sparisce e la
+  fase "Avvio lavorazione" compare in "📋 Fasi pubblicate", (d) una fase pubblicata dopo dal modulo sotto
+  **aggiorna la stessa pagina** (non ne crea una seconda). File: `ardy-michela-app.html` (box date + JS
+  `pubblicaAvvioLavoro`/`handleAvvioFotoUpload`/`aggiornaVisibilitaAvvio`).
 - **Date sopralluogo/consegna in dashboard (nuovo) — test dopo deploy:**
   - *Sopralluoghi (lista, Fase 1)*: ✅ deployato; aggiungi/sposta/elimina ci sono e **rispondono bene**
     (test rapido ok). Restano i test funzionali completi: nella scheda, sezione "📅 Sopralluoghi" → **Aggiungi** una visita
@@ -395,15 +407,6 @@ resto admin-only. `ardyAuthUser()` già restituisce lo username → manca lo str
 Nuovo utente: `htpasswd -B <path> dipendente` (mai `-c`).
 
 ### Migliorie minori UX / dashboard CRM (bassa priorità)
-- **Popup date all'attivazione IN_LAVORAZIONE** — ✅ DEPLOYATO 25/06. Al click su
-  IN_LAVORAZIONE, se inizio/fine lavoro sono vuote, si apre un modale che le chiede (inizio precompilato a
-  oggi); "IMPOSTA DATE" le copia nei campi "Periodo del lavoro" e marca dirty (salvi tu, anti-clobber attivo),
-  "ANNULLA" chiude senza scrivere. Serve a far scattare gli avvisi di scadenza che dipendono da quelle date.
-  **UX fix (25/06):** prima il popup si poteva richiamare SOLO ri-facendo la transizione di stato (giro
-  storto: ricaricare la pagina / cambiare stato e tornare). Aggiunto pulsante **"✏️ Imposta date"** nel box
-  "📅 Periodo del lavoro" che apre il modale in qualsiasi momento (precompila coi valori già presenti);
-  testo del modale reso neutro (vale sia all'avvio sia in modifica). In alternativa i due campi data restano
-  editabili a mano direttamente nel box.
 - **Filtro sidebar default su ACCONTO/IN_LAVORAZIONE** invece di TUTTI (da decidere sull'uso reale).
 - **Briefing del mattino** (opzionale): salvare data ultimo briefing per numero così il riepilogo lungo parte
   da solo al primo "buongiorno" (oggi parte quando Michela chiede "come va oggi?").

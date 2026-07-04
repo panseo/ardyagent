@@ -483,6 +483,12 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
 - **Libreria fasi lavorative** (DB, **condivisa tra dispositivi**) con 12 fasi predefinite
 - **Periodo del lavoro** (date inizio/fine, riferite all'intero lavoro) + elenco **📋 Fasi
   pubblicate** (sola lettura: titolo + data) caricato da `ardy-get-fasi.php`
+- **✦ Avvia la pagina lavorazione** *(lug 2026)*: dentro il box "Periodo del lavoro", finché il
+  cliente non ha ancora un `wp_post_id`, un mini-form con foto (scatta/galleria) + bottone
+  **PUBBLICA AVVIO LAVORO + NOTIFICA CLIENTE**. Chiama lo stesso `ardy-pubblica-lavorazione.php`
+  delle fasi con `fase_nome` fisso `"Avvio lavorazione"` (nessuna modifica backend), quindi crea il
+  primo post WP + notifica email/WhatsApp; il box si nasconde da solo appena esiste un `wp_post_id`,
+  perché da lì in poi si aggiorna con "🔨 Crea e pubblica nuova fase"
 - **📅 Sopralluoghi** *(giu 2026)*: nella scheda, lista di N visite per cliente (data/ora + etichetta),
   ognuna **un evento Google Calendar**. Aggiungi / sposta (💾) / elimina (🗑) si salvano da soli via
   `ardy-sopralluoghi-api.php` (NON passano dal bottone SALVA). Sincronizzata con i sopralluoghi che
