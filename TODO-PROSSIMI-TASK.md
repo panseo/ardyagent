@@ -241,14 +241,22 @@ Google (non un errore JSON dell'API), cioè la richiesta è respinta **prima** d
 progetto Cloud (Project Number ricavato dal client_id OAuth: **532339794075**) **non è nell'allow-list**
 della Business Profile API. Il form Basic API Access (17/06, ID 3-7851000041139) o non è ancora stato
 lavorato da Google, oppure è stato inviato per/da un progetto Cloud diverso da quello 532339794075.
-**Da fare (prossima sessione):**
-1. Verificare in Google Cloud Console che il progetto **532339794075** sia esattamente quello per cui è
-   stato inviato il form di accesso, e che lì la Business Profile API family sia *Enabled*.
-2. Controllare l'email dell'account Google (anche SPAM) per un eventuale esito/richiesta di chiarimenti
-   rimasta senza risposta.
-3. Se sono passate >2 settimane dal 17/06 senza risposta: ri-sottomettere il form o aprire un ticket al
-   supporto Business Profile.
-4. Ri-lanciare `ardy-gbp-check.php` dopo ogni azione, finché non dà verde ("QUOTA SBLOCCATA").
+**Aggiornamento (04/07, risposta support Google via email, operatore "Ravi"):** NON è (solo) questione di
+attendere l'approvazione — è un passo MANUALE da fare in Cloud Console. Il supporto dice: l'endpoint
+**"Google My Business API"** non è *enabled* nel progetto Cloud (è un'API privata, visibile solo dopo che
+l'account è stato "provisionato" da Google).
+**Da fare (prossima sessione, lato Michela/Andrea — azione manuale, non codice):**
+1. **console.cloud.google.com** → assicurarsi di essere nel progetto Cloud giusto (Project Number
+   **532339794075**, quello del client OAuth usato da Ardy — verificarlo nella console).
+2. Andare sulla pagina **"API Library"** (⚠️ Google stesso avvisa: NON usare la barra di ricerca generale
+   in alto, va seguito il percorso della pagina).
+3. Cercare **"Google My Business API"** e cliccare **"Enable"** se compare.
+4. **Se NON compare/non è visibile** (probabile, essendo privata): rispondere alla mail di Ravi con
+   l'**indirizzo email dell'account Google loggato in quella Cloud Console** (verificare quale sia — non
+   dato per scontato che sia `michelapanella1999@gmail.com`), così Google può "provisionare" l'account e
+   rendere visibile l'API.
+5. Solo dopo che l'API risulta *Enabled*: ri-lanciare `ardy-gbp-check.php`, finché non dà verde ("QUOTA
+   SBLOCCATA").
 
 **Lato codice (già pronto, riabilitare SOLO a check verde):** il toggle Google nel pannello social
 (`ardy-michela-app.html`, `socialDestHtml`) è stato **ri-disattivato** dopo l'esito negativo del check —
