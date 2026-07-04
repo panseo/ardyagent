@@ -13,10 +13,13 @@
 //   POST {mode:'delete', id}                     → elimina una fase (+ foto)
 //   POST {mode:'riordina', progetto_id, ordine:[id,…]} → riordina le fasi
 //   POST {mode:'invia_b2', progetto_id}          → backup su B2 delle foto (copia; il disco resta)
+//   POST {mode:'libera_spazio', progetto_id}     → fasi già su WP: backup su B2 + rimozione copia locale
 //
 // STORAGE foto fasi: DISCO-FIRST. Le foto vivono sempre su disco (fonte per la
 // pubblicazione WordPress e le anteprime), così non dipendono dalla lettura di B2.
 // B2 è solo un backup, caricato a parte col comando invia_b2 — mai nel percorso critico.
+// Per non intasare il server, 'libera_spazio' svuota il disco delle SOLE fasi già
+// pubblicate (lì la foto vive nella libreria media di WP): backup su B2 e poi unlink.
 //
 // Protetto via .htaccess (Basic Auth) — elencato nel <FilesMatch>.
 // -----------------------------------------------------------
@@ -278,6 +281,39 @@ try {
             }
         }
         echo json_encode(['success' => true, 'inviate' => $inviate, 'errori' => $errori]);
+        exit();
+    }
+
+    // ── Libera spazio su disco ────────────────────────────────
+    // Solo per le fasi GIÀ pubblicate su WordPress: lì la foto vive ormai nella libreria
+    // media di WP (l'articolo la mostra da quella URL), quindi la copia locale non serve
+    // più. Per ognuna: prima garantiamo il backup su B2, POI cancelliamo il file da disco
+    // (mai il contrario). foto_urls resta invariato → le anteprime ricadono su B2.
+    if ($mode === 'libera_spazio') {
+        $progettoId = (int) ($in['progetto_id'] ?? 0);
+        if ($progettoId <= 0)    { echo json_encode(['success' => false, 'error' => 'progetto mancante']); exit(); }
+        if (!ardyB2Configured()) { echo json_encode(['success' => false, 'error' => 'Backblaze B2 non configurato: senza backup non libero il disco']); exit(); }
+        $st = $db->prepare("SELECT id, foto_urls FROM fasi WHERE progetto_id = ? AND wp_pubblicata_at IS NOT NULL");
+        $st->execute([$progettoId]);
+        $liberate = 0; $byte = 0; $errori = 0;
+        foreach ($st->fetchAll() as $row) {
+            $fid = (int) $row['id'];
+            $dir = progettoFaseFotoDir($progettoId, $fid);
+            foreach (json_decode($row['foto_urls'] ?? '[]', true) ?: [] as $fn) {
+                $fn   = basename((string) $fn);
+                $path = $dir . $fn;
+                if ($fn === '' || !is_file($path)) continue;   // già liberata o mai su disco
+                $raw = @file_get_contents($path);
+                if ($raw === false) { $errori++; continue; }
+                $mime = (new finfo(FILEINFO_MIME_TYPE))->buffer($raw) ?: 'application/octet-stream';
+                // Backup su B2 PRIMA di cancellare: se fallisce, il disco NON si tocca.
+                if (!ardyStoragePut(progettoFaseB2Key($progettoId, $fid, $fn), $raw, $mime)) { $errori++; continue; }
+                $sz = strlen($raw);
+                if (@unlink($path)) { $liberate++; $byte += $sz; } else { $errori++; }
+            }
+            if (is_dir($dir) && !glob($dir . '*')) @rmdir($dir);   // togli la cartella se svuotata
+        }
+        echo json_encode(['success' => true, 'liberate' => $liberate, 'kb' => (int) round($byte / 1024), 'errori' => $errori]);
         exit();
     }
 
