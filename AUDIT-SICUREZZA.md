@@ -8,7 +8,8 @@
 > - **#3** `ardy-wa-lookup.php` e `ardy-wa-memoria.php` resi **fail-closed** sul segreto.
 > - **#1** `ardy-migrate.php` ora eseguibile solo da CLI o con segreto condiviso.
 > - **#4** rimossa l'esposizione di `getMessage()` in `ardy-archivia-persi` e `ardy-chiusura-sessioni`.
-> - **#5 / #6 / #7** (verifica cliente, token/config fuori web-root, retention) restano **aperti**: richiedono scelte operative/infrastrutturali, non solo codice.
+> - **#5** `ardy-verify-client.php` rinforzato: IP reale del client (`ardyClientIp`) invece di `REMOTE_ADDR` (che dietro Cloudflare accomunava tutti gli utenti), match sulle **ultime 9 cifre** invece di 7 (brute-force ~1000× più costoso), conteggio dei soli tentativi **falliti** e storage persistente. Il codice di accesso `ARD-XXXX-XXXX` resta l'alternativa forte.
+> - **#6 / #7** (token/config fuori web-root, retention/GDPR) restano **aperti**: richiedono scelte infrastrutturali/operative, non solo codice.
  (endpoint API, proxy AI, webhook WhatsApp, dashboard riservata) con particolare attenzione al trattamento dei **dati degli utenti** (clienti/lead: nome, telefono, email, indirizzo, conversazioni).
 
 > Nota di metodo: l'audit è statico (lettura del codice del repo). Non ho eseguito test dinamici sul server di produzione. Le priorità sono indicative; la verifica sul campo va fatta su `ardyagent.ardy-lab.it`.
