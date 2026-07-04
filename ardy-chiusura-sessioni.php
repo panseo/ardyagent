@@ -122,7 +122,9 @@ try {
             if (notificaMichela($msg, $dedupe)) $inviate++;
         }
     } catch (PDOException $e) {
-        $errori[] = 'web: ' . $e->getMessage();
+        // Dettaglio solo nel log; nella risposta un'etichetta generica (niente
+        // divulgazione di errori DB al client).
+        $errori[] = 'ramo web';
         error_log('ARDY CHIUSURA SESSIONI WEB: ' . $e->getMessage());
     }
 
@@ -159,7 +161,8 @@ try {
             if (notificaMichela($msg, $dedupe)) $inviate++;
         }
     } catch (PDOException $e) {
-        $errori[] = 'whatsapp: ' . $e->getMessage();
+        // Dettaglio solo nel log; nella risposta un'etichetta generica.
+        $errori[] = 'ramo whatsapp';
         error_log('ARDY CHIUSURA SESSIONI WA: ' . $e->getMessage());
     }
 

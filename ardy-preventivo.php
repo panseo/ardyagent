@@ -15,6 +15,11 @@ date_default_timezone_set('Europe/Rome');
 
 require_once __DIR__ . '/ardy-net.php';
 
+// Difesa in profondità: se il Basic Auth a monte (.htaccess) non venisse
+// applicato, questo guard rifiuta comunque le richieste non autenticate.
+require_once __DIR__ . '/ardy-auth.php';
+ardyRequireAuth();
+
 define('MPDF_VENDOR', __DIR__ . '/vendor/autoload.php');
 define('PDF_OUTPUT_DIR', __DIR__ . '/preventivi_pdf/');
 define('LOGO_PATH',      __DIR__ . '/assets/logo.png');

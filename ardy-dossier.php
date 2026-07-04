@@ -247,6 +247,15 @@ if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === realpath(__FILE__)) {
     $internalOk = defined('ARDY_INTERNAL_SECRET')
         && hash_equals(ARDY_INTERNAL_SECRET, (string) ($_SERVER['HTTP_X_ARDY_INTERNAL'] ?? ''));
 
+    // Difesa in profondità: il dossier contiene TUTTI i dati del cliente
+    // (anagrafica + preventivi + chat). Se la chiamata non porta il segreto
+    // interno, deve essere autenticata via Basic Auth; se il .htaccess non
+    // scattasse, questo guard rifiuta comunque.
+    if (!$internalOk) {
+        require_once __DIR__ . '/ardy-auth.php';
+        ardyRequireAuth();
+    }
+
     $sessionId = $_GET['session_id'] ?? $_POST['session_id'] ?? '';
     if ($sessionId === '') {
         $body = json_decode(file_get_contents('php://input'), true);

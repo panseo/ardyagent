@@ -2,6 +2,12 @@
 
 require_once __DIR__ . '/ardy-config.php';
 
+// Difesa in profondità: questo flusso OAuth crea/aggiorna il token Google
+// (Calendar + Gmail). Deve restare accessibile solo all'area riservata: se il
+// Basic Auth a monte (.htaccess) non venisse applicato, il guard rifiuta.
+require_once __DIR__ . '/ardy-auth.php';
+ardyRequireAuth();
+
 $CLIENT_ID     = ARDY_GCAL_CLIENT_ID;
 $CLIENT_SECRET = ARDY_GCAL_CLIENT_SECRET;
 

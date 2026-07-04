@@ -9,6 +9,14 @@ require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-net.php';
 
+// Difesa in profondità: da CLI resta libero (uso previsto); via web deve
+// essere autenticato, così un accesso HTTP non protetto non fa girare lo
+// scraping né espone i contatti del CRM.
+if (php_sapi_name() !== 'cli') {
+    require_once __DIR__ . '/ardy-auth.php';
+    ardyRequireAuth();
+}
+
 $db = ardyDB();
 
 // Prendi contatti con sito ma senza email

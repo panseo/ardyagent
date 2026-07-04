@@ -24,6 +24,10 @@ header('Access-Control-Allow-Headers: Content-Type');
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
+// Difesa in profondità: se il Basic Auth a monte (.htaccess) non venisse
+// applicato, questo guard rifiuta comunque le richieste non autenticate.
+require_once __DIR__ . '/ardy-auth.php';
+ardyRequireAuth();
 if ($_SERVER['REQUEST_METHOD'] !== 'POST')    { http_response_code(405); echo json_encode(['success' => false, 'error' => 'Metodo non valido']); exit(); }
 
 $in         = json_decode(file_get_contents('php://input'), true) ?: [];

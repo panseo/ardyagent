@@ -11,6 +11,22 @@
 
 require_once __DIR__ . '/ardy-config.php';
 
+// -----------------------------------------------------------
+// GUARD — questo script esegue DDL sul DB. Va eseguito SOLO da CLI (deploy)
+// o, via HTTP, solo con il segreto condiviso. Senza guard sarebbe una pagina
+// pubblica capace di lanciare operazioni sullo schema e divulgare errori DB.
+// -----------------------------------------------------------
+if (PHP_SAPI !== 'cli') {
+    $sent = $_SERVER['HTTP_X_ARDY_SECRET'] ?? ($_GET['secret'] ?? '');
+    if (!defined('WA_LOOKUP_SECRET') || WA_LOOKUP_SECRET === ''
+        || !hash_equals(WA_LOOKUP_SECRET, (string) $sent)) {
+        http_response_code(403);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo "Non autorizzato";
+        exit;
+    }
+}
+
 $pdo = new PDO(
     'mysql:host=' . ARDY_DB_HOST . ';dbname=' . ARDY_DB_NAME . ';charset=utf8mb4',
     ARDY_DB_USER,
