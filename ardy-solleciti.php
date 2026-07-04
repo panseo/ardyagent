@@ -564,6 +564,13 @@ try {
             if (in_array('whatsapp', $canali, true)) {
                 $tel = $caso['telefono'] ?? '';
                 $esito['whatsapp'] = $tel ? sollecito_invia_whatsapp($tel, $testo) : false;
+                // Registra il sollecito in uscita nelle Conversazioni della dash,
+                // così l'eventuale risposta del cliente (salvata dal webhook) è in thread.
+                if ($esito['whatsapp']) {
+                    require_once __DIR__ . '/ardy-wa-store.php';
+                    ardy_wa_save_message($db, (string) $tel, 'assistant',
+                        '📢 Sollecito (livello ' . $livello . ") inviato:\n" . $testo);
+                }
             }
             if (in_array('email', $canali, true)) {
                 $pdfPath = null;

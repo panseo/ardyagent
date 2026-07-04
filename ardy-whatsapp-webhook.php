@@ -118,6 +118,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (count($logs) > 50) $logs = array_slice($logs, -50);
     file_put_contents($logFile, json_encode($logs, JSON_PRETTY_PRINT));
 
+    // -----------------------------------------------------------
+    // Persistenza IDEMPOTENTE del messaggio in arrivo in `wa_messaggi`.
+    // Il webhook è l'unico punto da cui passano TUTTI i messaggi del cliente:
+    // salvandoli qui, ogni risposta — comprese quelle a una notifica della
+    // dashboard (inizio lavoro, fasi, ...) — compare in dash nelle Conversazioni,
+    // a prescindere da cosa faccia n8n. Idempotente per msg_id (le riconsegne di
+    // Meta non duplicano). Best-effort: nessun errore qui deve impedire il 200 a
+    // Meta né l'inoltro a n8n sotto.
+    // -----------------------------------------------------------
+    if ($from !== '') {
+        $waContent = '';
+        switch ($msgType) {
+            case 'text':     $waContent = (string) $msgText; break;
+            case 'image':    $waContent = '📷 ' . ($caption !== '' ? $caption : 'Foto'); break;
+            case 'audio':    $waContent = '🎤 Messaggio vocale'; break;
+            case 'video':    $waContent = '🎥 Video' . ($caption !== '' ? ': ' . $caption : ''); break;
+            case 'document': $waContent = '📎 Documento' . (($message['document']['filename'] ?? '') !== '' ? ': ' . $message['document']['filename'] : ''); break;
+            case 'sticker':  $waContent = '🌟 Sticker'; break;
+            case 'location': $waContent = '📍 Posizione'; break;
+            default:
+                // interactive (button/list reply), ecc.: prova a estrarre un testo leggibile
+                $waContent = (string) ($message['button']['text']
+                    ?? $message['interactive']['button_reply']['title']
+                    ?? $message['interactive']['list_reply']['title']
+                    ?? '');
+                if ($waContent === '') $waContent = '💬 messaggio (' . $msgType . ')';
+        }
+        if ($waContent !== '') {
+            try {
+                require_once __DIR__ . '/ardy-db.php';
+                require_once __DIR__ . '/ardy-wa-store.php';
+                ardy_wa_save_message(ardyDB(), $from, 'user', $waContent, $msgId);
+            } catch (Throwable $e) {
+                error_log('ARDY WEBHOOK persist: ' . $e->getMessage());
+            }
+        }
+    }
+
     // Inoltra a n8n per l'elaborazione
     $n8nWebhookUrl = 'https://n8n.ardy-lab.it/webhook/ardy-whatsapp';
     $n8nPayload = [

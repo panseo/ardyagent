@@ -30,7 +30,7 @@ ardyagent.ardy-lab.it/
 ├── ardy-chat-corsi.js         # Chat in "modalità corso" /ardy-agent/?corso= (servita dal server; in WPCode solo loader)
 ├── ardy-widget-lavorazione.js # Widget chat contestuale per pagine lavorazione
 ├── ardy-verify-client.php     # Verifica identità cliente (telefono + wp_post_id)
-├── ardy-whatsapp-webhook.php  # Webhook WhatsApp Cloud API (estrae anche il media id delle foto inviate)
+├── ardy-whatsapp-webhook.php  # Webhook WhatsApp Cloud API (estrae il media id delle foto; salva ogni messaggio in arrivo in wa_messaggi via ardy-wa-store → risposte visibili in dash anche senza n8n)
 ├── ardy-wa-agent.php          # Cervello WhatsApp lato cliente: loop agentico con tool calendario/lead/sposta + email + ricezione/valutazione foto
 ├── ardy-wa-crea-scheda.php    # Crea la scheda lead nel CRM da WhatsApp (usa il numero WA se manca il telefono)
 ├── ardy-sanitize.php          # Rete anti-sbrodolatura: ripulisce eventuale sintassi tool trapelata come testo
@@ -44,6 +44,7 @@ ardyagent.ardy-lab.it/
 ├── ardy-crm-api.php           # API CRM interna
 ├── ardy-dossier.php           # Dossier cliente in Markdown (clienti+preventivi+fasi+chat WA+chat web) per Sole/Michela
 ├── ardy-web-memoria.php       # Libreria: persistenza chat web (tabella web_messaggi) — usata da proxy e dossier
+├── ardy-wa-store.php          # Libreria: salvataggio IDEMPOTENTE in wa_messaggi (webhook + n8n + notifiche dash). Dedup per wa_msg_id (riconsegne Meta) o per contenuto (no doppioni n8n)
 ├── ardy-conoscenza-appresa.php # Autoapprendimento di Sole: distilla conoscenza anonima dalle fasi (tabella conoscenza_appresa) — libreria + endpoint dashboard
 ├── ardy-grazie-consegna.php   # Ringraziamento alla consegna: email (Brevo) + WhatsApp (template) — recensione/social/newsletter
 ├── ardy-trasporti.php         # Consegne/ritiri: email "è pronto" (→COMPLETATO) + giornata Trasporti (libreria + endpoint dashboard)

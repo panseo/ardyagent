@@ -97,15 +97,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
     try {
-        $ins = $db->prepare("INSERT INTO wa_messaggi (phone, role, content) VALUES (:p, :r, :c)");
+        // Salvataggio idempotente condiviso col webhook: se il webhook ha già
+        // registrato il messaggio in arrivo (per id Meta), il dedup morbido per
+        // contenuto evita il doppione qui. Se n8n passa un `id`/`msg_id` per riga
+        // lo usiamo per il dedup esatto.
+        require_once __DIR__ . '/ardy-wa-store.php';
         $saved = 0;
         foreach ($msgs as $m) {
-            $role    = ($m['role'] ?? '') === 'assistant' ? 'assistant' : 'user';
-            $content = trim((string)($m['content'] ?? ''));
-            if ($content === '') continue;
-            if (mb_strlen($content) > 8000) $content = mb_substr($content, 0, 8000);
-            $ins->execute([':p' => $phone, ':r' => $role, ':c' => $content]);
-            $saved++;
+            $role    = (string)($m['role'] ?? '');
+            $content = (string)($m['content'] ?? '');
+            $msgId   = $m['msg_id'] ?? ($m['id'] ?? null);
+            if (ardy_wa_save_message($db, $phone, $role, $content, $msgId !== null ? (string)$msgId : null)) {
+                $saved++;
+            }
         }
         // Pulizia leggera: tieni la memoria gestibile (max ~100 righe per numero)
         $db->prepare(

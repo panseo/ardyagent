@@ -76,6 +76,17 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `wa_messaggi` (
     INDEX idx_phone (phone, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE wa_messaggi");
 
+// wa_messaggi.wa_msg_id: id-messaggio Meta per la persistenza IDEMPOTENTE del
+// webhook (ardy-wa-store.php). L'indice UNIQUE fa sì che le riconsegne del
+// webhook di Meta non creino doppioni. NULL ammessi (righe storiche + salvataggi
+// n8n senza id): MySQL consente più NULL in un indice UNIQUE.
+if (!colExists($pdo, 'wa_messaggi', 'wa_msg_id')) {
+    ddl($pdo, "ALTER TABLE wa_messaggi ADD COLUMN wa_msg_id VARCHAR(128) NULL AFTER content", "wa_messaggi.wa_msg_id");
+}
+if (!indexExists($pdo, 'wa_messaggi', 'uq_wa_msg_id')) {
+    ddl($pdo, "ALTER TABLE wa_messaggi ADD UNIQUE INDEX uq_wa_msg_id (wa_msg_id)", "INDEX wa_messaggi.uq_wa_msg_id");
+}
+
 ddl($pdo, "CREATE TABLE IF NOT EXISTS `web_messaggi` (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     session_id VARCHAR(64) NOT NULL,
