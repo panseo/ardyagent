@@ -304,8 +304,12 @@ if (!$isComunicazione && defined('WA_TEMPLATE_FASI') && WA_TEMPLATE_FASI !== '')
         $stTel = $dbTel->prepare("SELECT telefono FROM clienti WHERE session_id = :sid LIMIT 1");
         $stTel->execute([':sid' => $sessionId]);
         $telCliente = (string)($stTel->fetchColumn() ?: '');
-        if ($telCliente !== '') {
-            inviaWhatsAppCliente($telCliente, $clienteNome, $mobileTitolo, $faseNome, $postLink);
+        if ($telCliente !== '' && inviaWhatsAppCliente($telCliente, $clienteNome, $mobileTitolo, $faseNome, $postLink)) {
+            // Registra la notifica in uscita nelle Conversazioni della dash, così
+            // l'eventuale risposta del cliente (salvata dal webhook) ha contesto.
+            require_once __DIR__ . '/ardy-wa-store.php';
+            ardy_wa_save_message($dbTel, $telCliente, 'assistant',
+                '📢 Aggiornamento lavorazione: ' . $faseNome . ($postLink !== '' ? "\n" . $postLink : ''));
         }
     } catch (Throwable $e) {
         error_log('ARDY PUBBLICA WA CLIENTE: ' . $e->getMessage());

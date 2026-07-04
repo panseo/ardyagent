@@ -181,6 +181,14 @@ function ardy_invia_grazie_consegna(PDO $db, string $sessionId, bool $force = fa
     $out['email']    = ardy_grazie_email($cli);
     $out['whatsapp'] = ardy_grazie_whatsapp($cli);
 
+    // Registra il ringraziamento in uscita nelle Conversazioni della dash, così
+    // l'eventuale risposta del cliente (salvata dal webhook) resta in thread.
+    if ($out['whatsapp'] && !empty($cli['telefono'])) {
+        require_once __DIR__ . '/ardy-wa-store.php';
+        ardy_wa_save_message($db, (string) $cli['telefono'], 'assistant',
+            '📢 Ringraziamento consegna inviato');
+    }
+
     // Segna come inviato se almeno un canale è partito (evita loop di retry infiniti).
     if ($out['email'] || $out['whatsapp']) {
         try {
