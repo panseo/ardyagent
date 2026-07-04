@@ -603,6 +603,10 @@ const IG_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="#E1306C"><
 const GOOGLE_SVG = '<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-2.8-.4-4H24v7.3h12.1c-.2 1.8-1.6 4.6-4.6 6.5l6.7 5.2c4.3-3.9 6.9-9.7 6.9-15z"/><path fill="#34A853" d="M24 46c6.1 0 11.2-2 14.9-5.5l-7.1-5.5c-1.9 1.3-4.5 2.3-7.8 2.3-6 0-11-4-12.8-9.5l-7.3 5.6C7.5 41 15.1 46 24 46z"/><path fill="#FBBC05" d="M11.2 27.8c-.5-1.4-.7-2.9-.7-4.4s.3-3 .7-4.4l-7.3-5.6C2.6 16.3 2 19.6 2 23.4s.6 7.1 1.9 10z"/><path fill="#EA4335" d="M24 9.5c4.3 0 7.1 1.8 8.8 3.4l6.4-6.2C35.2 3 30.1 1 24 1 15.1 1 7.5 6 3.9 13.4l7.3 5.6C13 13.5 18 9.5 24 9.5z"/></svg>';
 
 // Selettore destinazioni: ogni social è un toggle. Si può pubblicare anche su uno solo.
+// Google Business è di nuovo disattivato: il check ardy-gbp-check.php del 04/07
+// ha dato 403 "non in allow-list" — l'accesso Google NON è ancora davvero concesso
+// nonostante l'attesa fosse finita. Riabilitare solo quando il check dà verde
+// (vedi nota in TODO-PROSSIMI-TASK.md).
 function socialDestHtml(prefix, sel) {
   const selArr = (Array.isArray(sel) && sel.length) ? sel : ['facebook','instagram'];
   const tog = (plat, label, svg, disabled) => {
@@ -614,7 +618,7 @@ function socialDestHtml(prefix, sel) {
   return `<div class="social-dest" id="dest_${prefix}">`
     + tog('facebook','Facebook',FB_SVG,false)
     + tog('instagram','Instagram',IG_SVG,false)
-    + tog('google','Google',GOOGLE_SVG,false)
+    + tog('google','Google',GOOGLE_SVG,true)
     + `</div>`;
 }
 

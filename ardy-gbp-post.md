@@ -1,9 +1,12 @@
 # Pubblicazione post su Google Business Profile (fasi di lavorazione)
 
-> ✅ **STATO (04/07/2026): approvazione Google arrivata, toggle riabilitato.**
-> Richiesta `3-7851000041139` (quota 0 → 300 QPM) sbloccata. Il toggle Google nel
-> pannello social è ora attivo e collegato (vedi sotto). Prima di considerarlo live:
-> confermare `ardy-gbp-check.php` verde e fare un post di test reale sulla scheda.
+> ⏳ **STATO (04/07/2026): ancora in attesa — check dal vivo negativo.**
+> Il check `ardy-gbp-check.php` in produzione ha dato **403 "non in allow-list"**
+> (progetto Cloud 532339794075): la richiesta `3-7851000041139` non risulta ancora
+> concessa per questo progetto. Il toggle Google nel pannello social è stato
+> **ri-disattivato** dopo questo esito (era stato riattivato per errore in base a
+> un annuncio poi smentito dal check). Codice/wiring restano pronti — vedi
+> `TODO-PROSSIMI-TASK.md` per i passi di verifica. Riabilitare SOLO a check verde.
 
 ## Idea
 Quando una fase di lavorazione viene pubblicata, oltre a sito + social, si può
@@ -49,10 +52,12 @@ Risposta:
 ```
 Su 401/403/429 il messaggio è esplicito: *"accesso API non ancora attivo"*.
 
-## Collegamento alla dashboard — ✅ FATTO (04/07/2026)
+## Collegamento alla dashboard — codice PRONTO, toggle disattivato (in attesa)
 Nel pannello **"📲 Vuoi pubblicare sui social?"** di `ardy-michela-app.html` il toggle
-**Google** in `socialDestHtml` è ora attivo. `inviaSocial()` smista la richiesta:
-piattaforme `facebook`/`instagram` vanno a `ardy-pubblica-social.php` (invariato,
+**Google** in `socialDestHtml` resta **disattivato** (`disabled` a `true`) finché
+`ardy-gbp-check.php` non dà verde — vedi stato in cima al file. `inviaSocial()` è
+già cablato per smistare la richiesta quando verrà riattivato: piattaforme
+`facebook`/`instagram` vanno a `ardy-pubblica-social.php` (invariato,
 via n8n); `google` va **in aggiunta**, in parallelo, a `ardy-gbp-post.php` con lo
 stesso payload (`testo`/`testo_social`, `immagini`, `post_link`, `fase`, `mobile`,
 `cliente`). L'esito è unito: successo solo se tutte le piattaforme scelte vanno a

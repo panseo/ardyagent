@@ -233,24 +233,33 @@ INI-PEC non automatizzabile (captcha) → PEC via API a pagamento, eventuale tas
 
 ---
 
-## 🌐 GOOGLE BUSINESS PROFILE — post automatici delle fasi (SBLOCCATA 04/07, da verificare dal vivo)
+## 🌐 GOOGLE BUSINESS PROFILE — post automatici delle fasi (ANCORA IN ATTESA — check dal vivo 04/07 negativo)
 **Obiettivo**: pubblicare i post delle fasi sul profilo Google Business **Ardy di Michela Panella**.
-**STATO**: approvazione Google arrivata (form Basic API Access del 17/06, ID 3-7851000041139) → quota
-sbloccata. Lato codice: toggle **Google riabilitato** in dashboard (`ardy-michela-app.html`,
-`socialDestHtml`) e `inviaSocial()` ora spedisce in parallelo a `ardy-pubblica-social.php` (Facebook/
-Instagram, via n8n) e `ardy-gbp-post.php` (Google, diretto — nessuna modifica al nodo n8n). Si può
-pubblicare su un sottoinsieme qualsiasi delle tre; successo solo se TUTTE le piattaforme scelte vanno a
-buon fine (fallimento parziale mostra quali sono comunque uscite, per evitare doppi post).
-🐞 **Fix di sicurezza applicato in questo giro**: `ardy-gbp-post.php` e `ardy-gbp-check.php` erano privi di
-protezione — non erano elencati nel `.htaccess` (né nel blocco Basic Auth né nel deny) nonostante i loro
-stessi commenti la dessero per scontata. Aggiunti al blocco Basic Auth (come `ardy-pubblica-social.php`);
-`ardy-gbp.php` (lib, nessun output diretto) aggiunto al deny insieme a `ardy-net`/`ardy-db`/ecc.
-**Da verificare dal vivo (prossima sessione):**
-1. Aprire `ardy-gbp-check.php` (con le credenziali) → deve dare **verde** ("QUOTA SBLOCCATA").
-2. Pubblicare una fase di test con il toggle Google attivo → verificare che il post compaia sulla scheda
-   Google reale (non solo `success:true`).
-3. Provare un mix (es. solo Google, oppure Google+Facebook) e un fallimento parziale simulato, per
-   controllare il messaggio d'errore/successo in dashboard.
+**STATO REALE (04/07):** nonostante l'attesa dei 7-10 gg lav. fosse scaduta, `ardy-gbp-check.php` in
+produzione ha dato **403 "ACCESSO ALLA BUSINESS PROFILE API NON CONCESSO"** — risposta HTML generica di
+Google (non un errore JSON dell'API), cioè la richiesta è respinta **prima** di arrivare al servizio: il
+progetto Cloud (Project Number ricavato dal client_id OAuth: **532339794075**) **non è nell'allow-list**
+della Business Profile API. Il form Basic API Access (17/06, ID 3-7851000041139) o non è ancora stato
+lavorato da Google, oppure è stato inviato per/da un progetto Cloud diverso da quello 532339794075.
+**Da fare (prossima sessione):**
+1. Verificare in Google Cloud Console che il progetto **532339794075** sia esattamente quello per cui è
+   stato inviato il form di accesso, e che lì la Business Profile API family sia *Enabled*.
+2. Controllare l'email dell'account Google (anche SPAM) per un eventuale esito/richiesta di chiarimenti
+   rimasta senza risposta.
+3. Se sono passate >2 settimane dal 17/06 senza risposta: ri-sottomettere il form o aprire un ticket al
+   supporto Business Profile.
+4. Ri-lanciare `ardy-gbp-check.php` dopo ogni azione, finché non dà verde ("QUOTA SBLOCCATA").
+
+**Lato codice (già pronto, riabilitare SOLO a check verde):** il toggle Google nel pannello social
+(`ardy-michela-app.html`, `socialDestHtml`) è stato **ri-disattivato** dopo l'esito negativo del check —
+era stato riabilitato per errore in base a un annuncio poi smentito dal test dal vivo. `inviaSocial()` è
+già cablato per spedire in parallelo a `ardy-pubblica-social.php` (Facebook/Instagram, via n8n) e
+`ardy-gbp-post.php` (Google, diretto — nessuna modifica al nodo n8n); basta rimettere `false` nell'ultimo
+argomento del `tog('google', …)` in `socialDestHtml` per riattivarlo. Fix di sicurezza già applicato e
+valido a prescindere dall'esito: `ardy-gbp-post.php`/`ardy-gbp-check.php` ora protetti da Basic Auth in
+`.htaccess` (prima erano esposti senza protezione), `ardy-gbp.php` (lib) nel deny.
+**Ad approvazione confermata:** riabilitare il toggle (vedi sopra) → pubblicare una fase di test →
+verificare che il post compaia davvero sulla scheda Google (non solo `success:true`).
 
 ---
 
