@@ -249,6 +249,18 @@ INI-PEC non automatizzabile (captcha) → PEC via API a pagamento, eventuale tas
   Sole deve ora includere da sola il blocco "🗒️ COSE DA FARE QUESTA SETTIMANA" (la nota più recente),
   senza che Michela la chieda. Fix: blocco aggiunto in `ardy_riepilogo_settimana()` + istruzione briefing
   in `ardy-wa-lookup.php`. Test: salutare Sole al mattino con una nota salvata → deve elencarla nel resoconto.
+- **💬 Risposte WhatsApp alle notifiche → in dash nelle Conversazioni (DEPLOYATO 04/07, PR #34, mai provato dal
+  vivo).** Quando il cliente risponde su WhatsApp a una notifica della dash (inizio lavoro / fase / grazie /
+  sollecito), la risposta viene ora salvata dal **webhook** in `wa_messaggi` (nuova lib `ardy-wa-store.php`,
+  idempotente per `wa_msg_id` + dedup morbido vs n8n) e compare nella scheda cliente → 💬 Conversazioni, **anche
+  se Sole non risponde**. Le notifiche in uscita sono registrate come `role=assistant` (riga 📢) per dare
+  contesto. **PREREQUISITO:** `ardy-migrate.php` deve aver creato la colonna `wa_messaggi.wa_msg_id` + indice
+  `uq_wa_msg_id` (verifica in phpMyAdmin o `php ardy-migrate.php` → riga `OK/skip wa_messaggi.wa_msg_id`).
+  **Test dal vivo:** da un numero che è un cliente in CRM, scrivere a Sole (+39 379 375 6437) un testo
+  riconoscibile → aprire la scheda di quel cliente → 💬 Conversazioni → deve comparire il messaggio in arrivo
+  (e, se prima è stata inviata una notifica, anche la riga 📢 in uscita). Se non compare: cercare
+  `ARDY WA STORE` / `ARDY WEBHOOK persist` nell'`error_log` (di solito = migrazione non eseguita); controllare
+  in `ardy-wa-log.json` se il messaggio è arrivato al webhook.
 
 ---
 
@@ -293,40 +305,6 @@ verificare che il post compaia davvero sulla scheda Google (non solo `success:tr
 ---
 
 ## 📋 TASK DA SVILUPPARE (aperti)
-
-### ☀️ Briefing del mattino via EMAIL (push automatico 9:00) — ✅ DEPLOYATO 25/06 (cron da confermare, vedi in cima)
-Push proattivo del briefing **senza aspettare il "buongiorno"**. Scelto **email** (non WhatsApp) perché la
-finestra 24h di Meta non garantirebbe la consegna fuori sessione e un template non regge un briefing dinamico.
-- Nuovo endpoint **`ardy-briefing-mattino.php`**, protetto da `WA_LOOKUP_SECRET` (header `X-Ardy-Secret`),
-  NIENTE Basic Auth (lo chiama il cron). Solo **giorni feriali** (salta sab/dom; `?force=1` per test manuali).
-- Riusa la **stessa fonte del "buongiorno" WhatsApp**: la funzione `ardy_riepilogo_settimana()` è stata
-  **estratta** da `ardy-wa-lookup.php` in una lib condivisa **`ardy-briefing-lib.php`** (+ helper
-  `ardy_briefing_email_html()`); `ardy-wa-lookup.php` ora include la lib (nessuna duplicazione, comportamento
-  WhatsApp invariato). Lib aggiunta al deny `.htaccess`.
-- Invio via SMTP Brevo (stesso pattern di solleciti/trasporti), email HTML col logo. Include un **CTA**
-  "Apri la dashboard" per modificare le «Cose da fare questa settimana» (link `ARDY_DASHBOARD_URL`,
-  default `https://ardyagent.ardy-lab.it/` — unico accesso alla dashboard di Michela).
-- **Destinatario:** solo `michelapanella1999@gmail.com` (Andrea non lo vuole). Niente migrazione DB.
-- **Config (FATTA):** `ARDY_BRIEFING_EMAILS` impostata in `ardy-config.php`. L'email di test è arrivata → endpoint OK.
-- ⏳ **Resta solo da confermare il cron delle 9:00** (vedi blocco "DA CONTROLLARE SUBITO" in cima).
-
-### 🔁 Rollover settimanale della nota "Cose da fare" (lunedì) — ✅ DEPLOYATO 25/06 (cron da confermare, vedi in cima)
-La settimana è lun→dom. Il lunedì il job legge l'ultima `note_staff`, **elimina le righe marcate fatte**
-(✔ ✓ ✅ oppure `[x]`/`[X]`) e **riporta le non evase** salvando una riga nuova con la settimana ISO corrente
-(stessa codifica `date('o-\WW')` dei salvataggi). v1 su **testo libero + spunta** (zero AI), nessun refactor.
-- Nuovo endpoint **`ardy-rollover-nota.php`**, protetto da `WA_LOOKUP_SECRET`, NIENTE Basic Auth. **Idempotente**:
-  se l'ultima nota è già della settimana corrente non fa nulla (`?force=1` per i test). Logica pura in
-  `ardy-briefing-lib.php` → `ardy_nota_strip_fatte()` (testata: header tenuti, voci ✔/`[x]` rimosse).
-- **Editor nota in dashboard a RIGHE con checkbox "Fatto"** (non più textarea libera): in dashboard non si
-  digita l'icona ✔, si spunta la casella. Lo STORAGE resta testo libero col marcatore ✔ (ponte testo↔righe:
-  `notaParseRighe`/`notaSerializzaRighe` in `ardy-michela-app.html`) → Sole su WhatsApp e il rollover restano
-  identici. Voci spuntate mostrate barrate; "+ Aggiungi riga" e ✕ per riga.
-- 🐞 **Bugfix 25/06:** le righe di INTESTAZIONE (es. "NOTA SETTIMANALE (2026-W26)", "COSE DA FARE QUESTA
-  SETTIMANA") comparivano come voci con checkbox. Ora una riga è una VOCE solo se inizia da elemento di elenco
-  (bullet/numero/✔/`[x]`); le altre diventano **intestazioni** (senza checkbox, rimovibili con ✕, preservate
-  al salvataggio). In più, istruito Sole (prompt in `ardy-wa-lookup.php`) a **non** salvare righe di intestazione.
-- ⏳ **Cron del lunedì 06:00 da confermare** (vedi blocco "DA CONTROLLARE SUBITO" in cima).
-- ⚠️ Caveat (atteso): se nessuno spunta col ✔, il lunedì si riporta tutto — comportamento sicuro, non "pulisce" da solo.
 
 ### ☁️ Media su Backblaze B2 — off-load disco + semilavorato migrazione (PIANIFICATO 24/06)
 **Obiettivo doppio:** togliere i media dal disco del server attuale (oggi si "intasa") **e**, nello stesso
