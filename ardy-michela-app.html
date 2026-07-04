@@ -232,14 +232,6 @@
               <textarea class="info-value editable" id="dNote" rows="6" oninput="markDirty()"></textarea>
             </div>
             <div class="info-cell full">
-              <details id="notTemplateWrap" style="border:1px solid #333;border-radius:6px;padding:8px 12px;">
-                <summary style="cursor:pointer;color:#c8a96e;font-family:'DM Mono',monospace;font-size:11px;">📐 Fasi previste dal sopralluogo <small style="color:var(--text-dim);font-size:9px;">(dalla libreria)</small></summary>
-                <div id="notTemplateChips" style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 8px;"></div>
-                <button type="button" class="btn-secondary" style="width:100%;" onclick="generaFasiDaTemplate()">📐 Genera fasi da template selezionati</button>
-              </details>
-              <div id="notaSenzaFasiHint" style="display:none;font-size:11px;color:#c8a96e;margin-top:8px;">📐 C'è una nota ma nessuna fase è stata ancora generata — scegli i template quando hai deciso con calma.</div>
-            </div>
-            <div class="info-cell full">
               <div class="info-label" style="display:flex;align-items:center;gap:8px;">
                 <span>📦 Note consegna <small style="color:var(--text-dim);font-size:9px;">(materiali/logistica — la legge Sole)</small></span>
                 <button type="button" onclick="openNoteEditor('dNoteConsegna')" title="Apri editor a tutto schermo"
@@ -403,7 +395,7 @@
               </div>
             </div>
 
-            <!-- Fasi previste (bozze precompilate dai template scelti nel box note) -->
+            <!-- Fasi previste: bozze salvate con "💾 SALVA IN BOZZA" o estratte da un preventivo PDF -->
             <div id="fasiBozzaWrap" style="display:none;margin-bottom:16px;">
               <div class="lav-title" style="margin-bottom:8px;">📐 Fasi previste — da modificare e pubblicare</div>
               <div id="fasiBozzaList"></div>
@@ -745,13 +737,6 @@ async function loadLeads() {
 // Semaforo lavorazione: pallino + testo in base alle date (regola dei 4 gg).
 // Solo per stati operativi; gli altri non hanno segnale.
 const SEG_COLORI = { red:'#e05c5c', orange:'#e08a3c', green:'#4caf72', yellow:'#d8b23c' };
-// Stati in cui ha senso ricordare "c'è una nota ma nessuna fase generata ancora"
-// (esclude LEAD/STANDBY/PERSO/CONSEGNATO, dove le note non riguardano le fasi).
-const FASI_BADGE_STATES = ['SOPRALLUOGO','PREVENTIVO','ACCONTO','RITIRATI','IN_LAVORAZIONE','COMPLETATO'];
-function notaSenzaFasi(l) {
-  const stato = (l.Stato || '').toUpperCase();
-  return FASI_BADGE_STATES.includes(stato) && (l.Note || '').trim() !== '' && !l.ha_fasi;
-}
 function faseSegnale(l) {
   const stato = (l.Stato || '').toUpperCase();
   const ini = l.Inizio_lavoro || '';
@@ -826,7 +811,6 @@ function renderList() {
       <div class="lead-meta">
         <span class="stato-badge stato-${(l.Stato??'LEAD').toUpperCase().replace(/[^A-Z]/g,'')}">${escHtml(l.Stato ?? 'LEAD')}</span>
         ${l.ha_risposto ? '<span class="stato-badge" style="background:rgba(76,175,114,.22);color:#7fd49b;" title="Il cliente ha scritto di recente (ultime 48h) e non hai ancora aperto la chat">💬 ha risposto</span>' : ''}
-        ${notaSenzaFasi(l) ? '<span class="stato-badge" style="background:rgba(200,169,110,.18);color:#c8a96e;" title="Nota di sopralluogo senza fasi generate">📐 da pianificare</span>' : ''}
         ${(l.NoteConsegna && l.NoteConsegna.trim()) ? '<span class="stato-badge" style="background:rgba(120,160,90,.20);color:#a9c47a;" title="Ci sono note consegna da evadere">📦 consegna</span>' : ''}
         <span class="lead-zona">${escHtml(l.Zona)}</span>
         ${segLabel}
@@ -984,11 +968,6 @@ function renderDetail() {
   document.getElementById('dIndirizzo').value       = l.Indirizzo ?? '';
   document.getElementById('dNote').value            = l.Note      ?? '';
   document.getElementById('dNoteConsegna').value    = l.NoteConsegna ?? '';
-  notaTemplateSel.clear();
-  renderNoteTemplateChips();
-  if (!libLoadedOnce) { libLoadedOnce = true; libLoadRemote().then(renderNoteTemplateChips); }
-  const hintEl = document.getElementById('notaSenzaFasiHint');
-  if (hintEl) hintEl.style.display = notaSenzaFasi(l) ? 'block' : 'none';
   document.getElementById('dDataFollowup').value    = l.Data_followup ?? '';
   // Sopralluoghi: lista a parte (si salva da sola, non passa dal bottone SALVA)
   caricaSopralluoghi(l.Session_ID ?? '');
@@ -2160,12 +2139,6 @@ async function pubblicaAvvioLavoro() {
       aggiornaVisibilitaAvvio();
 
       caricaFasiPubblicate(currentLead.Session_ID ?? '');
-      if (!currentLead.ha_fasi) {
-        currentLead.ha_fasi = true;
-        const hintEl = document.getElementById('notaSenzaFasiHint');
-        if (hintEl) hintEl.style.display = 'none';
-        renderList();
-      }
       showToast('✓ Pagina lavorazione pubblicata: cliente avvisato', 'success');
     } else {
       showToast('⚠ Errore: ' + (data.error ?? 'sconosciuto'), 'error');
@@ -2410,54 +2383,6 @@ async function caricaFasiPubblicate(sessionId) {
     }
     wrap.style.display = 'block';
   } catch (e) { /* lista facoltativa: in caso di errore resta nascosta */ }
-}
-
-// ─── Fasi previste dal sopralluogo: template → bozze ──────
-// Nel box "Note" si scelgono uno o più template dalla libreria fasi; un click
-// li trasforma in righe "bozza" nella tabella fasi, da modificare e pubblicare
-// più avanti dal pannello Lavorazione (vedi caricaFasiBozza più sotto).
-let libLoadedOnce   = false;
-let notaTemplateSel = new Set();
-
-function renderNoteTemplateChips() {
-  const el = document.getElementById('notTemplateChips');
-  if (!el) return;
-  const fasi = libLoad();
-  el.innerHTML = fasi.map(f => `
-    <button type="button" class="filter-chip${notaTemplateSel.has(f.id) ? ' active' : ''}"
-            onclick="toggleNotaTemplate('${f.id}')">${escHtml(f.nome)}</button>
-  `).join('');
-}
-
-function toggleNotaTemplate(id) {
-  if (notaTemplateSel.has(id)) notaTemplateSel.delete(id); else notaTemplateSel.add(id);
-  renderNoteTemplateChips();
-}
-
-async function generaFasiDaTemplate() {
-  if (!currentLead || !currentLead.Session_ID) { showToast('⚠ Seleziona prima un cliente', 'error'); return; }
-  const ids = [...notaTemplateSel];
-  if (!ids.length) { showToast('⚠ Seleziona almeno una fase dalla libreria', 'error'); return; }
-  try {
-    const res  = await fetch(FASI_BOZZA_URL, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ mode: 'genera', session_id: currentLead.Session_ID, template_ids: ids })
-    });
-    const data = await res.json();
-    if (!data.success) throw new Error(data.error || 'Errore');
-    notaTemplateSel.clear();
-    renderNoteTemplateChips();
-    showToast(`✓ ${data.bozze.length} fasi pre-compilate — modificale e pubblicale dal pannello Lavorazione`, 'success');
-    caricaFasiBozza(currentLead.Session_ID);
-    if (data.bozze.length) {
-      currentLead.ha_fasi = true;
-      document.getElementById('notaSenzaFasiHint').style.display = 'none';
-      renderList();
-    }
-  } catch(e) {
-    showToast('⚠ Errore: ' + e.message, 'error');
-  }
 }
 
 // ─── Fasi previste (bozze): lista nel pannello Lavorazione ─
@@ -2733,12 +2658,6 @@ async function pubblicaFase(tipo) {
       // Se questa pubblicazione veniva da una bozza, ricarica la lista (ora più corta)
       faseBozzaIdInCorso = null;
       caricaFasiBozza(currentLead.Session_ID ?? '');
-      if (!currentLead.ha_fasi) {
-        currentLead.ha_fasi = true;
-        const hintEl = document.getElementById('notaSenzaFasiHint');
-        if (hintEl) hintEl.style.display = 'none';
-        renderList();
-      }
     } else {
       showToast('⚠ Errore: ' + (data.error ?? 'sconosciuto'), 'error');
     }
@@ -4535,12 +4454,6 @@ async function creaBozzeDaPreventivo() {
     if (!data.success) throw new Error(data.error || 'Errore');
     showToast(`✓ ${data.bozze.length} fasi pre-compilate — modificale e pubblicale dal pannello Lavorazione`, 'success');
     caricaFasiBozza(currentLead.Session_ID);
-    if (data.bozze.length) {
-      currentLead.ha_fasi = true;
-      const hint = document.getElementById('notaSenzaFasiHint');
-      if (hint) hint.style.display = 'none';
-      renderList();
-    }
     allegaFasiEstratte = [];
     renderAllegaFasiEstratte();
   } catch (e) {

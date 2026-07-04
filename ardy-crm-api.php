@@ -23,7 +23,7 @@ const ARDY_CLIENTI_COLS =
   . "fine_lavoro_prevista, sopralluogo_at, trasporto_data, wp_post_id, wp_post_link, foto_archiviate_at, "
   . "faq_pubblicata_at, created_at, updated_at, deleted_at, conversazione_letta_at";
 
-function ardy_map_cliente(array $r, bool $withDeletedAt = false, bool $haFasi = false, bool $haRisposto = false, string $ultimoMsgAt = ''): array {
+function ardy_map_cliente(array $r, bool $withDeletedAt = false, bool $haRisposto = false, string $ultimoMsgAt = ''): array {
     $out = [
         'Session_ID'    => $r['session_id']    ?? '',
         'Nome'          => $r['nome']           ?? '',
@@ -49,9 +49,6 @@ function ardy_map_cliente(array $r, bool $withDeletedAt = false, bool $haFasi = 
         'faq_pubblicata_at'  => $r['faq_pubblicata_at']  ?? '',
         'created_at'    => $r['created_at']     ?? '',
         'updated_at'    => $r['updated_at']     ?? '',
-        // Vero se esiste già almeno una fase (bozza o pubblicata) per questo cliente:
-        // usato in dashboard per il badge "nota senza fasi generate".
-        'ha_fasi'       => $haFasi,
         // Vero se il CLIENTE ha scritto (WA o sito) nelle ultime 48h DOPO l'ultima
         // volta che la conversazione è stata aperta in dashboard → badge "ha risposto".
         'ha_risposto'   => $haRisposto,
@@ -83,14 +80,6 @@ try {
     }
 
     // ── Lista normale (esclusi i cestinati) ────────────────
-    // Una sola query aggregata per sapere quali clienti hanno già almeno una
-    // fase (bozza o pubblicata), evitando una query per cliente.
-    $fasiMap = [];
-    try {
-        $fr = $db->query("SELECT session_id, COUNT(*) AS c FROM fasi GROUP BY session_id")->fetchAll();
-        foreach ($fr as $row) { $fasiMap[$row['session_id']] = ((int) $row['c']) > 0; }
-    } catch (PDOException $e) { /* tabella fasi non ancora creata: nessun cliente ha fasi */ }
-
     // ── "Ha risposto": ultimo messaggio del CLIENTE (role='user') negli ultimi
     //    2 giorni, per canale. Due query aggregate (non una per cliente):
     //      - web_messaggi  → per session_id
@@ -120,7 +109,7 @@ try {
     $rows = $db->query(
         "SELECT " . ARDY_CLIENTI_COLS . " FROM clienti WHERE deleted_at IS NULL ORDER BY updated_at DESC"
     )->fetchAll();
-    echo json_encode(array_map(function ($r) use ($fasiMap, $webMsgMap, $waMsgMap) {
+    echo json_encode(array_map(function ($r) use ($webMsgMap, $waMsgMap) {
         // Ultimo messaggio del cliente = il più recente tra canale web e WhatsApp.
         $tsWeb = $webMsgMap[$r['session_id'] ?? ''] ?? '';
         $last9 = substr(preg_replace('/\D+/', '', (string)($r['telefono'] ?? '')), -9);
@@ -128,7 +117,7 @@ try {
         $ultimo = ($tsWeb > $tsWa) ? $tsWeb : $tsWa; // confronto lessicografico OK su 'Y-m-d H:i:s'
         $letta  = (string)($r['conversazione_letta_at'] ?? '');
         $haRisposto = ($ultimo !== '') && ($letta === '' || $ultimo > $letta);
-        return ardy_map_cliente($r, false, $fasiMap[$r['session_id']] ?? false, $haRisposto, $ultimo);
+        return ardy_map_cliente($r, false, $haRisposto, $ultimo);
     }, $rows));
 
 } catch (PDOException $e) {

@@ -1,14 +1,10 @@
 <?php
 // -----------------------------------------------------------
-// ARDY LAB — Fasi in bozza generate dai template di libreria
-// Il box "Note" del sopralluogo permette di scegliere uno o più
-// template dalla libreria fasi: questo endpoint le trasforma in
-// righe "bozza" nella tabella fasi (non pubblicate), che Michela
-// modifica e pubblica una per una dal pannello Lavorazione.
+// ARDY LAB — Fasi in bozza (nome + testo_breve, non pubblicate)
+// Michela modifica e pubblica una bozza per volta dal pannello Lavorazione.
 //
 //   GET  ?session_id=...         → lista bozze del cliente (in ordine)
 //   GET  ?session_id=...&id=..&file=..  → serve una foto di bozza (anteprima/ricarico nel form)
-//   POST {mode:'genera', ...}        → crea N bozze dai template di libreria scelti
 //   POST {mode:'genera_custom', ...} → crea N bozze da voci libere (es. lette da un
 //                                       preventivo PDF esterno con ardy-estrai-preventivo-pdf.php)
 //   POST {mode:'salva', ...}     → upsert di UNA bozza completa (nome, note, prezzo, FOTO, video):
@@ -78,8 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['file'])) {
 }
 
 // Inserisce N bozze (nome + testo_breve) per un cliente, in coda all'ordine
-// esistente. Condiviso dai modi 'genera' (da libreria) e 'genera_custom'
-// (da voci libere, es. estratte da un PDF).
+// esistente. Usato dal modo 'genera_custom' (da voci libere, es. estratte da un PDF).
 /** Accetta sia un numero (già float, dall'estrazione AI) sia una stringa "1.450,00" / "350,00". */
 function ardyParseImportoFase($v): ?float {
     if (is_numeric($v)) return (float) $v;
@@ -136,31 +131,6 @@ try {
 
     $input = json_decode(file_get_contents('php://input'), true) ?: [];
     $mode  = $input['mode'] ?? '';
-
-    if ($mode === 'genera') {
-        $sessionId   = preg_replace('/[^a-zA-Z0-9_\-]/', '', $input['session_id'] ?? '');
-        $templateIds = is_array($input['template_ids'] ?? null) ? array_values($input['template_ids']) : [];
-        if ($sessionId === '' || !$templateIds) {
-            echo json_encode(['success' => false, 'error' => 'Dati mancanti']);
-            exit();
-        }
-
-        $placeholders = implode(',', array_fill(0, count($templateIds), '?'));
-        $stmt = $db->prepare("SELECT id, nome, descr FROM libreria_fasi WHERE id IN ($placeholders)");
-        $stmt->execute($templateIds);
-        $byId = [];
-        foreach ($stmt->fetchAll() as $r) { $byId[$r['id']] = $r; }
-
-        // Mantiene l'ordine di selezione scelto dall'operatore, ignorando i template non trovati.
-        $items = [];
-        foreach ($templateIds as $tid) {
-            if (!isset($byId[$tid])) continue;
-            $items[] = ['nome' => $byId[$tid]['nome'], 'breve' => $byId[$tid]['descr'] ?? ''];
-        }
-
-        echo json_encode(['success' => true, 'bozze' => ardyInserisciBozzeFasi($db, $sessionId, $items)]);
-        exit();
-    }
 
     if ($mode === 'genera_custom') {
         // Bozze da voci libere (es. lette da un preventivo PDF esterno con
