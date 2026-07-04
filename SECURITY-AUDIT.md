@@ -1,12 +1,16 @@
 # Security Audit — ardyagent
 
-**Data:** 2026-06-20 (due giri di audit nella stessa giornata)
+**Date:** 2026-06-20 (primi due giri) · 2026-07-04 (terzo giro — difesa in profondità sui dati utente)
 **Ambito:** intero progetto (60+ file PHP, JS, `.htaccess`, config, deploy, snippet WordPress, n8n)
-**Esito:** codebase complessivamente solida; chiusi 4 gruppi di vulnerabilità (1 critico, 1 medio
-auth + 1 medio XSS + bassi), tutti verificati in produzione. Ruotato il token di verifica del webhook.
+**Esito:** codebase complessivamente solida; chiusi 4 gruppi di vulnerabilità nei primi due giri
+(1 critico, 1 medio auth + 1 medio XSS + bassi), tutti verificati in produzione, con rotazione del
+token di verifica del webhook. Il terzo giro (§8) ha esteso la **difesa in profondità** a tutti gli
+endpoint dell'area riservata e completato i fix fail-closed sugli endpoint che leggono PII.
 
 > **Struttura del documento:** §1–4 = primo giro (auth + hardening). §5 = secondo giro
 > (XSS, token webhook, password). §6 = rotazione `WA_VERIFY_TOKEN`. §7 = aree pulite senza rilievi nel 2° giro.
+> §8 = terzo giro (2026-07-04): `ardyRequireAuth()` esteso, fail-closed su `wa-lookup`/`wa-memoria`,
+> guard su `ardy-migrate`, hardening `verify-client`.
 
 ---
 
@@ -171,3 +175,78 @@ La ricezione messaggi non si è mai interrotta (i POST sono validati con `WA_APP
 - I 401/403/200 attesi su tutte le categorie di endpoint sono stati confermati con test live.
 - Le guide utente (`ardy-guida-michela.html`, `GUIDA-UTENTE.md`, `MANUALE-SOLE.md`) non
   documentano dettagli tecnici di config/webhook → non richiedono aggiornamenti.
+
+---
+
+## 8. Terzo giro (2026-07-04) — difesa in profondità sui dati utente
+
+Audit **statico** (revisione del codice) focalizzato sul trattamento dei dati dei clienti
+(PII: nome, telefono, email, indirizzo, conversazioni). A differenza dei primi due giri, i fix
+di questo giro sono applicati sul branch ma **non ancora verificati in produzione**: vanno
+confermati con i test live post-deploy come in §2 (attesi 401 sugli endpoint riservati senza login,
+non-401 sui pubblici).
+
+L'impianto resta solido (SQLi/SSRF/HMAC/upload/segreti già a posto, vedi §3/§7). Le criticità di
+questo giro non erano bug grossolani ma **incoerenze** nell'applicazione delle difese già esistenti.
+
+| # | Gravità | Problema | Stato |
+|---|---|---|---|
+| 8.1 | 🟠 Media | `ardyRequireAuth()` presente solo su ~4 endpoint su ~40 dell'area riservata | ✅ risolto |
+| 8.2 | 🟠 Media | Segreto `WA_LOOKUP_SECRET` "opzionale" su `wa-lookup`/`wa-memoria` (leggono PII) | ✅ risolto |
+| 8.3 | 🟠 Media | `ardy-migrate.php` eseguibile pubblicamente (DDL + errori DB in chiaro) | ✅ risolto |
+| 8.4 | 🟡 Bassa | `getMessage()` esposto al client (`archivia-persi`, `chiusura-sessioni`) | ✅ risolto |
+| 8.5 | 🟡 Bassa | `verify-client`: match sulle ultime 7 cifre + rate-limit su `REMOTE_ADDR` | ✅ risolto |
+| 8.6 | 🔵 Info | Token OAuth Google + `ardy-config.php` nella web-root | ⏳ aperto (infra) |
+| 8.7 | 🔵 Info | Nessuna policy di retention/GDPR esplicita | ⏳ aperto (operativo) |
+
+### 8.1 🟠 Difesa in profondità estesa a TUTTI gli endpoint riservati
+Il primo giro (§1) aveva messo gli endpoint sensibili dietro Basic Auth nell'`.htaccess`, ma solo
+~4 file chiamavano anche il guard applicativo `ardyRequireAuth()`. Se la regex `FilesMatch`
+dell'`.htaccess` non scattasse (deploy errato, path diversa, file servito altrove), gli endpoint
+con i dati dei clienti resterebbero aperti — un single point of failure.
+**Fix.** Aggiunto `ardyRequireAuth()` a ~37 endpoint (CRM, dossier, preventivi, tutta la famiglia
+`progetti-*`, sopralluoghi, trasporti, pubblicazioni, reel, ecc.). Nei file **dual-use**
+(`ardy-dossier`, `ardy-grazie-consegna`, `ardy-conoscenza-appresa`, `ardy-trasporti`) il guard
+scatta **solo** nel ramo endpoint diretto (`realpath(SCRIPT_FILENAME)===__FILE__`), non quando
+sono inclusi come libreria da proxy/webhook. `ardy-email-finder` resta usabile da CLI (uso previsto)
+ma protetto via web. Il guard è sempre **dopo** il preflight OPTIONS (CORS intatto).
+Verificato con `php -l` su tutti i file toccati e con controllo che nessun endpoint pubblico
+(`proxy`, `proxy-lavorazione`, `save-lead`, `verify-client`, `visita`, `unsubscribe`,
+`whatsapp-webhook`, `wa-*`) sia stato impattato.
+
+### 8.2 🟠 `wa-lookup` / `wa-memoria` resi fail-closed
+Completano il fix §1-MEDIO (che aveva reso fail-closed `wa-agent`, `chiusura-sessioni`,
+`lead-monitor`, `notifica-michela`). Questi due endpoint restituiscono PII — identità e contesto
+del cliente e **intero storico conversazione** dato un numero — ma verificavano `WA_LOOKUP_SECRET`
+solo se configurato. **Fix.** Senza il segreto configurato ora rispondono 500 invece di restare
+aperti (stesso pattern fail-closed degli altri).
+
+### 8.3 🟠 Guard su `ardy-migrate.php`
+Lo script di migrazione dello schema non aveva alcun controllo di accesso e non era nell'`.htaccess`:
+una semplice GET eseguiva i DDL e, sugli errori non previsti, stampava `getMessage()` (dettagli del
+DB). **Fix.** Eseguibile solo da CLI (deploy) o via HTTP con il segreto condiviso; altrimenti 403.
+
+### 8.4 🟡 Niente `getMessage()` verso il client
+`ardy-archivia-persi.php` e `ardy-chiusura-sessioni.php` rimandavano al client il testo
+dell'eccezione (dettagli su query/schema). **Fix.** Dettaglio solo in `error_log`, al client un
+messaggio generico — uniformato al resto del codice.
+
+### 8.5 🟡 `verify-client` irrobustito contro il brute-force
+Endpoint pubblico con cui il cliente prova la propria identità per vedere la pagina di lavorazione.
+**Fix.** (a) IP **reale** del client via `ardyClientIp()`: dietro Cloudflare `REMOTE_ADDR` è l'IP
+dell'edge e accomunava tutti gli utenti nello stesso bucket di rate-limit; (b) match del telefono
+sulle **ultime 9 cifre** invece di 7 (canonico `ardyTelefonoLast9`, ~1000× più costoso da forzare,
+mantenendo la tolleranza a prefisso/spazi); (c) solo i tentativi **falliti** pesano sul limite;
+(d) storage del rate-limit in `ARDY_RATE_LIMIT_DIR` (persistente) con fallback su `sys_get_temp_dir`.
+Evitato di proposito un lockout per-lavorazione (rischio di griefing): il codice `ARD-XXXX-XXXX`
+resta l'alternativa forte per il cliente.
+
+### 8.6 / 8.7 🔵 Aperti (non risolvibili solo via codice)
+- **8.6** — `ardy-config.php` e `ardy-gcal-token.json` (refresh token Google: Calendar + Gmail)
+  stanno nella document root; oggi protetti da `.gitignore` + regola `.htaccess`, ma è lo stesso
+  single-point-of-failure di 8.1. Consigliato spostarli **sopra** `public_html` e referenziarli via
+  path assoluto (intervento su filesystem/`.cpanel.yml`).
+- **8.7** — PII in `clienti`/`wa_messaggi`/`web_messaggi`, aggregata da `ardy-dossier`. Esistono già
+  disiscrizione (`ardy-unsubscribe`) e cancellazione (`ardy-elimina-cliente`); manca una **policy di
+  retention** esplicita e non risulta cifratura at-rest oltre a quella eventuale del DB. Da valutare
+  in ottica GDPR (minimizzazione + retention).
