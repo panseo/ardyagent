@@ -233,14 +233,24 @@ INI-PEC non automatizzabile (captcha) → PEC via API a pagamento, eventuale tas
 
 ---
 
-## 🌐 GOOGLE BUSINESS PROFILE — post automatici delle fasi (IN ATTESA approvazione Google)
-**Obiettivo**: pubblicare in automatico i post delle fasi sul profilo Google Business **Ardy di Michela
-Panella**. **STATO**: form Basic API Access inviato il 17/06 (ID 3-7851000041139), in revisione ~7-10 gg lav.
-Non sollecitare; attendere esito su `ardy.documenti`.
-**Codice GIÀ PRONTO** (non testabile finché quota=0): `ardy-gbp.php`, `ardy-gbp-post.php`,
-`ardy-gbp-check.php`, guida `ardy-gbp-post.md`. Scope `business.manage` già aggiunto, token rigenerato.
-**Ad approvazione**: `ardy-gbp-check.php` verde → riabilitare il toggle Google in dashboard → POST a
-`ardy-gbp-post.php` → pubblicare una fase di test e verificare sulla scheda Google.
+## 🌐 GOOGLE BUSINESS PROFILE — post automatici delle fasi (SBLOCCATA 04/07, da verificare dal vivo)
+**Obiettivo**: pubblicare i post delle fasi sul profilo Google Business **Ardy di Michela Panella**.
+**STATO**: approvazione Google arrivata (form Basic API Access del 17/06, ID 3-7851000041139) → quota
+sbloccata. Lato codice: toggle **Google riabilitato** in dashboard (`ardy-michela-app.html`,
+`socialDestHtml`) e `inviaSocial()` ora spedisce in parallelo a `ardy-pubblica-social.php` (Facebook/
+Instagram, via n8n) e `ardy-gbp-post.php` (Google, diretto — nessuna modifica al nodo n8n). Si può
+pubblicare su un sottoinsieme qualsiasi delle tre; successo solo se TUTTE le piattaforme scelte vanno a
+buon fine (fallimento parziale mostra quali sono comunque uscite, per evitare doppi post).
+🐞 **Fix di sicurezza applicato in questo giro**: `ardy-gbp-post.php` e `ardy-gbp-check.php` erano privi di
+protezione — non erano elencati nel `.htaccess` (né nel blocco Basic Auth né nel deny) nonostante i loro
+stessi commenti la dessero per scontata. Aggiunti al blocco Basic Auth (come `ardy-pubblica-social.php`);
+`ardy-gbp.php` (lib, nessun output diretto) aggiunto al deny insieme a `ardy-net`/`ardy-db`/ecc.
+**Da verificare dal vivo (prossima sessione):**
+1. Aprire `ardy-gbp-check.php` (con le credenziali) → deve dare **verde** ("QUOTA SBLOCCATA").
+2. Pubblicare una fase di test con il toggle Google attivo → verificare che il post compaia sulla scheda
+   Google reale (non solo `success:true`).
+3. Provare un mix (es. solo Google, oppure Google+Facebook) e un fallimento parziale simulato, per
+   controllare il messaggio d'errore/successo in dashboard.
 
 ---
 

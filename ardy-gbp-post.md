@@ -1,9 +1,9 @@
 # Pubblicazione post su Google Business Profile (fasi di lavorazione)
 
-> ⏳ **STATO (17/06/2026): pronto ma in attesa dell'approvazione Google.**
-> Il codice è completo e deployabile, ma le chiamate torneranno 403/429 finché
-> la **Basic API Access** non è approvata (richiesta `3-7851000041139`, quota
-> 0 → 300 QPM). Verificare lo sblocco con `ardy-gbp-check.php`.
+> ✅ **STATO (04/07/2026): approvazione Google arrivata, toggle riabilitato.**
+> Richiesta `3-7851000041139` (quota 0 → 300 QPM) sbloccata. Il toggle Google nel
+> pannello social è ora attivo e collegato (vedi sotto). Prima di considerarlo live:
+> confermare `ardy-gbp-check.php` verde e fare un post di test reale sulla scheda.
 
 ## Idea
 Quando una fase di lavorazione viene pubblicata, oltre a sito + social, si può
@@ -49,17 +49,15 @@ Risposta:
 ```
 Su 401/403/429 il messaggio è esplicito: *"accesso API non ancora attivo"*.
 
-## Come collegarlo alla dashboard (quando l'accesso è approvato)
-Nel pannello **"📲 Vuoi pubblicare sui social?"** di `ardy-michela-app.html` esiste
-già un toggle **Google** lasciato **disattivato** (vedi `socialDestHtml`,
-`toggleSocialDest`, `getSelectedPlatforms` in `ardy-pubblica-social-n8n.md`).
-
-Per attivarlo:
-1. Riabilitare il toggle Google nel pannello.
-2. Se l'utente seleziona Google, fare — **in aggiunta** alla POST verso
-   `ardy-pubblica-social.php` — una POST a **`ardy-gbp-post.php`** con lo stesso
-   payload (`testo`/`testo_social`, `immagini`, `post_link`).
-3. Mostrare l'esito (success/errore) come per i social.
+## Collegamento alla dashboard — ✅ FATTO (04/07/2026)
+Nel pannello **"📲 Vuoi pubblicare sui social?"** di `ardy-michela-app.html` il toggle
+**Google** in `socialDestHtml` è ora attivo. `inviaSocial()` smista la richiesta:
+piattaforme `facebook`/`instagram` vanno a `ardy-pubblica-social.php` (invariato,
+via n8n); `google` va **in aggiunta**, in parallelo, a `ardy-gbp-post.php` con lo
+stesso payload (`testo`/`testo_social`, `immagini`, `post_link`, `fase`, `mobile`,
+`cliente`). L'esito è unito: successo solo se tutte le piattaforme scelte vanno a
+buon fine; un fallimento parziale lo dice esplicitamente (ed elenca quelle uscite
+comunque, per non doppiare la pubblicazione al retry).
 
 > Google e i social sono indipendenti: si può pubblicare solo su Google, solo sui
 > social, o su entrambi. Nessuna modifica al nodo n8n "Meta".
