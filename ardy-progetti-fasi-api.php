@@ -12,6 +12,11 @@
 //                                                → upsert di UNA fase completa (foto su disco)
 //   POST {mode:'delete', id}                     → elimina una fase (+ foto)
 //   POST {mode:'riordina', progetto_id, ordine:[id,…]} → riordina le fasi
+//   POST {mode:'invia_b2', progetto_id}          → backup su B2 delle foto (copia; il disco resta)
+//
+// STORAGE foto fasi: DISCO-FIRST. Le foto vivono sempre su disco (fonte per la
+// pubblicazione WordPress e le anteprime), così non dipendono dalla lettura di B2.
+// B2 è solo un backup, caricato a parte col comando invia_b2 — mai nel percorso critico.
 //
 // Protetto via .htaccess (Basic Auth) — elencato nel <FilesMatch>.
 // -----------------------------------------------------------
@@ -174,10 +179,11 @@ try {
             $raw = ardyCompressImage($raw, $mime);
             $ext = $mime === 'image/png' ? 'png' : ($mime === 'image/webp' ? 'webp' : ($mime === 'image/gif' ? 'gif' : 'jpg'));
             $fname = 'f' . $idx . '_' . uniqid() . '.' . $ext;
-            // Nuova foto su B2 se configurato; fallback su disco se B2 assente o fallisce.
-            $saved = ardyB2Configured() && ardyStoragePut(progettoFaseB2Key($progettoId, $id, $fname), $raw, $mime);
-            if (!$saved && $ensureDir() && file_put_contents($dir . $fname, $raw) !== false) $saved = true;
-            if ($saved) $fotoFiles[] = $fname;
+            // Disco-first: la foto vive SEMPRE su disco, così la pubblicazione WP e le
+            // anteprime NON dipendono dalla lettura di B2 (che, se bloccata, faceva
+            // sparire le foto dall'articolo). B2 resta un backup opzionale, caricato a
+            // parte con "Invia a B2" (mode invia_b2) — fuori dal percorso critico.
+            if ($ensureDir() && file_put_contents($dir . $fname, $raw) !== false) $fotoFiles[] = $fname;
         }
 
         // Video: URL già caricati a monte → conserviamo i validi.
@@ -242,6 +248,36 @@ try {
             $st->execute([':o' => $pos + 1, ':id' => (int) $faseId, ':pid' => $progettoId]);
         }
         echo json_encode(['success' => true]);
+        exit();
+    }
+
+    // ── Backup manuale su B2 ──────────────────────────────────
+    // Carica su Backblaze B2 una COPIA delle foto che stanno su disco (backup/offload
+    // banda). La copia su disco RESTA: la pubblicazione WP continua a leggere da lì, mai
+    // da B2. Best-effort e idempotente (ri-caricare sovrascrive). Fuori dal salvataggio
+    // così B2 non può bloccare né rallentare la creazione/modifica delle fasi.
+    if ($mode === 'invia_b2') {
+        $progettoId = (int) ($in['progetto_id'] ?? 0);
+        if ($progettoId <= 0)        { echo json_encode(['success' => false, 'error' => 'progetto mancante']); exit(); }
+        if (!ardyB2Configured())     { echo json_encode(['success' => false, 'error' => 'Backblaze B2 non configurato']); exit(); }
+        $st = $db->prepare("SELECT id, foto_urls FROM fasi WHERE progetto_id = ?");
+        $st->execute([$progettoId]);
+        $inviate = 0; $errori = 0;
+        foreach ($st->fetchAll() as $row) {
+            $fid = (int) $row['id'];
+            $dir = progettoFaseFotoDir($progettoId, $fid);
+            foreach (json_decode($row['foto_urls'] ?? '[]', true) ?: [] as $fn) {
+                $fn   = basename((string) $fn);
+                $path = $dir . $fn;
+                if ($fn === '' || !is_file($path)) continue;   // niente su disco → niente da caricare
+                $raw = @file_get_contents($path);
+                if ($raw === false) { $errori++; continue; }
+                $mime = (new finfo(FILEINFO_MIME_TYPE))->buffer($raw) ?: 'application/octet-stream';
+                if (ardyStoragePut(progettoFaseB2Key($progettoId, $fid, $fn), $raw, $mime)) $inviate++;
+                else $errori++;
+            }
+        }
+        echo json_encode(['success' => true, 'inviate' => $inviate, 'errori' => $errori]);
         exit();
     }
 
