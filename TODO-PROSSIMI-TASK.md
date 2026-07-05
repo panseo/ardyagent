@@ -8,6 +8,19 @@
 
 ---
 
+## 🎨 APERTO — Seguiti dell'audit usabilità dash (05/07/2026)
+Audit + interventi P1/P2/P3 **fatti e deployati** (vedi `AUDIT-USABILITA-DASH.md`): linguaggio
+bottoni coerente, sidebar per frequenza, filtri raggruppati, azioni duplicate disambiguate, menu ☰
+per i link app su mobile. Restano due code, non urgenti:
+- [ ] **Test-utente di validazione** — 15 min guardando Michela sui 3 compiti tipici
+      (`TEST-UTENTE-DASH.md`). Batte l'analisi a tavolino: da qui esce la prossima lista di fix,
+      ordinata dai fatti.
+- [ ] **Theming — Fase 0 residua** (lavoro estetico, non usabilità): migrare i restanti `style=""`
+      **non-bottone** (layout griglie/modali) a classi/token e aggiungere token spaziatura/ombra/raggi,
+      così la dash diventa "drop-in" per un `theme.css` (vedi `ANALISI-CLAUDE-DESIGN.md`, aggiornato).
+
+---
+
 ## 🔎 APERTO — Arricchimento outreach: email non trovata su sito JS (prossima sessione)
 Caso reale: B&B **`giubbonarisuites-adm.com/contatti`** (gruppo ADM Hospitality). L'arricchimento
 trova il **sito** (via Google Places) ma **NON l'email**, né con Haiku né con Sonnet — anche dopo il
