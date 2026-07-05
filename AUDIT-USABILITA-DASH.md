@@ -236,8 +236,17 @@ Sequenza consigliata: **P1 → verifica su staging → P2 → P3**, a piccoli bl
         dietro ⚙︎ restano solo PDF, Conoscenza, Libera spazio, Cestino (rari/manutenzione).
       - **Filtri raggruppati** in "Attivi" (funnel) e "Chiusi / parcheggio" (`.filter-group-label`),
         con la relazione CONSEGNATO↔ARCHIVIO chiarita nella legenda. Verificato con render Chromium.
+- [x] **Priorità 3** — disambiguazione azioni duplicate + riduzione annidamento:
+      - **Azioni duplicate rinominate per ambito**: sidebar `🧹 LIBERA SPAZIO (PERSI)` e
+        `🗑 VEDI CESTINO` (bulk/vista) vs dettaglio `🧹 Libera spazio cliente` e `🗑 Cestina cliente`
+        (questo cliente). Aggiornati anche i `textContent` gestiti dal JS.
+      - **Annidamento ridotto**: "🔨 Crea e pubblica nuova fase" non è più una fisarmonica annidata
+        (che sembrava una 7ª sezione pari alle altre) ma una **barra-azione** `.btn--accent`; il form
+        appare sotto come card. Verificato con render Chromium.
 - [ ] (Opzionale) 15 min di test-utente sui 3 compiti del §7 per dare priorità basata sui dati.
 
-> **Priorità 1 e 2 completate.** Restano da valutare gli interventi di **Priorità 3** (disambiguare
-> le azioni duplicate, ridurre l'annidamento delle fisarmoniche) e gli `style=""` inline non-bottone
-> (layout di modali/griglie): non usabilità, semmai theming — Fase 0 futura.
+> **Priorità 1, 2 e 3 completate** — audit chiuso sul lato interventi. Il linguaggio bottoni è
+> coerente, la sidebar è ordinata per frequenza, i filtri sono raggruppati, le azioni duplicate
+> sono disambiguate e l'annidamento è ridotto. Resta aperto solo il test-utente (validazione sul
+> campo) e, come lavoro separato di *theming* (non usabilità), la migrazione dei restanti `style=""`
+> non-bottone e i token spaziatura/ombra della Fase 0 di `ANALISI-CLAUDE-DESIGN.md`.
