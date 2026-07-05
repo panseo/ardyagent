@@ -13,6 +13,14 @@
     --blue: #2980b9;
     --orange: #e67e22;
     --yellow: #f1c40f;
+    /* Scala tipografica (Audit usabilità §5 P1) — leggibilità sopra la densità */
+    --fs-xs: 11px;   /* micro-etichette, meta, chip compatti */
+    --fs-sm: 12px;   /* testo compatto, bottoni */
+    --fs-base: 13px; /* etichette e testo di lettura */
+    --fs-md: 14px;   /* enfasi */
+    /* Categoria-colore bottoni: solo semantica, niente decorazione */
+    --btn-danger: #d9534f;
+    --btn-link: #8ec0d9;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -102,6 +110,39 @@
     border-color: var(--accent);
     color: var(--accent);
   }
+
+  /* ═══════════════════════════════════════════════════════════════
+     SISTEMA BOTTONI — Audit usabilità §5 P1
+     4 categorie semantiche (niente arcobaleno decorativo):
+       .btn          → neutro (default)
+       .btn--primary → azione PRINCIPALE del contesto (una sola)
+       .btn--danger  → distruttivo (cestina/elimina)
+       .btn--link    → naviga verso un'altra app/sezione
+     Modificatori: .btn--sm (compatto, sidebar) · .btn--block (larghezza piena)
+     ═══════════════════════════════════════════════════════════════ */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    font-family: 'DM Mono', monospace; font-size: var(--fs-sm); line-height: 1.1;
+    padding: 8px 14px; border-radius: 6px;
+    border: 1px solid var(--border); background: transparent; color: var(--text-mid);
+    cursor: pointer; white-space: nowrap; text-decoration: none;
+    transition: border-color .2s, color .2s, background .2s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  .btn--primary { background: var(--accent); border-color: var(--accent); color: #0e0e0e; font-weight: 500; }
+  .btn--primary:hover { background: #d4b87a; border-color: #d4b87a; color: #0e0e0e; }
+
+  .btn--danger { border-color: var(--btn-danger); color: var(--btn-danger); }
+  .btn--danger:hover { background: var(--btn-danger); border-color: var(--btn-danger); color: #fff; }
+
+  .btn--link { border-color: var(--blue); color: var(--btn-link); }
+  .btn--link:hover { border-color: #5a9fc0; color: #aed8f0; }
+
+  .btn--sm { padding: 5px 8px; font-size: var(--fs-xs); border-radius: 4px; gap: 4px; }
+  .btn--block { width: 100%; }
+  .btn--grow { flex: 1; }
 
   /* LAYOUT */
   .layout {
