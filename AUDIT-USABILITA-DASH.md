@@ -223,7 +223,13 @@ Sequenza consigliata: **P1 → verifica su staging → P2 → P3**, a piccoli bl
       `.btn--accent` (emphasis oro non-pieno) e `.btn--menu` (barra a tutta larghezza); migrati
       `RICERCA AVANZATA`, `📦 Archivio`, la barra `🔄 Aggiorna stato` (accent) e i due `➕ Aggiungi`
       (primary). Verificato con render Chromium.
-- [ ] **Prossimo blocco** — i bottoni generati da stringhe JS nei modali (cestino, morosi,
-      trasporti, conoscenza): ~12 istanze, stesso sistema di classi, ma vanno toccate dentro i
-      template literal → giro dedicato e prudente.
+- [x] **Blocco 3** — bottoni generati da stringhe JS nei modali/liste: migrate 10 azioni
+      (Ripristina/Elimina cestino, Elimina morosi, Elimina/Modifica conoscenza, coppie 💾/🗑 di
+      todo e sopralluoghi, Conferma trasporti, "Genera comunque"). **Tutte le eliminazioni ora sono
+      `.btn--danger` (rosse) in modo uniforme.** Lasciati di proposito i controlli minori (✕ di
+      chiusura overlay, frecce galleria ‹ ›, ✕ inline senza bordo) e `btnComunicazione` (arancione
+      = warning semantico). Parse JS verificato (0 errori) + spot-check visivo Chromium.
 - [ ] (Opzionale) 15 min di test-utente sui 3 compiti del §7 per dare priorità basata sui dati.
+
+> **Priorità 1 completata** su tutte le superfici a bottoni. Rimangono `style=""` inline non-bottone
+> (layout di modali/griglie): non sono un problema di usabilità, semmai di theming — Fase 0 futura.
