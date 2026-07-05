@@ -43,19 +43,24 @@
       <div style="margin-bottom:12px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
           <div class="sidebar-title" style="margin-bottom:0;flex:1;">Clienti / Lead</div>
-          <input type="text" id="search" placeholder="Cerca..." oninput="filterLeads()" style="flex:1;background:#1e1e1e;border:1px solid #444;color:#ccc;padding:4px 8px;border-radius:4px;font-family:monospace;font-size:10px;min-width:0;">
           <button id="btnArchivio" class="btn btn--sm" onclick="apriArchivio()" title="Lavori conclusi (CONSEGNATO)" style="display:none;">📦 Archivio <span id="archCount">0</span></button>
         </div>
-        <div style="display:flex;gap:5px;flex-wrap:wrap;">
+        <!-- Cerca su riga propria e leggibile (Audit P2) -->
+        <input type="text" id="search" placeholder="🔍 Cerca cliente…" oninput="filterLeads()" class="sidebar-search">
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;">
           <button class="btn btn--primary btn--sm btn--grow" onclick="openNuovoCliente()">+ NUOVO</button>
           <button class="btn btn--sm btn--grow" onclick="openGestioneLibreria()">LIBRERIA</button>
           <button class="btn btn--sm btn--grow" onclick="window.open('ardy-guida-michela.html','_blank')">❓ GUIDA</button>
           <button class="btn btn--sm" onclick="apriNotaEditorDaPulsante()" id="btnNotaDaFare" title="Cose da fare questa settimana">🗒️ DA FARE</button>
-          <button class="btn btn--sm" onclick="toggleStrumenti()" id="btnStrumenti" title="Strumenti">⚙︎</button>
+          <button class="btn btn--sm" onclick="toggleStrumenti()" id="btnStrumenti" title="Altri strumenti (import PDF, conoscenza, spazio, cestino)">⚙︎</button>
         </div>
-        <div id="strumentiPanel" style="display:none;gap:5px;margin-top:5px;flex-wrap:wrap;">
-          <button class="btn btn--sm btn--grow" onclick="openMorosi()">💸 MOROSI</button>
+        <!-- Strumenti quotidiani: sempre visibili, fuori dall'ingranaggio (Audit P2) -->
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;">
+          <button class="btn btn--sm btn--grow" onclick="openMorosi()" title="Clienti morosi: solleciti di pagamento">💸 MOROSI</button>
           <button class="btn btn--sm btn--grow" onclick="openTrasporti()" title="Giornata Trasporti: assegna i clienti COMPLETATO a una data di consegna/ritiro e avvisali">🚚 TRASPORTI</button>
+        </div>
+        <!-- Strumenti occasionali / manutenzione: dietro ⚙︎ (Audit P2) -->
+        <div id="strumentiPanel" style="display:none;gap:5px;margin-top:5px;flex-wrap:wrap;">
           <button class="btn btn--sm btn--grow" onclick="openImportPdf()">📥 PDF</button>
           <button class="btn btn--sm btn--grow" onclick="openConoscenza()" title="Conoscenza di Sole: fai imparare a Sole le tecniche dai lavori reali (fasi di lavorazione), in forma anonima">📚 CONOSCENZA</button>
           <button class="btn btn--sm btn--grow" onclick="archiviaPersi()" title="Sposta in una cartella di quarantena le foto e i reel dei clienti PERSI, così puoi cancellarli a mano dal server e liberare spazio. Non cancella nulla.">🧹 LIBERA SPAZIO</button>
@@ -69,6 +74,7 @@
     </div>
 
     <div class="filters" id="filters" style="display:none;">
+      <div class="filter-group-label">Attivi</div>
       <button class="filter-chip active" data-stato="TUTTI" onclick="setFilter(this)">TUTTI</button>
       <button class="filter-chip" data-stato="LEAD" onclick="setFilter(this)">LEAD</button>
       <button class="filter-chip" data-stato="SOPRALLUOGO" onclick="setFilter(this)">SOPRALLUOGO</button>
@@ -77,12 +83,13 @@
       <button class="filter-chip" data-stato="RITIRATI" onclick="setFilter(this)" title="Mobili gi&agrave; in laboratorio, lavori non ancora avviati">RITIRATI</button>
       <button class="filter-chip" data-stato="IN_LAVORAZIONE" onclick="setFilter(this)">IN LAVORAZIONE</button>
       <button class="filter-chip" data-stato="COMPLETATO" onclick="setFilter(this)">COMPLETATO</button>
+      <div class="filter-group-label">Chiusi / parcheggio</div>
       <button class="filter-chip" data-stato="CONSEGNATO" onclick="setFilter(this)">CONSEGNATO</button>
       <button class="filter-chip" data-stato="STANDBY" onclick="setFilter(this)">STANDBY</button>
       <button class="filter-chip" data-stato="PERSO" onclick="setFilter(this)">PERSO</button>
       <button class="filter-chip" data-stato="ARCHIVIO" onclick="setFilter(this)" title="Lavori conclusi (CONSEGNATO): non compaiono nella lista normale">📦 ARCHIVIO</button>
       <div style="width:100%;margin-top:8px;font-size:10px;color:#888;line-height:1.7;">
-        <span style="color:#888;">📦 ARCHIVIO</span> = lavori conclusi (CONSEGNATO), fuori dalla lista normale<br>
+        <span style="color:#888;">📦 ARCHIVIO</span> = i CONSEGNATO archiviati, fuori dalla lista normale<br>
         <span style="color:#e08a3c;">●</span> Sta per iniziare &nbsp;
         <span style="color:#4caf72;">●</span> Nei tempi &nbsp;
         <span style="color:#e05c5c;">●</span> Fine lavoro / ritardo &nbsp;

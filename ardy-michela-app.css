@@ -151,6 +151,32 @@
   /* Barra-toggle a tutta larghezza: display:block per non spezzare testo+chevron in flex-item */
   .btn--menu { display: block; width: 100%; text-align: left; }
 
+  /* Campo ricerca sidebar — riga propria, leggibile (Audit P2) */
+  .sidebar-search {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: var(--fs-sm);
+  }
+  .sidebar-search::placeholder { color: var(--text-dim); }
+  .sidebar-search:focus { outline: none; border-color: var(--accent); }
+
+  /* Etichetta gruppo filtri (Attivi / Chiusi) — Audit P2 */
+  .filter-group-label {
+    width: 100%;
+    font-family: 'DM Mono', monospace;
+    font-size: var(--fs-xs);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin: 6px 0 0;
+  }
+  .filter-group-label:first-child { margin-top: 0; }
+
   /* LAYOUT */
   .layout {
     display: grid;
