@@ -1335,8 +1335,8 @@ function renderTodoDatati(items) {
     return `<div class="todo-dat-row" data-id="${it.id}" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
       <input type="datetime-local" value="${val}" data-f="data" class="info-value editable" style="flex:1 1 170px;min-width:150px;">
       <input type="text" value="${tx}" data-f="testo" maxlength="255" class="info-value editable" style="flex:1 1 160px;min-width:140px;">
-      <button type="button" onclick="salvaTodoDatato(${it.id})" title="Salva / sposta" style="background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:5px;padding:6px 9px;font-size:12px;cursor:pointer;">💾</button>
-      <button type="button" onclick="eliminaTodoDatato(${it.id})" title="Elimina" style="background:none;border:1px solid var(--border);color:#c87070;border-radius:5px;padding:6px 9px;font-size:12px;cursor:pointer;">🗑</button>
+      <button type="button" class="btn btn--sm" onclick="salvaTodoDatato(${it.id})" title="Salva / sposta">💾</button>
+      <button type="button" class="btn btn--danger btn--sm" onclick="eliminaTodoDatato(${it.id})" title="Elimina">🗑</button>
     </div>`;
   }).join('');
 }
@@ -1535,8 +1535,8 @@ async function openCestino() {
           ${gg}
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;margin-left:10px;">
-          <button onclick="ripristinaCliente('${escJs(c.Session_ID)}')" style="background:none;border:1px solid #4caf72;color:#4caf72;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;">↩ Ripristina</button>
-          <button onclick="eliminaDefCestino('${escJs(c.Session_ID)}','${escJs(nome)}')" style="background:none;border:1px solid #8b3e3e;color:#c07070;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;">✕ Elimina</button>
+          <button class="btn btn--sm" onclick="ripristinaCliente('${escJs(c.Session_ID)}')">↩ Ripristina</button>
+          <button class="btn btn--danger btn--sm" onclick="eliminaDefCestino('${escJs(c.Session_ID)}','${escJs(nome)}')">✕ Elimina</button>
         </div>
       </div>`;
     }).join('');
@@ -2257,8 +2257,8 @@ function renderSopralluoghi(items) {
       </select>
       <input type="datetime-local" value="${val}" data-f="data" class="info-value editable" style="flex:1 1 180px;min-width:160px;">
       <input type="text" value="${et}" data-f="etichetta" class="info-value editable" style="flex:1 1 160px;min-width:140px;">
-      <button type="button" onclick="salvaSopralluogo(${it.id})" title="Salva / sposta" style="background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:5px;padding:6px 9px;font-size:12px;cursor:pointer;">💾</button>
-      <button type="button" onclick="eliminaSopralluogo(${it.id})" title="Elimina" style="background:none;border:1px solid var(--border);color:#c87070;border-radius:5px;padding:6px 9px;font-size:12px;cursor:pointer;">🗑</button>
+      <button type="button" class="btn btn--sm" onclick="salvaSopralluogo(${it.id})" title="Salva / sposta">💾</button>
+      <button type="button" class="btn btn--danger btn--sm" onclick="eliminaSopralluogo(${it.id})" title="Elimina">🗑</button>
     </div>`;
   }).join('');
 }
@@ -5727,7 +5727,7 @@ async function archiviaPersi() {
           <input type="date" id="tr-data">
         </div>
         <button class="btn-save" onclick="trAssegna()">📅 Assegna i selezionati</button>
-        <button class="btn-cancel" onclick="trConferma()" style="color:#8ed9bc;border-color:#3e8b6f;">📣 Conferma e avvisa</button>
+        <button class="btn" onclick="trConferma()">📣 Conferma e avvisa</button>
       </div>
 
       <div id="trasportiList"><div class="storico-empty">CARICAMENTO...</div></div>
@@ -6198,7 +6198,7 @@ function moRender() {
         <select onchange="moCambiaStato(${c.id}, this.value)" style="background:#0f0d0a;color:#ddd;border:1px solid #444;border-radius:4px;font-size:11px;padding:4px 6px;margin-left:auto;">
           ${['APERTO','PAGATO','DIFFIDA','ARCHIVIATO'].map(s => `<option value="${s}" ${c.stato===s?'selected':''}>${s}</option>`).join('')}
         </select>
-        <button class="btn-cancel" style="font-size:10px;padding:4px 8px;color:#e08080;border-color:#8b3e3e;" onclick="moElimina(${c.id})">🗑</button>
+        <button class="btn btn--danger btn--sm" onclick="moElimina(${c.id})">🗑</button>
       </div>
     </div>`;
   }).join('');
@@ -6310,7 +6310,7 @@ async function moRunGenera(forza) {
       box.innerHTML = '<b style="color:#e08080;">⛔ Generazione bloccata:</b><br>'
         + (data.bloccanti || []).map(b => '• ' + escHtml(b)).join('<br>')
         + ((data.avvisi && data.avvisi.length) ? '<br><br><b>Da verificare:</b><br>' + data.avvisi.map(a => '• ' + escHtml(a)).join('<br>') : '')
-        + '<br><br><button class="btn-cancel" style="font-size:10px;padding:4px 8px;color:#e0b070;border-color:#8b6f3e;" onclick="moRunGenera(true)">Genera comunque (sotto mia responsabilità)</button>';
+        + '<br><br><button class="btn btn--sm" onclick="moRunGenera(true)">Genera comunque (sotto mia responsabilità)</button>';
       btn.disabled = false;
       return;
     }
@@ -6631,7 +6631,7 @@ async function cnCaricaBlocchi() {
         <div style="margin-top:6px;display:flex;gap:8px;">
           <button class="btn-secondary" style="font-size:10px;padding:3px 8px;" onclick="cnToggle(${b.id}, ${b.attiva ? 0 : 1})">${b.attiva ? 'Disattiva' : 'Riattiva'}</button>
           <button class="btn-secondary" style="font-size:10px;padding:3px 8px;" onclick="cnModifica(${b.id})">✎ Modifica</button>
-          <button class="btn-secondary" style="font-size:10px;padding:3px 8px;color:#e08080;border-color:#8b3e3e;" onclick="cnElimina(${b.id})">🗑 Elimina</button>
+          <button class="btn btn--danger btn--sm" onclick="cnElimina(${b.id})">🗑 Elimina</button>
         </div>
       </div>`;
     }).join('');
