@@ -229,7 +229,15 @@ Sequenza consigliata: **P1 → verifica su staging → P2 → P3**, a piccoli bl
       `.btn--danger` (rosse) in modo uniforme.** Lasciati di proposito i controlli minori (✕ di
       chiusura overlay, frecce galleria ‹ ›, ✕ inline senza bordo) e `btnComunicazione` (arancione
       = warning semantico). Parse JS verificato (0 errori) + spot-check visivo Chromium.
+- [x] **Priorità 2** — riordino sidebar per frequenza + raggruppamento filtri:
+      - Campo **Cerca su riga propria** e leggibile (`.sidebar-search`, `--fs-sm`), tolto dalla
+        riga stipata del titolo.
+      - **Morosi e Trasporti promossi fuori dall'ingranaggio** (sempre visibili, sono quotidiani);
+        dietro ⚙︎ restano solo PDF, Conoscenza, Libera spazio, Cestino (rari/manutenzione).
+      - **Filtri raggruppati** in "Attivi" (funnel) e "Chiusi / parcheggio" (`.filter-group-label`),
+        con la relazione CONSEGNATO↔ARCHIVIO chiarita nella legenda. Verificato con render Chromium.
 - [ ] (Opzionale) 15 min di test-utente sui 3 compiti del §7 per dare priorità basata sui dati.
 
-> **Priorità 1 completata** su tutte le superfici a bottoni. Rimangono `style=""` inline non-bottone
-> (layout di modali/griglie): non sono un problema di usabilità, semmai di theming — Fase 0 futura.
+> **Priorità 1 e 2 completate.** Restano da valutare gli interventi di **Priorità 3** (disambiguare
+> le azioni duplicate, ridurre l'annidamento delle fisarmoniche) e gli `style=""` inline non-bottone
+> (layout di modali/griglie): non usabilità, semmai theming — Fase 0 futura.
