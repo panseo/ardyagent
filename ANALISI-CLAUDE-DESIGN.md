@@ -18,6 +18,16 @@
 - Fattibilità: **dashboard = alta** (è roba nostra), **widget webchat = media**, **sito WordPress/Divi
   = bassa** (lì il tema è Divi, non sostituibile con un artifact Claude; al massimo CSS mirato).
 
+> **Aggiornamento (05/07/2026) — parte della Fase 0 è già fatta.** Con l'audit di usabilità
+> (`AUDIT-USABILITA-DASH.md`) è stato introdotto uno **strato di componenti bottone** in
+> `ardy-michela-app.css` (`.btn` neutro · `.btn--primary/--accent/--danger/--link/--menu`, con
+> `.btn--sm/--block/--grow`) e una **scala tipografica** (`--fs-xs/sm/base/md`). **Tutti gli
+> `style=""` inline dei bottoni** (header, sidebar, dettaglio, modali JS) sono stati migrati a
+> queste classi/token. Restano da migrare gli inline **non-bottone** (layout di griglie/modali):
+> quelli sono l'attrito di theming ancora aperto, ma il numero è molto sotto i 363 di partenza e
+> il grosso della gerarchia visiva ora passa da un unico strato. Le fasi 1-2 (contratto di tema +
+> `theme.css` su staging) diventano più vicine.
+
 ---
 
 ## 1. Dove si applicherebbe un tema (3 superfici diverse, NON una sola)

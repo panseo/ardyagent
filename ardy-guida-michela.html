@@ -45,12 +45,13 @@
         del sito, ultime 48h) e di cui <b>non hai ancora aperto la conversazione</b>. Vedi a colpo d'occhio chi
         aspetta una risposta; sparisce quando apri la scheda e guardi la sua conversazione (sezione 💬). Vale da
         ogni dispositivo (telefono e computer).</li>
-    <li><b>🔍 Ricerca avanzata</b>: i filtri di stato ora sono dietro questo bottone, con la legenda dei colori.</li>
+    <li><b>🔍 Ricerca avanzata</b>: i filtri di stato ora sono dietro questo bottone, <b>raggruppati</b> in
+        <b>Attivi</b> (lavori in corso) e <b>Chiusi / parcheggio</b> (consegnati, standby, persi, archivio), con la legenda dei colori.</li>
     <li><b>📦 Archivio</b>: quando metti un cliente su <b>CONSEGNATO</b> esce dalla lista
         normale (così non la intasa) e finisce nell'Archivio. Lo riapri col pulsante <b>📦 Archivio</b>
         in alto nella lista (o dal filtro 📦 ARCHIVIO). Ripremendolo torni alla lista normale.</li>
-    <li><b>🧹 Libera spazio</b>: sui clienti archiviati (CONSEGNATO) compare in alto nella scheda
-        il pulsante <b>🧹 Libera spazio</b>. A oggetto consegnato lo premi per <b>cancellare le foto e i
+    <li><b>🧹 Libera spazio cliente</b>: sui clienti archiviati (CONSEGNATO) compare in alto nella scheda
+        il pulsante <b>🧹 Libera spazio cliente</b>. A oggetto consegnato lo premi per <b>cancellare le foto e i
         reel</b> di quel lavoro dal server e recuperare spazio. <b>Restano</b> scheda, dati, preventivi
         (i PDF restano completi, le foto sono già dentro al documento), fasi e pagina sul sito. Una volta
         fatto il pulsante diventa "🧹 Spazio liberato".</li>
@@ -119,7 +120,7 @@
   <li><b>A destra</b> → la scheda del cliente che hai selezionato</li>
 </ul>
 <p>Per aprire un cliente, <b>cliccaci sopra</b> nella lista a sinistra: la sua scheda compare a destra.</p>
-<p>La colonna di sinistra contiene: <b>Cerca</b> (per nome, zona o servizio), <b>+ NUOVO</b> (aggiungi cliente a mano), <b>LIBRERIA</b> (frasi pronte per le lavorazioni), <b>❓ GUIDA</b> (riapre questa guida) e <b>i filtri</b> per stato.</p>
+<p>La colonna di sinistra contiene, dall'alto: il campo <b>Cerca</b> (per nome, zona o servizio) su una riga tutta sua; poi <b>+ NUOVO</b> (aggiungi cliente a mano), <b>LIBRERIA</b> (frasi pronte per le lavorazioni), <b>❓ GUIDA</b> (riapre questa guida), <b>🗒️ DA FARE</b> (le cose della settimana) e l'ingranaggio <b>⚙︎</b>; subito sotto, sempre in vista, <b>💸 MOROSI</b> e <b>🚚 TRASPORTI</b> (gli strumenti di ogni giorno); infine <b>🔍 Ricerca avanzata</b> con <b>i filtri</b> per stato. Dietro l'ingranaggio ⚙︎ restano gli strumenti che usi di rado (import PDF, conoscenza, libera spazio persi, cestino).</p>
 
 <h2>3. Gli stati del cliente</h2>
 <p>Ogni cliente ha uno <b>stato</b>, che racconta a che punto è la trattativa. Lo cambi con i bottoni in alto nella sua scheda.</p>
@@ -333,8 +334,8 @@ posto unico. La scheda del cliente, i suoi dati e gli eventuali preventivi <b>re
 <p>Quando elimini un cliente dalla dashboard, <b>non sparisce subito</b>: finisce nel <b>cestino</b> e ci resta per <b>30 giorni</b>. In quel periodo puoi ripristinarlo senza perdere nulla.</p>
 <p>Come funziona:</p>
 <ul>
-  <li>Il pulsante <b>🗑 Cestino</b> nella scheda del cliente lo sposta nel cestino (non lo cancella davvero).</li>
-  <li>Il pulsante <b>🗑 CESTINO</b> nella barra laterale apre l'elenco dei clienti cestinati.</li>
+  <li>Il pulsante <b>🗑 Cestina cliente</b> nella scheda del cliente lo sposta nel cestino (non lo cancella davvero).</li>
+  <li>Il pulsante <b>🗑 VEDI CESTINO</b> nella barra laterale (dietro l'ingranaggio ⚙︎) apre l'elenco dei clienti cestinati.</li>
   <li>Per ogni cliente cestinato vedi i <b>giorni rimasti</b> prima della cancellazione definitiva (diventano rossi quando ne restano meno di 7).</li>
   <li><b>↩ Ripristina</b>: riporta il cliente nella lista normale, come se non fosse mai stato eliminato.</li>
   <li><b>✕ Elimina</b>: lo cancella subito e definitivamente (chiede la parola di conferma).</li>
@@ -366,6 +367,7 @@ posto unico. La scheda del cliente, i suoi dati e gli eventuali preventivi <b>re
 
 <h2>18. Ardy Outreach — trovare e contattare nuovi clienti e partner</h2>
 <p><b>Cos'è.</b> Uno strumento a parte (pulsante <b>← Dashboard</b> per tornare qui) per <b>cercare nuove attività</b> (antiquari, mercatini, designer, B&B), <b>completarne i dati</b> e <b>contattarle</b> via email o lettera. Lo apri da <b>ardyagent.ardy-lab.it/ardy-outreach.html</b>. Su telefono parti da un <b>menu a card</b>: ogni voce dice cosa apre.</p>
+<div class="tip">Dalla dashboard raggiungi <b>📣 Outreach</b> e <b>🎨 Design</b> dai due link in alto (nell'header). Su <b>telefono</b>, per non affollare la barra in alto, i due link stanno dietro il menu <b>☰</b> a destra: toccalo e scegli.</div>
 <ul>
   <li><b>🔎 Ricerca aziende</b> — scegli categoria, zona e raggio, e fonte <b>OpenStreetMap</b> (gratis) o <b>Google Maps</b> (più completa). Selezioni i risultati nuovi e li salvi (i doppioni vengono ignorati).</li>
   <li><b>📇 Contatti</b> — la lista. Le iconcine rosse/arancio/grigie segnalano <b>cosa manca</b> (email, telefono, sito); se la scheda è completa, nessuna icona.</li>
