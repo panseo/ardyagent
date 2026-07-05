@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Ardy">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="ardy-michela-app.css?v=20260625c">
+<link rel="stylesheet" href="ardy-michela-app.css?v=20260705a">
 </head>
 <body>
 
@@ -26,18 +26,8 @@
     </div>
   </div>
   <div style="display:flex;gap:8px;">
-    <a href="ardy-outreach.html" target="_blank"
-       style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border:1px solid #3e6f8b;color:#8ec0d9;border-radius:4px;font-family:'DM Mono',monospace;font-size:11px;text-decoration:none;white-space:nowrap;"
-       onmouseover="this.style.borderColor='#5a9fc0';this.style.color='#aed8f0';"
-       onmouseout="this.style.borderColor='#3e6f8b';this.style.color='#8ec0d9';">
-      📣 OUTREACH
-    </a>
-    <a href="ardy-design-app.html" target="_blank"
-       style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border:1px solid #6f5e8b;color:#b8a8d9;border-radius:4px;font-family:'DM Mono',monospace;font-size:11px;text-decoration:none;white-space:nowrap;"
-       onmouseover="this.style.borderColor='#9a85c0';this.style.color='#d0c5f0';"
-       onmouseout="this.style.borderColor='#6f5e8b';this.style.color='#b8a8d9';">
-      🎨 DESIGN
-    </a>
+    <a href="ardy-outreach.html" target="_blank" class="btn btn--link btn--sm">📣 OUTREACH</a>
+    <a href="ardy-design-app.html" target="_blank" class="btn btn--link btn--sm">🎨 DESIGN</a>
   </div>
   <div class="header-right">
     <div class="status-dot"></div>
@@ -56,20 +46,20 @@
           <input type="text" id="search" placeholder="Cerca..." oninput="filterLeads()" style="flex:1;background:#1e1e1e;border:1px solid #444;color:#ccc;padding:4px 8px;border-radius:4px;font-family:monospace;font-size:10px;min-width:0;">
           <button id="btnArchivio" onclick="apriArchivio()" title="Lavori conclusi (CONSEGNATO)" style="display:none;background:none;border:1px solid #555;color:#999;padding:3px 7px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;white-space:nowrap;">📦 Archivio <span id="archCount">0</span></button>
         </div>
-        <div style="display:flex;gap:5px;">
-          <button class="btn-nuovo-cliente" onclick="openNuovoCliente()" style="flex:1;text-align:center;background:none;border:1px solid #8b6f3e;color:#c8a96e;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">+ NUOVO</button>
-          <button class="btn-nuovo-cliente" onclick="openGestioneLibreria()" style="flex:1;text-align:center;background:none;border:1px solid #444;color:#888;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">LIBRERIA</button>
-          <button class="btn-nuovo-cliente" onclick="window.open('ardy-guida-michela.html','_blank')" style="flex:1;text-align:center;background:none;border:1px solid #444;color:#888;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">❓ GUIDA</button>
-          <button onclick="apriNotaEditorDaPulsante()" id="btnNotaDaFare" title="Cose da fare questa settimana" style="background:none;border:1px solid #8b6f3e;color:#c8a96e;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;white-space:nowrap;">🗒️ DA FARE</button>
-          <button onclick="toggleStrumenti()" id="btnStrumenti" title="Strumenti" style="background:none;border:1px solid #444;color:#888;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">⚙︎</button>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;">
+          <button class="btn btn--primary btn--sm btn--grow" onclick="openNuovoCliente()">+ NUOVO</button>
+          <button class="btn btn--sm btn--grow" onclick="openGestioneLibreria()">LIBRERIA</button>
+          <button class="btn btn--sm btn--grow" onclick="window.open('ardy-guida-michela.html','_blank')">❓ GUIDA</button>
+          <button class="btn btn--sm" onclick="apriNotaEditorDaPulsante()" id="btnNotaDaFare" title="Cose da fare questa settimana">🗒️ DA FARE</button>
+          <button class="btn btn--sm" onclick="toggleStrumenti()" id="btnStrumenti" title="Strumenti">⚙︎</button>
         </div>
         <div id="strumentiPanel" style="display:none;gap:5px;margin-top:5px;flex-wrap:wrap;">
-          <button class="btn-nuovo-cliente" onclick="openMorosi()" style="flex:1;text-align:center;background:none;border:1px solid #8b3e3e;color:#d98a8a;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">💸 MOROSI</button>
-          <button class="btn-nuovo-cliente" onclick="openTrasporti()" title="Giornata Trasporti: assegna i clienti COMPLETATO a una data di consegna/ritiro e avvisali" style="flex:1;text-align:center;background:none;border:1px solid #3e8b6f;color:#8ed9bc;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">🚚 TRASPORTI</button>
-          <button class="btn-nuovo-cliente" onclick="openImportPdf()" style="flex:1;text-align:center;background:none;border:1px solid #3e6f8b;color:#8ec0d9;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">📥 PDF</button>
-          <button class="btn-nuovo-cliente" onclick="openConoscenza()" title="Conoscenza di Sole: fai imparare a Sole le tecniche dai lavori reali (fasi di lavorazione), in forma anonima" style="flex:1;text-align:center;background:none;border:1px solid #6f5e8b;color:#b8a8d9;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">📚 CONOSCENZA</button>
-          <button class="btn-nuovo-cliente" onclick="archiviaPersi()" title="Sposta in una cartella di quarantena le foto e i reel dei clienti PERSI, così puoi cancellarli a mano dal server e liberare spazio. Non cancella nulla." style="flex:1;text-align:center;background:none;border:1px solid #6f6f6f;color:#aaa;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">🧹 LIBERA SPAZIO</button>
-          <button class="btn-nuovo-cliente" onclick="openCestino()" title="Clienti spostati nel cestino — ripristinabili per 30 giorni" style="flex:1;text-align:center;background:none;border:1px solid #6f3e3e;color:#c87070;padding:5px 8px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">🗑 CESTINO</button>
+          <button class="btn btn--sm btn--grow" onclick="openMorosi()">💸 MOROSI</button>
+          <button class="btn btn--sm btn--grow" onclick="openTrasporti()" title="Giornata Trasporti: assegna i clienti COMPLETATO a una data di consegna/ritiro e avvisali">🚚 TRASPORTI</button>
+          <button class="btn btn--sm btn--grow" onclick="openImportPdf()">📥 PDF</button>
+          <button class="btn btn--sm btn--grow" onclick="openConoscenza()" title="Conoscenza di Sole: fai imparare a Sole le tecniche dai lavori reali (fasi di lavorazione), in forma anonima">📚 CONOSCENZA</button>
+          <button class="btn btn--sm btn--grow" onclick="archiviaPersi()" title="Sposta in una cartella di quarantena le foto e i reel dei clienti PERSI, così puoi cancellarli a mano dal server e liberare spazio. Non cancella nulla.">🧹 LIBERA SPAZIO</button>
+          <button class="btn btn--sm btn--grow" onclick="openCestino()" title="Clienti spostati nel cestino — ripristinabili per 30 giorni">🗑 CESTINO</button>
         </div>
       </div>
     </div>
@@ -128,16 +118,10 @@
 
       <!-- Link rapidi alle altre app -->
       <div style="display:flex;gap:12px;margin-top:20px;justify-content:center;flex-wrap:wrap;">
-        <a href="ardy-outreach.html" target="_blank"
-           style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border:1px solid #3e6f8b;color:#8ec0d9;border-radius:6px;font-family:'DM Mono',monospace;font-size:12px;text-decoration:none;background:transparent;cursor:pointer;transition:border-color .2s,color .2s;"
-           onmouseover="this.style.borderColor='#5a9fc0';this.style.color='#aed8f0';"
-           onmouseout="this.style.borderColor='#3e6f8b';this.style.color='#8ec0d9';">
+        <a href="ardy-outreach.html" target="_blank" class="btn btn--link" style="padding:10px 20px;">
           📣 ARDY OUTREACH
         </a>
-        <a href="ardy-design-app.html" target="_blank"
-           style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border:1px solid #6f5e8b;color:#b8a8d9;border-radius:6px;font-family:'DM Mono',monospace;font-size:12px;text-decoration:none;background:transparent;cursor:pointer;transition:border-color .2s,color .2s;"
-           onmouseover="this.style.borderColor='#9a85c0';this.style.color='#d0c5f0';"
-           onmouseout="this.style.borderColor='#6f5e8b';this.style.color='#b8a8d9';">
+        <a href="ardy-design-app.html" target="_blank" class="btn btn--link" style="padding:10px 20px;">
           🎨 ARDY DESIGN
         </a>
       </div>
@@ -154,14 +138,12 @@
           <div class="detail-sub" id="dSub">—</div>
         </div>
         <div style="display:flex;gap:6px;margin-left:8px;align-self:flex-start;flex-wrap:wrap;justify-content:flex-end;">
-          <button id="btnDossier" onclick="apriDossier()" title="Apri il dossier completo del cliente: anagrafica, preventivi, fasi, chat WhatsApp."
-            style="background:transparent;border:1px solid #3e6f8b;color:#8ec0d9;border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;white-space:nowrap;">📄 Dossier</button>
-          <button id="btnReinviaGrazie" onclick="reinviaGrazie()" title="Reinvia al cliente l'email (e WhatsApp se configurato) di ringraziamento alla consegna: recensione Google, social, newsletter."
-            style="display:none;background:transparent;border:1px solid #8b6f3e;color:#c8a96e;border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;white-space:nowrap;">📧 Reinvia ringraziamento</button>
-          <button id="btnLiberaSpazio" onclick="liberaSpazioCliente()" title="Lavoro concluso: cancella foto e reel dal server per liberare spazio. Tiene scheda, preventivi (con PDF), fasi e pagina sito."
-            style="display:none;background:transparent;border:1px solid #6f8b6f;color:#9bd99b;border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;white-space:nowrap;">🧹 Libera spazio</button>
-          <button id="btnEliminaCliente" onclick="cestinaCliente()" title="Sposta nel cestino (recuperabile per 30 giorni)"
-            style="background:transparent;border:1px solid #d9534f;color:#d9534f;border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;white-space:nowrap;">🗑 Cestino</button>
+          <button id="btnDossier" class="btn btn--link" onclick="apriDossier()" title="Apri il dossier completo del cliente: anagrafica, preventivi, fasi, chat WhatsApp.">📄 Dossier</button>
+          <button id="btnReinviaGrazie" class="btn" onclick="reinviaGrazie()" title="Reinvia al cliente l'email (e WhatsApp se configurato) di ringraziamento alla consegna: recensione Google, social, newsletter."
+            style="display:none;">📧 Reinvia ringraziamento</button>
+          <button id="btnLiberaSpazio" class="btn" onclick="liberaSpazioCliente()" title="Lavoro concluso: cancella foto e reel dal server per liberare spazio. Tiene scheda, preventivi (con PDF), fasi e pagina sito."
+            style="display:none;">🧹 Libera spazio</button>
+          <button id="btnEliminaCliente" class="btn btn--danger" onclick="cestinaCliente()" title="Sposta nel cestino (recuperabile per 30 giorni)">🗑 Cestino</button>
         </div>
       </div>
 

@@ -211,7 +211,15 @@ Sequenza consigliata: **P1 → verifica su staging → P2 → P3**, a piccoli bl
 ---
 
 ## 8. Prossimo passo concreto (quando si riprende)
-- [ ] Decidere se partire dalla **Priorità 1** (consigliato: sì — impatto/rischio migliore).
-- [ ] Introdurre scala tipografica + classi `.btn-primary/.btn-secondary/.btn-danger` nei token.
-- [ ] Migrare gli `style=""` dei bottoni ai token, a blocchi, verificando a vista su staging.
+- [x] Decidere se partire dalla **Priorità 1** — sì.
+- [x] Introdurre scala tipografica (`--fs-xs/sm/base/md`) + sistema bottoni a 4 categorie
+      semantiche nei token (`.btn` neutro · `.btn--primary` · `.btn--danger` · `.btn--link`,
+      con `.btn--sm/--block/--grow`). Fatto in `ardy-michela-app.css`.
+- [x] Migrare gli `style=""` dei bottoni della **prima schermata** ai token: link header,
+      riga azioni sidebar (con `+ NUOVO` come unica azione primaria), pannello strumenti (⚙︎),
+      header del pannello dettaglio (Dossier=link, Cestino=danger), link-app dell'empty state.
+      Verificato a vista con render Chromium (sidebar pulita, nessun errore JS a runtime).
+- [ ] **Prossimo blocco** — estendere la stessa migrazione ai bottoni inline dentro i modali e
+      le sezioni a fisarmonica (restano ~440 `style=""`, la maggior parte non-bottoni): a piccoli
+      blocchi, con lo stesso sistema di classi già pronto.
 - [ ] (Opzionale) 15 min di test-utente sui 3 compiti del §7 per dare priorità basata sui dati.
