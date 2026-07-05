@@ -63,8 +63,8 @@
         <div id="strumentiPanel" style="display:none;gap:5px;margin-top:5px;flex-wrap:wrap;">
           <button class="btn btn--sm btn--grow" onclick="openImportPdf()">📥 PDF</button>
           <button class="btn btn--sm btn--grow" onclick="openConoscenza()" title="Conoscenza di Sole: fai imparare a Sole le tecniche dai lavori reali (fasi di lavorazione), in forma anonima">📚 CONOSCENZA</button>
-          <button class="btn btn--sm btn--grow" onclick="archiviaPersi()" title="Sposta in una cartella di quarantena le foto e i reel dei clienti PERSI, così puoi cancellarli a mano dal server e liberare spazio. Non cancella nulla.">🧹 LIBERA SPAZIO</button>
-          <button class="btn btn--sm btn--grow" onclick="openCestino()" title="Clienti spostati nel cestino — ripristinabili per 30 giorni">🗑 CESTINO</button>
+          <button class="btn btn--sm btn--grow" onclick="archiviaPersi()" title="Sposta in una cartella di quarantena le foto e i reel dei clienti PERSI, così puoi cancellarli a mano dal server e liberare spazio. Non cancella nulla.">🧹 LIBERA SPAZIO (PERSI)</button>
+          <button class="btn btn--sm btn--grow" onclick="openCestino()" title="Apri l'elenco dei clienti nel cestino — ripristinabili per 30 giorni">🗑 VEDI CESTINO</button>
         </div>
       </div>
     </div>
@@ -149,8 +149,8 @@
           <button id="btnReinviaGrazie" class="btn" onclick="reinviaGrazie()" title="Reinvia al cliente l'email (e WhatsApp se configurato) di ringraziamento alla consegna: recensione Google, social, newsletter."
             style="display:none;">📧 Reinvia ringraziamento</button>
           <button id="btnLiberaSpazio" class="btn" onclick="liberaSpazioCliente()" title="Lavoro concluso: cancella foto e reel dal server per liberare spazio. Tiene scheda, preventivi (con PDF), fasi e pagina sito."
-            style="display:none;">🧹 Libera spazio</button>
-          <button id="btnEliminaCliente" class="btn btn--danger" onclick="cestinaCliente()" title="Sposta nel cestino (recuperabile per 30 giorni)">🗑 Cestino</button>
+            style="display:none;">🧹 Libera spazio cliente</button>
+          <button id="btnEliminaCliente" class="btn btn--danger" onclick="cestinaCliente()" title="Sposta questo cliente nel cestino (recuperabile per 30 giorni)">🗑 Cestina cliente</button>
         </div>
       </div>
 
@@ -390,13 +390,13 @@
               <div id="fasiBozzaList"></div>
             </div>
 
-            <!-- Editor nuova fase: accordion come gli altri -->
-            <div style="border:1px solid var(--border);border-radius:6px;margin-bottom:16px;overflow:hidden;">
-            <button class="acc-header" id="btnToggleNuovaFase" onclick="toggleNuovaFase()">
-              <span class="acc-title">🔨 Crea e pubblica nuova fase</span>
+            <!-- Azione diretta della sezione Lavorazione (non fisarmonica annidata) — Audit P3 -->
+            <div style="margin-bottom:16px;">
+            <button class="btn btn--accent btn--block" id="btnToggleNuovaFase" onclick="toggleNuovaFase()" style="justify-content:space-between;">
+              <span>🔨 Crea e pubblica nuova fase</span>
               <span class="acc-chevron" id="nuovaFaseChevron">▾</span>
             </button>
-            <div id="nuovaFaseBody" class="lav-form" style="display:none;border:none;border-top:1px solid var(--border);border-radius:0;margin-bottom:0;">
+            <div id="nuovaFaseBody" class="lav-form" style="display:none;margin-top:10px;">
               <div class="lav-row">
                 <input class="lav-input" id="lavFase" placeholder="Fase — scrivi o scegli dalla libreria" list="dlLibreriaFasi" autocomplete="off" name="ardy-fase-libreria" inputmode="text" oninput="onFaseNomeInput()">
                 <input class="lav-input" id="lavMobile" placeholder="Mobile (es. Credenza anni 60)">
@@ -983,7 +983,7 @@ function renderDetail() {
     const giaLiberato = !!(l.foto_archiviate_at && String(l.foto_archiviate_at).trim());
     btnLib.style.display = archiviato ? 'inline-block' : 'none';
     btnLib.disabled = giaLiberato;
-    btnLib.textContent = giaLiberato ? '🧹 Spazio liberato' : '🧹 Libera spazio';
+    btnLib.textContent = giaLiberato ? '🧹 Spazio liberato' : '🧹 Libera spazio cliente';
     btnLib.style.opacity = giaLiberato ? '0.55' : '1';
     btnLib.style.cursor  = giaLiberato ? 'default' : 'pointer';
   }
@@ -1514,7 +1514,7 @@ async function cestinaCliente() {
   } catch(e) {
     showToast('⚠ Errore di rete', 'error');
   }
-  if (btn) { btn.disabled = false; btn.textContent = '🗑 Cestino'; }
+  if (btn) { btn.disabled = false; btn.textContent = '🗑 Cestina cliente'; }
 }
 
 // ─── VISTA CESTINO ───
@@ -1610,11 +1610,11 @@ async function liberaSpazioCliente() {
       showToast(`🧹 Spazio liberato${data.spazio ? ' · ' + data.spazio : ''}`, 'success');
     } else {
       showToast('⚠ ' + ((data && data.error) || 'Errore'), 'error');
-      if (btn) { btn.disabled = false; btn.textContent = '🧹 Libera spazio'; }
+      if (btn) { btn.disabled = false; btn.textContent = '🧹 Libera spazio cliente'; }
     }
   } catch(e) {
     showToast('⚠ Errore di rete', 'error');
-    if (btn) { btn.disabled = false; btn.textContent = '🧹 Libera spazio'; }
+    if (btn) { btn.disabled = false; btn.textContent = '🧹 Libera spazio cliente'; }
   }
 }
 
