@@ -44,7 +44,7 @@
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
           <div class="sidebar-title" style="margin-bottom:0;flex:1;">Clienti / Lead</div>
           <input type="text" id="search" placeholder="Cerca..." oninput="filterLeads()" style="flex:1;background:#1e1e1e;border:1px solid #444;color:#ccc;padding:4px 8px;border-radius:4px;font-family:monospace;font-size:10px;min-width:0;">
-          <button id="btnArchivio" onclick="apriArchivio()" title="Lavori conclusi (CONSEGNATO)" style="display:none;background:none;border:1px solid #555;color:#999;padding:3px 7px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;white-space:nowrap;">📦 Archivio <span id="archCount">0</span></button>
+          <button id="btnArchivio" class="btn btn--sm" onclick="apriArchivio()" title="Lavori conclusi (CONSEGNATO)" style="display:none;">📦 Archivio <span id="archCount">0</span></button>
         </div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;">
           <button class="btn btn--primary btn--sm btn--grow" onclick="openNuovoCliente()">+ NUOVO</button>
@@ -65,7 +65,7 @@
     </div>
 
     <div style="padding:0 14px;">
-      <button id="btnFiltri" onclick="toggleFiltri()" style="width:100%;text-align:left;background:none;border:1px solid #444;color:#aaa;padding:6px 10px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer;">🔍 RICERCA AVANZATA ▾</button>
+      <button id="btnFiltri" class="btn btn--menu btn--sm" onclick="toggleFiltri()">🔍 RICERCA AVANZATA ▾</button>
     </div>
 
     <div class="filters" id="filters" style="display:none;">
@@ -148,7 +148,7 @@
       </div>
 
       <div style="margin:10px 0 4px;">
-        <button id="btnToggleStato" onclick="toggleStato()" style="width:100%;text-align:left;background:none;border:1px solid #8b6f3e;color:#c8a96e;padding:8px 12px;border-radius:6px;font-family:monospace;font-size:12px;cursor:pointer;">🔄 Aggiorna stato — attuale: <strong id="statoCorrente">—</strong> ▾</button>
+        <button id="btnToggleStato" class="btn btn--menu btn--accent" onclick="toggleStato()">🔄 Aggiorna stato — attuale: <strong id="statoCorrente">—</strong> ▾</button>
         <div class="stato-selector" id="statoSelector" style="display:none;margin-top:8px;"></div>
       </div>
 
@@ -240,7 +240,7 @@
                 </select>
                 <input type="datetime-local" id="soprNewData" class="info-value editable" style="flex:1 1 180px;min-width:160px;">
                 <input type="text" id="soprNewEtichetta" class="info-value editable" placeholder="Etichetta (es. 2° sopralluogo)" style="flex:1 1 160px;min-width:140px;">
-                <button type="button" onclick="aggiungiSopralluogo()" style="background:var(--accent,#c8a96e);color:#1a1a1a;border:none;border-radius:5px;padding:7px 12px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">➕ Aggiungi</button>
+                <button type="button" class="btn btn--primary" onclick="aggiungiSopralluogo()">➕ Aggiungi</button>
               </div>
             </div>
             <!-- Session ID: dato tecnico (per Sole/n8n), non utile in dashboard.
@@ -5038,7 +5038,7 @@ async function archiviaPersi() {
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;border-top:1px dashed var(--border);padding-top:8px;">
           <input type="datetime-local" id="todoNewData" class="info-value editable" style="flex:1 1 170px;min-width:150px;">
           <input type="text" id="todoNewTesto" class="info-value editable" placeholder="Cosa c'è da fare…" maxlength="255" style="flex:1 1 160px;min-width:140px;">
-          <button type="button" onclick="aggiungiTodoDatato()" style="background:var(--accent,#c8a96e);color:#1a1a1a;border:none;border-radius:5px;padding:7px 12px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">➕ Aggiungi</button>
+          <button type="button" class="btn btn--primary" onclick="aggiungiTodoDatato()">➕ Aggiungi</button>
         </div>
       </div>
     </div>
