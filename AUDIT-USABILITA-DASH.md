@@ -219,7 +219,11 @@ Sequenza consigliata: **P1 → verifica su staging → P2 → P3**, a piccoli bl
       riga azioni sidebar (con `+ NUOVO` come unica azione primaria), pannello strumenti (⚙︎),
       header del pannello dettaglio (Dossier=link, Cestino=danger), link-app dell'empty state.
       Verificato a vista con render Chromium (sidebar pulita, nessun errore JS a runtime).
-- [ ] **Prossimo blocco** — estendere la stessa migrazione ai bottoni inline dentro i modali e
-      le sezioni a fisarmonica (restano ~440 `style=""`, la maggior parte non-bottoni): a piccoli
-      blocchi, con lo stesso sistema di classi già pronto.
+- [x] **Blocco 2** — barre-toggle e azioni statiche del dettaglio: aggiunte le varianti
+      `.btn--accent` (emphasis oro non-pieno) e `.btn--menu` (barra a tutta larghezza); migrati
+      `RICERCA AVANZATA`, `📦 Archivio`, la barra `🔄 Aggiorna stato` (accent) e i due `➕ Aggiungi`
+      (primary). Verificato con render Chromium.
+- [ ] **Prossimo blocco** — i bottoni generati da stringhe JS nei modali (cestino, morosi,
+      trasporti, conoscenza): ~12 istanze, stesso sistema di classi, ma vanno toccate dentro i
+      template literal → giro dedicato e prudente.
 - [ ] (Opzionale) 15 min di test-utente sui 3 compiti del §7 per dare priorità basata sui dati.

@@ -118,7 +118,9 @@
        .btn--primary → azione PRINCIPALE del contesto (una sola)
        .btn--danger  → distruttivo (cestina/elimina)
        .btn--link    → naviga verso un'altra app/sezione
-     Modificatori: .btn--sm (compatto, sidebar) · .btn--block (larghezza piena)
+       .btn--accent  → emphasis oro (contorno, non pieno): toggle/azione rilevante non-primaria
+     Modificatori: .btn--sm (compatto) · .btn--block (larghezza piena) · .btn--grow (flex:1)
+                   .btn--menu (barra a tutta larghezza, etichetta a sinistra + chevron)
      ═══════════════════════════════════════════════════════════════ */
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
@@ -140,9 +142,14 @@
   .btn--link { border-color: var(--blue); color: var(--btn-link); }
   .btn--link:hover { border-color: #5a9fc0; color: #aed8f0; }
 
+  .btn--accent { border-color: var(--accent2); color: var(--accent); }
+  .btn--accent:hover { border-color: var(--accent); color: var(--accent); background: rgba(200,169,110,.08); }
+
   .btn--sm { padding: 5px 8px; font-size: var(--fs-xs); border-radius: 4px; gap: 4px; }
   .btn--block { width: 100%; }
   .btn--grow { flex: 1; }
+  /* Barra-toggle a tutta larghezza: display:block per non spezzare testo+chevron in flex-item */
+  .btn--menu { display: block; width: 100%; text-align: left; }
 
   /* LAYOUT */
   .layout {
