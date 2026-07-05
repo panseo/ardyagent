@@ -81,6 +81,10 @@
     gap: 16px;
   }
 
+  /* Link alle altre app: in chiaro su desktop, nel menu ☰ su mobile (Audit) */
+  .header-apps { display: flex; gap: 8px; }
+  .header-menu-btn { display: none; }
+
   .status-dot {
     width: 8px; height: 8px;
     border-radius: 50%;
@@ -999,6 +1003,24 @@
 
     /* Header padding ridotto */
     header { padding: 0 16px; }
+
+    /* Mobile: i link app collassano nel menu ☰, per non affollare l'header */
+    .header-menu-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 36px; height: 32px; border-radius: 6px;
+      background: none; border: 1px solid var(--border); color: var(--text-mid);
+      font-size: 17px; line-height: 1; cursor: pointer;
+    }
+    .header-apps {
+      position: absolute; top: 54px; right: 8px;
+      flex-direction: column; gap: 6px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px; z-index: 200;
+      box-shadow: 0 8px 24px rgba(0,0,0,.45);
+      display: none;
+    }
+    .header-apps.open { display: flex; }
+    .header-apps .btn { width: 100%; justify-content: flex-start; }
 
     /* Toast centrato in basso */
     .toast { right: 16px; left: 16px; max-width: none; }
