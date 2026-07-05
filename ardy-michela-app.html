@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Ardy">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="ardy-michela-app.css?v=20260705b">
+<link rel="stylesheet" href="ardy-michela-app.css?v=20260705c">
 </head>
 <body>
 
@@ -25,11 +25,12 @@
       <span style="display:none;">ARDY LAB</span>
     </div>
   </div>
-  <div style="display:flex;gap:8px;">
+  <div class="header-apps" id="headerApps">
     <a href="ardy-outreach.html" target="_blank" class="btn btn--link btn--sm">📣 OUTREACH</a>
     <a href="ardy-design-app.html" target="_blank" class="btn btn--link btn--sm">🎨 DESIGN</a>
   </div>
   <div class="header-right">
+    <button class="header-menu-btn" id="headerMenuBtn" onclick="toggleHeaderApps(event)" aria-label="Altre app" title="Altre app">☰</button>
     <div class="status-dot"></div>
     <button class="btn-refresh" onclick="loadLeads()">↻ AGGIORNA</button>
   </div>
@@ -836,6 +837,19 @@ function toggleStrumenti() {
   p.style.display = aperto ? 'none' : 'flex';
   if (b) b.style.color = aperto ? '#888' : '#c8a96e';
 }
+
+// Menu ☰ dell'header (link ad altre app): usato solo su mobile
+function toggleHeaderApps(ev) {
+  if (ev) ev.stopPropagation();
+  const m = document.getElementById('headerApps');
+  if (m) m.classList.toggle('open');
+}
+document.addEventListener('click', (e) => {
+  const m = document.getElementById('headerApps');
+  const b = document.getElementById('headerMenuBtn');
+  if (!m || !b || !m.classList.contains('open')) return;
+  if (!m.contains(e.target) && !b.contains(e.target)) m.classList.remove('open');
+});
 
 function toggleFiltri() {
   const f = document.getElementById('filters');
