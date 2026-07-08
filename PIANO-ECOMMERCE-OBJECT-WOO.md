@@ -236,7 +236,7 @@ DDL nuovi campi §3.2 in `ardy-migrate.php` · UI nella dash design per compilar
 `ardy-object-proxy.php` (clone lavorazione, CORS nuovo, contesto server-side) · `ardy-object-system.txt`
 · `ardy-object-chat.js` · snippet WP di iniezione. → *Un pezzo demo chattabile.*
 
-**Fase 2 — Negozio + push**
+**Fase 2 — Negozio + push** ✅ *FATTA (vedi §15)*
 WP+Woo su `object.ardy-lab.it` · `ardy-object-push.php` (REST Woo) · pulsante in dash · primo prodotto
 reale pubblicato con chat attiva.
 
@@ -343,3 +343,38 @@ pubblica ma non viene iniettato nel prompt. Rivedibile quando i prezzi combacian
 
 **Prossimo (Fase 2):** WP+Woo già in piedi → resta il **push dash→Woo** (`ardy-object-push.php`, REST
 Woo: crea/aggiorna prodotto con lo stesso slug, salva `woo_product_id`) + pulsante in dash.
+
+---
+
+## 15. Stato implementazione — Fase 2 (push dash → Woo)
+
+Implementata sul branch. Ponte a **senso unico**: dalla dash design si crea/aggiorna il prodotto Woo;
+Woo non riscrive mai la dash.
+
+**Cosa è stato fatto**
+- **`ardy-object-push.php`** *(nuovo, Basic Auth)* — `POST {progetto_id[, pubblica]}`: legge il
+  progetto, chiama la **REST API WooCommerce** (Basic Auth CK/CS su HTTPS) e crea/aggiorna il prodotto
+  con lo **stesso slug**. Mappa: `titolo→name`, `slug→slug`, `descrizione+storia→description`,
+  `materiali+dimensioni→short_description`, `prezzo_vendita→regular_price`. Se `woo_product_id` manca,
+  **adotta** un prodotto già esistente con lo stesso slug (niente doppioni/`-2`). Salva `woo_product_id`
+  sul progetto. Su create → `draft` (si pubblica in Woo dopo revisione); su update non tocca lo status
+  se non `pubblica:true`.
+- **`ardy-design-app.html`** — pulsante **"🛒 Invia al negozio / Aggiorna su negozio"** nella riga
+  azioni + indicatore "Su negozio — prodotto Woo #id" nel blocco Scheda-Sole.
+- **`.htaccess`** — `ardy-object-push.php` aggiunto al `<FilesMatch>` Basic Auth.
+
+**Config richiesta** (in `ardy-config.php`, fuori dal repo):
+```php
+define('WOO_STORE_URL', 'https://object.ardy-lab.it');
+define('WOO_CK', 'ck_xxxxxxxx');   // WooCommerce → Impostazioni → Avanzate → API REST
+define('WOO_CS', 'cs_xxxxxxxx');   // permessi Read/Write
+```
+
+**Come usarla**
+1. In Woo: **Impostazioni → Avanzate → API REST → Aggiungi chiave** (Read/Write) → copia CK/CS in
+   `ardy-config.php` sul server.
+2. In dash design apri il progetto → **"🛒 Invia al negozio"** → il prodotto compare in Woo come bozza
+   (o si aggiorna se già collegato), con lo slug giusto → la chat di Sole è già agganciata.
+
+Con la Fase 2 il ciclo è chiuso: **dash = contenuti · Woo = commercio · Sole = chat**, una sola fonte
+di verità e nessun allineamento manuale di slug/prezzo/testi.
