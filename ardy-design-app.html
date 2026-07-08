@@ -286,6 +286,7 @@ function renderDettaglio(nuovo=false){
           <label style="display:flex;align-items:center;gap:6px;white-space:nowrap;margin-top:18px"><input type="checkbox" id="f_scheda_sole" ${p.scheda_sole_pubblica?'checked':''}> Visibile a Sole</label>
         </div>
         ${p.slug?`<div class="muted" style="font-size:.85em">object.ardy-lab.it/prodotto/<b>${esc(p.slug)}</b></div>`:'<div class="muted" style="font-size:.85em">Lo slug si genera al primo salvataggio dal titolo.</div>'}
+        ${p.woo_product_id?`<div class="muted" style="font-size:.85em">🛒 Su negozio — prodotto Woo #${p.woo_product_id}</div>`:''}
       </div>
 
       <div class="row">
@@ -297,6 +298,7 @@ function renderDettaglio(nuovo=false){
         <button class="primary" onclick="salvaProgetto()">${p.id?'Salva modifiche':'Crea progetto'}</button>
         ${p.id?`<button class="ghost danger" onclick="eliminaProgetto()">Elimina</button>`:''}
         ${p.id?`<button class="ghost" onclick="nuovaCongela()">${p.file_congelato_at?'🔒 Aggiorna versione congelata':'⏟ Congela file'}</button>`:''}
+        ${p.id?`<button class="ghost" onclick="pushWoo()">🛒 ${p.woo_product_id?'Aggiorna su negozio':'Invia al negozio'}</button>`:''}
       </div>
       ${p.id && p.file_congelato_at ? congelatoSummary() : ''}
     </div>
@@ -328,6 +330,20 @@ async function salvaProgetto(){
   const d = await api('POST', body);
   if (!d.success){ toast(d.error||'Errore'); return; }
   toast('Salvato'); await caricaLista(); apri(d.id);
+}
+async function pushWoo(){
+  const id = stato.dettaglio.progetto.id;
+  if (!id){ toast('Salva prima il progetto'); return; }
+  if (!confirm('Inviare/aggiornare questo oggetto sul negozio WooCommerce (come bozza)?')) return;
+  toast('Invio al negozio…');
+  let d;
+  try {
+    d = await fetch('ardy-object-push.php', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ progetto_id:id }) }).then(r=>r.json());
+  } catch(e){ toast('Errore di rete'); return; }
+  if (!d || !d.success){ toast((d&&d.error)||'Errore push'); return; }
+  toast(d.created?'Prodotto creato su Woo (bozza)':'Prodotto aggiornato su Woo');
+  await apri(id);
 }
 async function cambiaStato(s){
   const d = await api('POST', { mode:'stato', id:stato.dettaglio.progetto.id, stato:s });
