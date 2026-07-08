@@ -228,7 +228,7 @@ Standard WooCommerce (carrello + gateway). Fuori dallo scope della chat.
 
 ## 10. Roadmap a fasi
 
-**Fase 0 — Strutturare ardy design (fondazione dati)**
+**Fase 0 — Strutturare ardy design (fondazione dati)** ✅ *FATTA (vedi §13)*
 DDL nuovi campi §3.2 in `ardy-migrate.php` · UI nella dash design per compilarli · endpoint pubblico
 `ardy-object-scheda.php` con whitelist + `scheda_sole_pubblica`. → *Testabile subito con curl.*
 
@@ -268,3 +268,35 @@ lavorazione con contesto lato server e CORS nuovo) e il push dash→Woo. La scel
 **da ardy design via API** è quella che tiene una sola fonte di verità e, soprattutto, tiene **fuori
 dalla chat costi, margini e file** — che è il rischio numero uno quando la stessa entità è insieme
 "progetto interno" e "prodotto in vendita".
+
+---
+
+## 13. Stato implementazione — Fase 0 (fondazione dati)
+
+Implementata sul branch `claude/ardy-ecommerce-woocommerce-5ve2xq`. Solo backend dati + UI dash:
+nessuna dipendenza da WooCommerce, testabile con `curl`.
+
+**Cosa è stato fatto**
+- **`ardy-migrate.php`** — nuove colonne su `progetti`: `storia`, `dimensioni`, `cura`,
+  `faq_pubbliche` (JSON `[{q,a}]`), `scheda_sole_pubblica` (TINYINT, interruttore). Più un
+  **indice UNIQUE** `idx_progetti_slug` su `slug`. Idempotente (colExists/indexExists).
+- **`ardy-progetti-api.php`** — il `save` accetta e persiste i nuovi campi; **genera lo `slug`**
+  dal titolo se mancante (univoco, non lo cambia se già presente → non rompe URL/aggancio Woo);
+  le FAQ si salvano come JSON `[{q,a}]` da testo "Domanda | Risposta" per riga.
+- **`ardy-object-scheda.php`** *(nuovo, pubblico, read-only)* — `GET ?slug=…` restituisce SOLO i
+  campi whitelisted (slug, titolo, tipo, descrizione, storia, materiali, scheda_tecnica, dimensioni,
+  cura, faq, prezzo_vendita, copertina_url). Serve solo progetti con `scheda_sole_pubblica = 1` e non
+  eliminati. Costi/BOM/margine/file/iterazioni **non transitano**. CORS allowlist + rate-limit per IP.
+- **`ardy-design-app.html`** — nel form progetto un blocco **"🟡 Scheda-Sole"**: storia, dimensioni,
+  cura, FAQ, slug (con anteprima URL) e checkbox **"Visibile a Sole"** (`scheda_sole_pubblica`).
+
+**Come testare dopo il deploy** (il migrate gira da `deploy.sh`)
+1. In dash design: apri un progetto, compila la Scheda-Sole, spunta "Visibile a Sole", salva.
+2. Verifica lo slug generato (mostrato sotto il campo) e la proiezione pubblica:
+   ```bash
+   curl -s "https://ardyagent.ardy-lab.it/ardy-object-scheda.php?slug=LO-SLUG" | jq
+   ```
+   Deve tornare `success:true` con i soli campi pubblici; con `scheda_sole_pubblica=0` → `404`.
+
+**Prossimo (Fase 1):** `ardy-object-proxy.php` + `ardy-object-system.txt` + `ardy-object-chat.js`
+(chat per-oggetto che legge questa scheda lato server) e lo snippet WP di iniezione su Kadence.

@@ -383,6 +383,30 @@ foreach ($progettiWpCols as $col => $sql) {
     else { echo "  skip progetti.$col\n"; $skip++; }
 }
 
+// Colonne "scheda-Sole": la proiezione PUBBLICA del progetto che alimenta la chat
+// di Sole sul negozio object.ardy-lab.it (vedi PIANO-ECOMMERCE-OBJECT-WOO.md §3).
+// Sono campi pubblici curati; costi/BOM/margine/file/iterazioni NON stanno qui e
+// non transitano mai dall'endpoint pubblico. 'scheda_sole_pubblica' è l'interruttore:
+// solo se = 1 l'oggetto è servito alla chat (evita che bozze finiscano in vendita).
+$progettiSoleCols = [
+    'storia'               => "ALTER TABLE progetti ADD COLUMN storia TEXT NULL AFTER descrizione",
+    'dimensioni'           => "ALTER TABLE progetti ADD COLUMN dimensioni VARCHAR(160) NULL AFTER scheda_tecnica",
+    'cura'                 => "ALTER TABLE progetti ADD COLUMN cura TEXT NULL AFTER scheda_tecnica",
+    'faq_pubbliche'        => "ALTER TABLE progetti ADD COLUMN faq_pubbliche TEXT NULL", // JSON [{q,a}]
+    'scheda_sole_pubblica' => "ALTER TABLE progetti ADD COLUMN scheda_sole_pubblica TINYINT(1) NOT NULL DEFAULT 0",
+];
+foreach ($progettiSoleCols as $col => $sql) {
+    if (!colExists($pdo, 'progetti', $col)) { ddl($pdo, $sql, "progetti.$col"); }
+    else { echo "  skip progetti.$col\n"; $skip++; }
+}
+
+// Slug univoco del progetto = slug del prodotto Woo + chiave con cui la chat risolve
+// l'oggetto (/prodotto/{slug} → scheda-Sole). Indice UNIQUE: i NULL multipli sono
+// ammessi da InnoDB, quindi le righe storiche senza slug non rompono la migrazione.
+if (!indexExists($pdo, 'progetti', 'idx_progetti_slug')) {
+    ddl($pdo, "CREATE UNIQUE INDEX idx_progetti_slug ON progetti (slug)", "INDEX progetti.slug");
+} else { echo "  skip INDEX progetti.slug\n"; $skip++; }
+
 // ── COLONNE clienti ───────────────────────────────────────────────────────────
 
 $clientiCols = [
