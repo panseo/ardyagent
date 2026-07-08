@@ -89,6 +89,7 @@ if ($o['storia'])         { $ctx .= "Storia: {$o['storia']}\n"; }
 if ($o['materiali'])      { $ctx .= "Materiali: {$o['materiali']}\n"; }
 if ($o['scheda_tecnica']) { $ctx .= "Scheda tecnica: {$o['scheda_tecnica']}\n"; }
 if ($o['dimensioni'])     { $ctx .= "Dimensioni: {$o['dimensioni']}\n"; }
+if ($o['prezzo_vendita'] !== null) { $ctx .= 'Prezzo di listino: ' . number_format((float) $o['prezzo_vendita'], 2, ',', '.') . " €\n"; }
 if ($o['cura'])           { $ctx .= "Cura e manutenzione: {$o['cura']}\n"; }
 if ($faqTxt !== '')       { $ctx .= "FAQ:\n{$faqTxt}"; }
 

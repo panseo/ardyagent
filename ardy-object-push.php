@@ -59,9 +59,24 @@ function wooRequest(string $method, string $path, ?array $body = null): array {
     return ['code' => $code, 'body' => json_decode((string) $res, true), 'raw' => $res, 'err' => $err];
 }
 
+/** Immagini pubbliche (galleria) del progetto come URL che Woo scarica. Foto prima dei render. */
+function objectGalleriaImages(PDO $db, int $pid): array {
+    $st = $db->prepare(
+        "SELECT id FROM progetto_galleria WHERE progetto_id = ?
+         ORDER BY (tipo = 'foto') DESC, ordine ASC, id ASC"
+    );
+    $st->execute([$pid]);
+    $imgs = [];
+    foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $gid) {
+        $imgs[] = ['src' => 'https://ardyagent.ardy-lab.it/ardy-object-img.php?pid=' . $pid . '&gid=' . (int) $gid];
+    }
+    return $imgs;
+}
+
 $in       = json_decode(file_get_contents('php://input'), true) ?: [];
 $pid      = (int) ($in['progetto_id'] ?? $in['id'] ?? 0);
 $pubblica = !empty($in['pubblica']);
+$syncFoto = !empty($in['sync_foto']);
 if ($pid <= 0) { echo json_encode(['success' => false, 'error' => 'progetto mancante']); exit(); }
 
 try {
