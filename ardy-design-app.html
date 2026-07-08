@@ -303,7 +303,7 @@ function renderDettaglio(nuovo=false){
       ${p.id && p.file_congelato_at ? congelatoSummary() : ''}
     </div>
 
-    ${p.id?(stato.congelaForm?congelaFormHtml():'')+galleriaPanel()+articoloPanel()+filePanel()+bomPanel()+iterPanel()+fasiPanel():'<div class="muted">Salva il progetto per gestire galleria, file, costi, prototipi e contenuti.</div>'}
+    ${p.id?(stato.congelaForm?congelaFormHtml():'')+galleriaPanel()+fotoVenditaPanel()+articoloPanel()+filePanel()+bomPanel()+iterPanel()+fasiPanel():'<div class="muted">Salva il progetto per gestire galleria, file, costi, prototipi e contenuti.</div>'}
   `;
 }
 
@@ -562,6 +562,51 @@ async function eliminaGalleria(id){
   if (!confirm('Eliminare questa immagine dalla galleria?')) return;
   await fetch(GALLERIA_API, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode:'delete', id }) });
   toast('Immagine eliminata'); apri(stato.dettaglio.progetto.id);
+}
+
+// ── Foto VENDITA (Modulo 2 / WooCommerce) — set separato dalla galleria ──
+const FOTOVENDITA_API = 'ardy-object-foto-api.php';
+function fotoVenditaUrl(f){ return `${FOTOVENDITA_API}?progetto_id=${stato.dettaglio.progetto.id}&file_id=${f.id}&file=1`; }
+function fotoVenditaPanel(){
+  const imgs = stato.dettaglio.foto_vendita || [];
+  return `
+  <div class="panel">
+    <h2>📸 Foto vendita <small>foto professionali del pezzo finito · vanno sul prodotto WooCommerce</small></h2>
+    ${imgs.length ? `<div class="thumbs">${imgs.map(f=>`
+      <div class="thumbwrap"><img class="thumb" src="${fotoVenditaUrl(f)}" alt="">
+        <button class="x" onclick="eliminaFotoVendita(${f.id})">✕</button></div>`).join('')}</div>`
+      : '<div class="muted" style="font-size:11px">— nessuna foto vendita —</div>'}
+    <div class="row" style="align-items:flex-end;margin-top:8px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <label class="filebtn">📷 Scatta foto<input type="file" accept="image/*" capture="environment" multiple onchange="caricaFotoVendita(this)"></label>
+        <label class="filebtn">🖼️ Da file<input type="file" accept="image/*" multiple onchange="caricaFotoVendita(this)"></label>
+      </div>
+    </div>
+    <div id="fvOut" class="muted" style="margin-top:6px">Distinte dalla galleria: queste sono le immagini di vendita che il pulsante «🛒 Invia al negozio» carica su Woo. La prima è l'immagine principale.</div>
+  </div>`;
+}
+async function caricaFotoVendita(input){
+  const files = Array.from(input.files||[]);
+  if (!files.length) return;
+  const out = document.getElementById('fvOut');
+  if (out) out.textContent = '⏳ Carico…';
+  let ok=0, fail=0, lastErr='';
+  for (const file of files){
+    const fd = new FormData();
+    fd.append('mode','upload'); fd.append('progetto_id', stato.dettaglio.progetto.id); fd.append('file', file);
+    try {
+      const d = await fetch(FOTOVENDITA_API, { method:'POST', body: fd }).then(r=>r.json());
+      if (d.success) ok++; else { fail++; lastErr = d.error||'errore'; }
+    } catch(e){ fail++; lastErr = 'Errore di rete'; }
+  }
+  if (fail && out) out.innerHTML = `<span class="neg">${esc(lastErr)}</span>`;
+  toast(ok ? `Caricate ${ok} foto vendita${fail?` · ${fail} ko`:''}` : 'Upload fallito');
+  apri(stato.dettaglio.progetto.id);
+}
+async function eliminaFotoVendita(id){
+  if (!confirm('Eliminare questa foto vendita?')) return;
+  await fetch(FOTOVENDITA_API, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode:'delete', id }) });
+  toast('Foto vendita eliminata'); apri(stato.dettaglio.progetto.id);
 }
 
 // ── Articolo WordPress del progetto (madre delle fasi-racconto) ──

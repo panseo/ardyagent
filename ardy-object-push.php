@@ -59,12 +59,9 @@ function wooRequest(string $method, string $path, ?array $body = null): array {
     return ['code' => $code, 'body' => json_decode((string) $res, true), 'raw' => $res, 'err' => $err];
 }
 
-/** Immagini pubbliche (galleria) del progetto come URL che Woo scarica. Foto prima dei render. */
-function objectGalleriaImages(PDO $db, int $pid): array {
-    $st = $db->prepare(
-        "SELECT id FROM progetto_galleria WHERE progetto_id = ?
-         ORDER BY (tipo = 'foto') DESC, ordine ASC, id ASC"
-    );
+/** Foto VENDITA del progetto (Modulo 2) come URL che Woo scarica — NON la galleria. */
+function objectFotoVendita(PDO $db, int $pid): array {
+    $st = $db->prepare("SELECT id FROM progetto_foto_vendita WHERE progetto_id = ? ORDER BY ordine ASC, id ASC");
     $st->execute([$pid]);
     $imgs = [];
     foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $gid) {
@@ -118,6 +115,19 @@ try {
         if (is_array($found['body'] ?? null) && isset($found['body'][0]['id'])) {
             $wooId = (int) $found['body'][0]['id'];
         }
+    }
+
+    // Foto vendita: le manda il push quando il prodotto Woo non ne ha ancora (auto-fill),
+    // o quando si forza con sync_foto. Su un prodotto che ha già immagini (es. foto messa
+    // a mano in Woo) NON le sovrascrive, per non cancellare scelte manuali.
+    $hasImg = false;
+    if ($wooId > 0) {
+        $cur    = wooRequest('GET', "products/{$wooId}");
+        $hasImg = is_array($cur['body']['images'] ?? null) && count($cur['body']['images']) > 0;
+    }
+    if ($wooId <= 0 || !$hasImg || $syncFoto) {
+        $foto = objectFotoVendita($db, $pid);
+        if ($foto) { $payload['images'] = $foto; }
     }
 
     if ($wooId > 0) {

@@ -1,11 +1,12 @@
 <?php
 // -----------------------------------------------------------
-// ARDY LAB — Serve pubblico di un'immagine galleria di un oggetto
-// Le foto/render della galleria progetto SONO immagini pubbliche del pezzo. Questo
-// endpoint le serve in chiaro SOLO per gli oggetti pubblicati (scheda_sole_pubblica=1),
-// così WooCommerce può scaricarle durante il push (ardy-object-push.php). Gestisce sia
-// il disco locale sia Backblaze B2 (stesso seam della galleria-api).
-//   GET ?pid=N&gid=M → bytes immagine
+// ARDY LAB — Serve pubblico di una FOTO VENDITA di un oggetto
+// Le foto vendita (Modulo 2, tabella progetto_foto_vendita) sono le immagini pubbliche
+// del pezzo in vendita — DISTINTE dalla galleria del progetto (Modulo 1 → ardy-lab.it).
+// Questo endpoint le serve in chiaro SOLO per gli oggetti pubblicati
+// (scheda_sole_pubblica=1), così WooCommerce può scaricarle durante il push
+// (ardy-object-push.php). Gestisce disco locale e, se una foto è stata spostata, B2.
+//   GET ?pid=N&gid=M → bytes immagine (gid = id in progetto_foto_vendita)
 // PUBBLICO (fuori dal Basic Auth del .htaccess). Vedi PIANO §7.
 // -----------------------------------------------------------
 
@@ -32,12 +33,13 @@ if ($rl['count'] > 600) { http_response_code(429); exit(); }
 try {
     $db = ardyDB();
 
-    // Gate: l'immagine è servita solo se l'oggetto è pubblico e non eliminato.
+    // Gate: la foto è servita solo se l'oggetto è pubblico e non eliminato. Le foto
+    // sono quelle di VENDITA (Modulo 2), NON la galleria del progetto (Modulo 1).
     $st = $db->prepare(
-        "SELECT g.storage, g.nome_file, g.storage_key
-         FROM progetto_galleria g
-         JOIN progetti p ON p.id = g.progetto_id
-         WHERE g.id = ? AND g.progetto_id = ? AND p.scheda_sole_pubblica = 1 AND p.deleted_at IS NULL
+        "SELECT v.storage, v.nome_file, v.storage_key
+         FROM progetto_foto_vendita v
+         JOIN progetti p ON p.id = v.progetto_id
+         WHERE v.id = ? AND v.progetto_id = ? AND p.scheda_sole_pubblica = 1 AND p.deleted_at IS NULL
          LIMIT 1"
     );
     $st->execute([$gid, $pid]);
@@ -58,7 +60,7 @@ try {
         exit();
     }
 
-    $path = rtrim(ARDY_UPLOAD_DIR, '/') . '/progetti/' . $pid . '/galleria/' . basename($row['nome_file']);
+    $path = rtrim(ARDY_UPLOAD_DIR, '/') . '/progetti/' . $pid . '/vendita/' . basename($row['nome_file']);
     if (!is_file($path)) { http_response_code(404); exit(); }
     $mime = (new finfo(FILEINFO_MIME_TYPE))->file($path);
     if (!in_array($mime, $allowed, true)) { http_response_code(403); exit(); }

@@ -378,3 +378,39 @@ define('WOO_CS', 'cs_xxxxxxxx');   // permessi Read/Write
 
 Con la Fase 2 il ciclo è chiuso: **dash = contenuti · Woo = commercio · Sole = chat**, una sola fonte
 di verità e nessun allineamento manuale di slug/prezzo/testi.
+
+---
+
+## 16. Revisione (09/07) — foto vendita separate + prezzo in chat
+
+Due decisioni prese col committente durante la messa a punto:
+
+**Prezzo in chat (Punto 1).** Ora dash e Woo sono allineati dal push, quindi Sole **riceve il prezzo
+di listino** nel contesto e **può confermarlo** (senza contrattare/scontare); l'acquisto resta in
+pagina. (`ardy-object-proxy.php` + `ardy-object-system.txt`.)
+
+**Foto: due moduli, due set separati (Punto 2, ridisegnato).**
+La dash design ha due moduli e le immagini NON vanno mescolate:
+- **Modulo 1 — progetto/lavorazione** → articolo su `ardy-lab.it` con fasi/prototipazione. Usa la
+  **galleria** (`progetto_galleria`). **Intoccato.**
+- **Modulo 2 — WooCommerce** → usa un set **separato** di **foto vendita professionali**, fatte quando
+  il pezzo è A CATALOGO. Nuova tabella **`progetto_foto_vendita`** (mai la galleria).
+
+Motivo: la galleria racconta il *processo*, le foto vendita vendono il *prodotto finito*. Tenerle in
+tabelle distinte azzera il rischio di contaminazione tra i due moduli.
+
+**Implementazione**
+- `ardy-migrate.php` — nuova tabella `progetto_foto_vendita` (storage local di default).
+- `ardy-object-foto-api.php` *(nuovo, Basic Auth)* — upload/lista/serve/elimina/ordina foto vendita.
+  **Storage locale** (niente auto-push su B2 → Woo le scarica affidabile; B2 solo backup a freddo,
+  Opzione A per la fragilità delle letture B2).
+- `ardy-design-app.html` — pannello **"📸 Foto vendita"** distinto dalla Galleria; il dettaglio API
+  ora restituisce anche `foto_vendita`.
+- `ardy-object-img.php` — serve pubblico ripuntato su `progetto_foto_vendita`.
+- `ardy-object-push.php` — invia a Woo le **foto vendita** (auto-fill se il prodotto non ha immagini,
+  o forzato con `sync_foto`; non sovrascrive foto messe a mano). Immagini scaricate da Woo via
+  `ardy-object-img.php`.
+
+**Nota B2 (Opzione A):** le letture da Backblaze B2 sono il punto fragile (workaround già presente nel
+publish del Modulo 1). Per il Modulo 2 si evita del tutto: foto vendita in locale, B2 eventualmente
+solo come backup a freddo. Fix radicale del GET B2 = intervento separato, non in questo scope.
