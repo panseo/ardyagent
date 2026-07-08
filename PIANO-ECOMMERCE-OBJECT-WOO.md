@@ -232,7 +232,7 @@ Standard WooCommerce (carrello + gateway). Fuori dallo scope della chat.
 DDL nuovi campi §3.2 in `ardy-migrate.php` · UI nella dash design per compilarli · endpoint pubblico
 `ardy-object-scheda.php` con whitelist + `scheda_sole_pubblica`. → *Testabile subito con curl.*
 
-**Fase 1 — Chat per-oggetto**
+**Fase 1 — Chat per-oggetto** ✅ *FATTA (vedi §14)*
 `ardy-object-proxy.php` (clone lavorazione, CORS nuovo, contesto server-side) · `ardy-object-system.txt`
 · `ardy-object-chat.js` · snippet WP di iniezione. → *Un pezzo demo chattabile.*
 
@@ -300,3 +300,46 @@ nessuna dipendenza da WooCommerce, testabile con `curl`.
 
 **Prossimo (Fase 1):** `ardy-object-proxy.php` + `ardy-object-system.txt` + `ardy-object-chat.js`
 (chat per-oggetto che legge questa scheda lato server) e lo snippet WP di iniezione su Kadence.
+
+---
+
+## 14. Stato implementazione — Fase 1 (chat per-oggetto)
+
+Implementata sul branch `claude/ardy-ecommerce-woocommerce-5ve2xq`. Clone del pattern del widget
+lavorazione, senza tool (niente calendario): chiamata Claude singola, `claude-sonnet-4-6`, prompt
+caching. Il contesto dell'oggetto è caricato **lato server** dallo slug — il client non può iniettarlo.
+
+**Cosa è stato fatto**
+- **`ardy-object-lib.php`** *(nuovo, interno)* — `objectSchedaSole($db,$slug)`: UNICA fonte della
+  whitelist campi pubblici. Usata sia dall'endpoint sia dal proxy → nessuna divergenza. Negato
+  all'accesso diretto via `.htaccess`.
+- **`ardy-object-scheda.php`** — rifattorizzato per usare la libreria (stessa risposta pubblica).
+- **`ardy-object-system.txt`** *(nuovo)* — prompt di Sole "assistente del negozio": racconta il
+  pezzo, invita all'acquisto senza pressioni; **prezzo/disponibilità/spedizioni → rimanda alla
+  pagina/negozio** (così non contraddice Woo ed evita il disallineamento prezzo dash↔Woo); su misura
+  → contatta Michela. Solo dati del contesto, niente invenzioni.
+- **`ardy-object-proxy.php`** *(nuovo, pubblico)* — CORS allowlist con `object.ardy-lab.it` (non
+  cablata sul dominio principale come i proxy vecchi), rate-limit IP orario+giornaliero,
+  `ardy_strip_tool_syntax`, system statico (cacheabile) + contesto oggetto. Input `{slug,message,history}`.
+- **`ardy-object-chat.js`** *(nuovo)* — widget bolla pulito (stile chiaro, system font) che legge lo
+  slug da `#ardy-object-chat[data-slug]` e dialoga col proxy. Mobile-first.
+- **`wordpress-snippets/object-chat-inject.php`** *(backup)* — snippet per il WP del negozio: sulle
+  pagine prodotto stampa `<div id="ardy-object-chat" data-slug="{slug prodotto}">` + carica il widget.
+
+**Nota prezzo (decisione tecnica):** in attesa che dash e Woo siano allineati, Sole **non cita cifre**
+di prezzo: rimanda alla scheda del prodotto in pagina. Il prezzo resta comunque nella scheda-Sole
+pubblica ma non viene iniettato nel prompt. Rivedibile quando i prezzi combaciano (§11.1).
+
+**Come attivarla/testarla**
+1. Deploy del branch (i file girano su ardyagent; `ardy-object-system.txt` è servito solo lato server).
+2. Nel WP del negozio: incolla `wordpress-snippets/object-chat-inject.php` in Code Snippets/WPCode
+   (o mu-plugin). Ricarica una scheda prodotto → compare la bolla "Chiedi a Sole".
+3. Test diretto del proxy senza WP:
+   ```bash
+   curl -s -X POST https://ardyagent.ardy-lab.it/ardy-object-proxy.php \
+     -H 'Content-Type: application/json' -H 'Origin: https://object.ardy-lab.it' \
+     -d '{"slug":"lampada-ardisco","message":"Raccontami questa lampada"}' | jq -r .reply
+   ```
+
+**Prossimo (Fase 2):** WP+Woo già in piedi → resta il **push dash→Woo** (`ardy-object-push.php`, REST
+Woo: crea/aggiorna prodotto con lo stesso slug, salva `woo_product_id`) + pulsante in dash.

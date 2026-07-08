@@ -14,6 +14,7 @@
 
 require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-net.php';
+require_once __DIR__ . '/ardy-object-lib.php';
 
 // CORS: allowlist esplicita (il negozio + ardyagent per il proxy/test).
 $allowedOrigins = ['https://object.ardy-lab.it', 'https://ardyagent.ardy-lab.it'];
@@ -52,44 +53,15 @@ if ($slug === '') {
 
 try {
     $db = ardyDB();
+    $oggetto = objectSchedaSole($db, $slug);
 
-    // WHITELIST esplicita: SOLO campi pubblici. Nessun costo/margine/BOM/file/iterazione.
-    $st = $db->prepare(
-        "SELECT slug, titolo, tipo, descrizione, storia, materiali, scheda_tecnica,
-                dimensioni, cura, faq_pubbliche, prezzo_vendita, copertina_url
-         FROM progetti
-         WHERE slug = ? AND scheda_sole_pubblica = 1 AND deleted_at IS NULL
-         LIMIT 1"
-    );
-    $st->execute([$slug]);
-    $r = $st->fetch(PDO::FETCH_ASSOC);
-
-    if (!$r) {
+    if (!$oggetto) {
         http_response_code(404);
         echo json_encode(['success' => false, 'error' => 'Oggetto non trovato']);
         exit();
     }
 
-    $faq = json_decode($r['faq_pubbliche'] ?? 'null', true);
-    if (!is_array($faq)) { $faq = []; }
-
-    echo json_encode([
-        'success' => true,
-        'oggetto' => [
-            'slug'           => $r['slug'],
-            'titolo'         => $r['titolo'],
-            'tipo'           => $r['tipo'],
-            'descrizione'    => $r['descrizione'],
-            'storia'         => $r['storia'],
-            'materiali'      => $r['materiali'],
-            'scheda_tecnica' => $r['scheda_tecnica'],
-            'dimensioni'     => $r['dimensioni'],
-            'cura'           => $r['cura'],
-            'faq'            => $faq,
-            'prezzo_vendita' => $r['prezzo_vendita'] !== null ? (float) $r['prezzo_vendita'] : null,
-            'copertina_url'  => $r['copertina_url'],
-        ],
-    ], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['success' => true, 'oggetto' => $oggetto], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     error_log('ARDY OBJECT SCHEDA: ' . $e->getMessage());
     http_response_code(500);

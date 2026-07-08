@@ -11,7 +11,7 @@
 </FilesMatch>
 
 # Blocca accesso diretto a file PHP interni (non API)
-<FilesMatch "^(ardy-db|ardy-auth|ardy-net|ardy-storage|ardy-web-memoria|ardy-wa-store|ardy-email|ardy-outreach-lib|ardy-briefing-lib|ardy-gbp)\.php$">
+<FilesMatch "^(ardy-db|ardy-auth|ardy-net|ardy-storage|ardy-web-memoria|ardy-wa-store|ardy-email|ardy-outreach-lib|ardy-briefing-lib|ardy-gbp|ardy-object-lib)\.php$">
     Order Allow,Deny
     Deny from all
 </FilesMatch>
