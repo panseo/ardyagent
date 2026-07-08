@@ -83,6 +83,50 @@ function progettoArricchisci(array $r): array {
     return $r;
 }
 
+/** Slug URL-safe da un testo (per /prodotto/{slug} su Woo + chiave scheda-Sole). */
+function progettoSlugify(string $s): string {
+    $s = trim($s);
+    if (function_exists('iconv')) {
+        $t = @iconv('UTF-8', 'ASCII//TRANSLIT', $s);
+        if ($t !== false) $s = $t;
+    }
+    $s = preg_replace('/[^a-z0-9]+/', '-', strtolower($s));
+    return substr(trim($s, '-'), 0, 70);
+}
+
+/** Slug univoco: appende -2, -3… se già preso (escludendo il progetto stesso). */
+function progettoSlugUnico(PDO $db, string $base, int $exceptId = 0): string {
+    $base = $base !== '' ? $base : 'oggetto';
+    $slug = $base; $i = 2;
+    $st = $db->prepare("SELECT id FROM progetti WHERE slug = ? AND id <> ? LIMIT 1");
+    while (true) {
+        $st->execute([$slug, $exceptId]);
+        if (!$st->fetch()) return $slug;
+        $slug = substr($base, 0, 66) . '-' . $i++;
+    }
+}
+
+/** Normalizza le FAQ pubbliche in JSON [{q,a}]. Accetta array o testo "Domanda | Risposta" per riga. */
+function progettoFaqJson($v): ?string {
+    if ($v === null || $v === '') return null;
+    $out = [];
+    if (is_array($v)) {
+        foreach ($v as $item) {
+            $q = trim((string) ($item['q'] ?? '')); $a = trim((string) ($item['a'] ?? ''));
+            if ($q !== '' || $a !== '') $out[] = ['q' => $q, 'a' => $a];
+        }
+    } elseif (is_string($v)) {
+        foreach (preg_split('/\r?\n/', $v) as $line) {
+            $line = trim($line);
+            if ($line === '') continue;
+            $p = explode('|', $line, 2);
+            $q = trim($p[0]); $a = trim($p[1] ?? '');
+            if ($q !== '') $out[] = ['q' => $q, 'a' => $a];
+        }
+    }
+    return $out ? json_encode($out, JSON_UNESCAPED_UNICODE) : null;
+}
+
 try {
     $db = ardyDB();
 
@@ -169,8 +213,13 @@ try {
             'titolo'         => $titolo,
             'tipo'           => $tipo,
             'descrizione'    => trim((string) ($in['descrizione'] ?? '')),
+            'storia'         => trim((string) ($in['storia'] ?? '')),
             'materiali'      => trim((string) ($in['materiali'] ?? '')),
             'scheda_tecnica' => trim((string) ($in['scheda_tecnica'] ?? '')),
+            'dimensioni'     => trim((string) ($in['dimensioni'] ?? '')),
+            'cura'           => trim((string) ($in['cura'] ?? '')),
+            'faq_pubbliche'  => progettoFaqJson($in['faq_pubbliche'] ?? ($in['faq'] ?? null)),
+            'scheda_sole_pubblica' => !empty($in['scheda_sole_pubblica']) ? 1 : 0,
             'scarto_pct'     => max(0, progettoParseNum($in['scarto_pct'] ?? 10)),
             'prezzo_vendita' => isset($in['prezzo_vendita']) && $in['prezzo_vendita'] !== '' ? progettoParseNum($in['prezzo_vendita']) : null,
             'tempo_lavoro'   => trim((string) ($in['tempo_lavoro'] ?? '')),
@@ -195,6 +244,20 @@ try {
             $db->prepare("INSERT INTO progetti ($cols) VALUES ($phs)")->execute($fields);
             $id = (int) $db->lastInsertId();
         }
+        // Slug (chiave prodotto Woo + scheda-Sole): se l'utente lo fornisce lo si usa
+        // (reso univoco); altrimenti si genera dal titolo SOLO se ancora vuoto — non si
+        // cambia uno slug esistente, per non rompere l'URL/aggancio di un prodotto già
+        // pubblicato.
+        $slugCur = (string) $db->query("SELECT slug FROM progetti WHERE id = " . (int) $id)->fetchColumn();
+        $slugIn  = isset($in['slug']) ? progettoSlugify((string) $in['slug']) : '';
+        if ($slugIn !== '') {
+            $db->prepare("UPDATE progetti SET slug = :s WHERE id = :id")
+               ->execute([':s' => progettoSlugUnico($db, $slugIn, $id), ':id' => $id]);
+        } elseif ($slugCur === '') {
+            $db->prepare("UPDATE progetti SET slug = :s WHERE id = :id")
+               ->execute([':s' => progettoSlugUnico($db, progettoSlugify($titolo), $id), ':id' => $id]);
+        }
+
         progettoRicalcolaCosto($db, $id); // lo scarto può essere cambiato qui
         echo json_encode(['success' => true, 'id' => $id]);
         exit();
