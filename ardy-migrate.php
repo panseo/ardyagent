@@ -372,6 +372,24 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `progetto_galleria` (
     INDEX idx_galleria_progetto (progetto_id, ordine)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE progetto_galleria");
 
+// Foto VENDITA del progetto: set SEPARATO dalla galleria (che alimenta l'articolo su
+// ardy-lab.it, Modulo 1). Queste sono le foto professionali del pezzo finito, fatte
+// quando il progetto è A CATALOGO, e sono le immagini che vanno sul prodotto Woo
+// (Modulo 2). Tenute distinte apposta: la galleria racconta il processo, queste
+// vendono il prodotto. Storage 'local' di default (Woo le scarica affidabile da disco;
+// B2 solo come backup a freddo opzionale — vedi PIANO §7 / Opzione A B2).
+ddl($pdo, "CREATE TABLE IF NOT EXISTS `progetto_foto_vendita` (
+    `id`          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `progetto_id` BIGINT NOT NULL,
+    `storage`     VARCHAR(10)  NOT NULL DEFAULT 'local',  -- local | b2 (backup a freddo)
+    `nome_file`   VARCHAR(255) NOT NULL,
+    `storage_key` VARCHAR(300) NULL,
+    `dimensione`  BIGINT       NOT NULL DEFAULT 0,
+    `ordine`      INT          NOT NULL DEFAULT 0,
+    `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_fotovendita_progetto (progetto_id, ordine)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE progetto_foto_vendita");
+
 // Colonne WordPress sul progetto: id e link dell'articolo "madre" (pubblicato dalla
 // galleria + descrizione; le fasi-racconto poi vi si agganciano in append).
 $progettiWpCols = [

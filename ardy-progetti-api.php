@@ -179,14 +179,22 @@ try {
         );
         $gall->execute([$id]);
 
+        // Foto vendita (Modulo 2 / Woo): set separato dalla galleria.
+        $fv = $db->prepare(
+            "SELECT id, dimensione, ordine, created_at
+             FROM progetto_foto_vendita WHERE progetto_id = ? ORDER BY ordine ASC, id ASC"
+        );
+        $fv->execute([$id]);
+
         echo json_encode([
-            'success'    => true,
-            'progetto'   => $p,
-            'materiali'  => $mat->fetchAll(),
-            'iterazioni' => $iterRows,
-            'fasi'       => $fasiRows,
-            'file'       => $file->fetchAll(),
-            'galleria'   => $gall->fetchAll(),
+            'success'      => true,
+            'progetto'     => $p,
+            'materiali'    => $mat->fetchAll(),
+            'iterazioni'   => $iterRows,
+            'fasi'         => $fasiRows,
+            'file'         => $file->fetchAll(),
+            'galleria'     => $gall->fetchAll(),
+            'foto_vendita' => $fv->fetchAll(),
             'config'     => [
                 'stati'             => PROGETTO_STATI,
                 'tipi'              => PROGETTO_TIPI,

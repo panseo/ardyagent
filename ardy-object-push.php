@@ -59,9 +59,21 @@ function wooRequest(string $method, string $path, ?array $body = null): array {
     return ['code' => $code, 'body' => json_decode((string) $res, true), 'raw' => $res, 'err' => $err];
 }
 
+/** Foto VENDITA del progetto (Modulo 2) come URL che Woo scarica — NON la galleria. */
+function objectFotoVendita(PDO $db, int $pid): array {
+    $st = $db->prepare("SELECT id FROM progetto_foto_vendita WHERE progetto_id = ? ORDER BY ordine ASC, id ASC");
+    $st->execute([$pid]);
+    $imgs = [];
+    foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $gid) {
+        $imgs[] = ['src' => 'https://ardyagent.ardy-lab.it/ardy-object-img.php?pid=' . $pid . '&gid=' . (int) $gid];
+    }
+    return $imgs;
+}
+
 $in       = json_decode(file_get_contents('php://input'), true) ?: [];
 $pid      = (int) ($in['progetto_id'] ?? $in['id'] ?? 0);
 $pubblica = !empty($in['pubblica']);
+$syncFoto = !empty($in['sync_foto']);
 if ($pid <= 0) { echo json_encode(['success' => false, 'error' => 'progetto mancante']); exit(); }
 
 try {
@@ -103,6 +115,19 @@ try {
         if (is_array($found['body'] ?? null) && isset($found['body'][0]['id'])) {
             $wooId = (int) $found['body'][0]['id'];
         }
+    }
+
+    // Foto vendita: le manda il push quando il prodotto Woo non ne ha ancora (auto-fill),
+    // o quando si forza con sync_foto. Su un prodotto che ha già immagini (es. foto messa
+    // a mano in Woo) NON le sovrascrive, per non cancellare scelte manuali.
+    $hasImg = false;
+    if ($wooId > 0) {
+        $cur    = wooRequest('GET', "products/{$wooId}");
+        $hasImg = is_array($cur['body']['images'] ?? null) && count($cur['body']['images']) > 0;
+    }
+    if ($wooId <= 0 || !$hasImg || $syncFoto) {
+        $foto = objectFotoVendita($db, $pid);
+        if ($foto) { $payload['images'] = $foto; }
     }
 
     if ($wooId > 0) {
