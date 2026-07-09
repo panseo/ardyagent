@@ -75,6 +75,12 @@
   .badge.PROTOTIPO{color:var(--orange);border-color:var(--orange)} .badge.VERSIONE_FINALE{color:var(--yellow);border-color:var(--yellow)}
   .badge.REALIZZAZIONE{color:var(--accent);border-color:var(--accent)} .badge.FOTO{color:var(--text)}
   .badge.A_CATALOGO{color:var(--green);border-color:var(--green)}
+  /* Moduli collassabili (rivelati per fase del ciclo di vita) */
+  .panel.mod > h2{ cursor:pointer; position:relative; padding-right:24px; }
+  .panel.mod > h2::after{ content:'▸'; position:absolute; right:2px; top:0; color:var(--text-dim); transition:transform .2s; }
+  .panel.mod.open > h2::after{ transform:rotate(90deg); }
+  .panel.mod:not(.open) > *:not(h2){ display:none !important; }
+  .panel.mod.locked{ display:none !important; }
 
   .panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-bottom:18px; box-shadow:var(--shadow); }
   .panel h2 { font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:2px; color:var(--accent); margin-bottom:14px; font-weight:400; }
@@ -184,6 +190,21 @@ const TIPI = ['lampada','mobile','complemento','restyling','prototipo'];
 const STATI = ['IDEA','PROGETTAZIONE','PROTOTIPO','VERSIONE_FINALE','REALIZZAZIONE','FOTO','A_CATALOGO'];
 const METODI = [['stampa_3d','🖨️ Stampa 3D'],['restyling','♻️ Restyling'],['altro','🔧 Altro']];
 const DISPONIBILITA = [['pronto','Pronto'],['su_ordinazione','Su ordinazione'],['pezzo_unico','Pezzo unico']];
+
+// Toggle delle card collassabili (delega: click sull'<h2> di una .panel.mod).
+document.addEventListener('click', function(e){
+  const h2 = e.target.closest('h2');
+  if (h2 && h2.parentElement && h2.parentElement.classList.contains('mod')) h2.parentElement.classList.toggle('open');
+});
+// Rivelazione per fase: un modulo compare se la fase corrente ha raggiunto lo sblocco
+// (e il metodo lo consente). Aperto di default quando è la fase appena raggiunta.
+function modSection(id, unlock, need3d, html){
+  const p = stato.dettaglio.progetto;
+  if (STATI.indexOf(p.stato) < STATI.indexOf(unlock)) return '';
+  if (need3d && (p.metodo||'stampa_3d') !== 'stampa_3d') return '';
+  const open = (p.stato === unlock);
+  return html.replace('<div class="panel"', `<div class="panel mod ${open?'open':''}" id="mod-${id}"`);
+}
 const CATEGORIE = ['filamento','stampa','elettrico','ferramenta','finitura','imballo','manodopera'];
 const UNITA_DEF = { filamento:'g', stampa:'h', manodopera:'h' };
 let stato = { lista:[], sel:null, dettaglio:null, costoOrario:50, faseForm:null, congelaForm:null, articoloTesto:'', articoloProgId:null };
@@ -266,48 +287,33 @@ function renderDettaglio(nuovo=false){
       <div class="pipeline">
         ${STATI.map((s,i)=>`<div class="step ${i<stepi?'done':''} ${i===stepi?'current':''}" onclick="cambiaStato('${s}')">${s.replace('_',' ')}</div>`).join('')}
       </div>
-      <div class="muted" style="margin-bottom:8px">Lo stato terminale è <b>A CATALOGO</b>: stock e vendita vivono su Woo/Etsy, non qui.</div>
+      <div class="muted" style="margin-bottom:8px">Man mano che avanzi nel ciclo di vita compaiono i moduli di quella fase. <b>A CATALOGO</b> è terminale: stock e vendita vivono su Woo.</div>
       `:''}
 
-      <div class="field"><label>Descrizione / concept</label><textarea id="f_descrizione" placeholder="Il racconto del pezzo">${esc(p.descrizione)}</textarea></div>
-      <div class="field"><label>Materiali (testo pubblico per la listing)</label><textarea id="f_materiali" placeholder="Es. PLA riciclato, ottone, cavo tessile">${esc(p.materiali)}</textarea></div>
-      <div class="field"><label>Scheda tecnica</label><textarea id="f_scheda_tecnica" placeholder="Dimensioni, finiture, e per la lampada: attacco, V, cavo, peso…">${esc(p.scheda_tecnica)}</textarea></div>
-
-      <div class="panel-sole" style="border:1px solid var(--border);border-radius:10px;padding:12px;margin:10px 0">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-          <b>🟡 Scheda-Sole</b>
-          <span class="muted" style="font-size:.85em">ciò che Sole può raccontare su questo oggetto nella chat del negozio</span>
-        </div>
-        <div class="field"><label>Storia del pezzo</label><textarea id="f_storia" placeholder="Origine, ispirazione, come nasce. È il cuore delle risposte «raccontami questo oggetto».">${esc(p.storia||'')}</textarea></div>
-        <div class="row">
-          <div class="field"><label>Dimensioni (sintetiche)</label><input id="f_dimensioni" value="${esc(p.dimensioni||'')}" placeholder="Es. 30 × 30 × 45 cm · 1,2 kg"></div>
-        </div>
-        <div class="field"><label>Cura / manutenzione</label><textarea id="f_cura" placeholder="Come si pulisce e si usa. Es. attacco E27, LED max 8W, panno asciutto, no acqua.">${esc(p.cura||'')}</textarea></div>
-        <div class="field"><label>FAQ pubbliche — una per riga, «Domanda | Risposta»</label><textarea id="f_faq" placeholder="È adatto agli esterni? | Sì, la finitura resiste all'umidità.&#10;Quanto pesa? | Circa 1,2 kg.">${esc(faqToText(p.faq_pubbliche))}</textarea></div>
-        <div class="field" style="max-width:220px"><label>Disponibilità (per il negozio)</label><select id="f_disponibilita">${DISPONIBILITA.map(d=>`<option value="${d[0]}" ${d[0]===(p.disponibilita||'pronto')?'selected':''}>${d[1]}</option>`).join('')}</select></div>
-        <div class="row" style="align-items:center">
-          <div class="field" style="flex:2"><label>Slug (URL prodotto Woo)</label><input id="f_slug" value="${esc(p.slug||'')}" placeholder="auto dal titolo al salvataggio"></div>
-          <label style="display:flex;align-items:center;gap:6px;white-space:nowrap;margin-top:18px"><input type="checkbox" id="f_scheda_sole" ${p.scheda_sole_pubblica?'checked':''}> Visibile a Sole</label>
-        </div>
-        ${p.slug?`<div class="muted" style="font-size:.85em">object.ardy-lab.it/prodotto/<b>${esc(p.slug)}</b></div>`:'<div class="muted" style="font-size:.85em">Lo slug si genera al primo salvataggio dal titolo.</div>'}
-        ${p.woo_product_id?`<div class="muted" style="font-size:.85em">🛒 Su negozio — prodotto Woo #${p.woo_product_id}</div>`:''}
-      </div>
-
+      <div class="field"><label>Descrizione / concept</label><textarea id="f_descrizione" placeholder="L'idea, il racconto del pezzo">${esc(p.descrizione)}</textarea></div>
       <div class="row">
         <div class="field"><label>Tempo lavoro</label><input id="f_tempo_lavoro" value="${esc(p.tempo_lavoro)}" placeholder="Es. 6h"></div>
-        <div class="field"><label>Prezzo vendita (suggerito) €</label><input id="f_prezzo_vendita" class="num" value="${p.prezzo_vendita??''}" placeholder="0,00"></div>
         <div class="field"><label>Scarto stampa %</label><input id="f_scarto_pct" class="num" value="${p.scarto_pct??10}"></div>
       </div>
       <div class="row" style="align-items:center">
         <button class="primary" onclick="salvaProgetto()">${p.id?'Salva modifiche':'Crea progetto'}</button>
         ${p.id?`<button class="ghost danger" onclick="eliminaProgetto()">Elimina</button>`:''}
-        ${p.id?`<button class="ghost" onclick="nuovaCongela()">${p.file_congelato_at?'🔒 Aggiorna versione finale':'🔒 Blocca versione finale'}</button>`:''}
-        ${p.id?`<button class="ghost" onclick="pushWoo()">🛒 ${p.woo_product_id?'Aggiorna su negozio':'Invia al negozio'}</button>`:''}
       </div>
-      ${p.id && p.file_congelato_at ? congelatoSummary() : ''}
     </div>
 
-    ${p.id?(stato.congelaForm?congelaFormHtml():'')+galleriaPanel()+fotoVenditaPanel()+articoloPanel()+filePanel()+bomPanel()+iterPanel()+fasiPanel():'<div class="muted">Salva il progetto per gestire galleria, file, costi, prototipi e contenuti.</div>'}
+    ${p.id ? schedaProdottoCard() : ''}
+    ${p.id ? [
+      modSection('galleria','PROGETTAZIONE',false, galleriaPanel()),
+      modSection('file','PROGETTAZIONE',true, filePanel()),
+      modSection('iter','PROTOTIPO',true, iterPanel()),
+      modSection('bom','PROTOTIPO',false, bomPanel()),
+      modSection('versione','VERSIONE_FINALE',true, versioneFinalePanel()),
+      (stato.congelaForm ? congelaFormHtml() : ''),
+      modSection('fotovendita','VERSIONE_FINALE',false, fotoVenditaPanel()),
+      modSection('fasi','REALIZZAZIONE',false, fasiPanel()),
+      modSection('articolo','REALIZZAZIONE',false, articoloPanel()),
+      modSection('push','A_CATALOGO',false, pushPanel()),
+    ].join('') : '<div class="muted">Salva il progetto per gestire i suoi moduli (foto, file, costi, contenuti, negozio).</div>'}
   `;
 }
 
@@ -612,6 +618,57 @@ async function eliminaFotoVendita(id){
   if (!confirm('Eliminare questa foto vendita?')) return;
   await fetch(FOTOVENDITA_API, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode:'delete', id }) });
   toast('Foto vendita eliminata'); apri(stato.dettaglio.progetto.id);
+}
+
+// ── Scheda prodotto / Sole (card gated: compare da VERSIONE FINALE) ──
+// Sempre nel DOM (anche 'locked' = nascosta) così il salvataggio legge i campi.
+function schedaProdottoCard(){
+  const p = stato.dettaglio.progetto;
+  const locked = STATI.indexOf(p.stato) < STATI.indexOf('VERSIONE_FINALE');
+  const open = p.stato === 'VERSIONE_FINALE';
+  return `
+  <div class="panel mod ${open?'open':''} ${locked?'locked':''}" id="mod-prodotto">
+    <h2>🟡 Scheda prodotto / Sole <small>contenuti pubblici del pezzo in vendita</small></h2>
+    <div class="field"><label>Materiali (testo pubblico per la listing)</label><textarea id="f_materiali" placeholder="Es. PLA riciclato, ottone, cavo tessile">${esc(p.materiali)}</textarea></div>
+    <div class="field"><label>Scheda tecnica</label><textarea id="f_scheda_tecnica" placeholder="Finiture, e per la lampada: attacco, V, cavo, peso…">${esc(p.scheda_tecnica)}</textarea></div>
+    <div class="field"><label>Storia del pezzo</label><textarea id="f_storia" placeholder="Origine, ispirazione, come nasce. È il cuore delle risposte «raccontami questo oggetto».">${esc(p.storia||'')}</textarea></div>
+    <div class="row">
+      <div class="field"><label>Dimensioni (sintetiche)</label><input id="f_dimensioni" value="${esc(p.dimensioni||'')}" placeholder="Es. 30 × 30 × 45 cm · 1,2 kg"></div>
+      <div class="field"><label>Prezzo vendita €</label><input id="f_prezzo_vendita" class="num" value="${p.prezzo_vendita??''}" placeholder="0,00"></div>
+      <div class="field" style="max-width:200px"><label>Disponibilità</label><select id="f_disponibilita">${DISPONIBILITA.map(d=>`<option value="${d[0]}" ${d[0]===(p.disponibilita||'pronto')?'selected':''}>${d[1]}</option>`).join('')}</select></div>
+    </div>
+    <div class="field"><label>Cura / manutenzione</label><textarea id="f_cura" placeholder="Come si pulisce e si usa. Es. attacco E27, LED max 8W, panno asciutto, no acqua.">${esc(p.cura||'')}</textarea></div>
+    <div class="field"><label>FAQ pubbliche — una per riga, «Domanda | Risposta»</label><textarea id="f_faq" placeholder="È adatto agli esterni? | Sì, la finitura resiste all'umidità.&#10;Quanto pesa? | Circa 1,2 kg.">${esc(faqToText(p.faq_pubbliche))}</textarea></div>
+    <div class="row" style="align-items:center">
+      <div class="field" style="flex:2"><label>Slug (URL prodotto Woo)</label><input id="f_slug" value="${esc(p.slug||'')}" placeholder="auto dal titolo al salvataggio"></div>
+      <label style="display:flex;align-items:center;gap:6px;white-space:nowrap;margin-top:18px"><input type="checkbox" id="f_scheda_sole" ${p.scheda_sole_pubblica?'checked':''}> Visibile a Sole</label>
+    </div>
+    ${p.slug?`<div class="muted" style="font-size:.85em">object.ardy-lab.it/prodotto/<b>${esc(p.slug)}</b></div>`:'<div class="muted" style="font-size:.85em">Lo slug si genera al primo salvataggio dal titolo.</div>'}
+  </div>`;
+}
+
+// ── Versione finale (solo stampa 3D): blocca file/parametri ──
+function versioneFinalePanel(){
+  const p = stato.dettaglio.progetto;
+  return `
+  <div class="panel">
+    <h2>🔒 Versione finale <small>blocca file e parametri definitivi (stampa 3D)</small></h2>
+    <button class="ghost" onclick="nuovaCongela()">${p.file_congelato_at?'🔒 Aggiorna versione finale':'🔒 Blocca versione finale'}</button>
+    ${p.file_congelato_at ? congelatoSummary() : '<div class="muted" style="margin-top:8px">Non ancora bloccata: quando il design è definitivo, blocca i file/parametri con cui realizzi il pezzo.</div>'}
+  </div>`;
+}
+
+// ── Negozio (WooCommerce): compare a A CATALOGO ──
+function pushPanel(){
+  const p = stato.dettaglio.progetto;
+  const disp = (DISPONIBILITA.find(d=>d[0]===(p.disponibilita||'pronto'))||['','?'])[1];
+  return `
+  <div class="panel">
+    <h2>🛒 Negozio (WooCommerce) <small>pubblica o aggiorna il prodotto in vendita</small></h2>
+    <div class="muted" style="margin-bottom:8px">Slug: <b>${esc(p.slug||'—')}</b> · Disponibilità: <b>${disp}</b> · ${p.scheda_sole_pubblica?'Visibile a Sole ✅':'Non visibile a Sole'}</div>
+    <button class="ghost" onclick="pushWoo()">🛒 ${p.woo_product_id?'Aggiorna su negozio':'Invia al negozio'}</button>
+    ${p.woo_product_id?`<span class="muted" style="margin-left:8px">Woo #${p.woo_product_id}</span>`:''}
+  </div>`;
 }
 
 // ── Articolo WordPress del progetto (madre delle fasi-racconto) ──
