@@ -8,6 +8,33 @@
 
 ---
 
+## 🛒 APERTO — Ecommerce `object.ardy-lab.it` (Woo) + chat Sole per-oggetto (09/07/2026)
+
+Costruito in sessione `ardy-ecommerce-woocommerce`. Piano completo in **`PIANO-ECOMMERCE-OBJECT-WOO.md`**.
+WP+Woo dedicato su `object.ardy-lab.it` (Cloudflare arancione + Full strict; Origin cert `*.ardy-lab.it`).
+
+**Fatto (mergiato in main, PR #45-#51):**
+- Fase 0 — `progetti`: campi scheda-Sole (`storia/cura/faq_pubbliche/dimensioni/scheda_sole_pubblica`) +
+  slug univoco; endpoint pubblico `ardy-object-scheda.php` (whitelist).
+- Fase 1 — chat Sole per-oggetto: `ardy-object-proxy.php` + `ardy-object-system.txt` + `ardy-object-chat.js`
+  (contesto lato server, CORS `object.ardy-lab.it`), lib condivisa `ardy-object-lib.php`. Snippet WP di
+  iniezione: `wordpress-snippets/object-chat-inject.php` (installato come mu-plugin sul WP negozio).
+- Fase 2 — push dash→Woo `ardy-object-push.php` (REST Woo, CK/CS in `ardy-config.php`), pulsante in dash.
+- Prezzo confermabile in chat; **foto vendita separate** (tabella `progetto_foto_vendita`, `ardy-object-foto-api.php`,
+  `ardy-object-img.php`) — Modulo 1 (galleria→ardy-lab.it) intoccato.
+- Usabilità dash design: stati rinominati (VERSIONE_FINALE/REALIZZAZIONE/FOTO), attributi `metodo`/
+  `disponibilita`, **UI a card collassabili rivelate per fase** + gating per metodo.
+
+**Da fare / verificare:**
+- ⏳ **Verifica a video** della dash a card collassabili (grossa modifica UI, non testata live) — vedi
+  checklist di fine sessione. Poi eventuale ritocco layout.
+- ⏳ Test push **foto vendita** su un pezzo nuovo (auto-fill immagini su Woo).
+- ⚠️ **B2 letture rotte (Opzione A)**: il push foto usa immagini **locali** apposta. Fix radicale del GET
+  B2 (SigV4) resta un intervento a parte — impatta anche dash principale e articoli design.
+- Aggiornare la nota vecchia qui sotto in "CONGELATI" (già ribaltata: Woo **sì**, chat **è Sole**).
+
+---
+
 ## 🎨 APERTO — Seguiti dell'audit usabilità dash (05/07/2026)
 Audit + interventi P1/P2/P3 **fatti e deployati** (vedi `AUDIT-USABILITA-DASH.md`): linguaggio
 bottoni coerente, sidebar per frequenza, filtri raggruppati, azioni duplicate disambiguate, menu ☰
@@ -435,7 +462,7 @@ no concorrenza); diventa prioritario con più utenti o se compaiono 504. Refacto
 ---
 
 ## ❄️ CONGELATI / PARCHEGGIATI (non ora)
-- **Catalogo prezzi su Google Sheet / vendita**: niente WooCommerce → la vendita andrà su un **agente dedicato a parte**, non Sole.
+- **Catalogo prezzi su Google Sheet / vendita**: ~~niente WooCommerce → la vendita andrà su un **agente dedicato a parte**, non Sole.~~ **RIBALTATO (09/07/2026):** WooCommerce **sì** (`object.ardy-lab.it`) e la chat prodotto **è Sole**. Fatto — vedi la sezione in cima e `PIANO-ECOMMERCE-OBJECT-WOO.md`.
   - ⮑ **Scongelato/evoluto in `PIANO-DASH-DESIGN.md`** (25/06): dash separata per i progetti interni di design
     (prototipi/lampade/mobili/restyling) → fasi → contenuti → vendita. Deciso: stesso codebase + dati separati
     (`progetti` + `fasi.progetto_id`), la dash NON vende (master contenuti), Woo master commercio via push a
