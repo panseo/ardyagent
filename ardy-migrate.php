@@ -425,6 +425,29 @@ if (!indexExists($pdo, 'progetti', 'idx_progetti_slug')) {
     ddl($pdo, "CREATE UNIQUE INDEX idx_progetti_slug ON progetti (slug)", "INDEX progetti.slug");
 } else { echo "  skip INDEX progetti.slug\n"; $skip++; }
 
+// Attributi per l'usabilità della dash (rivelazione moduli per fase):
+//  - metodo: come si realizza il pezzo → decide quali moduli TECNICI mostrare
+//    (stampa 3D = archivio file/iterazioni/versione-file; restyling = niente STL).
+//  - disponibilita: come va a catalogo → guida stock/quantità su Woo. NON è una fase
+//    del ciclo di vita ma una proprietà (deciso 09/07).
+$progettiModuloCols = [
+    'metodo'        => "ALTER TABLE progetti ADD COLUMN metodo VARCHAR(20) NOT NULL DEFAULT 'stampa_3d'",      // stampa_3d|restyling|altro
+    'disponibilita' => "ALTER TABLE progetti ADD COLUMN disponibilita VARCHAR(20) NOT NULL DEFAULT 'pronto'",  // pronto|su_ordinazione|pezzo_unico
+];
+foreach ($progettiModuloCols as $col => $sql) {
+    if (!colExists($pdo, 'progetti', $col)) { ddl($pdo, $sql, "progetti.$col"); }
+    else { echo "  skip progetti.$col\n"; $skip++; }
+}
+
+// Rinomina degli stati del ciclo di vita: via dal gergo stampa-3D (deciso 09/07).
+// Idempotente: dopo la prima volta nessuna riga corrisponde più ai vecchi codici.
+$rinominaStati = ['FILE_CONGELATO' => 'VERSIONE_FINALE', 'PRODUZIONE' => 'REALIZZAZIONE', 'FOTOGRAFIA' => 'FOTO'];
+foreach ($rinominaStati as $old => $new) {
+    $rs = $pdo->prepare("UPDATE progetti SET stato = ? WHERE stato = ?");
+    $rs->execute([$new, $old]);
+    if ($rs->rowCount() > 0) { echo "  OK   rinomina stato $old→$new ({$rs->rowCount()} righe)\n"; }
+}
+
 // ── COLONNE clienti ───────────────────────────────────────────────────────────
 
 $clientiCols = [

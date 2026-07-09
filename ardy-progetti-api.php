@@ -33,8 +33,12 @@ ardyRequireAuth();
 
 // Ciclo di vita del progetto (vedi PIANO-DASH-DESIGN.md §3). 'A_CATALOGO' è terminale
 // lato dash: stock/ordini/venduto vivono su Woo/Etsy, non qui.
-const PROGETTO_STATI = ['IDEA', 'PROGETTAZIONE', 'PROTOTIPO', 'FILE_CONGELATO', 'PRODUZIONE', 'FOTOGRAFIA', 'A_CATALOGO'];
+const PROGETTO_STATI = ['IDEA', 'PROGETTAZIONE', 'PROTOTIPO', 'VERSIONE_FINALE', 'REALIZZAZIONE', 'FOTO', 'A_CATALOGO'];
 const PROGETTO_TIPI  = ['lampada', 'mobile', 'complemento', 'restyling', 'prototipo'];
+// Come si realizza il pezzo → guida i moduli tecnici mostrati nella dash.
+const PROGETTO_METODI = ['stampa_3d', 'restyling', 'altro'];
+// Come va a catalogo → guida stock/quantità su Woo (NON è una fase del ciclo).
+const PROGETTO_DISPONIBILITA = ['pronto', 'su_ordinazione', 'pezzo_unico'];
 const MAT_CATEGORIE  = ['filamento', 'stampa', 'elettrico', 'ferramenta', 'finitura', 'imballo', 'manodopera'];
 
 /** Tariffa oraria manodopera di default (override in ardy-config.php non versionato). */
@@ -198,6 +202,8 @@ try {
             'config'     => [
                 'stati'             => PROGETTO_STATI,
                 'tipi'              => PROGETTO_TIPI,
+                'metodi'            => PROGETTO_METODI,
+                'disponibilita'     => PROGETTO_DISPONIBILITA,
                 'categorie'         => MAT_CATEGORIE,
                 'costo_orario'      => progettoCostoOrario(),
             ],
@@ -220,6 +226,8 @@ try {
         $fields = [
             'titolo'         => $titolo,
             'tipo'           => $tipo,
+            'metodo'         => in_array($in['metodo'] ?? '', PROGETTO_METODI, true) ? $in['metodo'] : 'stampa_3d',
+            'disponibilita'  => in_array($in['disponibilita'] ?? '', PROGETTO_DISPONIBILITA, true) ? $in['disponibilita'] : 'pronto',
             'descrizione'    => trim((string) ($in['descrizione'] ?? '')),
             'storia'         => trim((string) ($in['storia'] ?? '')),
             'materiali'      => trim((string) ($in['materiali'] ?? '')),
@@ -290,7 +298,7 @@ try {
         if ($id <= 0) { echo json_encode(['success' => false, 'error' => 'id mancante']); exit(); }
         $snapshot = $in['snapshot'] ?? null; // {stl, profilo_orca, grammi, ore, scheda, ...}
         $db->prepare(
-            "UPDATE progetti SET file_congelato_at = NOW(), file_snapshot = :snap, stato = 'FILE_CONGELATO'
+            "UPDATE progetti SET file_congelato_at = NOW(), file_snapshot = :snap, stato = 'VERSIONE_FINALE'
              WHERE id = :id AND deleted_at IS NULL"
         )->execute([':snap' => $snapshot !== null ? json_encode($snapshot) : null, ':id' => $id]);
         echo json_encode(['success' => true]);
