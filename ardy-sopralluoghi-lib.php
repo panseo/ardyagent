@@ -37,11 +37,19 @@ function sopr_norm_data($raw): ?string {
 
 // Etichetta predefinita per tipo (usata anche per non ripeterla nel titolo evento).
 function sopr_tipo_label(string $tipo): string {
-    return $tipo === 'ritiro' ? 'Ritiro' : 'Sopralluogo';
+    if ($tipo === 'ritiro')   return 'Ritiro';
+    if ($tipo === 'consegna') return 'Consegna';
+    return 'Sopralluogo';
+}
+
+// Tipi di appuntamento ammessi (sopralluogo = visita/valutazione, ritiro = presa in
+// carico degli oggetti, consegna = riconsegna del lavoro finito al cliente).
+function sopr_tipi_validi(): array {
+    return ['sopralluogo', 'ritiro', 'consegna'];
 }
 
 // Titolo evento calendario coerente con quelli creati altrove. Il tipo decide
-// "Sopralluogo Ardy Lab" vs "Ritiro Ardy Lab"; l'etichetta libera (se diversa dal
+// "Sopralluogo/Ritiro/Consegna Ardy Lab"; l'etichetta libera (se diversa dal
 // default del tipo) finisce tra parentesi.
 function sopr_summary(array $cli, string $etichetta, string $tipo = 'sopralluogo'): string {
     $nm    = trim(($cli['nome'] ?? '') . ' ' . ($cli['cognome'] ?? ''));
@@ -117,7 +125,7 @@ function sopr_list(PDO $db, string $sid): array {
 // Google Calendar e riallinea il mirror. Ritorna ['id'=>int, 'gcal_event_id'=>?]
 // oppure null se $id>0 ma la riga non esiste per quel cliente.
 function sopr_salva(PDO $db, string $sid, int $id, string $dataOraNorm, string $etichetta, string $note, array $cli, string $tipo = 'sopralluogo'): ?array {
-    $tipo      = in_array($tipo, ['sopralluogo', 'ritiro'], true) ? $tipo : 'sopralluogo';
+    $tipo      = in_array($tipo, sopr_tipi_validi(), true) ? $tipo : 'sopralluogo';
     $etichetta = $etichetta !== '' ? $etichetta : sopr_tipo_label($tipo);
     $dt        = new DateTime($dataOraNorm);
     $dateStr   = $dt->format('Y-m-d');
@@ -135,8 +143,8 @@ function sopr_salva(PDO $db, string $sid, int $id, string $dataOraNorm, string $
         $eid = $row['gcal_event_id'] ?? null;
         try {
             if (!empty($eid)) {
-                // Passo anche il titolo: se cambia il tipo (sopralluogo↔ritiro) o
-                // l'etichetta, l'evento in calendario si aggiorna di conseguenza.
+                // Passo anche il titolo: se cambia il tipo (sopralluogo/ritiro/consegna)
+                // o l'etichetta, l'evento in calendario si aggiorna di conseguenza.
                 gcal_update_event($eid, $dateStr, $timeStr, 2, $summary);
             } else {
                 $ev = gcal_create_event($dateStr, $timeStr, $nomeCli, (string) ($cli['telefono'] ?? ''), (string) ($cli['email'] ?? ''), '', '', $summary, $kindLabel);

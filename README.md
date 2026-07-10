@@ -565,9 +565,11 @@ Tool staff (in `ardy-wa-agent.php`, ramo `$staff`; prompt in `ardy-wa-lookup.php
   `ardy-wa-crea-scheda.php`, upsert deterministico per telefono/nome → niente doppioni) e ritorna il
   `session_id`, così Sole **crea e fissa l'appuntamento nello stesso giro** riusando quel `session_id` con
   `fissa_appuntamento_staff`, senza aspettare nessuna "sincronizzazione";
-- **Sopralluoghi MULTIPLI**: `fissa_appuntamento_staff` (AGGIUNGE sempre una visita, niente anti-doppione),
-  `sposta_appuntamento_staff` (se il cliente ha più visite, Sole **chiede QUALE** via `sopralluogo_id`),
-  `elenca_sopralluoghi_staff`. Usano `ardy-sopralluoghi-lib.php` (stesso motore della dashboard);
+- **Appuntamenti MULTIPLI** (`tipo`: `sopralluogo` | `consegna` | `ritiro`): `fissa_appuntamento_staff`
+  (AGGIUNGE sempre un appuntamento, niente anti-doppione; una **consegna** non è un sopralluogo →
+  Sole passa `tipo:"consegna"`), `sposta_appuntamento_staff` (se il cliente ha più eventi, Sole
+  **chiede QUALE** via `sopralluogo_id`), `elenca_sopralluoghi_staff`. Usano `ardy-sopralluoghi-lib.php`
+  (stesso motore della dashboard, tabella `sopralluoghi.tipo` VARCHAR — nessuna migrazione per nuovi tipi);
 - **Nota settimanale**: `salva_nota_settimanale` / `leggi_nota_settimanale` (tabella `note_staff`,
   condivisa Michela+Andrea). Sole legge → modifica il testo intero → risalva.
 

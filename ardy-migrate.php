@@ -223,9 +223,10 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `sopralluoghi` (
     INDEX idx_sopr_session (session_id, data_ora)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE sopralluoghi");
 
-// `tipo` distingue l'appuntamento: 'sopralluogo' (default) o 'ritiro' (presa in
-// carico degli oggetti → fa scattare lo stato RITIRATI). Aggiunta idempotente per
-// gli ambienti dove la tabella sopralluoghi esiste già dalla versione precedente.
+// `tipo` distingue l'appuntamento: 'sopralluogo' (default), 'ritiro' (presa in carico
+// degli oggetti → fa scattare lo stato RITIRATI) o 'consegna' (riconsegna del lavoro
+// finito al cliente). VARCHAR(20): nuovi tipi non richiedono migrazioni di schema.
+// Aggiunta idempotente per gli ambienti dove la tabella esiste già da prima.
 if (!colExists($pdo, 'sopralluoghi', 'tipo')) {
     ddl($pdo, "ALTER TABLE sopralluoghi ADD COLUMN `tipo` VARCHAR(20) NOT NULL DEFAULT 'sopralluogo' AFTER session_id", "sopralluoghi.tipo");
 }

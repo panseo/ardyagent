@@ -400,7 +400,7 @@ if ($staff) {
         ],
         [
             'name'        => 'elenca_sopralluoghi_staff',
-            'description' => 'Elenca i sopralluoghi (anche più di uno) di un cliente del CRM, con data/ora ed etichetta. Usalo quando lo staff chiede "che sopralluoghi ha X?" o quando devi sapere QUALE visita spostare/eliminare prima di agire.',
+            'description' => 'Elenca gli appuntamenti (anche più di uno) di un cliente del CRM — sopralluoghi, consegne e ritiri — con data/ora ed etichetta. Usalo quando lo staff chiede "che appuntamenti/sopralluoghi ha X?" o quando devi sapere QUALE spostare/eliminare prima di agire.',
             'input_schema' => [
                 'type'       => 'object',
                 'properties' => [
@@ -412,14 +412,15 @@ if ($staff) {
         ],
         [
             'name'        => 'fissa_appuntamento_staff',
-            'description' => 'AGGIUNGE un sopralluogo nel calendario di Ardy Lab PER CONTO di un cliente del CRM (lo stai facendo tu, dello staff). Un cliente può averne PIÙ DI UNO (1°, 2°, sopralluogo colori…): questo tool aggiunge SEMPRE una nuova visita, non è un doppione. Identifica il cliente per nome; se esistono più schede con quel nome ti verrà restituito l\'elenco e dovrai richiamare il tool col session_id giusto. Usalo solo dopo che lo staff ha indicato giorno e ora precisi.',
+            'description' => 'AGGIUNGE un appuntamento nel calendario di Ardy Lab PER CONTO di un cliente del CRM (lo stai facendo tu, dello staff). L\'appuntamento può essere di tre tipi (campo `tipo`): un SOPRALLUOGO (visita/valutazione), un RITIRO (vai a prendere gli oggetti dal cliente) o una CONSEGNA (riporti il lavoro finito al cliente). Scegli il tipo giusto: una consegna NON è un sopralluogo. Un cliente può avere PIÙ appuntamenti: questo tool ne aggiunge SEMPRE uno nuovo, non è un doppione. Identifica il cliente per nome; se esistono più schede con quel nome ti verrà restituito l\'elenco e dovrai richiamare il tool col session_id giusto. Usalo solo dopo che lo staff ha indicato giorno e ora precisi.',
             'input_schema' => [
                 'type'       => 'object',
                 'properties' => [
                     'nome'       => ['type' => 'string', 'description' => 'Nome (o nome e cognome) del cliente.'],
                     'start'      => ['type' => 'string', 'description' => 'Data e ora inizio, ISO 8601. Es: 2026-06-23T10:00:00+02:00'],
+                    'tipo'       => ['type' => 'string', 'enum' => ['sopralluogo', 'consegna', 'ritiro'], 'description' => 'Tipo di appuntamento: "sopralluogo" (visita, default), "consegna" (riconsegna del lavoro al cliente), "ritiro" (presa in carico degli oggetti). Se lo staff dice "consegna"/"consegnare" usa "consegna"; se dice "ritiro"/"ritirare" usa "ritiro".'],
                     'session_id' => ['type' => 'string', 'description' => 'Opzionale: session_id della scheda esatta, per disambiguare gli omonimi (formato wa-XXXXXXXXXXXXXXXX).'],
-                    'etichetta'  => ['type' => 'string', 'description' => 'Opzionale: etichetta della visita (es. "2° sopralluogo", "sopralluogo colori"). Default "Sopralluogo".'],
+                    'etichetta'  => ['type' => 'string', 'description' => 'Opzionale: etichetta libera dell\'appuntamento (es. "2° sopralluogo", "consegna comodini"). Se la ometti si usa il nome del tipo.'],
                 ],
                 'required' => ['nome', 'start'],
             ],
@@ -507,6 +508,7 @@ $iteration      = 0;
 $bookingMade    = false;
 $bookingWhen    = null;   // DateTime dell'appuntamento (nuovo o spostato)
 $bookingEventId = null;   // id evento Google appena creato/spostato
+$bookingTipo    = 'sopralluogo';  // tipo dell'appuntamento fissato/spostato (per l'email al cliente)
 $rescheduled    = false;  // true se un appuntamento è stato SPOSTATO
 
 while ($iteration < $maxIterations) {
@@ -845,18 +847,22 @@ while ($iteration < $maxIterations) {
                         if ($dataOra === null) {
                             $toolResult = 'La data/ora non è valida. Chiedi allo staff di ripeterla (giorno e ora).';
                         } else {
-                            // AGGIUNGE sempre una nuova visita (un cliente può averne più d'una).
+                            // AGGIUNGE sempre un nuovo appuntamento (un cliente può averne più d'uno).
+                            // Il tipo (sopralluogo/consegna/ritiro) sceglie titolo evento ed etichetta.
+                            $tipo = in_array($toolInput['tipo'] ?? '', sopr_tipi_validi(), true) ? (string) $toolInput['tipo'] : 'sopralluogo';
                             $cli = sopr_get_cliente($db, $card['session_id']);
-                            sopr_salva($db, $card['session_id'], 0, $dataOra, (string) ($toolInput['etichetta'] ?? ''), '', $cli);
+                            sopr_salva($db, $card['session_id'], 0, $dataOra, (string) ($toolInput['etichetta'] ?? ''), '', $cli, $tipo);
                             $startDt     = new DateTime($dataOra);
+                            $bookingTipo = $tipo;         // per l'email di conferma al cliente (sopralluogo/consegna/ritiro)
                             $bookingMade = true;          // → conferma al cliente (se ha email)
                             $bookingWhen = $startDt;       // NB: niente $bookingEventId → il mirror lo cura la lib
                             $nm = trim(($card['nome'] ?? '') . ' ' . ($card['cognome'] ?? ''));
                             if ($nm !== '') $leadNome = $nm;
                             $em = trim((string) ($card['email'] ?? ''));
                             if ($em !== '' && filter_var($em, FILTER_VALIDATE_EMAIL)) $leadEmail = $em;
-                            $et = trim((string) ($toolInput['etichetta'] ?? '')) ?: 'Sopralluogo';
-                            $toolResult = 'Sopralluogo «' . $et . '» aggiunto per ' . ($nm !== '' ? $nm : 'il cliente')
+                            $tLabel = sopr_tipo_label($tipo);
+                            $et = trim((string) ($toolInput['etichetta'] ?? '')) ?: $tLabel;
+                            $toolResult = $tLabel . ' «' . $et . '» aggiunto per ' . ($nm !== '' ? $nm : 'il cliente')
                                         . ' il ' . $startDt->format('d/m/Y') . ' alle ' . $startDt->format('H:i') . ' (calendario aggiornato).';
                         }
                     }
@@ -912,15 +918,20 @@ while ($iteration < $maxIterations) {
                                     if ($free === false) {
                                         $toolResult = 'Quel nuovo orario è già occupato. Proponi un altro slot (controlla con ottieni_disponibilita_calendario).';
                                     } else {
+                                        // Preserva il tipo esistente della visita: spostare una consegna/ritiro
+                                        // NON deve trasformarla in un sopralluogo (titolo evento + email coerenti).
+                                        $tipoT = in_array($target['tipo'] ?? '', sopr_tipi_validi(), true) ? (string) $target['tipo'] : 'sopralluogo';
                                         $cli = sopr_get_cliente($db, $card['session_id']);
-                                        sopr_salva($db, $card['session_id'], (int) $target['id'], $dataOra, (string) ($target['etichetta'] ?? ''), (string) ($target['note'] ?? ''), $cli);
+                                        sopr_salva($db, $card['session_id'], (int) $target['id'], $dataOra, (string) ($target['etichetta'] ?? ''), (string) ($target['note'] ?? ''), $cli, $tipoT);
                                         $rescheduled = true;
                                         $bookingWhen = $startDt;   // niente $bookingEventId → il mirror lo cura la lib
+                                        $bookingTipo = $tipoT;     // per l'email di conferma al cliente
                                         $nm = trim(($card['nome'] ?? '') . ' ' . ($card['cognome'] ?? ''));
                                         if ($nm !== '') $leadNome = $nm;
                                         $em = trim((string) ($card['email'] ?? ''));
                                         if ($em !== '' && filter_var($em, FILTER_VALIDATE_EMAIL)) $leadEmail = $em;
-                                        $toolResult = 'Sopralluogo «' . ($target['etichetta'] ?: 'Sopralluogo') . '» spostato al '
+                                        $tLabelT = sopr_tipo_label($tipoT);
+                                        $toolResult = $tLabelT . ' «' . ($target['etichetta'] ?: $tLabelT) . '» spostato al '
                                                     . $startDt->format('d/m/Y') . ' alle ' . $timeStr . ' per ' . ($nm !== '' ? $nm : 'il cliente') . '.';
                                     }
                                 }
@@ -1073,16 +1084,19 @@ if (($bookingMade || $rescheduled) && $bookingWhen instanceof DateTime && $leadE
     $quando = trim(ucfirst($gg) . ' ' . $bookingWhen->format('j') . ' ' . $mm . ' ' . $bookingWhen->format('Y') . ' alle ' . $bookingWhen->format('H:i'));
     try {
         $isMoveC = $rescheduled && !$bookingMade;
+        // Testo coerente col tipo: sopralluogo / consegna / ritiro.
+        $tLabelC = ($bookingTipo === 'ritiro') ? 'Ritiro' : ($bookingTipo === 'consegna' ? 'Consegna' : 'Sopralluogo');
+        $tLowerC = mb_strtolower($tLabelC);
         $mailC = waNewMailer();
         $mailC->setFrom('noreply@ardy-lab.it', 'Ardy Lab');
         $mailC->addAddress($leadEmail);
-        $mailC->Subject = ($isMoveC ? '✅ Sopralluogo Ardy Lab spostato — ' : '✅ Sopralluogo Ardy Lab — ') . $quando;
+        $mailC->Subject = '✅ ' . $tLabelC . ' Ardy Lab' . ($isMoveC ? ' spostato/a — ' : ' — ') . $quando;
         $mailC->isHTML(true);
         $mailC->Body = '
 <div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:32px;color:#333;">
   ' . ardy_email_logo_cid($mailC) . '
-  <p style="color:#999;font-size:13px;margin-bottom:24px;">' . ($isMoveC ? 'Sopralluogo aggiornato' : 'Conferma sopralluogo') . '</p>
-  <p style="font-size:15px;line-height:1.7;">Ciao,<br>' . ($isMoveC ? 'abbiamo aggiornato il tuo sopralluogo al nuovo orario.' : 'abbiamo fissato il tuo sopralluogo.') . ' Ecco il riepilogo:</p>
+  <p style="color:#999;font-size:13px;margin-bottom:24px;">' . ($isMoveC ? $tLabelC . ' aggiornato/a' : 'Conferma ' . $tLowerC) . '</p>
+  <p style="font-size:15px;line-height:1.7;">Ciao,<br>' . ($isMoveC ? 'abbiamo aggiornato il tuo appuntamento (' . $tLowerC . ') al nuovo orario.' : 'abbiamo fissato il tuo appuntamento (' . $tLowerC . ').') . ' Ecco il riepilogo:</p>
   <div style="border-left:3px solid #c8a96e;padding:12px 20px;background:#fafaf8;margin:20px 0;font-size:16px;">
     <strong>' . htmlspecialchars($quando) . '</strong>
   </div>

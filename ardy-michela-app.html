@@ -239,11 +239,12 @@
               <input type="date" class="info-value editable" id="dDataConsegna" oninput="markDirty()" style="width:100%;">
             </div>
             <div class="info-cell full">
-              <div class="info-label">📅 Sopralluoghi e ritiri <small style="color:var(--text-dim);font-size:9px;">(ogni riga è un evento su Google Calendar — si salvano da soli; un ritiro = presa in carico → stato RITIRATI)</small></div>
+              <div class="info-label">📅 Appuntamenti <small style="color:var(--text-dim);font-size:9px;">(sopralluoghi, consegne e ritiri — ogni riga è un evento su Google Calendar, si salvano da soli; un ritiro = presa in carico → stato RITIRATI)</small></div>
               <div id="soprList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
               <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;border-top:1px dashed var(--border);padding-top:8px;">
                 <select id="soprNewTipo" class="info-value editable" title="Tipo di appuntamento" style="flex:0 0 auto;min-width:120px;">
                   <option value="sopralluogo">🔎 Sopralluogo</option>
+                  <option value="consegna">🚚 Consegna</option>
                   <option value="ritiro">📦 Ritiro</option>
                 </select>
                 <input type="datetime-local" id="soprNewData" class="info-value editable" style="flex:1 1 180px;min-width:160px;">
@@ -2259,22 +2260,31 @@ async function caricaSopralluoghi(sessionId) {
   }
 }
 
+// Tipi di appuntamento, coerenti col backend (ardy-sopralluoghi-lib.php):
+// sopralluogo (visita) · consegna (riconsegna al cliente) · ritiro (presa in carico).
+function soprNormTipo(t) { return (t === 'ritiro' || t === 'consegna') ? t : 'sopralluogo'; }
+function soprCosa(t)     { return t === 'ritiro' ? 'Ritiro' : (t === 'consegna' ? 'Consegna' : 'Sopralluogo'); }
+function soprOpzioniTipo(tipo) {
+  const s = (v) => tipo === v ? ' selected' : '';
+  return `<option value="sopralluogo"${s('sopralluogo')}>🔎 Sopralluogo</option>`
+       + `<option value="consegna"${s('consegna')}>🚚 Consegna</option>`
+       + `<option value="ritiro"${s('ritiro')}>📦 Ritiro</option>`;
+}
+
 function renderSopralluoghi(items) {
   const cont = document.getElementById('soprList');
   if (!cont) return;
   if (!items.length) {
-    cont.innerHTML = '<div style="color:var(--text-dim);font-size:11px;">Nessun sopralluogo o ritiro ancora. Aggiungine uno qui sotto 👇</div>';
+    cont.innerHTML = '<div style="color:var(--text-dim);font-size:11px;">Nessun appuntamento ancora. Aggiungine uno qui sotto 👇</div>';
     return;
   }
   cont.innerHTML = items.map(it => {
     const val  = it.data_ora ? String(it.data_ora).replace(' ', 'T').slice(0, 16) : '';
-    const et   = escHtml(it.etichetta || 'Sopralluogo');
-    const tipo = (it.tipo === 'ritiro') ? 'ritiro' : 'sopralluogo';
-    const sel  = (v) => tipo === v ? ' selected' : '';
+    const tipo = soprNormTipo(it.tipo);
+    const et   = escHtml(it.etichetta || soprCosa(tipo));
     return `<div class="sopr-row" data-id="${it.id}" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
       <select data-f="tipo" class="info-value editable" title="Tipo di appuntamento" style="flex:0 0 auto;min-width:120px;">
-        <option value="sopralluogo"${sel('sopralluogo')}>🔎 Sopralluogo</option>
-        <option value="ritiro"${sel('ritiro')}>📦 Ritiro</option>
+        ${soprOpzioniTipo(tipo)}
       </select>
       <input type="datetime-local" value="${val}" data-f="data" class="info-value editable" style="flex:1 1 180px;min-width:160px;">
       <input type="text" value="${et}" data-f="etichetta" class="info-value editable" style="flex:1 1 160px;min-width:140px;">
@@ -2310,8 +2320,8 @@ async function aggiungiSopralluogo() {
   if (!soprSessionCorrente) return;
   const data = document.getElementById('soprNewData').value;
   const et   = document.getElementById('soprNewEtichetta').value.trim();
-  const tipo = (document.getElementById('soprNewTipo') || {}).value === 'ritiro' ? 'ritiro' : 'sopralluogo';
-  const cosa = tipo === 'ritiro' ? 'Ritiro' : 'Sopralluogo';
+  const tipo = soprNormTipo((document.getElementById('soprNewTipo') || {}).value);
+  const cosa = soprCosa(tipo);
   if (!data) { showToast('Metti data e ora dell\'appuntamento', 'error'); return; }
   try {
     const res = await soprPost({ mode: 'salva', session_id: soprSessionCorrente, id: 0, data_ora: data, etichetta: et, tipo: tipo });
@@ -2330,8 +2340,8 @@ async function salvaSopralluogo(id) {
   if (!row) return;
   const data = row.querySelector('[data-f="data"]').value;
   const et   = row.querySelector('[data-f="etichetta"]').value.trim();
-  const tipo = (row.querySelector('[data-f="tipo"]') || {}).value === 'ritiro' ? 'ritiro' : 'sopralluogo';
-  const cosa = tipo === 'ritiro' ? 'Ritiro' : 'Sopralluogo';
+  const tipo = soprNormTipo((row.querySelector('[data-f="tipo"]') || {}).value);
+  const cosa = soprCosa(tipo);
   if (!data) { showToast('Metti data e ora', 'error'); return; }
   try {
     const res = await soprPost({ mode: 'salva', session_id: soprSessionCorrente, id: id, data_ora: data, etichetta: et, tipo: tipo });
