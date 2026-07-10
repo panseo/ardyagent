@@ -31,7 +31,8 @@ function ardy_riepilogo_settimana(PDO $db, array $staffDigits = []): string {
                     $ora    = $ev['all_day'] ? 'tutto il giorno' : date('H:i', $ev['start']);
                     $low    = mb_strtolower($ev['summary']);
                     $tipo   = strpos($low, 'sopralluogo') !== false ? '🏠 '
-                            : (strpos($low, 'consulenz') !== false ? '💬 ' : '📌 ');
+                            : ((strpos($low, 'consegna') !== false || strpos($low, 'ritiro') !== false) ? '📦 '
+                            : (strpos($low, 'consulenz') !== false ? '💬 ' : '📌 '));
                     $loc    = $ev['location'] !== '' ? ' · ' . $ev['location'] : '';
                     $righe[] = "- {$quando} {$ora} · {$tipo}{$ev['summary']}{$loc}";
                 }
@@ -274,20 +275,33 @@ function ardy_riepilogo_settimana(PDO $db, array $staffDigits = []): string {
         }
     } catch (PDOException $e) { /* colonna note_consegna assente o altro: salta */ }
 
-    // Sopralluoghi fissati (data VERA dal calendario, salvata in sopralluogo_at)
+    // Appuntamenti fissati (data VERA dal calendario, mirror in sopralluogo_at). Il
+    // tipo (sopralluogo/consegna/ritiro) arriva dalla riga sopralluoghi corrispondente,
+    // così una consegna NON viene etichettata come un sopralluogo nel contesto di Sole.
     try {
-        $rows = $db->query("SELECT nome, cognome, zona, sopralluogo_at FROM clienti
-                             WHERE sopralluogo_at IS NOT NULL AND sopralluogo_at >= NOW()
-                          ORDER BY sopralluogo_at ASC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
+        $rows = $db->query(
+            "SELECT c.nome, c.cognome, c.zona, c.sopralluogo_at,
+                    COALESCE(s.tipo, 'sopralluogo') AS tipo, s.etichetta
+               FROM clienti c
+          LEFT JOIN sopralluoghi s
+                 ON s.session_id = c.session_id
+                AND ( (c.gcal_event_id IS NOT NULL AND c.gcal_event_id <> '' AND s.gcal_event_id = c.gcal_event_id)
+                   OR ((c.gcal_event_id IS NULL OR c.gcal_event_id = '') AND s.data_ora = c.sopralluogo_at) )
+              WHERE c.sopralluogo_at IS NOT NULL AND c.sopralluogo_at >= NOW()
+                AND c.deleted_at IS NULL
+           ORDER BY c.sopralluogo_at ASC LIMIT 10"
+        )->fetchAll(PDO::FETCH_ASSOC);
         if ($rows) {
-            $out[] = "SOPRALLUOGHI FISSATI (prossimi):";
+            $out[] = "APPUNTAMENTI FISSATI (prossimi):";
             foreach ($rows as $r) {
-                $nome = trim(($r['nome'] ?? '') . ' ' . ($r['cognome'] ?? '')) ?: '(senza nome)';
+                $nome  = trim(($r['nome'] ?? '') . ' ' . ($r['cognome'] ?? '')) ?: '(senza nome)';
+                $tipo  = (string) ($r['tipo'] ?? 'sopralluogo');
+                $label = $tipo === 'ritiro' ? 'Ritiro' : ($tipo === 'consegna' ? 'Consegna' : 'Sopralluogo');
                 $quando = date('d/m/Y H:i', strtotime((string)$r['sopralluogo_at']));
-                $out[] = "- {$quando} · {$nome}" . ($r['zona'] ? " · " . $r['zona'] : '');
+                $out[] = "- {$quando} · {$label} · {$nome}" . ($r['zona'] ? " · " . $r['zona'] : '');
             }
         }
-    } catch (PDOException $e) { /* colonna assente o altro: salta */ }
+    } catch (PDOException $e) { /* colonna/tabella assente o altro: salta */ }
 
     // Follow-up generici in agenda (campo note follow-up del CRM)
     try {

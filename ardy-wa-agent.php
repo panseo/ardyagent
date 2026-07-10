@@ -10,8 +10,11 @@
 // Così Sole può proporre 2 slot reali e chiudere l'appuntamento, invece di
 // "recitare" la sintassi di un tool che su WhatsApp non esisteva (caso Alberto).
 //
-// La modalità TITOLARE (staff) NON passa di qui: resta sul flusso n8n esistente
-// (single-shot + marker [[CREA_SCHEDA]]/[[CONTATTA_LEAD]]). Zero regressioni lì.
+// Anche la modalità TITOLARE (staff) passa ora di qui, con un set di tool "_staff"
+// dedicati (ricerca/creazione scheda, calendario per nome, nota settimanale). Il solo
+// marker n8n rimasto è [[CONTATTA_LEAD]] (primo contatto a freddo); la creazione scheda
+// è ora un tool VERO (crea_scheda_cliente), sincrona, così Sole crea e prenota nello
+// stesso giro senza aspettare nessuna "sincronizzazione".
 //
 // Chiamato server-to-server da n8n. Riusa: lookup (system già pronto), memoria
 // e invio a WhatsApp restano in n8n. Qui si fa SOLO il loop con i tool.
@@ -358,7 +361,8 @@ $tools = [
 // agisce sul calendario PER CONTO di un cliente NOMINATO nel CRM. Quindi i tool
 // non sono quelli legati al numero WhatsApp di chi scrive (che qui è lo staff),
 // ma versioni "_staff" che identificano il cliente per nome (con disambiguazione
-// in caso di omonimi). La creazione/contatto scheda resta sui marker n8n.
+// in caso di omonimi). La creazione scheda è il tool crea_scheda_cliente (sincrono):
+// solo il primo contatto a freddo del lead resta sul marker n8n [[CONTATTA_LEAD]].
 // -----------------------------------------------------------
 if ($staff) {
     $tools = [
@@ -375,8 +379,28 @@ if ($staff) {
             ],
         ],
         [
+            'name'        => 'crea_scheda_cliente',
+            'description' => 'CREA (o aggiorna) una scheda cliente nel CRM quando lo staff ti detta un nuovo contatto. Salva SUBITO e in modo definitivo: la scheda è disponibile all\'ISTANTE, non c\'è nessuna sincronizzazione da aspettare. Ritorna il session_id della scheda: riusalo SUBITO con fissa_appuntamento_staff (campo session_id) per fissare l\'appuntamento nello stesso giro, senza doverla ricercare. Usalo solo DOPO che lo staff ha confermato i dati. Se rifai la stessa scheda (stesso telefono o stesso nome) non crei un doppione, la aggiorni.',
+            'input_schema' => [
+                'type'       => 'object',
+                'properties' => [
+                    'nome'      => ['type' => 'string', 'description' => 'Nome del cliente.'],
+                    'cognome'   => ['type' => 'string', 'description' => 'Cognome del cliente.'],
+                    'telefono'  => ['type' => 'string', 'description' => 'Telefono del cliente (quello che ti detta lo staff). NON è il numero di chi ti sta scrivendo: se lo staff non lo dà, lascialo vuoto.'],
+                    'email'     => ['type' => 'string', 'description' => 'Email del cliente.'],
+                    'indirizzo' => ['type' => 'string', 'description' => 'Indirizzo completo: via, numero, città.'],
+                    'zona'      => ['type' => 'string', 'description' => 'Zona o città del cliente.'],
+                    'servizio'  => ['type' => 'string', 'description' => 'Tipo di servizio/lavoro (es. "wrapping armadio + Ardy Express", "montaggio vetro e ritocchi").'],
+                    'mobile'    => ['type' => 'string', 'description' => 'Descrizione del mobile o pezzo.'],
+                    'stato'     => ['type' => 'string', 'description' => 'Stato: LEAD, SOPRALLUOGO, PREVENTIVO, ACCONTO, RITIRATI, IN_LAVORAZIONE, STANDBY, PERSO. Se lo staff non lo dice, usa LEAD.'],
+                    'note'      => ['type' => 'string', 'description' => 'Note aggiuntive per lo staff.'],
+                ],
+                'required' => ['nome'],
+            ],
+        ],
+        [
             'name'        => 'elenca_sopralluoghi_staff',
-            'description' => 'Elenca i sopralluoghi (anche più di uno) di un cliente del CRM, con data/ora ed etichetta. Usalo quando lo staff chiede "che sopralluoghi ha X?" o quando devi sapere QUALE visita spostare/eliminare prima di agire.',
+            'description' => 'Elenca gli appuntamenti (anche più di uno) di un cliente del CRM — sopralluoghi, consegne e ritiri — con data/ora ed etichetta. Usalo quando lo staff chiede "che appuntamenti/sopralluoghi ha X?" o quando devi sapere QUALE spostare/eliminare prima di agire.',
             'input_schema' => [
                 'type'       => 'object',
                 'properties' => [
@@ -388,14 +412,15 @@ if ($staff) {
         ],
         [
             'name'        => 'fissa_appuntamento_staff',
-            'description' => 'AGGIUNGE un sopralluogo nel calendario di Ardy Lab PER CONTO di un cliente del CRM (lo stai facendo tu, dello staff). Un cliente può averne PIÙ DI UNO (1°, 2°, sopralluogo colori…): questo tool aggiunge SEMPRE una nuova visita, non è un doppione. Identifica il cliente per nome; se esistono più schede con quel nome ti verrà restituito l\'elenco e dovrai richiamare il tool col session_id giusto. Usalo solo dopo che lo staff ha indicato giorno e ora precisi.',
+            'description' => 'AGGIUNGE un appuntamento nel calendario di Ardy Lab PER CONTO di un cliente del CRM (lo stai facendo tu, dello staff). L\'appuntamento può essere di tre tipi (campo `tipo`): un SOPRALLUOGO (visita/valutazione), un RITIRO (vai a prendere gli oggetti dal cliente) o una CONSEGNA (riporti il lavoro finito al cliente). Scegli il tipo giusto: una consegna NON è un sopralluogo. Un cliente può avere PIÙ appuntamenti: questo tool ne aggiunge SEMPRE uno nuovo, non è un doppione. Identifica il cliente per nome; se esistono più schede con quel nome ti verrà restituito l\'elenco e dovrai richiamare il tool col session_id giusto. Usalo solo dopo che lo staff ha indicato giorno e ora precisi.',
             'input_schema' => [
                 'type'       => 'object',
                 'properties' => [
                     'nome'       => ['type' => 'string', 'description' => 'Nome (o nome e cognome) del cliente.'],
                     'start'      => ['type' => 'string', 'description' => 'Data e ora inizio, ISO 8601. Es: 2026-06-23T10:00:00+02:00'],
+                    'tipo'       => ['type' => 'string', 'enum' => ['sopralluogo', 'consegna', 'ritiro'], 'description' => 'Tipo di appuntamento: "sopralluogo" (visita, default), "consegna" (riconsegna del lavoro al cliente), "ritiro" (presa in carico degli oggetti). Se lo staff dice "consegna"/"consegnare" usa "consegna"; se dice "ritiro"/"ritirare" usa "ritiro".'],
                     'session_id' => ['type' => 'string', 'description' => 'Opzionale: session_id della scheda esatta, per disambiguare gli omonimi (formato wa-XXXXXXXXXXXXXXXX).'],
-                    'etichetta'  => ['type' => 'string', 'description' => 'Opzionale: etichetta della visita (es. "2° sopralluogo", "sopralluogo colori"). Default "Sopralluogo".'],
+                    'etichetta'  => ['type' => 'string', 'description' => 'Opzionale: etichetta libera dell\'appuntamento (es. "2° sopralluogo", "consegna comodini"). Se la ometti si usa il nome del tipo.'],
                 ],
                 'required' => ['nome', 'start'],
             ],
@@ -483,6 +508,7 @@ $iteration      = 0;
 $bookingMade    = false;
 $bookingWhen    = null;   // DateTime dell'appuntamento (nuovo o spostato)
 $bookingEventId = null;   // id evento Google appena creato/spostato
+$bookingTipo    = 'sopralluogo';  // tipo dell'appuntamento fissato/spostato (per l'email al cliente)
 $rescheduled    = false;  // true se un appuntamento è stato SPOSTATO
 
 while ($iteration < $maxIterations) {
@@ -739,6 +765,51 @@ while ($iteration < $maxIterations) {
                 $toolResult = 'Errore nella ricerca della scheda. Riprova.';
             }
 
+        } elseif ($toolName === 'crea_scheda_cliente') {
+            // Staff: crea la scheda SUBITO (server-to-server, stessa logica di upsert
+            // deterministico di ardy-wa-crea-scheda.php → niente doppioni). Ritorna il
+            // session_id così Sole può fissare l'appuntamento nello stesso giro, senza
+            // aspettare nessuna "sincronizzazione" (era la causa della confusione: la
+            // creazione stava sul marker n8n post-turno e i tool non la vedevano ancora).
+            // NB: il telefono è quello DEL CLIENTE dettato dallo staff, MAI il numero di
+            // chi scrive ($phone = Michela): qui non facciamo il fallback su $phone.
+            $nomeCli = trim((string) ($toolInput['nome'] ?? ''));
+            if ($nomeCli === '' && trim((string) ($toolInput['cognome'] ?? '')) === '' && trim((string) ($toolInput['telefono'] ?? '')) === '') {
+                $toolResult = 'Serve almeno nome, cognome o telefono per creare la scheda. Chiedi allo staff.';
+            } else {
+                $payload = [
+                    'nome'      => $toolInput['nome']      ?? '',
+                    'cognome'   => $toolInput['cognome']   ?? '',
+                    'telefono'  => preg_replace('/[^0-9+]/', '', (string) ($toolInput['telefono'] ?? '')),
+                    'email'     => $toolInput['email']     ?? '',
+                    'indirizzo' => $toolInput['indirizzo'] ?? '',
+                    'zona'      => $toolInput['zona']       ?? '',
+                    'servizio'  => $toolInput['servizio']  ?? '',
+                    'mobile'    => $toolInput['mobile']    ?? '',
+                    'stato'     => $toolInput['stato']      ?? 'LEAD',
+                    'note'      => $toolInput['note']       ?? '',
+                ];
+                $ch = curl_init('https://ardyagent.ardy-lab.it/ardy-wa-crea-scheda.php');
+                curl_setopt($ch, CURLOPT_POST,           true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS,     json_encode($payload));
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT,        15);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                    'Content-Type: application/json',
+                    'X-Ardy-Secret: ' . (defined('WA_LOOKUP_SECRET') ? WA_LOOKUP_SECRET : ''),
+                ]);
+                $r = json_decode(curl_exec($ch), true);
+                curl_close($ch);
+                if (is_array($r) && !empty($r['success']) && !empty($r['session_id'])) {
+                    $verbo = !empty($r['created']) ? 'creata' : 'aggiornata';
+                    $toolResult = 'Scheda ' . $verbo . ' e già salvata nel CRM (session_id=' . $r['session_id'] . '). '
+                                . "È disponibile SUBITO: NON dire che il sistema deve ancora \"sincronizzarsi\" o che non la trova.\n"
+                                . 'Se questo cliente ha un appuntamento da fissare, chiama ORA fissa_appuntamento_staff passando questo session_id.';
+                } else {
+                    $toolResult = 'Non sono riuscita a salvare la scheda adesso. Riprova tra poco o di\' allo staff di registrarla dalla dashboard.';
+                }
+            }
+
         } elseif ($toolName === 'elenca_sopralluoghi_staff') {
             try {
                 $db = ardyDB();
@@ -776,18 +847,22 @@ while ($iteration < $maxIterations) {
                         if ($dataOra === null) {
                             $toolResult = 'La data/ora non è valida. Chiedi allo staff di ripeterla (giorno e ora).';
                         } else {
-                            // AGGIUNGE sempre una nuova visita (un cliente può averne più d'una).
+                            // AGGIUNGE sempre un nuovo appuntamento (un cliente può averne più d'uno).
+                            // Il tipo (sopralluogo/consegna/ritiro) sceglie titolo evento ed etichetta.
+                            $tipo = in_array($toolInput['tipo'] ?? '', sopr_tipi_validi(), true) ? (string) $toolInput['tipo'] : 'sopralluogo';
                             $cli = sopr_get_cliente($db, $card['session_id']);
-                            sopr_salva($db, $card['session_id'], 0, $dataOra, (string) ($toolInput['etichetta'] ?? ''), '', $cli);
+                            sopr_salva($db, $card['session_id'], 0, $dataOra, (string) ($toolInput['etichetta'] ?? ''), '', $cli, $tipo);
                             $startDt     = new DateTime($dataOra);
+                            $bookingTipo = $tipo;         // per l'email di conferma al cliente (sopralluogo/consegna/ritiro)
                             $bookingMade = true;          // → conferma al cliente (se ha email)
                             $bookingWhen = $startDt;       // NB: niente $bookingEventId → il mirror lo cura la lib
                             $nm = trim(($card['nome'] ?? '') . ' ' . ($card['cognome'] ?? ''));
                             if ($nm !== '') $leadNome = $nm;
                             $em = trim((string) ($card['email'] ?? ''));
                             if ($em !== '' && filter_var($em, FILTER_VALIDATE_EMAIL)) $leadEmail = $em;
-                            $et = trim((string) ($toolInput['etichetta'] ?? '')) ?: 'Sopralluogo';
-                            $toolResult = 'Sopralluogo «' . $et . '» aggiunto per ' . ($nm !== '' ? $nm : 'il cliente')
+                            $tLabel = sopr_tipo_label($tipo);
+                            $et = trim((string) ($toolInput['etichetta'] ?? '')) ?: $tLabel;
+                            $toolResult = $tLabel . ' «' . $et . '» aggiunto per ' . ($nm !== '' ? $nm : 'il cliente')
                                         . ' il ' . $startDt->format('d/m/Y') . ' alle ' . $startDt->format('H:i') . ' (calendario aggiornato).';
                         }
                     }
@@ -843,15 +918,20 @@ while ($iteration < $maxIterations) {
                                     if ($free === false) {
                                         $toolResult = 'Quel nuovo orario è già occupato. Proponi un altro slot (controlla con ottieni_disponibilita_calendario).';
                                     } else {
+                                        // Preserva il tipo esistente della visita: spostare una consegna/ritiro
+                                        // NON deve trasformarla in un sopralluogo (titolo evento + email coerenti).
+                                        $tipoT = in_array($target['tipo'] ?? '', sopr_tipi_validi(), true) ? (string) $target['tipo'] : 'sopralluogo';
                                         $cli = sopr_get_cliente($db, $card['session_id']);
-                                        sopr_salva($db, $card['session_id'], (int) $target['id'], $dataOra, (string) ($target['etichetta'] ?? ''), (string) ($target['note'] ?? ''), $cli);
+                                        sopr_salva($db, $card['session_id'], (int) $target['id'], $dataOra, (string) ($target['etichetta'] ?? ''), (string) ($target['note'] ?? ''), $cli, $tipoT);
                                         $rescheduled = true;
                                         $bookingWhen = $startDt;   // niente $bookingEventId → il mirror lo cura la lib
+                                        $bookingTipo = $tipoT;     // per l'email di conferma al cliente
                                         $nm = trim(($card['nome'] ?? '') . ' ' . ($card['cognome'] ?? ''));
                                         if ($nm !== '') $leadNome = $nm;
                                         $em = trim((string) ($card['email'] ?? ''));
                                         if ($em !== '' && filter_var($em, FILTER_VALIDATE_EMAIL)) $leadEmail = $em;
-                                        $toolResult = 'Sopralluogo «' . ($target['etichetta'] ?: 'Sopralluogo') . '» spostato al '
+                                        $tLabelT = sopr_tipo_label($tipoT);
+                                        $toolResult = $tLabelT . ' «' . ($target['etichetta'] ?: $tLabelT) . '» spostato al '
                                                     . $startDt->format('d/m/Y') . ' alle ' . $timeStr . ' per ' . ($nm !== '' ? $nm : 'il cliente') . '.';
                                     }
                                 }
@@ -1004,16 +1084,19 @@ if (($bookingMade || $rescheduled) && $bookingWhen instanceof DateTime && $leadE
     $quando = trim(ucfirst($gg) . ' ' . $bookingWhen->format('j') . ' ' . $mm . ' ' . $bookingWhen->format('Y') . ' alle ' . $bookingWhen->format('H:i'));
     try {
         $isMoveC = $rescheduled && !$bookingMade;
+        // Testo coerente col tipo: sopralluogo / consegna / ritiro.
+        $tLabelC = ($bookingTipo === 'ritiro') ? 'Ritiro' : ($bookingTipo === 'consegna' ? 'Consegna' : 'Sopralluogo');
+        $tLowerC = mb_strtolower($tLabelC);
         $mailC = waNewMailer();
         $mailC->setFrom('noreply@ardy-lab.it', 'Ardy Lab');
         $mailC->addAddress($leadEmail);
-        $mailC->Subject = ($isMoveC ? '✅ Sopralluogo Ardy Lab spostato — ' : '✅ Sopralluogo Ardy Lab — ') . $quando;
+        $mailC->Subject = '✅ ' . $tLabelC . ' Ardy Lab' . ($isMoveC ? ' spostato/a — ' : ' — ') . $quando;
         $mailC->isHTML(true);
         $mailC->Body = '
 <div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:32px;color:#333;">
   ' . ardy_email_logo_cid($mailC) . '
-  <p style="color:#999;font-size:13px;margin-bottom:24px;">' . ($isMoveC ? 'Sopralluogo aggiornato' : 'Conferma sopralluogo') . '</p>
-  <p style="font-size:15px;line-height:1.7;">Ciao,<br>' . ($isMoveC ? 'abbiamo aggiornato il tuo sopralluogo al nuovo orario.' : 'abbiamo fissato il tuo sopralluogo.') . ' Ecco il riepilogo:</p>
+  <p style="color:#999;font-size:13px;margin-bottom:24px;">' . ($isMoveC ? $tLabelC . ' aggiornato/a' : 'Conferma ' . $tLowerC) . '</p>
+  <p style="font-size:15px;line-height:1.7;">Ciao,<br>' . ($isMoveC ? 'abbiamo aggiornato il tuo appuntamento (' . $tLowerC . ') al nuovo orario.' : 'abbiamo fissato il tuo appuntamento (' . $tLowerC . ').') . ' Ecco il riepilogo:</p>
   <div style="border-left:3px solid #c8a96e;padding:12px 20px;background:#fafaf8;margin:20px 0;font-size:16px;">
     <strong>' . htmlspecialchars($quando) . '</strong>
   </div>

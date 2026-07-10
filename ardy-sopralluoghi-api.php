@@ -8,7 +8,7 @@
 //   GET  ?session_id=...            → lista sopralluoghi del cliente (ordinati)
 //   POST {mode:'salva', session_id, id?, data_ora, tipo?, etichetta?, note?}
 //                                   → crea (id=0) o sposta/aggiorna (id>0)
-//                                   → tipo: 'sopralluogo' (default) | 'ritiro'
+//                                   → tipo: 'sopralluogo' (default) | 'ritiro' | 'consegna'
 //   POST {mode:'delete', session_id, id}
 //                                   → elimina (+ cancella l'evento gcal)
 //
@@ -61,7 +61,7 @@ try {
     if ($mode === 'salva') {
         $id        = (int) ($in['id'] ?? 0);
         $dataOra   = sopr_norm_data($in['data_ora'] ?? '');
-        $tipo      = ($in['tipo'] ?? '') === 'ritiro' ? 'ritiro' : 'sopralluogo';
+        $tipo      = in_array($in['tipo'] ?? '', ['ritiro', 'consegna'], true) ? (string) $in['tipo'] : 'sopralluogo';
         $etichetta = trim((string) ($in['etichetta'] ?? ''));
         $note      = trim((string) ($in['note'] ?? ''));
         if ($dataOra === null) { echo json_encode(['success' => false, 'error' => 'Data/ora non valida']); exit(); }
