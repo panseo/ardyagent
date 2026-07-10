@@ -37,6 +37,13 @@ base per la **centralizzazione** dei widget front-end (vedi sotto).
 | `snippet-yoast.php` | Snippet yoast | 15241 | php | everywhere | Schema `LocalBusiness` via filtro `wpseo_schema_organization` (SEO) | ❌ No (backup-only) |
 | `performance.php` | performance | 15267 | php | everywhere | Ottimizzazioni performance (hook WP) | ❌ No (backup-only) |
 
+### Snippet del negozio `object.ardy-lab.it` (non da export WPCode)
+
+| File | Cosa fa | Dove/come |
+|---|---|---|
+| `object-chat-inject.php` | Inietta il widget chat Sole sulle schede prodotto Woo | Snippet PHP nel WP del **negozio** |
+| `object-tema-apple.php` | Look "Apple-like" su **Kadence + WooCommerce** (bianco/grigio chiaro, font di sistema, bottoni pill blu, card morbide). Additivo, disattivabile in un click. | Snippet PHP (front-end) **oppure** copiare solo il blocco CSS in *Aspetto → Personalizza → CSS aggiuntivo*. Personalizzazione via variabili `:root`. Vedi PIANO-ECOMMERCE §17. |
+
 > **Nota:** il *loader della pagina lavorazione* NON è in questi snippet (la vecchia nota nel
 > TODO era imprecisa): sta nelle **Integrazioni di Divi** ed è già nel repo come
 > `../wpcode-snippet-lavorazione.html`. Il "Pulsante flottante ovunque" è solo il bottone CTA.
