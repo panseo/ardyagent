@@ -15,6 +15,7 @@
 
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
+require_once __DIR__ . '/ardy-object-lib.php'; // catalogo categorie di vendita (objectCategorieVendita / objectCategoriaDaTipo)
 
 header('Access-Control-Allow-Origin: https://ardyagent.ardy-lab.it');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -57,6 +58,32 @@ function wooRequest(string $method, string $path, ?array $body = null): array {
     $err  = curl_error($ch);
     curl_close($ch);
     return ['code' => $code, 'body' => json_decode((string) $res, true), 'raw' => $res, 'err' => $err];
+}
+
+/**
+ * Risolve l'ID della categoria di vendita su Woo dallo slug del catalogo:
+ * la cerca per slug e — se non c'è ancora — la crea con nome+slug. Così le
+ * categorie (Lampade, Complementi, Cornici, Restyling, Mobili, Sedie) nascono
+ * al primo prodotto che le usa, senza crearle a mano nel pannello Woo.
+ * Ritorna l'id categoria, o 0 se non risolvibile (allora il push non tocca le
+ * categorie del prodotto, per non azzerare scelte fatte a mano su Woo).
+ */
+function wooResolveCategoryId(string $slug): int {
+    $catalogo = objectCategorieVendita();
+    if (!isset($catalogo[$slug])) return 0;
+    $nome = $catalogo[$slug];
+
+    $found = wooRequest('GET', 'products/categories?slug=' . urlencode($slug));
+    if (is_array($found['body'] ?? null) && isset($found['body'][0]['id'])) {
+        return (int) $found['body'][0]['id'];
+    }
+    $created = wooRequest('POST', 'products/categories', ['name' => $nome, 'slug' => $slug]);
+    if (isset($created['body']['id'])) return (int) $created['body']['id'];
+    // Corsa/duplicato (Woo risponde term_exists): rileggi per slug.
+    if (($created['body']['code'] ?? '') === 'term_exists' && isset($created['body']['data']['resource_id'])) {
+        return (int) $created['body']['data']['resource_id'];
+    }
+    return 0;
 }
 
 /** Foto VENDITA del progetto (Modulo 2) come URL che Woo scarica — NON la galleria. */
@@ -105,6 +132,17 @@ try {
     ];
     if ($p['prezzo_vendita'] !== null && $p['prezzo_vendita'] !== '') {
         $payload['regular_price'] = (string) round((float) $p['prezzo_vendita'], 2);
+    }
+
+    // Categoria di vendita: quella scelta in dash, o (se non impostata) quella
+    // suggerita dal 'tipo'. Se risolvibile, la crea/aggancia su Woo. Se il progetto
+    // non ne ha nessuna (es. tipo 'prototipo'), NON tocchiamo le categorie del
+    // prodotto Woo — per non azzerare un'eventuale scelta fatta a mano nel pannello.
+    $catSlug = trim((string) ($p['categoria'] ?? ''));
+    if ($catSlug === '') { $catSlug = objectCategoriaDaTipo($p['tipo'] ?? ''); }
+    if ($catSlug !== '') {
+        $catId = wooResolveCategoryId($catSlug);
+        if ($catId > 0) { $payload['categories'] = [['id' => $catId]]; }
     }
 
     // Risolvi il prodotto Woo: id salvato → oppure adotta un prodotto già esistente

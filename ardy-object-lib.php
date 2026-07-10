@@ -10,6 +10,39 @@
 // -----------------------------------------------------------
 
 /**
+ * Catalogo delle categorie di VENDITA del negozio (Woo), unica fonte di verità:
+ * la usano sia la dash/API (validazione del campo `categoria`) sia il push
+ * (creazione/aggancio della categoria su WooCommerce). Ordine = ordine di
+ * presentazione. Chiave = slug categoria Woo · valore = nome mostrato.
+ * Aggiungere qui una voce la rende disponibile ovunque senza altre modifiche.
+ */
+function objectCategorieVendita(): array {
+    return [
+        'lampade'     => 'Lampade',
+        'complementi' => 'Complementi',
+        'cornici'     => 'Cornici',
+        'restyling'   => 'Restyling',
+        'mobili'      => 'Mobili',
+        'sedie'       => 'Sedie',
+    ];
+}
+
+/**
+ * Categoria di vendita suggerita a partire dal `tipo` interno del progetto, per i
+ * pezzi che non hanno ancora una categoria esplicita. `prototipo` non è da vendere
+ * → nessuna categoria. Ritorna lo slug categoria o '' se non mappabile.
+ */
+function objectCategoriaDaTipo(?string $tipo): string {
+    $map = [
+        'lampada'     => 'lampade',
+        'mobile'      => 'mobili',
+        'complemento' => 'complementi',
+        'restyling'   => 'restyling',
+    ];
+    return $map[(string) $tipo] ?? '';
+}
+
+/**
  * Ritorna la scheda-Sole pubblica di un oggetto per slug, o null se non esiste /
  * non è pubblicato (scheda_sole_pubblica != 1) / è eliminato.
  */

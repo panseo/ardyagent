@@ -414,3 +414,39 @@ tabelle distinte azzera il rischio di contaminazione tra i due moduli.
 **Nota B2 (Opzione A):** le letture da Backblaze B2 sono il punto fragile (workaround già presente nel
 publish del Modulo 1). Per il Modulo 2 si evita del tutto: foto vendita in locale, B2 eventualmente
 solo come backup a freddo. Fix radicale del GET B2 = intervento separato, non in questo scope.
+
+---
+
+## 17. Revisione (10/07) — categorie di vendita (dash → Woo)
+
+**Domanda del committente:** *"ardy design come pubblica sulla categoria giusta?"* — finora **non lo
+faceva**: il push mandava a Woo nome/slug/descrizione/prezzo/foto ma **nessuna categoria**, quindi i
+prodotti finivano in *Senza categoria*. Il campo `tipo` esisteva ma è un concetto **interno**
+(`lampada|mobile|complemento|restyling|prototipo`), non combacia con le categorie di vendita e include
+`prototipo` (R&D, non vendibile).
+
+**Decisione:** campo **`categoria`** dedicato sul progetto, distinto dal `tipo`. Catalogo iniziale:
+**Lampade, Complementi, Cornici, Restyling, Mobili, Sedie**. Il push crea/aggancia la categoria su Woo.
+
+**Implementazione**
+- `ardy-object-lib.php` — **`objectCategorieVendita()`** (unica fonte: slug→nome del catalogo) e
+  **`objectCategoriaDaTipo()`** (suggerimento dal `tipo` per i pezzi senza categoria esplicita:
+  `lampada→lampade`, `mobile→mobili`, `complemento→complementi`, `restyling→restyling`; `prototipo`→nessuna).
+- `ardy-migrate.php` — nuova colonna `progetti.categoria VARCHAR(40) NULL` (idempotente).
+- `ardy-progetti-api.php` — il `save` valida `categoria` contro il catalogo (fuori catalogo → NULL) e la
+  persiste; include la lib per il catalogo.
+- `ardy-design-app.html` — select **"Categoria negozio"** nella Scheda prodotto; se non scelta a mano è
+  **pre-selezionata dal tipo** (`CAT_DA_TIPO`) e segnalata come suggerita.
+- `ardy-object-push.php` — **`wooResolveCategoryId()`**: cerca la categoria per slug su Woo e, se manca,
+  la **crea** (name+slug) — così le categorie nascono al primo prodotto, senza crearle a mano nel
+  pannello. Gestisce `term_exists` (corsa/duplicato). La categoria usata è quella in dash, o quella
+  suggerita dal `tipo`; se nessuna è risolvibile (es. `prototipo`) il push **non tocca** le categorie
+  del prodotto Woo (non azzera scelte manuali).
+
+**Aggiungere una categoria in futuro:** basta una riga in `objectCategorieVendita()` (+ la voce in
+`CATEGORIE_NEGOZIO` nella dash). La categoria Woo viene creata al primo push che la usa.
+
+> **Fuori da questo repo (pannello WordPress di `object.ardy-lab.it`):** il **tema/layout stile Apple**
+> e i **gateway di pagamento (Stripe, PayPal, Klarna)** si configurano nell'admin WooCommerce
+> dell'installazione dedicata (plugin + chiavi API), non nel codice della dash. Vedi la guida operativa
+> passata al committente il 10/07.

@@ -187,6 +187,11 @@
 <script>
 const API = 'ardy-progetti-api.php';
 const TIPI = ['lampada','mobile','complemento','restyling','prototipo'];
+// Categorie di VENDITA del negozio Woo (diverse dal 'tipo' interno). Slug → etichetta.
+// Deve combaciare con objectCategorieVendita() in ardy-object-lib.php.
+const CATEGORIE_NEGOZIO = [['lampade','Lampade'],['complementi','Complementi'],['cornici','Cornici'],['restyling','Restyling'],['mobili','Mobili'],['sedie','Sedie']];
+// Categoria suggerita dal tipo interno quando non è ancora stata scelta a mano.
+const CAT_DA_TIPO = { lampada:'lampade', mobile:'mobili', complemento:'complementi', restyling:'restyling' };
 const STATI = ['IDEA','PROGETTAZIONE','PROTOTIPO','VERSIONE_FINALE','REALIZZAZIONE','FOTO','A_CATALOGO'];
 const METODI = [['stampa_3d','🖨️ Stampa 3D'],['restyling','♻️ Restyling'],['altro','🔧 Altro']];
 const DISPONIBILITA = [['pronto','Pronto'],['su_ordinazione','Su ordinazione'],['pezzo_unico','Pezzo unico']];
@@ -264,7 +269,7 @@ function closeMobileDetail(){
 
 function nuovoProgetto(){
   stato.sel = null;
-  stato.dettaglio = { progetto:{ id:0, titolo:'', tipo:'lampada', metodo:'stampa_3d', disponibilita:'pronto', stato:'IDEA', descrizione:'', storia:'', materiali:'', scheda_tecnica:'', dimensioni:'', cura:'', faq_pubbliche:null, scheda_sole_pubblica:0, slug:'', scarto_pct:10, prezzo_vendita:'', tempo_lavoro:'', costo_produzione:null, margine:null }, materiali:[], iterazioni:[], fasi:[], file:[], galleria:[], foto_vendita:[] };
+  stato.dettaglio = { progetto:{ id:0, titolo:'', tipo:'lampada', categoria:'', metodo:'stampa_3d', disponibilita:'pronto', stato:'IDEA', descrizione:'', storia:'', materiali:'', scheda_tecnica:'', dimensioni:'', cura:'', faq_pubbliche:null, scheda_sole_pubblica:0, slug:'', scarto_pct:10, prezzo_vendita:'', tempo_lavoro:'', costo_produzione:null, margine:null }, materiali:[], iterazioni:[], fasi:[], file:[], galleria:[], foto_vendita:[] };
   renderLista();
   renderDettaglio(true);
   openMobileDetail();
@@ -330,7 +335,7 @@ function faqToText(v){
 async function salvaProgetto(){
   const body = {
     mode:'save', id: stato.dettaglio.progetto.id, stato: stato.dettaglio.progetto.stato,
-    titolo:val('f_titolo'), tipo:val('f_tipo'), metodo:val('f_metodo'), disponibilita:val('f_disponibilita'),
+    titolo:val('f_titolo'), tipo:val('f_tipo'), categoria:val('f_categoria'), metodo:val('f_metodo'), disponibilita:val('f_disponibilita'),
     descrizione:val('f_descrizione'),
     storia:val('f_storia'), materiali:val('f_materiali'), scheda_tecnica:val('f_scheda_tecnica'),
     dimensioni:val('f_dimensioni'), cura:val('f_cura'), faq_pubbliche:val('f_faq'),
@@ -636,6 +641,15 @@ function schedaProdottoCard(){
       <div class="field"><label>Dimensioni (sintetiche)</label><input id="f_dimensioni" value="${esc(p.dimensioni||'')}" placeholder="Es. 30 × 30 × 45 cm · 1,2 kg"></div>
       <div class="field"><label>Prezzo vendita €</label><input id="f_prezzo_vendita" class="num" value="${p.prezzo_vendita??''}" placeholder="0,00"></div>
       <div class="field" style="max-width:200px"><label>Disponibilità</label><select id="f_disponibilita">${DISPONIBILITA.map(d=>`<option value="${d[0]}" ${d[0]===(p.disponibilita||'pronto')?'selected':''}>${d[1]}</option>`).join('')}</select></div>
+    </div>
+    <div class="row">
+      <div class="field" style="max-width:260px"><label>Categoria negozio <small>(WooCommerce)</small></label>
+        <select id="f_categoria">
+          <option value="">— nessuna —</option>
+          ${CATEGORIE_NEGOZIO.map(c=>`<option value="${c[0]}" ${c[0]===(p.categoria||CAT_DA_TIPO[p.tipo]||'')?'selected':''}>${c[1]}</option>`).join('')}
+        </select>
+        <div class="muted" style="font-size:.85em">Decide in quale categoria del negozio va il prodotto al push. ${p.categoria?'':'<b>Suggerita dal tipo</b> finché non la scegli.'}</div>
+      </div>
     </div>
     <div class="field"><label>Cura / manutenzione</label><textarea id="f_cura" placeholder="Come si pulisce e si usa. Es. attacco E27, LED max 8W, panno asciutto, no acqua.">${esc(p.cura||'')}</textarea></div>
     <div class="field"><label>FAQ pubbliche — una per riga, «Domanda | Risposta»</label><textarea id="f_faq" placeholder="È adatto agli esterni? | Sì, la finitura resiste all'umidità.&#10;Quanto pesa? | Circa 1,2 kg.">${esc(faqToText(p.faq_pubbliche))}</textarea></div>

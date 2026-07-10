@@ -19,6 +19,7 @@
 // -----------------------------------------------------------
 
 require_once __DIR__ . '/ardy-db.php';
+require_once __DIR__ . '/ardy-object-lib.php'; // catalogo categorie di vendita (objectCategorieVendita)
 
 header('Access-Control-Allow-Origin: https://ardyagent.ardy-lab.it');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
@@ -222,10 +223,13 @@ try {
         if ($titolo === '') { echo json_encode(['success' => false, 'error' => 'Titolo mancante']); exit(); }
 
         $tipo  = in_array($in['tipo'] ?? '', PROGETTO_TIPI, true) ? $in['tipo'] : 'lampada';
+        // Categoria di vendita (Woo): ammessa solo se nel catalogo; '' = nessuna.
+        $categoria = array_key_exists($in['categoria'] ?? '', objectCategorieVendita()) ? (string) $in['categoria'] : '';
 
         $fields = [
             'titolo'         => $titolo,
             'tipo'           => $tipo,
+            'categoria'      => $categoria !== '' ? $categoria : null,
             'metodo'         => in_array($in['metodo'] ?? '', PROGETTO_METODI, true) ? $in['metodo'] : 'stampa_3d',
             'disponibilita'  => in_array($in['disponibilita'] ?? '', PROGETTO_DISPONIBILITA, true) ? $in['disponibilita'] : 'pronto',
             'descrizione'    => trim((string) ($in['descrizione'] ?? '')),

@@ -434,6 +434,11 @@ if (!indexExists($pdo, 'progetti', 'idx_progetti_slug')) {
 $progettiModuloCols = [
     'metodo'        => "ALTER TABLE progetti ADD COLUMN metodo VARCHAR(20) NOT NULL DEFAULT 'stampa_3d'",      // stampa_3d|restyling|altro
     'disponibilita' => "ALTER TABLE progetti ADD COLUMN disponibilita VARCHAR(20) NOT NULL DEFAULT 'pronto'",  // pronto|su_ordinazione|pezzo_unico
+    // Categoria di VENDITA per WooCommerce (diversa dal 'tipo' interno): decide in
+    // quale categoria del negozio finisce il prodotto al push. Slug del catalogo in
+    // objectCategorieVendita() (ardy-object-lib.php). NULL/'' = nessuna categoria
+    // forzata (il push non tocca le categorie del prodotto Woo).
+    'categoria'     => "ALTER TABLE progetti ADD COLUMN categoria VARCHAR(40) NULL AFTER tipo",                // lampade|complementi|cornici|restyling|mobili|sedie
 ];
 foreach ($progettiModuloCols as $col => $sql) {
     if (!colExists($pdo, 'progetti', $col)) { ddl($pdo, $sql, "progetti.$col"); }
