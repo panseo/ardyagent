@@ -561,13 +561,19 @@ Una **rete di sicurezza** (`ardy-sanitize.php`) ripulisce eventuale sintassi too
 
 Tool staff (in `ardy-wa-agent.php`, ramo `$staff`; prompt in `ardy-wa-lookup.php` → `ardy_wa_titolare_istruzioni`):
 - `ottieni_disponibilita_calendario`, `cerca_scheda_cliente`;
+- **Creazione scheda**: `crea_scheda_cliente` — crea/aggiorna la scheda **sincrona** (server-to-server verso
+  `ardy-wa-crea-scheda.php`, upsert deterministico per telefono/nome → niente doppioni) e ritorna il
+  `session_id`, così Sole **crea e fissa l'appuntamento nello stesso giro** riusando quel `session_id` con
+  `fissa_appuntamento_staff`, senza aspettare nessuna "sincronizzazione";
 - **Sopralluoghi MULTIPLI**: `fissa_appuntamento_staff` (AGGIUNGE sempre una visita, niente anti-doppione),
   `sposta_appuntamento_staff` (se il cliente ha più visite, Sole **chiede QUALE** via `sopralluogo_id`),
   `elenca_sopralluoghi_staff`. Usano `ardy-sopralluoghi-lib.php` (stesso motore della dashboard);
 - **Nota settimanale**: `salva_nota_settimanale` / `leggi_nota_settimanale` (tabella `note_staff`,
   condivisa Michela+Andrea). Sole legge → modifica il testo intero → risalva.
 
-La **creazione/contatto scheda** resta sui marker n8n (`[[CREA_SCHEDA]]`/`[[CONTATTA_LEAD]]`).
+Il solo marker n8n rimasto lato staff è il **contatto lead a freddo** (`[[CONTATTA_LEAD]]`). La creazione
+scheda **non** usa più il marker `[[CREA_SCHEDA]]`: era la causa della confusione (la scheda veniva creata
+dopo il turno e i tool non la vedevano ancora → Sole inventava un "problema di sincronizzazione").
 
 > ⚠️ **Gotcha tool a zero argomenti**: un tool senza parametri (es. `leggi_nota_settimanale`) torna con
 > `input {}`; `json_decode(assoc)` lo rende un **array PHP vuoto** che, rispedito ad Anthropic, diventa

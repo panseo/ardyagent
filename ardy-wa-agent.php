@@ -10,8 +10,11 @@
 // Così Sole può proporre 2 slot reali e chiudere l'appuntamento, invece di
 // "recitare" la sintassi di un tool che su WhatsApp non esisteva (caso Alberto).
 //
-// La modalità TITOLARE (staff) NON passa di qui: resta sul flusso n8n esistente
-// (single-shot + marker [[CREA_SCHEDA]]/[[CONTATTA_LEAD]]). Zero regressioni lì.
+// Anche la modalità TITOLARE (staff) passa ora di qui, con un set di tool "_staff"
+// dedicati (ricerca/creazione scheda, calendario per nome, nota settimanale). Il solo
+// marker n8n rimasto è [[CONTATTA_LEAD]] (primo contatto a freddo); la creazione scheda
+// è ora un tool VERO (crea_scheda_cliente), sincrona, così Sole crea e prenota nello
+// stesso giro senza aspettare nessuna "sincronizzazione".
 //
 // Chiamato server-to-server da n8n. Riusa: lookup (system già pronto), memoria
 // e invio a WhatsApp restano in n8n. Qui si fa SOLO il loop con i tool.
@@ -358,7 +361,8 @@ $tools = [
 // agisce sul calendario PER CONTO di un cliente NOMINATO nel CRM. Quindi i tool
 // non sono quelli legati al numero WhatsApp di chi scrive (che qui è lo staff),
 // ma versioni "_staff" che identificano il cliente per nome (con disambiguazione
-// in caso di omonimi). La creazione/contatto scheda resta sui marker n8n.
+// in caso di omonimi). La creazione scheda è il tool crea_scheda_cliente (sincrono):
+// solo il primo contatto a freddo del lead resta sul marker n8n [[CONTATTA_LEAD]].
 // -----------------------------------------------------------
 if ($staff) {
     $tools = [
@@ -370,6 +374,26 @@ if ($staff) {
                 'type'       => 'object',
                 'properties' => [
                     'nome' => ['type' => 'string', 'description' => 'Nome (o nome e cognome) del cliente da cercare.'],
+                ],
+                'required' => ['nome'],
+            ],
+        ],
+        [
+            'name'        => 'crea_scheda_cliente',
+            'description' => 'CREA (o aggiorna) una scheda cliente nel CRM quando lo staff ti detta un nuovo contatto. Salva SUBITO e in modo definitivo: la scheda è disponibile all\'ISTANTE, non c\'è nessuna sincronizzazione da aspettare. Ritorna il session_id della scheda: riusalo SUBITO con fissa_appuntamento_staff (campo session_id) per fissare l\'appuntamento nello stesso giro, senza doverla ricercare. Usalo solo DOPO che lo staff ha confermato i dati. Se rifai la stessa scheda (stesso telefono o stesso nome) non crei un doppione, la aggiorni.',
+            'input_schema' => [
+                'type'       => 'object',
+                'properties' => [
+                    'nome'      => ['type' => 'string', 'description' => 'Nome del cliente.'],
+                    'cognome'   => ['type' => 'string', 'description' => 'Cognome del cliente.'],
+                    'telefono'  => ['type' => 'string', 'description' => 'Telefono del cliente (quello che ti detta lo staff). NON è il numero di chi ti sta scrivendo: se lo staff non lo dà, lascialo vuoto.'],
+                    'email'     => ['type' => 'string', 'description' => 'Email del cliente.'],
+                    'indirizzo' => ['type' => 'string', 'description' => 'Indirizzo completo: via, numero, città.'],
+                    'zona'      => ['type' => 'string', 'description' => 'Zona o città del cliente.'],
+                    'servizio'  => ['type' => 'string', 'description' => 'Tipo di servizio/lavoro (es. "wrapping armadio + Ardy Express", "montaggio vetro e ritocchi").'],
+                    'mobile'    => ['type' => 'string', 'description' => 'Descrizione del mobile o pezzo.'],
+                    'stato'     => ['type' => 'string', 'description' => 'Stato: LEAD, SOPRALLUOGO, PREVENTIVO, ACCONTO, RITIRATI, IN_LAVORAZIONE, STANDBY, PERSO. Se lo staff non lo dice, usa LEAD.'],
+                    'note'      => ['type' => 'string', 'description' => 'Note aggiuntive per lo staff.'],
                 ],
                 'required' => ['nome'],
             ],
@@ -737,6 +761,51 @@ while ($iteration < $maxIterations) {
             } catch (PDOException $e) {
                 error_log('ARDY WA-AGENT STAFF CERCA ERROR: ' . $e->getMessage());
                 $toolResult = 'Errore nella ricerca della scheda. Riprova.';
+            }
+
+        } elseif ($toolName === 'crea_scheda_cliente') {
+            // Staff: crea la scheda SUBITO (server-to-server, stessa logica di upsert
+            // deterministico di ardy-wa-crea-scheda.php → niente doppioni). Ritorna il
+            // session_id così Sole può fissare l'appuntamento nello stesso giro, senza
+            // aspettare nessuna "sincronizzazione" (era la causa della confusione: la
+            // creazione stava sul marker n8n post-turno e i tool non la vedevano ancora).
+            // NB: il telefono è quello DEL CLIENTE dettato dallo staff, MAI il numero di
+            // chi scrive ($phone = Michela): qui non facciamo il fallback su $phone.
+            $nomeCli = trim((string) ($toolInput['nome'] ?? ''));
+            if ($nomeCli === '' && trim((string) ($toolInput['cognome'] ?? '')) === '' && trim((string) ($toolInput['telefono'] ?? '')) === '') {
+                $toolResult = 'Serve almeno nome, cognome o telefono per creare la scheda. Chiedi allo staff.';
+            } else {
+                $payload = [
+                    'nome'      => $toolInput['nome']      ?? '',
+                    'cognome'   => $toolInput['cognome']   ?? '',
+                    'telefono'  => preg_replace('/[^0-9+]/', '', (string) ($toolInput['telefono'] ?? '')),
+                    'email'     => $toolInput['email']     ?? '',
+                    'indirizzo' => $toolInput['indirizzo'] ?? '',
+                    'zona'      => $toolInput['zona']       ?? '',
+                    'servizio'  => $toolInput['servizio']  ?? '',
+                    'mobile'    => $toolInput['mobile']    ?? '',
+                    'stato'     => $toolInput['stato']      ?? 'LEAD',
+                    'note'      => $toolInput['note']       ?? '',
+                ];
+                $ch = curl_init('https://ardyagent.ardy-lab.it/ardy-wa-crea-scheda.php');
+                curl_setopt($ch, CURLOPT_POST,           true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS,     json_encode($payload));
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT,        15);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                    'Content-Type: application/json',
+                    'X-Ardy-Secret: ' . (defined('WA_LOOKUP_SECRET') ? WA_LOOKUP_SECRET : ''),
+                ]);
+                $r = json_decode(curl_exec($ch), true);
+                curl_close($ch);
+                if (is_array($r) && !empty($r['success']) && !empty($r['session_id'])) {
+                    $verbo = !empty($r['created']) ? 'creata' : 'aggiornata';
+                    $toolResult = 'Scheda ' . $verbo . ' e già salvata nel CRM (session_id=' . $r['session_id'] . '). '
+                                . "È disponibile SUBITO: NON dire che il sistema deve ancora \"sincronizzarsi\" o che non la trova.\n"
+                                . 'Se questo cliente ha un appuntamento da fissare, chiama ORA fissa_appuntamento_staff passando questo session_id.';
+                } else {
+                    $toolResult = 'Non sono riuscita a salvare la scheda adesso. Riprova tra poco o di\' allo staff di registrarla dalla dashboard.';
+                }
             }
 
         } elseif ($toolName === 'elenca_sopralluoghi_staff') {
