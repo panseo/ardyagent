@@ -3,8 +3,8 @@
 // ARDY LAB — Serve pubblico di una FOTO VENDITA di un oggetto
 // Le foto vendita (Modulo 2, tabella progetto_foto_vendita) sono le immagini pubbliche
 // del pezzo in vendita — DISTINTE dalla galleria del progetto (Modulo 1 → ardy-lab.it).
-// Questo endpoint le serve in chiaro SOLO per gli oggetti pubblicati
-// (scheda_sole_pubblica=1), così WooCommerce può scaricarle durante il push
+// Questo endpoint le serve in chiaro (sono le foto pubbliche del prodotto in vendita,
+// indipendenti dalla chat di Sole), così WooCommerce può scaricarle durante il push
 // (ardy-object-push.php). Gestisce disco locale e, se una foto è stata spostata, B2.
 //   GET ?pid=N&gid=M → bytes immagine (gid = id in progetto_foto_vendita)
 // PUBBLICO (fuori dal Basic Auth del .htaccess). Vedi PIANO §7.
@@ -33,13 +33,15 @@ if ($rl['count'] > 600) { http_response_code(429); exit(); }
 try {
     $db = ardyDB();
 
-    // Gate: la foto è servita solo se l'oggetto è pubblico e non eliminato. Le foto
-    // sono quelle di VENDITA (Modulo 2), NON la galleria del progetto (Modulo 1).
+    // Le foto sono quelle di VENDITA (Modulo 2), NON la galleria (Modulo 1). Sono
+    // immagini pubbliche del prodotto in vendita: si servono a prescindere dalla
+    // visibilità a Sole (un pezzo può essere venduto anche senza chat). Gate = solo
+    // progetto non eliminato + riga esistente.
     $st = $db->prepare(
         "SELECT v.storage, v.nome_file, v.storage_key
          FROM progetto_foto_vendita v
          JOIN progetti p ON p.id = v.progetto_id
-         WHERE v.id = ? AND v.progetto_id = ? AND p.scheda_sole_pubblica = 1 AND p.deleted_at IS NULL
+         WHERE v.id = ? AND v.progetto_id = ? AND p.deleted_at IS NULL
          LIMIT 1"
     );
     $st->execute([$gid, $pid]);
