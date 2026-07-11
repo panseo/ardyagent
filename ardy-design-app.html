@@ -342,18 +342,18 @@ async function salvaProgetto(){
   if (!d.success){ toast(d.error||'Errore'); return; }
   toast('Salvato'); await caricaLista(); apri(d.id);
 }
-async function pushWoo(){
+async function pushWoo(pubblica){
   const id = stato.dettaglio.progetto.id;
   if (!id){ toast('Salva prima il progetto'); return; }
-  if (!confirm('Inviare/aggiornare questo oggetto sul negozio WooCommerce (come bozza)?')) return;
-  toast('Invio al negozio…');
+  if (!confirm(pubblica ? 'Pubblicare questo oggetto sul negozio (visibile ai clienti)?' : 'Inviare/aggiornare questo oggetto come bozza sul negozio?')) return;
+  toast(pubblica ? 'Pubblico sul negozio…' : 'Invio al negozio…');
   let d;
   try {
     d = await fetch('ardy-object-push.php', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ progetto_id:id }) }).then(r=>r.json());
+      body: JSON.stringify({ progetto_id:id, pubblica: pubblica?1:0 }) }).then(r=>r.json());
   } catch(e){ toast('Errore di rete'); return; }
   if (!d || !d.success){ toast((d&&d.error)||'Errore push'); return; }
-  toast(d.created?'Prodotto creato su Woo (bozza)':'Prodotto aggiornato su Woo');
+  toast(d.status==='publish' ? 'Pubblicato sul negozio ✅' : (d.created?'Creato su Woo (bozza)':'Aggiornato su Woo'));
   await apri(id);
 }
 async function cambiaStato(s){
@@ -666,8 +666,12 @@ function pushPanel(){
   <div class="panel">
     <h2>🛒 Negozio (WooCommerce) <small>pubblica o aggiorna il prodotto in vendita</small></h2>
     <div class="muted" style="margin-bottom:8px">Slug: <b>${esc(p.slug||'—')}</b> · Disponibilità: <b>${disp}</b> · ${p.scheda_sole_pubblica?'Visibile a Sole ✅':'Non visibile a Sole'}</div>
-    <button class="ghost" onclick="pushWoo()">🛒 ${p.woo_product_id?'Aggiorna su negozio':'Invia al negozio'}</button>
-    ${p.woo_product_id?`<span class="muted" style="margin-left:8px">Woo #${p.woo_product_id}</span>`:''}
+    <div class="row" style="align-items:center">
+      <button class="ghost" onclick="pushWoo(false)">🛒 ${p.woo_product_id?'Aggiorna (bozza)':'Invia (bozza)'}</button>
+      <button class="primary" onclick="pushWoo(true)">🚀 Pubblica sul negozio</button>
+      ${p.woo_product_id?`<span class="muted" style="margin-left:4px">Woo #${p.woo_product_id}</span>`:''}
+    </div>
+    <div class="muted" style="font-size:.85em;margin-top:6px">«Invia (bozza)» crea/aggiorna il prodotto ma lo lascia da rivedere su Woo. «Pubblica» lo rende visibile ai clienti.</div>
   </div>`;
 }
 
