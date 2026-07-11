@@ -326,16 +326,24 @@ provisioning:
 - Google account: **ardy.documenti@gmail.com**
 - Cloud project: **ardy-lab** (project number 532339794075)
 - Request ID originale: **3-7851000041139**
-**Aggiornamento (11/07):** confermato in Cloud Console (dettaglio "Google My Business API" → tab "Quote e
-limiti di sistema"): stato **"Attivato"**, ma la quota è **0** (nessun limite disponibile assegnato) — cioè
-l'API è enabled ma senza traffico concesso. Da Google **ancora nessuna risposta** dopo la mail del 04/07
-con i dati di provisioning. Conferma che "Attivato/Enabled" ≠ "quota concessa": sono due gate distinti.
+**Aggiornamento (11/07, precisazione):** filtrando le quote per servizio (`mybusiness.googleapis.com`) nella
+pagina progetto-wide di IAM & Admin → Quote, le **8 quote di Google My Business API risultano popolate e
+sane** (es. 250.000 requests/day, 3.000 V4 General Requests/minuto, ecc.) — "0%"/"0" in quella vista sono
+solo **utilizzo attuale** (zero chiamate riuscite finora), NON il limite. Quindi non è un problema di quota
+numerica: il blocco resta il **gate di allow-list** a monte (stesso che dava 403 prima di arrivare al
+servizio). Il pulsante "Modifica quote" in Console **non è la via giusta** per questa API privata.
+**Ri-testato `ardy-gbp-check.php` l'11/07 (15:19):** **stesso identico 403** "ACCESSO NON CONCESSO" di
+prima — nessun cambiamento nonostante l'API risulti enabled e le quote popolate. Conferma che l'unico
+sblocco possibile è il provisioning manuale lato Google, non azionabile da Cloud Console.
 **Da fare (prossima sessione):**
-1. Se continuano a non rispondere entro un'altra settimana (quindi verso il 18/07, ~1 mese dal form
-   originale del 17/06), **ri-sollecitare** la mail di supporto (rispondere allo stesso thread di Ravi)
-   citando che l'API è enabled ma la quota resta a 0.
-2. Controllare la mail (anche SPAM) di `ardy.documenti@gmail.com` per l'esito nel frattempo.
-3. Ri-lanciare `ardy-gbp-check.php` periodicamente, finché non dà verde ("QUOTA SBLOCCATA").
+1. ⏳ **Confermare se è stato inviato** il sollecito di follow-up allo stesso thread di Ravi (richiamando i
+   dati già forniti il 04/07: account `ardy.documenti@gmail.com`, progetto `ardy-lab` / 532339794075) — se
+   non ancora fatto, è l'unica azione utile rimasta.
+2. Controllare la mail (anche SPAM) di `ardy.documenti@gmail.com` per la risposta.
+3. Se continua il silenzio oltre metà/fine luglio, valutare un ulteriore sollecito o un canale diverso
+   (community/forum Business Profile API, se esiste un contatto più diretto).
+4. Ri-lanciare `ardy-gbp-check.php` periodicamente (nessuna altra azione utile lato Cloud Console/codice
+   finché Google non fa il provisioning), finché non dà verde ("QUOTA SBLOCCATA").
 
 **Lato codice (già pronto, riabilitare SOLO a check verde):** il toggle Google nel pannello social
 (`ardy-michela-app.html`, `socialDestHtml`) è stato **ri-disattivato** dopo l'esito negativo del check —
