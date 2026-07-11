@@ -234,6 +234,7 @@ try {
             'scheda_tecnica' => trim((string) ($in['scheda_tecnica'] ?? '')),
             'dimensioni'     => trim((string) ($in['dimensioni'] ?? '')),
             'cura'           => trim((string) ($in['cura'] ?? '')),
+            'teaser_vendita' => trim((string) ($in['teaser_vendita'] ?? '')),
             'faq_pubbliche'  => progettoFaqJson($in['faq_pubbliche'] ?? ($in['faq'] ?? null)),
             'scheda_sole_pubblica' => !empty($in['scheda_sole_pubblica']) ? 1 : 0,
             'scarto_pct'     => max(0, progettoParseNum($in['scarto_pct'] ?? 10)),

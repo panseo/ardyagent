@@ -91,13 +91,12 @@ try {
     if ($slug === '')                        { echo json_encode(['success' => false, 'error' => 'Il progetto non ha uno slug: salva prima la scheda.']); exit(); }
     if (trim((string) $p['titolo']) === '')  { echo json_encode(['success' => false, 'error' => 'Titolo mancante']); exit(); }
 
-    // Descrizione lunga = concept + storia; breve = materiali + dimensioni.
-    $descr = trim((string) $p['descrizione']);
-    if (!empty($p['storia'])) { $descr = trim($descr . "\n\n" . $p['storia']); }
-    $shortParts = [];
-    if (!empty($p['materiali']))  { $shortParts[] = $p['materiali']; }
-    if (!empty($p['dimensioni'])) { $shortParts[] = 'Dimensioni: ' . $p['dimensioni']; }
-    $short = implode("\n", $shortParts);
+    // Pagina prodotto PULITA: solo un teaser emozionale + invito a chiedere a Sole.
+    // I dettagli (storia, materiali, misure, cura) li racconta Sole in chat, non la scheda.
+    $teaser = trim((string) ($p['teaser_vendita'] ?? ''));
+    $invito = "💬 Vuoi conoscere la storia, i materiali e ogni dettaglio di questo pezzo? Chiedi a Sole, l'assistente qui in pagina.";
+    $descr  = $teaser !== '' ? $teaser . "\n\n" . $invito : $invito;
+    $short  = $teaser;
 
     $payload = [
         'name'              => $p['titolo'],

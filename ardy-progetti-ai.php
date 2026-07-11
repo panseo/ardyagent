@@ -62,7 +62,7 @@ try {
     $in   = json_decode(file_get_contents('php://input'), true) ?: [];
     $mode = $in['mode'] ?? 'genera_post';
 
-    if (!in_array($mode, ['genera_post', 'genera_articolo'], true)) { echo json_encode(['success' => false, 'error' => 'mode non valido']); exit(); }
+    if (!in_array($mode, ['genera_post', 'genera_articolo', 'genera_teaser'], true)) { echo json_encode(['success' => false, 'error' => 'mode non valido']); exit(); }
 
     $progettoId = (int) ($in['progetto_id'] ?? 0);
     $faseNome   = trim((string) ($in['fase_nome'] ?? ''));
@@ -74,21 +74,25 @@ try {
     }
 
     // Contesto dal progetto (per ancorare il testo, senza inventare nulla).
-    $titolo = $tipo = $descr = $materiali = $scheda = '';
+    $titolo = $tipo = $descr = $storia = $materiali = $scheda = '';
     if ($progettoId > 0) {
         $db = ardyDB();
-        $st = $db->prepare("SELECT titolo, tipo, descrizione, materiali, scheda_tecnica FROM progetti WHERE id = ? AND deleted_at IS NULL");
+        $st = $db->prepare("SELECT titolo, tipo, descrizione, storia, materiali, scheda_tecnica FROM progetti WHERE id = ? AND deleted_at IS NULL");
         $st->execute([$progettoId]);
         if ($p = $st->fetch()) {
             $titolo    = trim((string) ($p['titolo'] ?? ''));
             $tipo      = trim((string) ($p['tipo'] ?? ''));
             $descr     = trim((string) ($p['descrizione'] ?? ''));
+            $storia    = trim((string) ($p['storia'] ?? ''));
             $materiali = trim((string) ($p['materiali'] ?? ''));
             $scheda    = trim((string) ($p['scheda_tecnica'] ?? ''));
         }
     }
     if ($mode === 'genera_articolo' && $descr === '' && $materiali === '' && $scheda === '') {
         echo json_encode(['success' => false, 'error' => 'Compila prima la descrizione del progetto']); exit();
+    }
+    if ($mode === 'genera_teaser' && $descr === '' && $storia === '' && $materiali === '') {
+        echo json_encode(['success' => false, 'error' => 'Compila prima descrizione o storia del pezzo']); exit();
     }
 
     $system =
@@ -105,10 +109,21 @@ try {
     if ($tipo      !== '') $ctx .= "Tipo: $tipo\n";
     if ($faseNome  !== '') $ctx .= "Fase di lavorazione: $faseNome\n";
     if ($descr     !== '') $ctx .= "Concept del progetto: $descr\n";
+    if ($mode === 'genera_teaser' && $storia !== '') $ctx .= "Storia del pezzo: $storia\n";
     if ($materiali !== '') $ctx .= "Materiali dichiarati: $materiali\n";
     if ($mode === 'genera_articolo' && $scheda !== '') $ctx .= "Scheda tecnica: $scheda\n";
 
-    if ($mode === 'genera_articolo') {
+    if ($mode === 'genera_teaser') {
+        // Teaser breve ed emozionale per la scheda prodotto Woo: i dettagli li dà Sole.
+        $userMsg =
+            ($ctx !== '' ? "Dati del progetto:\n$ctx\n" : '')
+          . "Scrivi un testo EMOZIONALE di massimo 3 righe (2-3 frasi brevi) per la scheda prodotto del negozio online. Regole:\n"
+          . "- Evoca il pezzo e il desiderio di averlo, tono caldo e curato, italiano naturale.\n"
+          . "- NIENTE dettagli tecnici, materiali, misure, tempi o prezzi: quelli li racconta l'assistente Sole in chat.\n"
+          . "- Niente elenchi, niente hashtag, niente titolo, niente virgolette. Al massimo una emoji se calza.\n"
+          . "- Resta fedele al progetto: non inventare fatti.\n"
+          . "Rispondi SOLO con le 2-3 frasi.";
+    } elseif ($mode === 'genera_articolo') {
         // Intro dell'articolo "madre" del progetto: presenta il pezzo finito.
         $userMsg =
             ($ctx !== '' ? "Dati del progetto:\n$ctx\n" : '')

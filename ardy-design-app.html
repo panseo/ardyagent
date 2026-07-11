@@ -264,7 +264,7 @@ function closeMobileDetail(){
 
 function nuovoProgetto(){
   stato.sel = null;
-  stato.dettaglio = { progetto:{ id:0, titolo:'', tipo:'lampada', metodo:'stampa_3d', disponibilita:'pronto', stato:'IDEA', descrizione:'', storia:'', materiali:'', scheda_tecnica:'', dimensioni:'', cura:'', faq_pubbliche:null, scheda_sole_pubblica:0, slug:'', scarto_pct:10, prezzo_vendita:'', tempo_lavoro:'', costo_produzione:null, margine:null }, materiali:[], iterazioni:[], fasi:[], file:[], galleria:[], foto_vendita:[] };
+  stato.dettaglio = { progetto:{ id:0, titolo:'', tipo:'lampada', metodo:'stampa_3d', disponibilita:'pronto', stato:'IDEA', descrizione:'', storia:'', materiali:'', scheda_tecnica:'', dimensioni:'', cura:'', teaser_vendita:'', faq_pubbliche:null, scheda_sole_pubblica:0, slug:'', scarto_pct:10, prezzo_vendita:'', tempo_lavoro:'', costo_produzione:null, margine:null }, materiali:[], iterazioni:[], fasi:[], file:[], galleria:[], foto_vendita:[] };
   renderLista();
   renderDettaglio(true);
   openMobileDetail();
@@ -333,7 +333,7 @@ async function salvaProgetto(){
     titolo:val('f_titolo'), tipo:val('f_tipo'), metodo:val('f_metodo'), disponibilita:val('f_disponibilita'),
     descrizione:val('f_descrizione'),
     storia:val('f_storia'), materiali:val('f_materiali'), scheda_tecnica:val('f_scheda_tecnica'),
-    dimensioni:val('f_dimensioni'), cura:val('f_cura'), faq_pubbliche:val('f_faq'),
+    dimensioni:val('f_dimensioni'), cura:val('f_cura'), teaser_vendita:val('f_teaser_vendita'), faq_pubbliche:val('f_faq'),
     scheda_sole_pubblica:chk('f_scheda_sole'), slug:val('f_slug'),
     tempo_lavoro:val('f_tempo_lavoro'), prezzo_vendita:val('f_prezzo_vendita'), scarto_pct:val('f_scarto_pct')
   };
@@ -620,6 +620,24 @@ async function eliminaFotoVendita(id){
   toast('Foto vendita eliminata'); apri(stato.dettaglio.progetto.id);
 }
 
+async function generaTeaser(){
+  const id = stato.dettaglio.progetto.id;
+  if (!id){ toast('Salva prima il progetto'); return; }
+  const btn = document.getElementById('teaserAiBtn');
+  if (btn){ btn.disabled=true; btn.textContent='✨ Scrivo…'; }
+  try {
+    const d = await fetch('ardy-progetti-ai.php', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ mode:'genera_teaser', progetto_id:id }) }).then(r=>r.json());
+    if (d.success && d.testo){
+      const t = document.getElementById('f_teaser_vendita');
+      if (t) t.value = d.testo;
+      stato.dettaglio.progetto.teaser_vendita = d.testo;
+      toast('Teaser generato — rivedilo e salva');
+    } else toast(d.error||'Errore generazione');
+  } catch(e){ toast('Errore di rete'); }
+  if (btn){ btn.disabled=false; btn.textContent='✨ Genera con AI'; }
+}
+
 // ── Scheda prodotto / Sole (card gated: compare da VERSIONE FINALE) ──
 // Sempre nel DOM (anche 'locked' = nascosta) così il salvataggio legge i campi.
 function schedaProdottoCard(){
@@ -629,6 +647,7 @@ function schedaProdottoCard(){
   return `
   <div class="panel mod ${open?'open':''} ${locked?'locked':''}" id="mod-prodotto">
     <h2>🟡 Scheda prodotto / Sole <small>contenuti pubblici del pezzo in vendita</small></h2>
+    <div class="field"><label>Teaser vendita <small class="muted">— le 3 righe emozionali sulla pagina Woo; i dettagli li racconta Sole in chat</small> <button class="sm" id="teaserAiBtn" onclick="generaTeaser()" style="margin-left:6px">✨ Genera con AI</button></label><textarea id="f_teaser_vendita" placeholder="2-3 frasi che fanno venire voglia del pezzo. Niente dettagli tecnici: quelli li dà Sole.">${esc(p.teaser_vendita||'')}</textarea></div>
     <div class="field"><label>Materiali (testo pubblico per la listing)</label><textarea id="f_materiali" placeholder="Es. PLA riciclato, ottone, cavo tessile">${esc(p.materiali)}</textarea></div>
     <div class="field"><label>Scheda tecnica</label><textarea id="f_scheda_tecnica" placeholder="Finiture, e per la lampada: attacco, V, cavo, peso…">${esc(p.scheda_tecnica)}</textarea></div>
     <div class="field"><label>Storia del pezzo</label><textarea id="f_storia" placeholder="Origine, ispirazione, come nasce. È il cuore delle risposte «raccontami questo oggetto».">${esc(p.storia||'')}</textarea></div>
