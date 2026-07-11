@@ -335,14 +335,13 @@ servizio). Il pulsante "Modifica quote" in Console **non è la via giusta** per 
 **Ri-testato `ardy-gbp-check.php` l'11/07 (15:19):** **stesso identico 403** "ACCESSO NON CONCESSO" di
 prima — nessun cambiamento nonostante l'API risulti enabled e le quote popolate. Conferma che l'unico
 sblocco possibile è il provisioning manuale lato Google, non azionabile da Cloud Console.
+**Fatto (11/07, pomeriggio):** inviato il sollecito di follow-up allo stesso thread di Ravi (dati già
+forniti il 04/07: account `ardy.documenti@gmail.com`, progetto `ardy-lab` / 532339794075).
 **Da fare (prossima sessione):**
-1. ⏳ **Confermare se è stato inviato** il sollecito di follow-up allo stesso thread di Ravi (richiamando i
-   dati già forniti il 04/07: account `ardy.documenti@gmail.com`, progetto `ardy-lab` / 532339794075) — se
-   non ancora fatto, è l'unica azione utile rimasta.
-2. Controllare la mail (anche SPAM) di `ardy.documenti@gmail.com` per la risposta.
-3. Se continua il silenzio oltre metà/fine luglio, valutare un ulteriore sollecito o un canale diverso
+1. Controllare la mail (anche SPAM) di `ardy.documenti@gmail.com` per la risposta al sollecito.
+2. Se continua il silenzio oltre metà/fine luglio, valutare un ulteriore sollecito o un canale diverso
    (community/forum Business Profile API, se esiste un contatto più diretto).
-4. Ri-lanciare `ardy-gbp-check.php` periodicamente (nessuna altra azione utile lato Cloud Console/codice
+3. Ri-lanciare `ardy-gbp-check.php` periodicamente (nessuna altra azione utile lato Cloud Console/codice
    finché Google non fa il provisioning), finché non dà verde ("QUOTA SBLOCCATA").
 
 **Lato codice (già pronto, riabilitare SOLO a check verde):** il toggle Google nel pannello social
