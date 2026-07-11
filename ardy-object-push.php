@@ -111,24 +111,35 @@ try {
         $payload['regular_price'] = (string) round((float) $p['prezzo_vendita'], 2);
     }
 
-    // Risolvi il prodotto Woo: id salvato → oppure adotta un prodotto già esistente
-    // con lo stesso slug (es. creato a mano) per non generare doppioni/slug -2.
-    $wooId = (int) ($p['woo_product_id'] ?? 0);
+    // Risolvi il prodotto Woo.
+    $wooId    = (int) ($p['woo_product_id'] ?? 0);
+    $existing = null;
+
+    // Verifica che l'id salvato esista ANCORA su Woo: se il prodotto è stato cancellato
+    // là, l'id è "stale" → lo scartiamo e si ricrea (push auto-riparante).
+    if ($wooId > 0) {
+        $cur = wooRequest('GET', "products/{$wooId}");
+        if ($cur['code'] >= 200 && $cur['code'] < 300 && isset($cur['body']['id'])) {
+            $existing = $cur['body'];
+        } else {
+            $wooId = 0; // prodotto non più esistente su Woo
+        }
+    }
+
+    // Senza id valido, adotta un prodotto con lo stesso slug (es. creato a mano), per
+    // non generare doppioni / slug con -2.
     if ($wooId <= 0) {
         $found = wooRequest('GET', 'products?slug=' . urlencode($slug) . '&status=any');
         if (is_array($found['body'] ?? null) && isset($found['body'][0]['id'])) {
-            $wooId = (int) $found['body'][0]['id'];
+            $wooId    = (int) $found['body'][0]['id'];
+            $existing = $found['body'][0];
         }
     }
 
     // Foto vendita: le manda il push quando il prodotto Woo non ne ha ancora (auto-fill),
     // o quando si forza con sync_foto. Su un prodotto che ha già immagini (es. foto messa
     // a mano in Woo) NON le sovrascrive, per non cancellare scelte manuali.
-    $hasImg = false;
-    if ($wooId > 0) {
-        $cur    = wooRequest('GET', "products/{$wooId}");
-        $hasImg = is_array($cur['body']['images'] ?? null) && count($cur['body']['images']) > 0;
-    }
+    $hasImg = is_array($existing['images'] ?? null) && count($existing['images']) > 0;
     if ($wooId <= 0 || !$hasImg || $syncFoto) {
         $foto = objectFotoVendita($db, $pid);
         if ($foto) { $payload['images'] = $foto; }
