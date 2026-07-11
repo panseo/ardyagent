@@ -59,13 +59,17 @@ function wooRequest(string $method, string $path, ?array $body = null): array {
     return ['code' => $code, 'body' => json_decode((string) $res, true), 'raw' => $res, 'err' => $err];
 }
 
-/** Foto VENDITA del progetto (Modulo 2) come URL che Woo scarica — NON la galleria. */
+/** Foto VENDITA del progetto (Modulo 2) come URL che Woo scarica — NON la galleria.
+ *  URL con estensione immagine (via rewrite /object-img/{pid}-{gid}.{ext}) perché Woo
+ *  ricava il tipo file dall'estensione nel path, non dal Content-Type. */
 function objectFotoVendita(PDO $db, int $pid): array {
-    $st = $db->prepare("SELECT id FROM progetto_foto_vendita WHERE progetto_id = ? ORDER BY ordine ASC, id ASC");
+    $st = $db->prepare("SELECT id, nome_file FROM progetto_foto_vendita WHERE progetto_id = ? ORDER BY ordine ASC, id ASC");
     $st->execute([$pid]);
     $imgs = [];
-    foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $gid) {
-        $imgs[] = ['src' => 'https://ardyagent.ardy-lab.it/ardy-object-img.php?pid=' . $pid . '&gid=' . (int) $gid];
+    foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        $ext = strtolower(pathinfo($r['nome_file'], PATHINFO_EXTENSION));
+        if ($ext === '' || $ext === 'jpeg') { $ext = 'jpg'; }
+        $imgs[] = ['src' => 'https://ardyagent.ardy-lab.it/object-img/' . $pid . '-' . (int) $r['id'] . '.' . $ext];
     }
     return $imgs;
 }

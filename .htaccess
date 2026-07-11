@@ -23,6 +23,15 @@ Options -Indexes
 # via FilesMatch più sotto).
 DirectoryIndex ardy-michela-app.html
 
+# URL "pulito" con estensione immagine per le foto vendita: WooCommerce, quando
+# importa un'immagine da URL, ricava il tipo file dall'estensione nel path (non dal
+# Content-Type). Serve quindi un URL che finisca in .jpg/.png/... → lo mappiamo su
+# ardy-object-img.php. Es. /object-img/3-2.jpg → ardy-object-img.php?pid=3&gid=2
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^object-img/([0-9]+)-([0-9]+)\.(jpe?g|png|webp|gif)$ ardy-object-img.php?pid=$1&gid=$2 [L,QSA]
+</IfModule>
+
 # Web App Manifest (icona schermata-home / installazione come app): MIME corretto
 # per .webmanifest. Uso .webmanifest e non .json perché i .json sono bloccati sopra.
 <IfModule mod_mime.c>
