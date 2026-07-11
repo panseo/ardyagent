@@ -412,6 +412,7 @@ $progettiSoleCols = [
     'cura'                 => "ALTER TABLE progetti ADD COLUMN cura TEXT NULL AFTER scheda_tecnica",
     'faq_pubbliche'        => "ALTER TABLE progetti ADD COLUMN faq_pubbliche TEXT NULL", // JSON [{q,a}]
     'scheda_sole_pubblica' => "ALTER TABLE progetti ADD COLUMN scheda_sole_pubblica TINYINT(1) NOT NULL DEFAULT 0",
+    'teaser_vendita'       => "ALTER TABLE progetti ADD COLUMN teaser_vendita TEXT NULL", // 2-3 righe emozionali per la scheda prodotto Woo
 ];
 foreach ($progettiSoleCols as $col => $sql) {
     if (!colExists($pdo, 'progetti', $col)) { ddl($pdo, $sql, "progetti.$col"); }
