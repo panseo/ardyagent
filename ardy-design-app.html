@@ -315,7 +315,7 @@ function renderDettaglio(nuovo=false){
         <div class="field"><label>Scarto stampa %</label><input id="f_scarto_pct" class="num" value="${p.scarto_pct??10}"></div>
       </div>
       <div class="row" style="align-items:center">
-        ${p.id ? `<button class="ghost danger" onclick="eliminaProgetto()">Elimina</button>`
+        ${p.id ? `<button class="ghost danger" onclick="eliminaProgetto()">🗑 Elimina progetto</button>`
                : `<button class="primary" onclick="salvaProgetto()">Crea progetto</button>`}
       </div>
     </div>
