@@ -436,8 +436,9 @@ async function salvaTutto(){
   try {
     const d = await api('POST', body);
     if (!d.success){ toast(d.error||'Errore'); return; }
-    for (const b of bomRowsDaSalvare()){
-      const r = await api('POST', b);
+    const righe = bomRowsDaSalvare();
+    if (righe.length){
+      const r = await api('POST', { mode:'mat_save_batch', progetto_id:d.id, righe });
       if (!r.success){ toast(r.error||'Errore nella distinta'); return; }
     }
     stato.dirty = false;
