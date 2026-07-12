@@ -276,6 +276,8 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `progetti` (
     `slug`              VARCHAR(80)  NULL,
     `titolo`            VARCHAR(200) NOT NULL DEFAULT '',
     `tipo`              VARCHAR(40)  NOT NULL DEFAULT 'lampada',
+    `variante`          VARCHAR(12)  NOT NULL DEFAULT 'standard', -- standard | premium (copia agganciata)
+    `parent_id`         BIGINT NULL,                              -- progetto d'origine se è una variante
     `stato`             VARCHAR(30)  NOT NULL DEFAULT 'IDEA',
     `descrizione`       TEXT NULL,
     `materiali`         TEXT NULL,                 -- descrizione PUBBLICA per la listing
@@ -310,18 +312,9 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `progetto_materiali` (
     `costo_unitario` DECIMAL(12,4) NOT NULL DEFAULT 0,
     `costo_riga`     DECIMAL(12,2) NOT NULL DEFAULT 0,
     `note`           TEXT NULL,
-    `variante`       VARCHAR(12) NOT NULL DEFAULT 'standard',    -- standard (base/economica) | premium
     `created_at`     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_mat_progetto (progetto_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE progetto_materiali");
-
-// Colonna aggiunta dopo l'intro della tabella (doppia distinta: alcuni oggetti hanno
-// una versione 'premium' — materiali scelti, post-produzione, lavorazioni pregiate —
-// e una 'standard'/economica. Le righe esistenti restano 'standard' e alimentano il
-// costo_produzione base; 'premium' è una distinta parallela di riferimento interno.
-if (!colExists($pdo, 'progetto_materiali', 'variante')) {
-    ddl($pdo, "ALTER TABLE progetto_materiali ADD COLUMN variante VARCHAR(12) NOT NULL DEFAULT 'standard' AFTER note", "progetto_materiali.variante");
-} else { echo "  skip progetto_materiali.variante\n"; $skip++; }
 
 // Binario R&D: iterazioni del prototipo (v1, v2, v3…) con note di iterazione.
 // Interne di default; 'promossa_a_fase_id' != NULL = promossa a contenuto pubblico.
@@ -446,6 +439,18 @@ $progettiModuloCols = [
     'disponibilita' => "ALTER TABLE progetti ADD COLUMN disponibilita VARCHAR(20) NOT NULL DEFAULT 'pronto'",  // pronto|su_ordinazione|pezzo_unico
 ];
 foreach ($progettiModuloCols as $col => $sql) {
+    if (!colExists($pdo, 'progetti', $col)) { ddl($pdo, $sql, "progetti.$col"); }
+    else { echo "  skip progetti.$col\n"; $skip++; }
+}
+
+// Versione Premium come progetto-copia agganciato (branch): un oggetto può avere una
+// variante 'premium' — nuovo progetto con scheda+distinta copiate, prodotto Woo separato,
+// collegato all'originale via parent_id. 'variante' distingue standard|premium.
+$progettiVarianteCols = [
+    'variante'  => "ALTER TABLE progetti ADD COLUMN variante VARCHAR(12) NOT NULL DEFAULT 'standard' AFTER tipo", // standard|premium
+    'parent_id' => "ALTER TABLE progetti ADD COLUMN parent_id BIGINT NULL AFTER variante",                        // progetto d'origine (branch)
+];
+foreach ($progettiVarianteCols as $col => $sql) {
     if (!colExists($pdo, 'progetti', $col)) { ddl($pdo, $sql, "progetti.$col"); }
     else { echo "  skip progetti.$col\n"; $skip++; }
 }
