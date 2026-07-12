@@ -11,6 +11,7 @@
 //   POST {mode:'congela', id, snapshot} → segna file congelato + salva snapshot
 //   POST {mode:'delete', id}     → soft delete (deleted_at)
 //   POST {mode:'mat_save', progetto_id, ...riga} → upsert riga BOM (ricalcola costo)
+//   POST {mode:'mat_save_batch', progetto_id, righe:[...]} → upsert N righe in 1 transazione
 //   POST {mode:'mat_delete', id} → elimina riga BOM (ricalcola costo)
 //   POST {mode:'iter_save', progetto_id, ...} → upsert iterazione prototipo
 //   POST {mode:'iter_delete', id} → elimina iterazione
@@ -406,6 +407,58 @@ try {
         }
         $costo = progettoRicalcolaCosto($db, $progettoId);
         echo json_encode(['success' => true, 'id' => $id, 'costo_riga' => $costoRiga, 'costo_produzione' => $costo]);
+        exit();
+    }
+
+    // — upsert in blocco di più righe BOM (usato da «Salva tutto») —
+    // Stessa semantica di 'mat_save' riga per riga, ma in UNA transazione e con
+    // UN solo ricalcolo del costo. Evita le N chiamate sequenziali del frontend.
+    if ($mode === 'mat_save_batch') {
+        $progettoId = (int) ($in['progetto_id'] ?? 0);
+        if ($progettoId <= 0) { echo json_encode(['success' => false, 'error' => 'progetto mancante']); exit(); }
+        $righe = $in['righe'] ?? null;
+        if (!is_array($righe)) { echo json_encode(['success' => false, 'error' => 'righe mancanti']); exit(); }
+
+        $upd = $db->prepare(
+            "UPDATE progetto_materiali SET categoria=:c, voce=:v, qta=:q, unita=:u, costo_unitario=:cu, costo_riga=:cr, note=:n
+             WHERE id=:id AND progetto_id=:pid"
+        );
+        $ins = $db->prepare(
+            "INSERT INTO progetto_materiali (progetto_id, categoria, voce, qta, unita, costo_unitario, costo_riga, note)
+             VALUES (:pid, :c, :v, :q, :u, :cu, :cr, :n)"
+        );
+
+        $ids = [];
+        $db->beginTransaction();
+        try {
+            foreach ($righe as $riga) {
+                if (!is_array($riga)) { continue; }
+                $id        = (int) ($riga['id'] ?? 0);
+                $categoria = in_array($riga['categoria'] ?? '', MAT_CATEGORIE, true) ? $riga['categoria'] : 'filamento';
+                $voce      = trim((string) ($riga['voce'] ?? ''));
+                $qta       = progettoParseNum($riga['qta'] ?? 0);
+                $unita     = trim((string) ($riga['unita'] ?? 'pz')) ?: 'pz';
+                $costoUnit = progettoParseNum($riga['costo_unitario'] ?? 0);
+                $note      = trim((string) ($riga['note'] ?? ''));
+                $costoRiga = round($qta * $costoUnit, 2);
+                $par = [':c'=>$categoria, ':v'=>$voce, ':q'=>$qta, ':u'=>$unita, ':cu'=>$costoUnit, ':cr'=>$costoRiga, ':n'=>$note];
+                if ($id > 0) {
+                    $upd->execute($par + [':id'=>$id, ':pid'=>$progettoId]);
+                } else {
+                    $ins->execute($par + [':pid'=>$progettoId]);
+                    $id = (int) $db->lastInsertId();
+                }
+                $ids[] = $id;
+            }
+            $db->commit();
+        } catch (Throwable $e) {
+            $db->rollBack();
+            echo json_encode(['success' => false, 'error' => 'salvataggio distinta fallito']);
+            exit();
+        }
+
+        $costo = progettoRicalcolaCosto($db, $progettoId);
+        echo json_encode(['success' => true, 'ids' => $ids, 'costo_produzione' => $costo]);
         exit();
     }
 
