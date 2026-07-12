@@ -68,7 +68,8 @@
   <tr><td><b>Prezzo vendita (suggerito)</b></td><td>Prezzo a cui pensi di venderlo: serve a calcolare il margine.</td></tr>
   <tr><td><b>Scarto stampa %</b></td><td>Percentuale di fallimenti/scarti di stampa (default 10%): gonfia il costo di produzione per essere realistici.</td></tr>
 </table>
-<p>Ricordati di premere <b>Salva modifiche</b>. <span class="warn">Salvare la scheda <b>non</b> cambia lo stato: il ciclo di vita si tocca solo dalla barra.</span></p>
+<p>In fondo alla scheda del progetto c'è una <b>barra di salvataggio sempre visibile</b>: quando è tutto a posto mostra <b>✓ Tutto salvato</b>; appena modifichi un campo diventa <b>● Modifiche non salvate</b> (in oro). Premi <b>Salva tutto</b> per salvare in un colpo i campi del progetto, la <b>scheda prodotto</b> e la <b>distinta materiali</b>.</p>
+<div class="warn">Salvare <b>non</b> cambia lo stato: il ciclo di vita si tocca solo dalla barra degli stati. Se provi a lasciare la pagina con modifiche non salvate, il browser ti avvisa.</div>
 
 <h2>4. Archivio file di stampa (STL · 3MF · G-code · CAD)</h2>
 <p>È il magazzino dei <b>file veri</b> del pezzo: quelli che poi prelevi e stampi.</p>
@@ -92,10 +93,11 @@
 <h2>6. Costi — distinta materiali (BOM)</h2>
 <p>Uso interno: serve a sapere quanto ti costa il pezzo e quindi il <b>margine</b>.</p>
 <ul>
-  <li>Ogni riga ha <b>categoria</b> (filamento, stampa, elettrico, ferramenta, finitura, imballo, manodopera), <b>voce</b>, <b>quantità</b>, <b>unità</b> e <b>€ unitario</b>. Il € riga si calcola da solo.</li>
-  <li><b>Filamento</b> (grammi) e <b>stampa</b> (ore) si compilano coi numeri che ti dà <b>OrcaSlicer</b> a ogni stampa.</li>
+  <li>Ogni riga ha <b>categoria</b> (filamento, stampa, <b>legno</b>, elettrico, ferramenta, finitura, imballo, manodopera), <b>voce</b>, <b>quantità</b>, <b>unità</b> e <b>€ unitario</b>. Il € riga si calcola da solo.</li>
+  <li><b>Filamento</b> (grammi) e <b>stampa</b> (ore) si compilano coi numeri che ti dà <b>OrcaSlicer</b> a ogni stampa. La categoria <b>legno</b> è per i pezzi in legno di recupero/pregiato (gambe, listelli, paralumi…).</li>
   <li>La somma × (1 + scarto%) dà il <b>Costo di produzione</b>; <b>Prezzo − Costo = Margine</b>.</li>
 </ul>
+<div class="tip">La distinta si salva con <b>Salva tutto</b> (la barra in fondo alla scheda), insieme al resto del progetto: non serve salvare riga per riga.</div>
 
 <h2>7. Prototipo — iterazioni (il diario R&amp;D)</h2>
 <p>Tieni traccia delle versioni (v1, v2, v3…) con una nota per ognuna ("qui non torna, rifare") e il riferimento CAD/profilo. Serve a <b>ricordarti cosa hai cambiato</b>, non a pubblicare.</p>
@@ -135,6 +137,16 @@
 </ul>
 <div class="tip">Lo <b>slug</b> del prodotto Woo è lo stesso della scheda: è ciò che permette alla chat di Sole di riconoscere l'oggetto. Si genera da solo dal titolo al primo salvataggio.</div>
 <div class="warn">Sole conferma il <b>prezzo di listino</b> ma non tratta né sconta; per disponibilità e spedizioni rimanda alla pagina del negozio. Racconta solo ciò che scrivi nella Scheda prodotto: se un dato non c'è, non lo inventa.</div>
+
+<h2>12. Versione Premium (copia agganciata)</h2>
+<p>Alcuni pezzi hanno <b>due versioni</b>: una <b>standard / economica</b> e una <b>Premium</b> (materiali scelti, post-produzione degli stampati 3D, lavorazioni pregiate, tarsi e decorazioni). Invece di ingarbugliare un unico progetto, la Premium è un <b>progetto a sé collegato</b> all'originale (come un "branch"):</p>
+<ol>
+  <li>Apri il progetto base e, sotto la barra del <b>Ciclo di vita</b>, premi <b>✨ Crea versione Premium</b>.</li>
+  <li>Nasce un <b>nuovo progetto</b> con <b>scheda e distinta materiali già copiate</b>, pronto da rifinire (materiali migliori, voci di post-produzione, prezzo più alto).</li>
+  <li>Nella lista a sinistra lo riconosci dall'etichetta <b>✨ Premium</b>; nella sua scheda compare <b>«derivata da …»</b> col link all'originale (e sull'originale il link alla Premium).</li>
+</ol>
+<div class="tip">La Premium è un <b>prodotto vendibile a sé</b>: ha <b>slug e prodotto WooCommerce separati</b>. Così pubblichi due prodotti distinti — economico e premium — dello stesso pezzo.</div>
+<div class="warn">Si copiano solo <b>scheda + distinta</b>: foto, file di stampa e galleria <b>non</b> vengono duplicati (sono per-prodotto). Per eliminare un progetto (anche una Premium di prova) usa <b>🗑 Elimina progetto</b> nella sua scheda.</div>
 
 <div class="footer">Ardy Lab — guida Ardy Design. Aggiornata a luglio 2026.</div>
 

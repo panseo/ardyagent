@@ -276,6 +276,8 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `progetti` (
     `slug`              VARCHAR(80)  NULL,
     `titolo`            VARCHAR(200) NOT NULL DEFAULT '',
     `tipo`              VARCHAR(40)  NOT NULL DEFAULT 'lampada',
+    `variante`          VARCHAR(12)  NOT NULL DEFAULT 'standard', -- standard | premium (copia agganciata)
+    `parent_id`         BIGINT NULL,                              -- progetto d'origine se è una variante
     `stato`             VARCHAR(30)  NOT NULL DEFAULT 'IDEA',
     `descrizione`       TEXT NULL,
     `materiali`         TEXT NULL,                 -- descrizione PUBBLICA per la listing
@@ -437,6 +439,18 @@ $progettiModuloCols = [
     'disponibilita' => "ALTER TABLE progetti ADD COLUMN disponibilita VARCHAR(20) NOT NULL DEFAULT 'pronto'",  // pronto|su_ordinazione|pezzo_unico
 ];
 foreach ($progettiModuloCols as $col => $sql) {
+    if (!colExists($pdo, 'progetti', $col)) { ddl($pdo, $sql, "progetti.$col"); }
+    else { echo "  skip progetti.$col\n"; $skip++; }
+}
+
+// Versione Premium come progetto-copia agganciato (branch): un oggetto può avere una
+// variante 'premium' — nuovo progetto con scheda+distinta copiate, prodotto Woo separato,
+// collegato all'originale via parent_id. 'variante' distingue standard|premium.
+$progettiVarianteCols = [
+    'variante'  => "ALTER TABLE progetti ADD COLUMN variante VARCHAR(12) NOT NULL DEFAULT 'standard' AFTER tipo", // standard|premium
+    'parent_id' => "ALTER TABLE progetti ADD COLUMN parent_id BIGINT NULL AFTER variante",                        // progetto d'origine (branch)
+];
+foreach ($progettiVarianteCols as $col => $sql) {
     if (!colExists($pdo, 'progetti', $col)) { ddl($pdo, $sql, "progetti.$col"); }
     else { echo "  skip progetti.$col\n"; $skip++; }
 }

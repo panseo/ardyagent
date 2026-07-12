@@ -39,7 +39,7 @@ const PROGETTO_TIPI  = ['lampada', 'mobile', 'complemento', 'restyling', 'protot
 const PROGETTO_METODI = ['stampa_3d', 'restyling', 'altro'];
 // Come va a catalogo → guida stock/quantità su Woo (NON è una fase del ciclo).
 const PROGETTO_DISPONIBILITA = ['pronto', 'su_ordinazione', 'pezzo_unico'];
-const MAT_CATEGORIE  = ['filamento', 'stampa', 'elettrico', 'ferramenta', 'finitura', 'imballo', 'manodopera'];
+const MAT_CATEGORIE  = ['filamento', 'stampa', 'legno', 'elettrico', 'ferramenta', 'finitura', 'imballo', 'manodopera'];
 
 /** Tariffa oraria manodopera di default (override in ardy-config.php non versionato). */
 function progettoCostoOrario(): float {
@@ -84,6 +84,8 @@ function progettoArricchisci(array $r): array {
     $prezzo = $r['prezzo_vendita'] !== null ? (float) $r['prezzo_vendita'] : null;
     $costo  = $r['costo_produzione'] !== null ? (float) $r['costo_produzione'] : null;
     $r['margine'] = ($prezzo !== null && $costo !== null) ? round($prezzo - $costo, 2) : null;
+    $r['variante']  = $r['variante'] ?? 'standard';
+    $r['parent_id'] = isset($r['parent_id']) && $r['parent_id'] !== null ? (int) $r['parent_id'] : null;
     return $r;
 }
 
@@ -277,6 +279,68 @@ try {
 
         progettoRicalcolaCosto($db, $id); // lo scarto può essere cambiato qui
         echo json_encode(['success' => true, 'id' => $id]);
+        exit();
+    }
+
+    // — duplica progetto come variante (Premium): copia agganciata via parent_id —
+    // Copia scheda + distinta materiali in un NUOVO progetto collegato all'originale.
+    // Slug/Woo/WP/media NON si copiano: la variante è un prodotto a sé (branch).
+    if ($mode === 'duplica') {
+        $srcId = (int) ($in['id'] ?? 0);
+        if ($srcId <= 0) { echo json_encode(['success' => false, 'error' => 'id mancante']); exit(); }
+        $variante = in_array($in['variante'] ?? '', ['standard', 'premium'], true) ? $in['variante'] : 'premium';
+
+        $st = $db->prepare("SELECT * FROM progetti WHERE id = ? AND deleted_at IS NULL");
+        $st->execute([$srcId]);
+        $src = $st->fetch();
+        if (!$src) { echo json_encode(['success' => false, 'error' => 'Progetto d\'origine non trovato']); exit(); }
+
+        // Campi di contenuto copiati; l'identità di prodotto (slug, Woo, WP, media,
+        // congelamento) riparte da zero perché la variante è un oggetto vendibile a sé.
+        $suffix = $variante === 'premium' ? ' — Premium' : ' — Copia';
+        $fields = [
+            'titolo'         => mb_substr(trim((string) $src['titolo']) . $suffix, 0, 200),
+            'tipo'           => $src['tipo'],
+            'variante'       => $variante,
+            'parent_id'      => $srcId,
+            'stato'          => $src['stato'],
+            'metodo'         => $src['metodo'] ?? 'stampa_3d',
+            'disponibilita'  => $src['disponibilita'] ?? 'pronto',
+            'descrizione'    => $src['descrizione'],
+            'storia'         => $src['storia'] ?? null,
+            'materiali'      => $src['materiali'],
+            'scheda_tecnica' => $src['scheda_tecnica'],
+            'dimensioni'     => $src['dimensioni'] ?? null,
+            'cura'           => $src['cura'] ?? null,
+            'teaser_vendita' => $src['teaser_vendita'] ?? null,
+            'faq_pubbliche'  => $src['faq_pubbliche'] ?? null,
+            'scheda_sole_pubblica' => 0,
+            'scarto_pct'     => $src['scarto_pct'],
+            'prezzo_vendita' => $src['prezzo_vendita'] !== null ? (float) $src['prezzo_vendita'] : null,
+            'tempo_lavoro'   => $src['tempo_lavoro'] ?? null,
+        ];
+        $cols = implode(', ', array_map(fn($k) => "`$k`", array_keys($fields)));
+        $phs  = implode(', ', array_map(fn($k) => ":$k", array_keys($fields)));
+        $db->prepare("INSERT INTO progetti ($cols) VALUES ($phs)")->execute($fields);
+        $newId = (int) $db->lastInsertId();
+
+        // Slug proprio (dal titolo con suffisso), univoco.
+        $db->prepare("UPDATE progetti SET slug = :s WHERE id = :id")
+           ->execute([':s' => progettoSlugUnico($db, progettoSlugify($fields['titolo']), $newId), ':id' => $newId]);
+
+        // Copia la distinta materiali (base da cui la Premium viene rifinita).
+        $mats = $db->prepare("SELECT categoria, voce, qta, unita, costo_unitario, costo_riga, note FROM progetto_materiali WHERE progetto_id = ?");
+        $mats->execute([$srcId]);
+        $ins = $db->prepare(
+            "INSERT INTO progetto_materiali (progetto_id, categoria, voce, qta, unita, costo_unitario, costo_riga, note)
+             VALUES (:pid, :c, :v, :q, :u, :cu, :cr, :n)"
+        );
+        foreach ($mats->fetchAll() as $m) {
+            $ins->execute([':pid'=>$newId, ':c'=>$m['categoria'], ':v'=>$m['voce'], ':q'=>$m['qta'],
+                ':u'=>$m['unita'], ':cu'=>$m['costo_unitario'], ':cr'=>$m['costo_riga'], ':n'=>$m['note']]);
+        }
+        progettoRicalcolaCosto($db, $newId);
+        echo json_encode(['success' => true, 'id' => $newId]);
         exit();
     }
 

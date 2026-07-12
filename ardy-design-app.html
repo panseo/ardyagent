@@ -104,6 +104,24 @@
   .costbar .b b { font-size:20px; font-weight:500; }
   .pos{color:var(--green)} .neg{color:var(--red)}
 
+  /* Barra di salvataggio sempre visibile in fondo al dettaglio: stato + "Salva tutto". */
+  .savebar { position:sticky; bottom:0; z-index:15; display:flex; align-items:center; justify-content:space-between;
+    gap:12px; margin:20px -24px -24px; padding:12px 24px; background:rgba(22,22,22,.94);
+    -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); border-top:1px solid var(--border); }
+  .savebar.dirty { border-top-color:var(--accent); }
+  .savebar .state { display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-dim); }
+  .savebar.dirty .state { color:var(--accent); }
+  .savebar .dot { width:8px; height:8px; border-radius:50%; background:var(--green); flex:none; }
+  .savebar.dirty .dot { background:var(--accent); }
+  .savebar button.primary[disabled] { opacity:.5; cursor:default; }
+
+  /* Variante Premium (progetto-copia agganciato) */
+  .variante-box { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;
+    padding:8px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); font-size:13px; }
+  .variante-box.premium { border-color:var(--accent); }
+  .premium-tag { font-size:10px; letter-spacing:.5px; color:var(--accent); border:1px solid var(--accent);
+    border-radius:20px; padding:1px 6px; margin-left:4px; white-space:nowrap; }
+
   .iter { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:8px; }
   .iter .h { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
   .iter .vtag { font-family:'DM Mono',monospace; color:var(--accent); font-weight:500; }
@@ -205,9 +223,9 @@ function modSection(id, unlock, need3d, html){
   const open = (p.stato === unlock);
   return html.replace('<div class="panel"', `<div class="panel mod ${open?'open':''}" id="mod-${id}"`);
 }
-const CATEGORIE = ['filamento','stampa','elettrico','ferramenta','finitura','imballo','manodopera'];
+const CATEGORIE = ['filamento','stampa','legno','elettrico','ferramenta','finitura','imballo','manodopera'];
 const UNITA_DEF = { filamento:'g', stampa:'h', manodopera:'h' };
-let stato = { lista:[], sel:null, dettaglio:null, costoOrario:50, faseForm:null, congelaForm:null, articoloTesto:'', articoloProgId:null };
+let stato = { lista:[], sel:null, dettaglio:null, costoOrario:50, faseForm:null, congelaForm:null, articoloTesto:'', articoloProgId:null, dirty:false };
 
 const eur = n => (n===null||n===undefined||n==='') ? '—' : Number(n).toLocaleString('it-IT',{style:'currency',currency:'EUR'});
 const esc = s => (s??'').toString().replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -231,7 +249,7 @@ function renderLista(){
   if (!stato.lista.length){ el.innerHTML = '<div class="muted" style="padding:8px">Nessun progetto.</div>'; return; }
   el.innerHTML = stato.lista.map(p => `
     <div class="pcard ${p.id===stato.sel?'active':''}" onclick="apri(${p.id})">
-      <div class="t">${esc(p.titolo)||'(senza titolo)'}</div>
+      <div class="t">${esc(p.titolo)||'(senza titolo)'}${p.variante==='premium'?' <span class="premium-tag">✨ Premium</span>':''}</div>
       <div class="meta">
         <span class="badge ${p.stato}">${p.stato.replace('_',' ')}</span>
         <span>${esc(p.tipo)}</span>
@@ -288,6 +306,7 @@ function renderDettaglio(nuovo=false){
         ${STATI.map((s,i)=>`<div class="step ${i<stepi?'done':''} ${i===stepi?'current':''}" onclick="cambiaStato('${s}')">${s.replace('_',' ')}</div>`).join('')}
       </div>
       <div class="muted" style="margin-bottom:8px">Man mano che avanzi nel ciclo di vita compaiono i moduli di quella fase. <b>A CATALOGO</b> è terminale: stock e vendita vivono su Woo.</div>
+      ${p.id ? variantiRow(p) : ''}
       `:''}
 
       <div class="field"><label>Descrizione / concept</label><textarea id="f_descrizione" placeholder="L'idea, il racconto del pezzo">${esc(p.descrizione)}</textarea></div>
@@ -296,8 +315,8 @@ function renderDettaglio(nuovo=false){
         <div class="field"><label>Scarto stampa %</label><input id="f_scarto_pct" class="num" value="${p.scarto_pct??10}"></div>
       </div>
       <div class="row" style="align-items:center">
-        <button class="primary" onclick="salvaProgetto()">${p.id?'Salva modifiche':'Crea progetto'}</button>
-        ${p.id?`<button class="ghost danger" onclick="eliminaProgetto()">Elimina</button>`:''}
+        ${p.id ? `<button class="ghost danger" onclick="eliminaProgetto()">🗑 Elimina progetto</button>`
+               : `<button class="primary" onclick="salvaProgetto()">Crea progetto</button>`}
       </div>
     </div>
 
@@ -314,7 +333,65 @@ function renderDettaglio(nuovo=false){
       modSection('articolo','REALIZZAZIONE',false, articoloPanel()),
       modSection('push','A_CATALOGO',false, pushPanel()),
     ].join('') : '<div class="muted">Salva il progetto per gestire i suoi moduli (foto, file, costi, contenuti, negozio).</div>'}
+    ${p.id ? saveBar() : ''}
   `;
+  // Ogni render riflette lo stato salvato sul server ⇒ riparte "pulito".
+  stato.dirty = false;
+  updateSaveBar();
+}
+
+// ── Barra "Salva tutto" (campi progetto + scheda prodotto + distinta) ──
+function saveBar(){
+  return `
+  <div class="savebar" id="savebar">
+    <span class="state"><span class="dot"></span><span id="saveState">Tutto salvato</span></span>
+    <button class="primary" id="saveAllBtn" onclick="salvaTutto()">Salva tutto</button>
+  </div>`;
+}
+function updateSaveBar(){
+  const bar = document.getElementById('savebar'); if (!bar) return;
+  bar.classList.toggle('dirty', !!stato.dirty);
+  const st = document.getElementById('saveState');
+  if (st) st.textContent = stato.dirty ? 'Modifiche non salvate' : 'Tutto salvato';
+}
+function setDirty(v){ if (stato.dirty === v) return; stato.dirty = v; updateSaveBar(); }
+// Marca "sporco" solo i campi che «Salva tutto» persiste davvero: i campi progetto
+// (id f_*) e le righe della distinta (id m_cat_/voce/qta/unita/cu_*). Non i sotto-form
+// (fasi, congela, articolo) che hanno un proprio salvataggio.
+function isCampoSalvabile(el){
+  const id = el && el.id || '';
+  return /^f_/.test(id) || /^m_(cat|voce|qta|unita|cu)_/.test(id);
+}
+['input','change'].forEach(ev => document.addEventListener(ev, e => {
+  if (stato.dettaglio && stato.dettaglio.progetto.id && isCampoSalvabile(e.target)) setDirty(true);
+}));
+window.addEventListener('beforeunload', e => { if (stato.dirty){ e.preventDefault(); e.returnValue = ''; } });
+
+// ── Varianti (Premium come progetto-copia agganciato) ──
+// Le relazioni si leggono dalla lista già caricata (nessuna query extra).
+function premiumFiglia(pid){ return stato.lista.find(x => x.parent_id == pid && x.variante === 'premium'); }
+function progettoPadre(p){ return p.parent_id ? stato.lista.find(x => x.id == p.parent_id) : null; }
+function variantiRow(p){
+  if (p.variante === 'premium'){
+    const pad = progettoPadre(p);
+    return `<div class="variante-box premium">✨ <b>Versione Premium</b>${pad
+      ? ` — derivata da <a href="#" onclick="apri(${pad.id});return false">${esc(pad.titolo)||'originale'}</a>`
+      : ''}<span class="muted"> · prodotto Woo separato</span></div>`;
+  }
+  const fig = premiumFiglia(p.id);
+  if (fig){
+    return `<div class="variante-box">Versione Premium: <a href="#" onclick="apri(${fig.id});return false">✨ ${esc(fig.titolo)||'Premium'}</a></div>`;
+  }
+  return `<div class="variante-box"><button class="sm" onclick="creaPremium()">✨ Crea versione Premium</button>
+    <span class="muted">copia scheda + distinta in un progetto collegato (Woo separato)</span></div>`;
+}
+async function creaPremium(){
+  const p = stato.dettaglio.progetto;
+  if (!p.id) return;
+  if (!confirm(`Creo una versione Premium di «${p.titolo||'oggetto'}»?\nCopia scheda e distinta materiali in un nuovo progetto collegato. Il prodotto Woo sarà separato: materiali scelti, post-produzione, lavorazioni pregiate.`)) return;
+  const d = await api('POST', { mode:'duplica', id:p.id, variante:'premium' });
+  if (d.success){ toast('Versione Premium creata'); await caricaLista(); apri(d.id); }
+  else toast(d.error||'Errore');
 }
 
 function val(id){ const e=document.getElementById(id); return e?e.value:''; }
@@ -327,8 +404,10 @@ function faqToText(v){
   return arr.map(x=>`${x.q||''} | ${x.a||''}`).join('\n');
 }
 
-async function salvaProgetto(){
-  const body = {
+// Corpo del salvataggio progetto: raccoglie i campi principali + quelli della scheda
+// prodotto (sono tutti nel DOM anche quando la card è collassata).
+function progettoBody(){
+  return {
     mode:'save', id: stato.dettaglio.progetto.id, stato: stato.dettaglio.progetto.stato,
     titolo:val('f_titolo'), tipo:val('f_tipo'), metodo:val('f_metodo'), disponibilita:val('f_disponibilita'),
     descrizione:val('f_descrizione'),
@@ -337,10 +416,39 @@ async function salvaProgetto(){
     scheda_sole_pubblica:chk('f_scheda_sole'), slug:val('f_slug'),
     tempo_lavoro:val('f_tempo_lavoro'), prezzo_vendita:val('f_prezzo_vendita'), scarto_pct:val('f_scarto_pct')
   };
+}
+async function salvaProgetto(){
+  const body = progettoBody();
   if (!body.titolo.trim()){ toast('Titolo mancante'); return; }
   const d = await api('POST', body);
   if (!d.success){ toast(d.error||'Errore'); return; }
-  toast('Salvato'); await caricaLista(); apri(d.id);
+  stato.dirty = false; toast('Salvato'); await caricaLista(); apri(d.id);
+}
+// «Salva tutto»: in un colpo i campi del progetto/scheda prodotto E le righe della
+// distinta materiali. È lo strumento della barra fissa in fondo al dettaglio.
+async function salvaTutto(){
+  const p = stato.dettaglio && stato.dettaglio.progetto;
+  if (!p || !p.id) return;
+  const btn = document.getElementById('saveAllBtn');
+  const body = progettoBody();
+  if (!body.titolo.trim()){ toast('Titolo mancante'); return; }
+  if (btn){ btn.disabled = true; btn.textContent = 'Salvo…'; }
+  try {
+    const d = await api('POST', body);
+    if (!d.success){ toast(d.error||'Errore'); return; }
+    for (const b of bomRowsDaSalvare()){
+      const r = await api('POST', b);
+      if (!r.success){ toast(r.error||'Errore nella distinta'); return; }
+    }
+    stato.dirty = false;
+    toast('Tutto salvato');
+    await caricaLista();
+    await apri(d.id);
+  } catch(e){
+    toast('Errore di rete');
+  } finally {
+    if (btn){ btn.disabled = false; btn.textContent = 'Salva tutto'; }
+  }
 }
 async function pushWoo(pubblica){
   const id = stato.dettaglio.progetto.id;
@@ -794,13 +902,25 @@ function onQta(rid){
   const cu = parseFloat((val('m_cu_'+rid)||'0').replace(',','.'))||0;
   const cell = document.getElementById('m_riga_'+rid); if (cell) cell.textContent = eur(Math.round(q*cu*100)/100);
 }
-async function salvaMat(rid){
-  const body = { mode:'mat_save', progetto_id:stato.dettaglio.progetto.id,
+function bomRowBody(rid){
+  return { mode:'mat_save', progetto_id:stato.dettaglio.progetto.id,
     id: rid==='new'?0:rid, categoria:val('m_cat_'+rid), voce:val('m_voce_'+rid),
     qta:val('m_qta_'+rid), unita:val('m_unita_'+rid), costo_unitario:val('m_cu_'+rid) };
-  const d = await api('POST', body);
+}
+async function salvaMat(rid){
+  const d = await api('POST', bomRowBody(rid));
   if (d.success){ toast('Costo aggiornato'); apri(stato.dettaglio.progetto.id); caricaLista(); }
   else toast(d.error||'Errore');
+}
+// Righe BOM da salvare col "Salva tutto": tutte le esistenti + la nuova se compilata.
+function bomRowsDaSalvare(){
+  const bodies = [];
+  document.querySelectorAll('#mod-bom select[id^="m_cat_"]').forEach(sel=>{
+    const rid = sel.id.replace('m_cat_','');
+    if (rid==='new' && !val('m_voce_'+rid).trim() && !val('m_qta_'+rid).trim()) return; // riga nuova vuota
+    bodies.push(bomRowBody(rid));
+  });
+  return bodies;
 }
 async function eliminaMat(id){
   await api('POST', { mode:'mat_delete', id });

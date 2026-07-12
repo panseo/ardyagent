@@ -127,7 +127,7 @@ Due cose con lo stesso nome, da tenere separate:
 progetto_materiali           -- distinta costi (interna)
   id              BIGINT PK
   progetto_id     BIGINT FK
-  categoria       VARCHAR   -- filamento | stampa | elettrico | ferramenta | finitura | imballo | manodopera
+  categoria       VARCHAR   -- filamento | stampa | legno | elettrico | ferramenta | finitura | imballo | manodopera
   voce            VARCHAR   -- es. "PLA nero bobina X", "kit E27 cavo tessile"
   qta             DECIMAL   -- grammi / ore / pezzi
   unita           VARCHAR   -- g | h | pz
@@ -150,6 +150,23 @@ Regole:
   Klipper** (API live) resta aperta per dopo — ora impraticabile (stampante in LAN, dash su hosting).
 - Lo **snapshot del file congelato** (`file_snapshot`, §2.1/§3) include il **profilo OrcaSlicer** +
   grammi/tempo del momento → "con cosa ho prodotto questo lotto" è risposto del tutto.
+
+### 2.6 Salvataggio unico (barra fissa)
+Niente più bottoni "Salva" sparsi per pannello: il dettaglio del progetto ha una **barra fissa in
+fondo** sempre visibile, con indicatore **dirty** ("Modifiche non salvate") e avviso `beforeunload`.
+Il pulsante **Salva tutto** salva in un colpo i campi progetto + scheda prodotto (`mode=save`) **e** le
+righe della distinta (`mode=mat_save`, riga per riga). Il tracking dirty guarda solo i campi realmente
+persistiti (id `f_*` e `m_*`), non i sotto-form (fasi/congela/articolo) che hanno un loro salvataggio.
+
+### 2.7 Versione Premium — progetto-copia agganciato (branch)
+Alcuni pezzi hanno due versioni vendibili: **standard/economica** e **premium** (materiali scelti,
+post-produzione degli stampati, lavorazioni pregiate, tarsi/decorazioni). Modello scelto: **non** una
+doppia distinta nello stesso progetto, ma una **copia agganciata**.
+- `progetti.variante` (`standard|premium`) e `progetti.parent_id` (progetto d'origine).
+- API `mode=duplica`: crea un nuovo progetto copiando scheda + distinta (`progetto_materiali`); slug,
+  Woo, WP, media e congelamento **ripartono da zero** (la variante è un prodotto a sé). Le relazioni si
+  mostrano in dash leggendo la lista già caricata (link padre⇄figlia, badge ✨ Premium).
+- Conseguenza: la Premium si **pubblica come prodotto WooCommerce separato**, con prezzo/margine propri.
 
 ---
 
