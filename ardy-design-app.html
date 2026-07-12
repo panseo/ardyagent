@@ -205,9 +205,10 @@ function modSection(id, unlock, need3d, html){
   const open = (p.stato === unlock);
   return html.replace('<div class="panel"', `<div class="panel mod ${open?'open':''}" id="mod-${id}"`);
 }
-const CATEGORIE = ['filamento','stampa','elettrico','ferramenta','finitura','imballo','manodopera'];
+const CATEGORIE = ['filamento','stampa','legno','elettrico','ferramenta','finitura','imballo','manodopera'];
 const UNITA_DEF = { filamento:'g', stampa:'h', manodopera:'h' };
-let stato = { lista:[], sel:null, dettaglio:null, costoOrario:50, faseForm:null, congelaForm:null, articoloTesto:'', articoloProgId:null };
+const VARIANTI = [['standard','Standard / Economica'],['premium','Premium ✨']];
+let stato = { lista:[], sel:null, dettaglio:null, costoOrario:50, faseForm:null, congelaForm:null, articoloTesto:'', articoloProgId:null, bomVariante:'standard' };
 
 const eur = n => (n===null||n===undefined||n==='') ? '—' : Number(n).toLocaleString('it-IT',{style:'currency',currency:'EUR'});
 const esc = s => (s??'').toString().replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -663,6 +664,7 @@ function schedaProdottoCard(){
       <label style="display:flex;align-items:center;gap:6px;white-space:nowrap;margin-top:18px"><input type="checkbox" id="f_scheda_sole" ${p.scheda_sole_pubblica?'checked':''}> Visibile a Sole</label>
     </div>
     ${p.slug?`<div class="muted" style="font-size:.85em">object.ardy-lab.it/prodotto/<b>${esc(p.slug)}</b></div>`:'<div class="muted" style="font-size:.85em">Lo slug si genera al primo salvataggio dal titolo.</div>'}
+    <div class="row" style="margin-top:12px"><button class="primary" onclick="salvaProgetto()">Salva modifiche</button></div>
   </div>`;
 }
 
@@ -749,26 +751,45 @@ async function pubblicaArticolo(){
 function bomPanel(){
   const mats = stato.dettaglio.materiali;
   const p = stato.dettaglio.progetto;
-  const somma = mats.reduce((s,m)=>s+Number(m.costo_riga||0),0);
+  const vSel = stato.bomVariante || 'standard';
+  const isVar = m => (m.variante||'standard') === (vSel==='premium'?'premium':'standard');
+  const rows = mats.filter(isVar);
+  const scarto = Number(p.scarto_pct||0);
+  // Somma della variante mostrata + costo prod. (×scarto) per ciascuna delle due varianti.
+  const somma    = rows.reduce((s,m)=>s+Number(m.costo_riga||0),0);
+  const sommaStd = mats.filter(m=>(m.variante||'standard')!=='premium').reduce((s,m)=>s+Number(m.costo_riga||0),0);
+  const sommaPrem= mats.filter(m=>(m.variante||'standard')==='premium').reduce((s,m)=>s+Number(m.costo_riga||0),0);
+  const costoStd = Math.round(sommaStd*(1+scarto/100)*100)/100;
+  const costoPrem= Math.round(sommaPrem*(1+scarto/100)*100)/100;
+  const hasPrem  = mats.some(m=>(m.variante||'standard')==='premium');
   return `
   <div class="panel">
     <h2>Costi — distinta materiali <small>uso interno · margine</small></h2>
+    <div class="row" style="gap:6px;margin-bottom:10px">
+      ${VARIANTI.map(v=>`<button class="sm ${v[0]===vSel?'primary':'ghost'}" onclick="setBomVariante('${v[0]}')">${v[1]}${v[0]==='premium'&&hasPrem?' •':''}</button>`).join('')}
+    </div>
+    <div class="muted" style="margin-bottom:8px">${vSel==='premium'
+      ? 'Distinta <b>premium</b>: materiali scelti, post-produzione degli stampati, lavorazioni pregiate, tarsi e decorazioni. Riferimento interno (il prezzo/margine dell\'oggetto resta sulla Standard).'
+      : 'Distinta <b>standard / economica</b>: è la base che alimenta costo di produzione, prezzo e margine dell\'oggetto.'}</div>
     <table class="bom">
       <thead><tr><th>Categoria</th><th>Voce</th><th>Q.tà</th><th>Unità</th><th>€ unit.</th><th>€ riga</th><th></th></tr></thead>
       <tbody>
-        ${mats.map(m=>bomRow(m)).join('')}
+        ${rows.map(m=>bomRow(m)).join('')}
         ${bomRow({id:0,categoria:'filamento',voce:'',qta:'',unita:'g',costo_unitario:'',costo_riga:0}, true)}
       </tbody>
     </table>
     <div class="costbar">
-      <div class="b"><span>Somma BOM</span><b>${eur(somma)}</b></div>
-      <div class="b"><span>Costo prod. (×scarto ${p.scarto_pct||0}%)</span><b>${eur(p.costo_produzione)}</b></div>
+      <div class="b"><span>Somma BOM (${vSel==='premium'?'premium':'standard'})</span><b>${eur(somma)}</b></div>
+      <div class="b"><span>Costo prod. std (×scarto ${scarto}%)</span><b>${eur(costoStd)}</b></div>
+      ${hasPrem?`<div class="b"><span>Costo prod. premium (×scarto ${scarto}%)</span><b>${eur(costoPrem)}</b></div>`:''}
       <div class="b"><span>Prezzo vendita</span><b>${eur(p.prezzo_vendita)}</b></div>
-      <div class="b"><span>Margine</span><b class="${p.margine>=0?'pos':'neg'}">${eur(p.margine)}</b></div>
+      <div class="b"><span>Margine (std)</span><b class="${p.margine>=0?'pos':'neg'}">${eur(p.margine)}</b></div>
     </div>
-    <div class="muted" style="margin-top:8px">Filamento (g) e stampa (h) si compilano coi numeri di OrcaSlicer. Manodopera default ${eur(stato.costoOrario)}/h.</div>
+    <div class="row" style="margin-top:10px"><button class="primary" onclick="salvaTuttiMat()">Salva modifiche</button></div>
+    <div class="muted" style="margin-top:8px">Filamento (g) e stampa (h) si compilano coi numeri di OrcaSlicer. Manodopera default ${eur(stato.costoOrario)}/h. «Salva modifiche» salva tutte le righe della distinta mostrata.</div>
   </div>`;
 }
+function setBomVariante(v){ stato.bomVariante = v; renderDettaglio(); }
 function bomRow(m, isNew=false){
   const rid = isNew?'new':m.id;
   return `<tr data-mid="${m.id}">
@@ -794,13 +815,33 @@ function onQta(rid){
   const cu = parseFloat((val('m_cu_'+rid)||'0').replace(',','.'))||0;
   const cell = document.getElementById('m_riga_'+rid); if (cell) cell.textContent = eur(Math.round(q*cu*100)/100);
 }
-async function salvaMat(rid){
-  const body = { mode:'mat_save', progetto_id:stato.dettaglio.progetto.id,
+function bomRowBody(rid){
+  return { mode:'mat_save', progetto_id:stato.dettaglio.progetto.id,
     id: rid==='new'?0:rid, categoria:val('m_cat_'+rid), voce:val('m_voce_'+rid),
-    qta:val('m_qta_'+rid), unita:val('m_unita_'+rid), costo_unitario:val('m_cu_'+rid) };
-  const d = await api('POST', body);
+    qta:val('m_qta_'+rid), unita:val('m_unita_'+rid), costo_unitario:val('m_cu_'+rid),
+    variante: stato.bomVariante||'standard' };
+}
+async function salvaMat(rid){
+  const d = await api('POST', bomRowBody(rid));
   if (d.success){ toast('Costo aggiornato'); apri(stato.dettaglio.progetto.id); caricaLista(); }
   else toast(d.error||'Errore');
+}
+// Salva in blocco tutte le righe della distinta mostrata (esistenti + la nuova, se compilata).
+async function salvaTuttiMat(){
+  const pid = stato.dettaglio.progetto.id;
+  const sels = document.querySelectorAll('#mod-bom select[id^="m_cat_"]');
+  const bodies = [];
+  sels.forEach(sel=>{
+    const rid = sel.id.replace('m_cat_','');
+    if (rid==='new' && !val('m_voce_'+rid).trim() && !val('m_qta_'+rid).trim()) return; // riga nuova vuota
+    bodies.push(bomRowBody(rid));
+  });
+  if (!bodies.length){ toast('Niente da salvare'); return; }
+  for (const b of bodies){
+    const d = await api('POST', b);
+    if (!d.success){ toast(d.error||'Errore'); return; }
+  }
+  toast('Distinta salvata'); apri(pid); caricaLista();
 }
 async function eliminaMat(id){
   await api('POST', { mode:'mat_delete', id });

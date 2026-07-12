@@ -310,9 +310,18 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `progetto_materiali` (
     `costo_unitario` DECIMAL(12,4) NOT NULL DEFAULT 0,
     `costo_riga`     DECIMAL(12,2) NOT NULL DEFAULT 0,
     `note`           TEXT NULL,
+    `variante`       VARCHAR(12) NOT NULL DEFAULT 'standard',    -- standard (base/economica) | premium
     `created_at`     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_mat_progetto (progetto_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE progetto_materiali");
+
+// Colonna aggiunta dopo l'intro della tabella (doppia distinta: alcuni oggetti hanno
+// una versione 'premium' — materiali scelti, post-produzione, lavorazioni pregiate —
+// e una 'standard'/economica. Le righe esistenti restano 'standard' e alimentano il
+// costo_produzione base; 'premium' è una distinta parallela di riferimento interno.
+if (!colExists($pdo, 'progetto_materiali', 'variante')) {
+    ddl($pdo, "ALTER TABLE progetto_materiali ADD COLUMN variante VARCHAR(12) NOT NULL DEFAULT 'standard' AFTER note", "progetto_materiali.variante");
+} else { echo "  skip progetto_materiali.variante\n"; $skip++; }
 
 // Binario R&D: iterazioni del prototipo (v1, v2, v3…) con note di iterazione.
 // Interne di default; 'promossa_a_fase_id' != NULL = promossa a contenuto pubblico.

@@ -39,7 +39,8 @@ const PROGETTO_TIPI  = ['lampada', 'mobile', 'complemento', 'restyling', 'protot
 const PROGETTO_METODI = ['stampa_3d', 'restyling', 'altro'];
 // Come va a catalogo → guida stock/quantità su Woo (NON è una fase del ciclo).
 const PROGETTO_DISPONIBILITA = ['pronto', 'su_ordinazione', 'pezzo_unico'];
-const MAT_CATEGORIE  = ['filamento', 'stampa', 'elettrico', 'ferramenta', 'finitura', 'imballo', 'manodopera'];
+const MAT_CATEGORIE  = ['filamento', 'stampa', 'legno', 'elettrico', 'ferramenta', 'finitura', 'imballo', 'manodopera'];
+const MAT_VARIANTI   = ['standard', 'premium'];
 
 /** Tariffa oraria manodopera di default (override in ardy-config.php non versionato). */
 function progettoCostoOrario(): float {
@@ -63,8 +64,10 @@ function progettoParseNum($v): float {
 
 /** Ricalcola e salva progetti.costo_produzione = Σ costo_riga × (1 + scarto/100). */
 function progettoRicalcolaCosto(PDO $db, int $progettoId): float {
+    // Il costo_produzione base (che alimenta margine e Woo, prezzo unico) è la somma
+    // della variante 'standard' (base/economica). La distinta 'premium' è parallela.
     $somma = (float) $db->query(
-        "SELECT COALESCE(SUM(costo_riga),0) FROM progetto_materiali WHERE progetto_id = " . (int) $progettoId
+        "SELECT COALESCE(SUM(costo_riga),0) FROM progetto_materiali WHERE variante <> 'premium' AND progetto_id = " . (int) $progettoId
     )->fetchColumn();
     $scarto = (float) $db->query(
         "SELECT COALESCE(scarto_pct,0) FROM progetti WHERE id = " . (int) $progettoId
@@ -326,18 +329,19 @@ try {
         $unita     = trim((string) ($in['unita'] ?? 'pz')) ?: 'pz';
         $costoUnit = progettoParseNum($in['costo_unitario'] ?? 0);
         $note      = trim((string) ($in['note'] ?? ''));
+        $variante  = in_array($in['variante'] ?? '', MAT_VARIANTI, true) ? $in['variante'] : 'standard';
         $costoRiga = round($qta * $costoUnit, 2);
 
         if ($id > 0) {
             $db->prepare(
-                "UPDATE progetto_materiali SET categoria=:c, voce=:v, qta=:q, unita=:u, costo_unitario=:cu, costo_riga=:cr, note=:n
+                "UPDATE progetto_materiali SET categoria=:c, voce=:v, qta=:q, unita=:u, costo_unitario=:cu, costo_riga=:cr, note=:n, variante=:vr
                  WHERE id=:id AND progetto_id=:pid"
-            )->execute([':c'=>$categoria, ':v'=>$voce, ':q'=>$qta, ':u'=>$unita, ':cu'=>$costoUnit, ':cr'=>$costoRiga, ':n'=>$note, ':id'=>$id, ':pid'=>$progettoId]);
+            )->execute([':c'=>$categoria, ':v'=>$voce, ':q'=>$qta, ':u'=>$unita, ':cu'=>$costoUnit, ':cr'=>$costoRiga, ':n'=>$note, ':vr'=>$variante, ':id'=>$id, ':pid'=>$progettoId]);
         } else {
             $db->prepare(
-                "INSERT INTO progetto_materiali (progetto_id, categoria, voce, qta, unita, costo_unitario, costo_riga, note)
-                 VALUES (:pid, :c, :v, :q, :u, :cu, :cr, :n)"
-            )->execute([':pid'=>$progettoId, ':c'=>$categoria, ':v'=>$voce, ':q'=>$qta, ':u'=>$unita, ':cu'=>$costoUnit, ':cr'=>$costoRiga, ':n'=>$note]);
+                "INSERT INTO progetto_materiali (progetto_id, categoria, voce, qta, unita, costo_unitario, costo_riga, note, variante)
+                 VALUES (:pid, :c, :v, :q, :u, :cu, :cr, :n, :vr)"
+            )->execute([':pid'=>$progettoId, ':c'=>$categoria, ':v'=>$voce, ':q'=>$qta, ':u'=>$unita, ':cu'=>$costoUnit, ':cr'=>$costoRiga, ':n'=>$note, ':vr'=>$variante]);
             $id = (int) $db->lastInsertId();
         }
         $costo = progettoRicalcolaCosto($db, $progettoId);
