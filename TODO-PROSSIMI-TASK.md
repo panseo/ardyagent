@@ -106,6 +106,26 @@ I due cron previsti (server, fuso Europe/Rome; `<SEGRETO>` = `WA_LOOKUP_SECRET`)
   data "agg." aggiornata al lunedì). Se manca, il cron del rollover non è partito.
 - **Test manuale** (sempre ok per provare l'endpoint a mano): aggiungere `?force=1&secret=<SEGRETO>` all'URL.
 
+### ⚠️ Segreto ruotato ≠ aggiornato ovunque — da tenere d'occhio (13/07/2026)
+Scoperto risolvendo il workflow n8n **"Lead Monitor"**: andava in **403 ogni ora** (visibile nelle sue
+Executions) perché il suo nodo **HTTP Request** aveva l'`X-Ardy-Secret` **hardcoded col valore
+pre-rotazione**. Il ramo WhatsApp invece è sopravvissuto perché il suo Code node legge il segreto dalla
+**variabile d'ambiente n8n** (`process.env.WA_LOOKUP_SECRET`), aggiornata alla rotazione.
+- **Fix Lead Monitor**: incollato il valore attuale di `WA_LOOKUP_SECRET` nell'header (letterale). Provato
+  a usare l'expression `{{ $env.WA_LOOKUP_SECRET }}` ma **questo n8n la blocca** negli HTTP Request
+  ("access to env vars denied"): funziona solo nei Code node → per gli HTTP Request serve il valore a mano.
+  Verificato live: `ok:true`, 3 lead processati.
+- **Ancora da verificare (SOLO se si notano anomalie)**: i 3 endpoint schedulati che condividono lo stesso
+  segreto — `ardy-rollover-nota.php`, `ardy-briefing-mattino.php`, `ardy-chiusura-sessioni.php` — potrebbero
+  avere ancora il segreto **vecchio** nella riga cron (o nel workflow n8n, per chiusura-sessioni).
+- **Decisione (13/07)**: **crons lasciati come stanno.** Non testarli chiamandoli a mano: girano su GET e
+  fanno subito il lavoro vero (mandano WhatsApp a Michela). Verifica sicura = confronto **visivo** del valore
+  `X-Ardy-Secret` in **cPanel → Cron Jobs** col segreto attuale. Si riprende solo se: il briefing del mattino
+  non arriva, il rollover del lunedì non crea la riga in `note_staff`, o mancano le notifiche di chiusura chat.
+- **Regola generale**: alla prossima rotazione di `WA_LOOKUP_SECRET`, aggiornare **tutti** i punti che lo
+  portano a mano — nodi n8n HTTP Request (Lead Monitor, ecc.) **e** righe cron — oltre alla env var n8n e a
+  `ardy-config.php`. I Code node n8n (ramo WhatsApp) si allineano da soli via env var.
+
 ---
 
 ## 💾 BACKUP OFF-SITE Backblaze B2 — ✅ FATTO (sessione `ardy-infra`, 24/06/2026)
