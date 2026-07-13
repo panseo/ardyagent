@@ -530,6 +530,102 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
 
 ---
 
+## 🎨 Dash Design (ardy-design-app.html)
+
+Dashboard **gemella** della dash Michela per i **progetti interni di design** (prototipi, lampade,
+piccoli mobili, complementi, restyling) — dal concept al catalogo. Vedi il piano completo in
+**`PIANO-DASH-DESIGN.md`** e il ponte ecommerce in **`PIANO-ECOMMERCE-OBJECT-WOO.md`**.
+
+Single-file HTML che **riusa lo stesso CSS** (`ardy-michela-app.css`), lo stesso login
+(`ardy-auth.php`), lo stesso DB e — soprattutto — lo **stesso motore fasi → reel/social/WordPress**.
+La differenza col CRM: il soggetto non è un **cliente** ma un **progetto tuo**, e il fondo dell'imbuto
+non è "consegna + saldo" ma **"prodotto a catalogo"** (stock/ordini/venduto vivono su Woo/Etsy, **non**
+nella dash).
+
+### Interazione con la dash principale
+- **Navigazione**: la dash Michela ha in header il bottone **🎨 DESIGN** (`ardy-design-app.html`); la
+  dash design ha il ritorno **← Dash principale** (`ardy-michela-app.html`). Stesso header anche per
+  📣 OUTREACH → le tre dashboard sono un unico sistema con login condiviso.
+- **Motore condiviso, non duplicato**: la tabella `fasi` ha una colonna **`progetto_id` nullable** —
+  una fase appartiene *o* a un cliente *o* a un progetto. Così `ardy-crea-reel.php`,
+  `ardy-pubblica-progetto.php`, `ardy-pubblica-fase-progetto.php` ramificano su `progetto_id` senza
+  duplicare il codice reel/social (decisione 25/06: una colonna nullable invece di una tabella gemella).
+- **Aggancio dati**: nessuno. I progetti (`progetti`) stanno **accanto** ai clienti (`clienti`), non
+  dentro — niente campi cliente (telefono, indirizzo, solleciti).
+
+### Ciclo di vita del progetto (≠ stati cliente)
+`IDEA → PROGETTAZIONE → PROTOTIPO → [⏟ FILE CONGELATO] → VERSIONE_FINALE/REALIZZAZIONE → FOTO →
+A_CATALOGO` (terminale). Pilotato dalla **maturazione del prodotto**, non dai pagamenti. Man mano che
+avanzi, **compaiono i moduli** di quella fase (barra pipeline cliccabile nel dettaglio):
+
+| Modulo (sblocco) | A cosa serve | Endpoint |
+|---|---|---|
+| **Galleria** (PROGETTAZIONE) | Immagini di lavoro del progetto (Modulo 1, → `ardy-lab.it`) | `ardy-progetti-galleria-api.php` |
+| **File CAD/STL** (PROGETTAZIONE) | Archivio file tecnici dietro Basic Auth | `ardy-progetti-file-api.php` |
+| **Iterazioni** (PROTOTIPO) | Binario **R&D interno**: v1/v2/v3 con note "qui non torna" | `ardy-progetti-api.php` (`iter_*`) |
+| **Distinta / costi** (PROTOTIPO) | **BOM** interna → `costo_produzione` = Σ righe × (1+scarto%); mostra il **margine** | `ardy-progetti-api.php` (`mat_*`) |
+| **Versione finale** (VERSIONE_FINALE) | **Congela file**: snapshot STL + profilo OrcaSlicer + scheda | `ardy-progetti-api.php` (`congela`) |
+| **Foto vendita** (VERSIONE_FINALE) | Foto professionali del pezzo finito (Modulo 2, → Woo) | `ardy-object-foto-api.php` / `ardy-object-img.php` |
+| **Fasi-racconto** (REALIZZAZIONE) | Binario **pubblico**: le stesse `fasi` della dash Michela → reel/social/WP | `ardy-progetti-fasi-api.php` |
+| **Articolo** (REALIZZAZIONE) | Testo di brand riscritto con **✨ AI** (Claude), da rivedere prima di pubblicare | `ardy-progetti-ai.php` |
+| **Push catalogo** (A_CATALOGO) | Crea/aggiorna il prodotto **WooCommerce** in bozza | `ardy-object-push.php` |
+
+### Costi e margine (uso interno)
+- **Distinta (BOM)** in `progetto_materiali`: categorie `filamento | stampa | legno | elettrico |
+  ferramenta | finitura | imballo | manodopera`. Manodopera default **€50,00/h** (`ARDY_DESIGN_COSTO_ORARIO`),
+  override per riga; grammi/ore da **OrcaSlicer** digitati a mano (no integrazione Moonraker per ora).
+- **`scarto_pct`** (default 10%) = % fallimenti stampa: senza, il margine sarebbe una bugia.
+- **Salva tutto**: barra fissa in fondo al dettaglio con indicatore *dirty* + `beforeunload`; salva in
+  un colpo campi progetto + scheda **e** le righe della distinta (`mode:'mat_save_batch'`, una transazione).
+
+### Versione Premium
+Alcuni pezzi hanno una variante **standard** e una **premium**: modellata come **progetto-copia
+agganciato** (`progetti.variante` + `parent_id`), non doppia distinta. `mode:'duplica'` copia scheda +
+BOM; slug/Woo/WP/media **ripartono da zero** (è un prodotto a sé). In dash: link padre⇄figlia, badge ✨.
+
+### Ponte ecommerce "object" (chat prodotto → Woo)
+Layer separato per la **vendita**: `ardy-object-push.php` fa un push **a senso unico** dash → Woo
+(stesso slug, salva `woo_product_id`, Woo non riscrive mai la dash). `ardy-object-scheda.php` espone una
+**proiezione PUBBLICA** whitelisted del progetto (via `ardy-object-lib.php`) che alimenta la chat di Sole
+sul negozio (`ardy-object-proxy.php`) — **costi, BOM, margine, STL e iterazioni R&D non escono mai** da
+lì. Guida d'uso: `ardy-guida-design.html`.
+
+---
+
+## 📣 Ardy Outreach (ardy-outreach.html)
+
+Dashboard per il **cold-outreach B2B**: costruire liste di contatti per verticale, arricchirli e mandare
+**campagne email** (via Brevo). Terza app dello stesso sistema (header condiviso con Michela e Design,
+stesso login). API: `ardy-outreach-api.php` (routing per `action`); tabelle `outreach_contatti` e
+`outreach_template`.
+
+### Funzionalità
+- **📇 Contatti / 📊 Pipeline**: lista contatti per **categoria** e **stato** (`da_contattare` = lead
+  freddo target campagne, `cliente`, `partner`, ecc.), con filtri e azioni di massa.
+- **🔎 Ricerca contatti** per verticale — target predefiniti: **antiquari, mercatini, interior designer,
+  B&B**. Fonte **Google Places** (`ardy-places.php`) con fallback OpenStreetMap; i risultati si salvano
+  come contatti (`save_leads`).
+- **✨ Arricchimento** (`enrich_contact`): dato un contatto incompleto (spesso solo nome + indirizzo),
+  l'agente `ardy-enrich.php` prova a completare email/telefono/sito. `ardy-email-finder.php` (da CLI)
+  visita i siti dei contatti senza email e ne cerca una.
+- **📝 Template email** generati/riscritti con AI (`genera_template`), salvati in `outreach_template`
+  (`save_template` / `init_templates`).
+- **✉ Invio**: singola email (`send_email`) o **campagna** di massa (`send_campaign`) via Brevo, con
+  **unsubscribe** (`unsubscribe`) e link di disiscrizione (`ardy-unsubscribe.php`).
+- **🤝 Promozione stato**: un contatto può diventare **partner** (`promote_partner`) o **cliente**
+  (`promote_client`).
+
+### Interazione con la dash principale (CRM → Outreach)
+Quando un lead **diventa reale** — passa a uno stato "impegnato" (es. **Acconto**) in `ardy-update-lead.php`
+— viene **agganciato automaticamente** ai contatti outreach come `cliente` (via
+`ardy_outreach_aggiungi_cliente` in `ardy-outreach-lib.php`). È comunicazione di servizio/riattivazione,
+tenuta **distinta** dai lead freddi `da_contattare` che le campagne targetizzano. L'aggancio è idempotente
+(dedup per email/nome), best-effort (non blocca il salvataggio del lead se fallisce) e richiede un'email.
+Import manuale in blocco dei clienti CRM disponibile anche dal bottone **⬇ IMPORTA CLIENTI CRM**
+(`import_clients`).
+
+---
+
 ## 📱 WhatsApp (ATTIVO — Piano B)
 
 ### Stato attuale
