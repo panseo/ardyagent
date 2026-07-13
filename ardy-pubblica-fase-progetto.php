@@ -75,14 +75,27 @@ function faseProgFotoBytes(int $pid, int $fid, string $file): ?string {
 // anteprime in dashboard — il problema sparisce. Con le foto su disco (prima della
 // migrazione a B2) file_get_contents funzionava anche dopo wp-load: ecco perché
 // "prima di B2 funzionava".
+// Nomi validi delle foto che la fase DOVREBBE avere nell'articolo: è il metro con
+// cui, a valle, si decide se la pubblicazione è "completa" (semaforo verde) o se una
+// o più immagini non sono arrivate (avviso, niente verde).
+$fotoNomi = [];
+foreach (array_slice($foto, 0, 12) as $fn) {
+    if (is_string($fn) && $fn !== '') $fotoNomi[] = $fn;
+}
+$fotoAttese = count($fotoNomi);
+
 $fotoPronte = [];   // [['mime'=>.., 'ext'=>.., 'bytes'=>..], ...] già lette in RAM
 $extMap = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif'];
-foreach (array_slice($foto, 0, 12) as $fn) {
-    if (!is_string($fn) || $fn === '') continue;
+foreach ($fotoNomi as $fn) {
     $bytes = faseProgFotoBytes($progettoId, $faseId, $fn);
-    if (!is_string($bytes) || strlen($bytes) < 12) continue;
+    if (!is_string($bytes) || strlen($bytes) < 12) {
+        // Foto attesa ma illeggibile (né su disco né recuperabile da B2): la si perde
+        // qui. Va tracciata, così a fine flusso l'articolo non risulta "verde" a vuoto.
+        error_log('ARDY PUBBLICA FASE PROG: byte foto assenti fase=' . $faseId . ' file=' . $fn);
+        continue;
+    }
     $mime = (new finfo(FILEINFO_MIME_TYPE))->buffer($bytes);
-    if (!isset($extMap[$mime])) continue;
+    if (!isset($extMap[$mime])) { error_log('ARDY PUBBLICA FASE PROG: mime foto non valido fase=' . $faseId . ' file=' . $fn . ' mime=' . $mime); continue; }
     $fotoPronte[] = ['mime' => $mime, 'ext' => $extMap[$mime], 'bytes' => $bytes];
 }
 
@@ -102,6 +115,7 @@ if (!is_dir($tmpDir) && !mkdir($tmpDir, 0755, true) && !is_dir($tmpDir)) {
 ardyHardenUploadDir(rtrim(ARDY_UPLOAD_DIR, '/'));
 
 $fotoHtml = '';
+$fotoPubblicate = 0;                          // quante foto sono DAVVERO entrate nell'articolo
 foreach ($fotoPronte as $f) {                 // byte già letti da storage prima di wp-load
     $bytes = $f['bytes'];
     $mime  = $f['mime'];
@@ -111,6 +125,7 @@ foreach ($fotoPronte as $f) {                 // byte già letti da storage prim
     $attachId = media_handle_sideload(['name' => $tname, 'type' => $mime, 'tmp_name' => $tpath, 'error' => 0, 'size' => strlen($bytes)], 0);
     if (is_wp_error($attachId)) { @unlink($tpath); error_log('ARDY PUBBLICA FASE PROG SIDELOAD: ' . $attachId->get_error_message()); continue; }
     $fotoHtml .= '<img src="' . esc_url(wp_get_attachment_url($attachId)) . '" style="max-width:100%;margin:10px 0;border-radius:6px;" />' . "\n";
+    $fotoPubblicate++;
 }
 foreach (glob($tmpDir . '*') as $tmpf) { if (is_file($tmpf)) @unlink($tmpf); }
 @rmdir($tmpDir);
@@ -149,8 +164,29 @@ if (is_wp_error($result)) {
     echo json_encode(['success' => false, 'error' => 'Aggiornamento articolo non riuscito']); exit();
 }
 
-try {
-    $db->prepare("UPDATE fasi SET wp_pubblicata_at = NOW() WHERE id = ? AND progetto_id = ?")->execute([$faseId, $progettoId]);
-} catch (PDOException $e) { error_log('ARDY PUBBLICA FASE PROG DB UPD: ' . $e->getMessage()); }
+// La fase è "pubblicata" (semaforo verde ✅ su WP) SOLO se tutte le foto attese sono
+// finite davvero nell'articolo. Se una o più immagini sono andate perse (lettura B2
+// fallita, sideload rifiutato…) NON segno wp_pubblicata_at: così la dash non mostra un
+// verde ingannevole e Michela può ripubblicare — l'append è idempotente (marcatori per-fase).
+$fotoComplete = ($fotoPubblicate >= $fotoAttese);
 
-echo json_encode(['success' => true, 'post_link' => get_permalink($wpPostId)]);
+if ($fotoComplete) {
+    try {
+        $db->prepare("UPDATE fasi SET wp_pubblicata_at = NOW() WHERE id = ? AND progetto_id = ?")->execute([$faseId, $progettoId]);
+    } catch (PDOException $e) { error_log('ARDY PUBBLICA FASE PROG DB UPD: ' . $e->getMessage()); }
+}
+
+$resp = [
+    'success'         => true,
+    'post_link'       => get_permalink($wpPostId),
+    'pubblicata'      => $fotoComplete,   // true → badge verde; false → resta da ripubblicare
+    'foto_attese'     => $fotoAttese,
+    'foto_pubblicate' => $fotoPubblicate,
+];
+if (!$fotoComplete) {
+    $mancanti = $fotoAttese - $fotoPubblicate;
+    $resp['foto_warning'] = 'Testo aggiornato, ma ' . $mancanti . ' di ' . $fotoAttese
+        . ' foto non sono arrivate nell\'articolo. Riprova la pubblicazione fra poco.';
+    error_log('ARDY PUBBLICA FASE PROG: foto incomplete fase=' . $faseId . ' attese=' . $fotoAttese . ' pubblicate=' . $fotoPubblicate);
+}
+echo json_encode($resp);

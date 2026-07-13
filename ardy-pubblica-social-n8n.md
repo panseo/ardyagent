@@ -65,6 +65,65 @@ return [{ json: { ok: true, pubblicato: risultati } }];
 > trigger chiama il webhook senza il campo; con le chiamate dalla dashboard
 > aggiornata il campo c'è sempre.
 
+## ⚠️ Esito REALE per piattaforma (fix "semaforo verde ma niente pubblicato")
+
+> Sintomo osservato: pubblicazione andata a vuoto (né testo né foto su Meta) ma
+> la dashboard verde. Causa: due difetti che si sommano.
+
+**Difetto 1 — il workflow mente.** Nello snippet qui sopra `risultati.facebook = 'ok'`
+è impostato **incondizionatamente**, senza guardare la risposta di Graph API. Se la
+`HTTP Request` verso Graph fallisce (token scaduto, immagine rifiutata da IG per
+proporzioni/formato, permessi), il workflow risponde comunque `{ ok: true }`.
+
+**Difetto 2 — n8n risponde subito.** Se il nodo **Webhook** è su *"Respond
+immediately"*, torna `200` **prima** ancora che le chiamate a Graph avvengano: il
+PHP non può sapere l'esito.
+
+### Cosa cambiare in n8n
+
+1. **Webhook → Respond: "Using 'Respond to Webhook' node"** (non "immediately"), e
+   mettere il `Respond to Webhook` **in fondo**, dopo le chiamate a Graph. Così il
+   `200` arriva solo a pubblicazione conclusa. (`ardy-pubblica-social.php` ora
+   aspetta fino a 30s.)
+2. **Derivare l'esito dalla risposta di Graph**, non fissarlo a `'ok'`. Graph torna
+   `{ id: ... }`/`{ post_id: ... }` sul successo e `{ error: { message, ... } }`
+   sul fallimento. Esempio:
+
+```js
+// dopo la HTTP Request a Graph (per ciascuna piattaforma):
+const fb = $node["HTTP Request FB"]?.json || {};
+const ig = $node["HTTP Request IG"]?.json || {};
+
+let risultati = {};
+let errori = [];
+if (wantFB) {
+  if (fb.id || fb.post_id) risultati.facebook = 'ok';
+  else { risultati.facebook = 'errore'; if (fb.error) errori.push('FB: ' + (fb.error.message || 'errore')); }
+}
+if (wantIG) {
+  if (ig.id) risultati.instagram = 'ok';
+  else { risultati.instagram = 'errore'; if (ig.error) errori.push('IG: ' + (ig.error.message || 'errore')); }
+}
+
+const ok = errori.length === 0;
+return [{ json: ok ? { ok: true, pubblicato: risultati }
+                    : { ok: false, pubblicato: risultati, error: errori.join(' · ') } }];
+```
+
+### Contratto letto dal PHP
+
+`ardy-pubblica-social.php` (funzione `ardySocialInterpretaEsito`) interpreta la
+risposta così:
+
+- `{ ok:false }` **oppure** `{ error: ... }` / `{ errors: [...] }` → **fallimento**:
+  la dash mostra l'errore (niente verde).
+- `{ ok:true, pubblicato:{ facebook:'ok', instagram:'ok' } }` → **confermato**: verde
+  pieno solo per le piattaforme marcate `'ok'` (una `'errore'` non conta).
+- `200` con corpo vuoto o senza questi campi → **inviato ma non confermato**: la dash
+  scrive *"📤 Inviato ai social — verifica che sia pubblicato"* invece del verde.
+  (Stato di transizione finché il workflow non espone l'esito reale: nessuna
+  regressione sui flussi che oggi funzionano.)
+
 ## Lato dashboard (già fatto, in questo repo)
 
 - Le icone brand nel pannello "📲 Vuoi pubblicare sui social?" e in ogni post in

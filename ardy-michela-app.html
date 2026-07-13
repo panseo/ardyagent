@@ -3215,10 +3215,11 @@ async function inviaSocial(payload) {
   const results   = await Promise.all(tasks);
   const pubblicate = [];
   const errori      = [];
+  let confermato    = true;   // false se un ramo è "inviato ma esito non confermato"
   let i = 0;
   if (metaPlats.length) {
     const r = results[i++];
-    if (r.success) pubblicate.push(...(r.piattaforme || metaPlats));
+    if (r.success) { pubblicate.push(...(r.piattaforme || metaPlats)); if (r.confermato === false) confermato = false; }
     else errori.push(r.error || 'Errore social');
   }
   if (wantGoogle) {
@@ -3231,6 +3232,7 @@ async function inviaSocial(payload) {
   return {
     success: errori.length === 0,
     piattaforme: pubblicate,
+    confermato,   // il chiamante distingue "pubblicato" da "inviato, da verificare"
     error: errori.length
       ? errori.join(' · ') + (pubblicate.length ? ' (pubblicato su ' + platLabel(pubblicate) + ')' : '')
       : undefined,
@@ -3247,7 +3249,12 @@ async function pubblicaSocialOra() {
     if (data.success) {
       document.getElementById('socialPanel').style.display = 'none';
       pendingSocial = null;
-      showToast('✓ Pubblicato su ' + platLabel(data.piattaforme || piattaforme), 'success');
+      // Verde pieno solo se il workflow ha CONFERMATO. Se ha risposto 200 "muto"
+      // (confermato:false) non promettiamo la pubblicazione: invito a verificare.
+      if (data.confermato === false)
+        showToast('📤 Inviato ai social — verifica che sia pubblicato', '');
+      else
+        showToast('✓ Pubblicato su ' + platLabel(data.piattaforme || piattaforme), 'success');
     } else {
       showToast('⚠ ' + (data.error || 'Errore social'), 'error');
     }
@@ -3485,7 +3492,10 @@ async function pubblicaPending(id) {
           body: JSON.stringify({ azione: 'elimina', id })
         });
       } catch(e) { /* pubblicato comunque: la bozza verrà ripulita al prossimo sync */ }
-      showToast('✓ Pubblicato su ' + platLabel(data.piattaforme || piattaforme), 'success');
+      if (data.confermato === false)
+        showToast('📤 Inviato ai social — verifica che sia pubblicato', '');
+      else
+        showToast('✓ Pubblicato su ' + platLabel(data.piattaforme || piattaforme), 'success');
     } else {
       showToast('⚠ ' + (data.error || 'Errore social'), 'error');
     }
