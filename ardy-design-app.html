@@ -1158,7 +1158,13 @@ async function pubblicaFaseWp(id){
   try {
     const d = await fetch('ardy-pubblica-fase-progetto.php', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ progetto_id: stato.dettaglio.progetto.id, fase_id: id }) }).then(r=>r.json());
-    if (d.success){ toast('Fase pubblicata sull\'articolo'); apri(stato.dettaglio.progetto.id); }
+    if (d.success){
+      // Verde solo se TUTTE le foto sono arrivate nell'articolo. Se il server segnala
+      // foto_warning (immagini perse) mostro l'avviso: la fase NON risulta pubblicata,
+      // così resta il tasto "Pubblica su WP" per riprovare invece di un falso semaforo verde.
+      toast(d.foto_warning ? ('⚠️ ' + d.foto_warning) : 'Fase pubblicata sull\'articolo');
+      apri(stato.dettaglio.progetto.id);
+    }
     else toast(d.error||'Errore');
   } catch(e){ toast('Errore di rete'); }
 }
