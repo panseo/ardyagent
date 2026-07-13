@@ -216,12 +216,12 @@ document.addEventListener('click', function(e){
 });
 // Rivelazione per fase: un modulo compare se la fase corrente ha raggiunto lo sblocco
 // (e il metodo lo consente). Aperto di default quando è la fase appena raggiunta.
-function modSection(id, unlock, need3d, html){
+function modSection(id, unlock, need3d, contenuto){
   const p = stato.dettaglio.progetto;
   if (STATI.indexOf(p.stato) < STATI.indexOf(unlock)) return '';
   if (need3d && (p.metodo||'stampa_3d') !== 'stampa_3d') return '';
   const open = (p.stato === unlock);
-  return html.replace('<div class="panel"', `<div class="panel mod ${open?'open':''}" id="mod-${id}"`);
+  return String(contenuto).replace('<div class="panel"', `<div class="panel mod ${open?'open':''}" id="mod-${id}"`);
 }
 const CATEGORIE = ['filamento','stampa','legno','elettrico','ferramenta','finitura','imballo','manodopera'];
 const UNITA_DEF = { filamento:'g', stampa:'h', manodopera:'h' };
@@ -229,6 +229,26 @@ let stato = { lista:[], sel:null, dettaglio:null, costoOrario:50, faseForm:null,
 
 const eur = n => (n===null||n===undefined||n==='') ? '—' : Number(n).toLocaleString('it-IT',{style:'currency',currency:'EUR'});
 const esc = s => (s??'').toString().replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// ── Micro-layer di rendering ────────────────────────────────
+// html`...` costruisce HTML facendo l'escape dei valori interpolati PER DEFAULT
+// (chiude il buco "mi sono scordato esc()", che è XSS). I frammenti già-HTML —
+// altri html``, raw(x), o array di questi (es. list.map(x=>html`…`)) — vengono
+// inseriti grezzi. Zero dipendenze, zero build: è l'idea di lit-html in ~15 righe.
+// Uso: nuove funzioni di render tornano html`…`; i valori utente NON vanno più
+// avvolti in esc() a mano (lo fa il tag). Serve HTML grezzo di proposito? raw(s).
+class HtmlSafe { constructor(s){ this.s = s; } toString(){ return this.s; } }
+const raw = s => new HtmlSafe(s==null ? '' : String(s));
+function htmlVal(v){
+  if (v instanceof HtmlSafe) return v.s;          // frammento già-HTML → grezzo
+  if (Array.isArray(v)) return v.map(htmlVal).join(''); // lista di frammenti
+  return esc(v);                                   // valore → escape
+}
+function html(strings, ...values){
+  let out = strings[0];
+  for (let i=0; i<values.length; i++) out += htmlVal(values[i]) + strings[i+1];
+  return new HtmlSafe(out);
+}
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
 
 async function api(method, body){
@@ -859,13 +879,13 @@ function bomPanel(){
   const mats = stato.dettaglio.materiali;
   const p = stato.dettaglio.progetto;
   const somma = mats.reduce((s,m)=>s+Number(m.costo_riga||0),0);
-  return `
+  return html`
   <div class="panel">
     <h2>Costi — distinta materiali <small>uso interno · margine</small></h2>
     <table class="bom">
       <thead><tr><th>Categoria</th><th>Voce</th><th>Q.tà</th><th>Unità</th><th>€ unit.</th><th>€ riga</th><th></th></tr></thead>
       <tbody>
-        ${mats.map(m=>bomRow(m)).join('')}
+        ${mats.map(m=>bomRow(m))}
         ${bomRow({id:0,categoria:'filamento',voce:'',qta:'',unita:'g',costo_unitario:'',costo_riga:0}, true)}
       </tbody>
     </table>
@@ -880,16 +900,16 @@ function bomPanel(){
 }
 function bomRow(m, isNew=false){
   const rid = isNew?'new':m.id;
-  return `<tr data-mid="${m.id}">
-    <td><select id="m_cat_${rid}" onchange="onCat('${rid}')">${CATEGORIE.map(c=>`<option ${c===m.categoria?'selected':''}>${c}</option>`).join('')}</select></td>
-    <td><input id="m_voce_${rid}" value="${esc(m.voce)}" placeholder="${isNew?'+ nuova voce…':''}"></td>
+  return html`<tr data-mid="${m.id}">
+    <td><select id="m_cat_${rid}" onchange="onCat('${rid}')">${CATEGORIE.map(c=>html`<option ${c===m.categoria?'selected':''}>${c}</option>`)}</select></td>
+    <td><input id="m_voce_${rid}" value="${m.voce}" placeholder="${isNew?'+ nuova voce…':''}"></td>
     <td><input id="m_qta_${rid}" class="num" value="${m.qta!==''&&m.qta!=null?Number(m.qta):''}" style="width:70px" oninput="onQta('${rid}')"></td>
-    <td><input id="m_unita_${rid}" value="${esc(m.unita)}" style="width:48px"></td>
+    <td><input id="m_unita_${rid}" value="${m.unita}" style="width:48px"></td>
     <td><input id="m_cu_${rid}" class="num" value="${m.costo_unitario!==''&&m.costo_unitario!=null?Number(m.costo_unitario):''}" style="width:80px" oninput="onQta('${rid}')"></td>
     <td class="num" id="m_riga_${rid}">${eur(m.costo_riga)}</td>
     <td>${isNew
-        ? `<button class="sm" onclick="salvaMat('new')">Aggiungi</button>`
-        : `<button class="sm" onclick="salvaMat(${m.id})">✓</button> <button class="sm ghost danger" onclick="eliminaMat(${m.id})">✕</button>`}</td>
+        ? html`<button class="sm" onclick="salvaMat('new')">Aggiungi</button>`
+        : html`<button class="sm" onclick="salvaMat(${m.id})">✓</button> <button class="sm ghost danger" onclick="eliminaMat(${m.id})">✕</button>`}</td>
   </tr>`;
 }
 function onCat(rid){ // pre-compila unità e tariffa manodopera
@@ -931,16 +951,16 @@ async function eliminaMat(id){
 // ── Iterazioni prototipo (binario R&D) ──────────────────
 function iterPanel(){
   const its = stato.dettaglio.iterazioni;
-  return `
+  return html`
   <div class="panel">
     <h2>Prototipo — iterazioni <small>binario R&amp;D interno</small></h2>
-    ${its.map(it=>`
+    ${its.length ? its.map(it=>html`
       <div class="iter">
         <div class="h"><span class="vtag">v${it.v_num}</span>
           <span><button class="sm ghost danger" onclick="eliminaIter(${it.id})">✕</button></span></div>
-        <div class="muted">${esc(it.note)||'(nessuna nota)'}</div>
-        ${it.cad_ref?`<div class="muted">CAD: ${esc(it.cad_ref)}</div>`:''}
-      </div>`).join('') || '<div class="muted">Nessuna iterazione ancora.</div>'}
+        <div class="muted">${it.note||'(nessuna nota)'}</div>
+        ${it.cad_ref?html`<div class="muted">CAD: ${it.cad_ref}</div>`:''}
+      </div>`) : html`<div class="muted">Nessuna iterazione ancora.</div>`}
     <div class="field" style="margin-top:12px"><label>Nuova iterazione — note ("qui non torna…")</label>
       <textarea id="iter_note" placeholder="Cosa hai cambiato / cosa non va"></textarea></div>
     <div class="row">
