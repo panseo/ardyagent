@@ -61,7 +61,7 @@ $ch = curl_init($webhookUrl);
 curl_setopt($ch, CURLOPT_POST,           true);
 curl_setopt($ch, CURLOPT_POSTFIELDS,     json_encode($webhookData));
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_TIMEOUT,        15);
+curl_setopt($ch, CURLOPT_TIMEOUT,        30);   // il workflow ora risponde a FINE pubblicazione
 curl_setopt($ch, CURLOPT_HTTPHEADER,     ['Content-Type: application/json']);
 $res      = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -74,4 +74,85 @@ if ($err || $httpCode >= 400) {
     exit();
 }
 
-echo json_encode(['success' => true, 'piattaforme' => $piattaforme]);
+// HTTP 200 dal webhook NON basta: n8n può rispondere 200 anche quando Graph API
+// rifiuta la pubblicazione (o quando non pubblica nulla). Interpretiamo il CORPO
+// per confermare l'esito reale ed evitare il "semaforo verde" ingannevole.
+$esito = ardySocialInterpretaEsito($res, $piattaforme);
+error_log('ARDY SOCIAL PUBLISH ESITO: ' . $esito['stato'] . ' http=' . $httpCode
+    . ' confermate=' . implode(',', $esito['piattaforme'])
+    . ' body=' . substr((string) $res, 0, 500));
+
+if ($esito['stato'] === 'fail') {
+    echo json_encode(['success' => false, 'error' => $esito['error'] ?: 'I social non hanno confermato la pubblicazione']);
+    exit();
+}
+
+echo json_encode([
+    'success'     => true,
+    'piattaforme' => $esito['piattaforme'] ?: $piattaforme,
+    // false = inviato ma il workflow non ha confermato l'esito (200 "muto"): la dash
+    // lo segnala come da verificare invece di dare un verde pieno.
+    'confermato'  => ($esito['stato'] === 'ok'),
+]);
+
+/**
+ * Interpreta la risposta del webhook n8n. Distingue tre stati:
+ *   'ok'      → il workflow conferma la pubblicazione per le piattaforme richieste
+ *   'unknown' → 200 senza segnali riconoscibili: inviato, esito non confermabile
+ *   'fail'    → segnale esplicito di errore (dal workflow o da Graph API)
+ * Conservativo di proposito: fallisce SOLO su un segnale negativo esplicito, così
+ * non trasforma in errore i successi reali finché il workflow n8n non espone
+ * l'esito per-piattaforma (vedi ardy-pubblica-social-n8n.md).
+ */
+function ardySocialInterpretaEsito($raw, array $richieste): array {
+    $body = json_decode((string) $raw, true);
+    // n8n a volte incapsula la risposta in [ {json:{...}} ] o [ {...} ].
+    if (is_array($body) && $body && array_keys($body) === range(0, count($body) - 1)) {
+        $body = $body[0] ?? null;
+        if (is_array($body) && isset($body['json']) && is_array($body['json'])) $body = $body['json'];
+    }
+    if (!is_array($body)) {
+        return ['stato' => 'unknown', 'error' => '', 'piattaforme' => []]; // corpo vuoto/non-JSON
+    }
+
+    $errMsg = ardySocialEstraiErrore($body);
+    if ($errMsg !== '') return ['stato' => 'fail', 'error' => $errMsg, 'piattaforme' => []];
+
+    if (array_key_exists('ok', $body) && !in_array($body['ok'], [true, 'true', 1, '1'], true)) {
+        return ['stato' => 'fail', 'error' => 'I social hanno rifiutato la pubblicazione', 'piattaforme' => []];
+    }
+
+    // Dettaglio per-piattaforma, se il workflow lo espone.
+    $pub = $body['pubblicato'] ?? $body['published'] ?? null;
+    if (is_array($pub)) {
+        $confermate = [];
+        foreach ($richieste as $p) {
+            $v = $pub[$p] ?? null;
+            if ($v === 'ok' || $v === true || (is_array($v) && $v && !isset($v['error']))) $confermate[] = $p;
+        }
+        if (!$confermate) return ['stato' => 'fail', 'error' => 'Nessun social ha confermato la pubblicazione', 'piattaforme' => []];
+        return ['stato' => 'ok', 'error' => '', 'piattaforme' => $confermate];
+    }
+
+    if (array_key_exists('ok', $body) && in_array($body['ok'], [true, 'true', 1, '1'], true)) {
+        return ['stato' => 'ok', 'error' => '', 'piattaforme' => $richieste]; // ok esplicito, senza dettaglio
+    }
+
+    return ['stato' => 'unknown', 'error' => '', 'piattaforme' => []]; // JSON senza segnali → nessuna regressione
+}
+
+/** Estrae un messaggio d'errore da una risposta Graph API / workflow, '' se assente. */
+function ardySocialEstraiErrore($body): string {
+    if (!is_array($body)) return '';
+    if (isset($body['error'])) {
+        $e = $body['error'];
+        if (is_array($e))  return 'Social: ' . (string) ($e['message'] ?? ($e['error_user_msg'] ?? 'errore Graph API'));
+        if (is_string($e) && $e !== '') return 'Social: ' . $e;
+    }
+    if (isset($body['errors']) && is_array($body['errors']) && $body['errors']) {
+        $first = reset($body['errors']);
+        if (is_array($first))  return 'Social: ' . (string) ($first['message'] ?? 'errore');
+        if (is_string($first)) return 'Social: ' . $first;
+    }
+    return '';
+}
