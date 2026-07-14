@@ -99,12 +99,14 @@ Anthropic** (un modello GPAI), presente su due superfici:
 3. **[Documentazione] Tenere questo file aggiornato** come traccia delle scelte
    di conformità (utile in caso di domande del Garante/autorità).
 
-4. **[Ecommerce — Termini & Privacy propri] DA FARE.** `object.ardy-lab.it` è
-   un'installazione WordPress **separata** dal sito principale: ha bisogno di
-   **proprie** pagine "Termini e Condizioni" e "Privacy Policy". Quelle attuali in
-   `termini-privacy-wordpress.md` sono per `ardy-lab.it` e vanno **adattate** al
-   negozio, aggiungendo: menzione dell'assistente AI Sole sulle schede prodotto
-   (già coperta lato tecnico), e le voci tipiche dell'ecommerce (vedi §4).
+4. **[Ecommerce — Termini & Privacy propri] BOZZA PRONTA → revisione legale +
+   pubblicazione.** `object.ardy-lab.it` è un'installazione WordPress **separata**:
+   ha bisogno di **proprie** pagine legali. Bozza completa in
+   **`termini-privacy-object-ecommerce.md`** (3 pagine: Termini di Vendita, Privacy
+   del negozio, Recesso/Resi) con menzione dell'assistente AI Sole e le voci
+   ecommerce (vedi §4). Restano da **compilare i segnaposto ⟦…⟧** (gateway di
+   pagamento, corriere, costi/tempi spedizione, indirizzo resi), far **validare da
+   un legale** e **pubblicare** le tre pagine sul WP del negozio.
 
 5. **[Trasparenza recommender — quando si attiveranno i consigli] DA FARE al
    momento giusto.** Oggi Sole parla **solo del singolo oggetto** in scheda; NON
