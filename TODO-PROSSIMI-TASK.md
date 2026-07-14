@@ -374,13 +374,17 @@ Business Business Information API"** risultano **già "API abilitata"** (badge v
 problema — si torna alla conclusione originale: il blocco è il **gate di allow-list/provisioning
 dell'account** lato Google, indipendente dall'enablement delle API in Cloud Console (tutte e 3 le API
 necessarie sono enabled, eppure `ardy-gbp-check.php` continua a dare 403).
+**Fatto (14/07):** preparata la **bozza di risposta a Ravi** (in Bozze di `ardy.documenti@gmail.com`,
+stesso thread del ticket 4-4300000041395). La bozza fa notare esplicitamente: (a) tutte e 3 le API sono
+già enabled e le quote sono popolate, (b) il 403 è la pagina HTML generica di Google, cioè la richiesta è
+respinta PRIMA di arrivare al servizio → il blocco resta il provisioning/allow-list, (c) il loro
+placeholder `<emailadddedtotheGoogleGroup>` non era compilato — chiede QUALE email hanno aggiunto al
+gruppo di accesso e lo stato del provisioning per `ardy.documenti@gmail.com` / progetto `ardy-lab`
+(532339794075, request ID 3-7851000041139), (d) l'account è Gmail normale, non Workspace.
 **Da fare (prossima sessione):** nessuna altra leva lato Cloud Console/codice — solo attendere/sollecitare
 Google:
-1. Controllare la mail (anche SPAM) di `ardy.documenti@gmail.com` per la risposta al sollecito dell'11/07.
-2. Se continua il silenzio, nel prossimo messaggio al supporto Google far notare esplicitamente: (a) tutte
-   e 3 le API sono già enabled, (b) il loro placeholder `<emailaddedtotheGoogleGroup>` non è stato
-   compilato — chiedere conferma di quale email hanno effettivamente aggiunto al gruppo di accesso e a che
-   punto è il provisioning.
+1. **Rivedere e INVIARE la bozza** dalle Bozze di `ardy.documenti@gmail.com` (oggetto "Re: [4-4300000041395]").
+2. Controllare la mail (anche SPAM) per la risposta di Google.
 3. Ri-lanciare `ardy-gbp-check.php` periodicamente, finché non dà verde ("QUOTA SBLOCCATA").
 
 **Lato codice (già pronto, riabilitare SOLO a check verde):** il toggle Google nel pannello social
