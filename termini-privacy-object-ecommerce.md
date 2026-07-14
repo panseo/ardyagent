@@ -7,11 +7,12 @@
 > `ardy-lab.it`, che ha le sue pagine legali).
 >
 > **Da completare prima di pubblicare** (segnaposto tra ⟦…⟧):
-> - ⟦CORRIERE/SPEDIZIONIERE⟧, ⟦COSTI E TEMPI DI SPEDIZIONE⟧, ⟦AREA GEOGRAFICA⟧ servita.
 > - Date di "ultimo aggiornamento" alla pubblicazione effettiva.
+> - **Tempi** di consegna indicativi per corriere/area (da confermare con SDA/GLS/UPS).
 > - Verifica del **plugin Cookie** attivo sul negozio (banner + Cookie Policy).
 >
-> Già compilati: pagamenti (Stripe, Klarna, PayPal, bonifico), indirizzo resi (= sede).
+> Già compilati: pagamenti (Stripe, Klarna, PayPal, bonifico), indirizzo resi (= sede),
+> corrieri (SDA/GLS/UPS), area (Europa), costi spedizione (variabili, da € 12, mostrati al checkout).
 >
 > Suggerimento: crea **tre pagine** su WordPress — "Termini e Condizioni di Vendita",
 > "Privacy Policy" e "Diritto di Recesso / Resi" — e linkale nel footer e nel checkout.
@@ -84,9 +85,12 @@ Scegliendo **Klarna**, il relativo servizio può effettuare **proprie verifiche*
 in qualità di titolare autonomo, secondo la propria informativa privacy.
 
 ## 7. Spedizione e consegna
-7.1 Le spedizioni sono effettuate tramite ⟦CORRIERE/SPEDIZIONIERE⟧ verso ⟦AREA GEOGRAFICA — es.
-Italia / UE⟧. Costi e tempi indicativi: ⟦COSTI E TEMPI DI SPEDIZIONE⟧, comunque riepilogati al
-checkout.
+7.1 Le spedizioni sono effettuate tramite **SDA, GLS e UPS** verso i **Paesi europei** (ulteriori
+destinazioni, come Stati Uniti e Cina, potranno essere attivate in seguito). Il **costo di spedizione
+varia** in base al **peso volumetrico** del collo e alla destinazione: parte indicativamente da
+**€ 12,00** e può arrivare fino ad alcune centinaia di euro (es. fino a circa **€ 400** per colli di
+grande volume verso destinazioni europee più distanti). Il costo esatto è **calcolato e mostrato al
+checkout**, prima della conferma dell'ordine.
 7.2 I tempi di consegna hanno natura **indicativa** e decorrono dalla conferma del pagamento.
 Trattandosi in parte di **produzione artigianale su stampa 3D**, alcuni pezzi possono richiedere un
 tempo di realizzazione indicato in scheda.
@@ -156,7 +160,7 @@ email: ardy.documenti@gmail.com. Per ogni richiesta sui tuoi dati puoi scrivere 
   intelligenza artificiale di **Anthropic** per generare le risposte.
 - **Stripe, PayPal, Klarna** per l'elaborazione dei pagamenti (ciascuno titolare autonomo per i
   dati di pagamento; Klarna può effettuare proprie verifiche di solvibilità per il pagamento differito).
-- **⟦CORRIERE/SPEDIZIONIERE⟧** per la consegna degli ordini.
+- **SDA, GLS, UPS** per la consegna degli ordini.
 - **Brevo (ex Sendinblue)** per l'invio delle email (conferme ordine, comunicazioni).
 - **Aruba** (Aruba S.p.A.) per l'hosting; i server sono situati nell'Unione Europea.
 Nessuna **decisione automatizzata** con effetti giuridici è presa solo dall'AI (art. 22 GDPR).
