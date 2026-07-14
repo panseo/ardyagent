@@ -38,7 +38,7 @@
     panel.id = 'ardy-obj-panel';
     panel.innerHTML =
       '<div id="ardy-obj-head">' +
-        '<div class="ardy-obj-id"><b>Sole</b><span>assistente Ardy</span></div>' +
+        '<div class="ardy-obj-id"><b>Sole</b><span>assistente AI di Ardy</span></div>' +
         '<button id="ardy-obj-close" aria-label="Chiudi">&times;</button>' +
       '</div>' +
       '<div id="ardy-obj-msgs"></div>' +
@@ -86,7 +86,7 @@
       requestAnimationFrame(function () { panel.classList.add('visible'); });
       toggle.style.display = 'none';
       if (!msgs.childElementCount) {
-        addMsg('Ciao! Sono Sole 👋 Chiedimi pure di questo pezzo: storia, materiali, come si usa.', 'bot');
+        addMsg('Ciao! Sono Sole, l\'assistente virtuale (AI) di Ardy Lab 👋 Chiedimi pure di questo pezzo: storia, materiali, come si usa.', 'bot');
       }
       setTimeout(function () { input.focus(); }, 260);
     }
