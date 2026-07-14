@@ -357,12 +357,27 @@ prima — nessun cambiamento nonostante l'API risulti enabled e le quote popolat
 sblocco possibile è il provisioning manuale lato Google, non azionabile da Cloud Console.
 **Fatto (11/07, pomeriggio):** inviato il sollecito di follow-up allo stesso thread di Ravi (dati già
 forniti il 04/07: account `ardy.documenti@gmail.com`, progetto `ardy-lab` / 532339794075).
+**Risposta Google ricevuta (11/07, stesso pomeriggio) — possibile causa reale trovata:** l'operatore
+elenca **8 API diverse** della "famiglia" Business Profile da abilitare (non solo "Google My Business
+API" v4, quella dei post — già confermata enabled). `ardy-gbp-check.php` chiama per primo un'API
+**diversa**: `mybusinessaccountmanagement.googleapis.com` (**"My Business Account Management API"**) — MAI
+verificata come enabled finora. Ipotesi: è quella mancante a causare il 403 persistente, non il
+provisioning dell'account. Servono almeno queste due (oltre a quella già enabled), usate dal codice
+(`ardy-gbp.php` → `gbp_get_parent()`):
+- **My Business Account Management API** (v1, risolve gli account)
+- **My Business Business Information API** (v1, risolve le location)
+Nota: la mail contiene un placeholder non compilato `<emailaddedtotheGoogleGroup>` (bug del loro
+template — non hanno detto quale email hanno aggiunto al gruppo di accesso) e un avviso su Google
+Workspace che non si applica (l'account è un Gmail normale, non Workspace).
 **Da fare (prossima sessione):**
-1. Controllare la mail (anche SPAM) di `ardy.documenti@gmail.com` per la risposta al sollecito.
-2. Se continua il silenzio oltre metà/fine luglio, valutare un ulteriore sollecito o un canale diverso
-   (community/forum Business Profile API, se esiste un contatto più diretto).
-3. Ri-lanciare `ardy-gbp-check.php` periodicamente (nessuna altra azione utile lato Cloud Console/codice
-   finché Google non fa il provisioning), finché non dà verde ("QUOTA SBLOCCATA").
+1. **Cloud Console → API Library** (progetto `ardy-lab`): cercare e abilitare **"My Business Account
+   Management API"** e **"My Business Business Information API"** se non già enabled (verificare prima,
+   non dato per scontato che manchino).
+2. Ri-lanciare `ardy-gbp-check.php` subito dopo — se il problema era davvero l'API mancante, potrebbe dare
+   verde senza bisogno di aspettare altro da Google.
+3. Se resta 403 anche con tutte le API abilitate: allora il blocco è davvero il provisioning account, e si
+   torna ad aspettare/sollecitare Google (chiedendo anche di chiarire il placeholder non compilato).
+4. Controllare comunque la mail (anche SPAM) di `ardy.documenti@gmail.com` per ulteriori risposte.
 
 **Lato codice (già pronto, riabilitare SOLO a check verde):** il toggle Google nel pannello social
 (`ardy-michela-app.html`, `socialDestHtml`) è stato **ri-disattivato** dopo l'esito negativo del check —
