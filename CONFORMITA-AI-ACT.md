@@ -104,9 +104,10 @@ Anthropic** (un modello GPAI), presente su due superfici:
    ha bisogno di **proprie** pagine legali. Bozza completa in
    **`termini-privacy-object-ecommerce.md`** (3 pagine: Termini di Vendita, Privacy
    del negozio, Recesso/Resi) con menzione dell'assistente AI Sole e le voci
-   ecommerce (vedi §4). Restano da **compilare i segnaposto ⟦…⟧** (gateway di
-   pagamento, corriere, costi/tempi spedizione, indirizzo resi), far **validare da
-   un legale** e **pubblicare** le tre pagine sul WP del negozio.
+   ecommerce (vedi §4). Compilati pagamenti (Stripe/Klarna/PayPal/bonifico),
+   corrieri (SDA/GLS/UPS), area (Europa), costi spedizione e indirizzo resi;
+   restano da inserire **date di aggiornamento** e **tempi di consegna** indicativi,
+   far **validare da un legale** e **pubblicare** le tre pagine sul WP del negozio.
 
 5. **[Trasparenza recommender — quando si attiveranno i consigli] DA FARE al
    momento giusto.** Oggi Sole parla **solo del singolo oggetto** in scheda; NON
