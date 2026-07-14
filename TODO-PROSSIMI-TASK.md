@@ -357,7 +357,7 @@ prima — nessun cambiamento nonostante l'API risulti enabled e le quote popolat
 sblocco possibile è il provisioning manuale lato Google, non azionabile da Cloud Console.
 **Fatto (11/07, pomeriggio):** inviato il sollecito di follow-up allo stesso thread di Ravi (dati già
 forniti il 04/07: account `ardy.documenti@gmail.com`, progetto `ardy-lab` / 532339794075).
-**Risposta Google ricevuta (11/07, stesso pomeriggio) — possibile causa reale trovata:** l'operatore
+**Risposta Google ricevuta (~14/07, 3 giorni dopo il sollecito) — possibile causa reale trovata:** l'operatore
 elenca **8 API diverse** della "famiglia" Business Profile da abilitare (non solo "Google My Business
 API" v4, quella dei post — già confermata enabled). `ardy-gbp-check.php` chiama per primo un'API
 **diversa**: `mybusinessaccountmanagement.googleapis.com` (**"My Business Account Management API"**) — MAI
@@ -369,7 +369,7 @@ provisioning dell'account. Servono almeno queste due (oltre a quella già enable
 Nota: la mail contiene un placeholder non compilato `<emailaddedtotheGoogleGroup>` (bug del loro
 template — non hanno detto quale email hanno aggiunto al gruppo di accesso) e un avviso su Google
 Workspace che non si applica (l'account è un Gmail normale, non Workspace).
-**Ipotesi ESCLUSA (11/07, verificata in console):** sia **"My Business Account Management API"** sia **"My
+**Ipotesi ESCLUSA (~14/07, verificata in console):** sia **"My Business Account Management API"** sia **"My
 Business Business Information API"** risultano **già "API abilitata"** (badge verde). Non era quello il
 problema — si torna alla conclusione originale: il blocco è il **gate di allow-list/provisioning
 dell'account** lato Google, indipendente dall'enablement delle API in Cloud Console (tutte e 3 le API
