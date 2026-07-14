@@ -369,15 +369,19 @@ provisioning dell'account. Servono almeno queste due (oltre a quella già enable
 Nota: la mail contiene un placeholder non compilato `<emailaddedtotheGoogleGroup>` (bug del loro
 template — non hanno detto quale email hanno aggiunto al gruppo di accesso) e un avviso su Google
 Workspace che non si applica (l'account è un Gmail normale, non Workspace).
-**Da fare (prossima sessione):**
-1. **Cloud Console → API Library** (progetto `ardy-lab`): cercare e abilitare **"My Business Account
-   Management API"** e **"My Business Business Information API"** se non già enabled (verificare prima,
-   non dato per scontato che manchino).
-2. Ri-lanciare `ardy-gbp-check.php` subito dopo — se il problema era davvero l'API mancante, potrebbe dare
-   verde senza bisogno di aspettare altro da Google.
-3. Se resta 403 anche con tutte le API abilitate: allora il blocco è davvero il provisioning account, e si
-   torna ad aspettare/sollecitare Google (chiedendo anche di chiarire il placeholder non compilato).
-4. Controllare comunque la mail (anche SPAM) di `ardy.documenti@gmail.com` per ulteriori risposte.
+**Ipotesi ESCLUSA (11/07, verificata in console):** sia **"My Business Account Management API"** sia **"My
+Business Business Information API"** risultano **già "API abilitata"** (badge verde). Non era quello il
+problema — si torna alla conclusione originale: il blocco è il **gate di allow-list/provisioning
+dell'account** lato Google, indipendente dall'enablement delle API in Cloud Console (tutte e 3 le API
+necessarie sono enabled, eppure `ardy-gbp-check.php` continua a dare 403).
+**Da fare (prossima sessione):** nessuna altra leva lato Cloud Console/codice — solo attendere/sollecitare
+Google:
+1. Controllare la mail (anche SPAM) di `ardy.documenti@gmail.com` per la risposta al sollecito dell'11/07.
+2. Se continua il silenzio, nel prossimo messaggio al supporto Google far notare esplicitamente: (a) tutte
+   e 3 le API sono già enabled, (b) il loro placeholder `<emailaddedtotheGoogleGroup>` non è stato
+   compilato — chiedere conferma di quale email hanno effettivamente aggiunto al gruppo di accesso e a che
+   punto è il provisioning.
+3. Ri-lanciare `ardy-gbp-check.php` periodicamente, finché non dà verde ("QUOTA SBLOCCATA").
 
 **Lato codice (già pronto, riabilitare SOLO a check verde):** il toggle Google nel pannello social
 (`ardy-michela-app.html`, `socialDestHtml`) è stato **ri-disattivato** dopo l'esito negativo del check —
