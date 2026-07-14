@@ -40,10 +40,16 @@ DPIA AI o sistema di gestione del rischio: quelli valgono solo per i sistemi
 
 ## 2. Classificazione del nostro sistema
 
-**Cos'è:** "Sole", assistente AI conversazionale (chatbot sito + widget
-lavorazioni + WhatsApp) basato sul modello **Claude di Anthropic** (un modello
-GPAI). Usi: informazioni, qualifica lead, supporto clienti, bozze testi/email,
-generazione reel/post.
+**Cos'è:** "Sole", assistente AI conversazionale basato sul modello **Claude di
+Anthropic** (un modello GPAI), presente su due superfici:
+- **Assistenza** su `ardy-lab.it`: chatbot sito + widget lavorazioni + WhatsApp +
+  chat corsi. Usi: informazioni, qualifica lead, supporto clienti, bozze
+  testi/email, generazione reel/post.
+- **Vendita** su `object.ardy-lab.it` (ecommerce WooCommerce dedicato): widget
+  chat per-oggetto sulla scheda prodotto (`ardy-object-chat.js` +
+  `ardy-object-proxy.php`), che racconta il pezzo, conferma il prezzo di listino
+  e accompagna all'acquisto senza pressioni. **In programma:** consigli di
+  prodotti correlati (recommender) — vedi §3, punto trasparenza recommender.
 
 **Ruoli ai sensi dell'AI Act:**
 - **Anthropic** = fornitore del modello GPAI (ha i suoi obblighi dal 2 ago 2025, non nostri).
@@ -54,7 +60,7 @@ generazione reel/post.
 | Categoria AI Act | Si applica? | Perché |
 |---|---|---|
 | Pratica **vietata** (art. 5) — manipolazione subliminale, social scoring, ecc. | ❌ No | Sole non fa nulla di tutto questo |
-| **Alto rischio** (Allegato III) — credito, lavoro/selezione personale, biometria, istruzione, servizi essenziali, giustizia | ❌ No | Restauro mobili: nessun ambito dell'Allegato III |
+| **Alto rischio** (Allegato III) — credito, lavoro/selezione personale, biometria, istruzione, servizi essenziali, giustizia | ❌ No | Restauro mobili + vendita oggetti design: nessun ambito dell'Allegato III (un recommender di prodotti su un ecommerce **non** è alto rischio) |
 | Riconoscimento **emozioni** / categorizzazione **biometrica** | ❌ No | Non usato |
 | **Decisioni automatizzate** con effetti giuridici | ❌ No | Prezzi/tempi/accordi sempre confermati da una persona (già scritto nei Termini §3.2 e Privacy §4) |
 | **Rischio limitato** → trasparenza (art. 50) | ✅ **Sì** | È un chatbot che interagisce con persone |
@@ -72,6 +78,7 @@ generazione reel/post.
   - Widget lavorazione, WhatsApp, chat corsi: disclosure nel messaggio di benvenuto (`ardy-widget-lavorazione.js`, `ardy-whatsapp-system.txt`, `ardy-chat-corsi.js`).
   - Prompt di sistema: regola di trasparenza esplicita in `ardy-system.txt` ("dichiara sempre di essere un'AI nel primo messaggio; non spacciarti per una persona").
   - Pulsante flottante: "Chatta con Sole, l'assistente AI".
+  - **Ecommerce `object.ardy-lab.it`**: widget scheda prodotto — intestazione "assistente AI di Ardy", apertura "Sono Sole, l'assistente virtuale (AI) di Ardy Lab" e regola di trasparenza in `ardy-object-system.txt`.
 
 ### 🔧 Da fare (poco lavoro)
 
@@ -92,9 +99,26 @@ generazione reel/post.
 3. **[Documentazione] Tenere questo file aggiornato** come traccia delle scelte
    di conformità (utile in caso di domande del Garante/autorità).
 
-> **Stato al 28/06/2026:** trasparenza (art. 50) **implementata e in produzione** su
-> tutti i canali. Restano solo gli adempimenti organizzativi: firmare l'Allegato A
-> (alfabetizzazione AI) e l'eventuale revisione legale del testo.
+4. **[Ecommerce — Termini & Privacy propri] DA FARE.** `object.ardy-lab.it` è
+   un'installazione WordPress **separata** dal sito principale: ha bisogno di
+   **proprie** pagine "Termini e Condizioni" e "Privacy Policy". Quelle attuali in
+   `termini-privacy-wordpress.md` sono per `ardy-lab.it` e vanno **adattate** al
+   negozio, aggiungendo: menzione dell'assistente AI Sole sulle schede prodotto
+   (già coperta lato tecnico), e le voci tipiche dell'ecommerce (vedi §4).
+
+5. **[Trasparenza recommender — quando si attiveranno i consigli] DA FARE al
+   momento giusto.** Oggi Sole parla **solo del singolo oggetto** in scheda; NON
+   consiglia ancora altri prodotti. Quando aggiungerete i **consigli di prodotti
+   correlati**, indicate in modo sintetico la logica ("suggerimenti generati
+   automaticamente in base a X — es. materiale/stile/prezzo simile"), in una riga
+   nella chat o nella pagina. Resta rischio limitato: nessun obbligo pesante, solo
+   trasparenza. (Nota: la trasparenza dei sistemi di raccomandazione è materia
+   soprattutto del **DSA**, che per un piccolo negozio ha obblighi minimi.)
+
+> **Stato al 14/07/2026:** trasparenza (art. 50) **implementata e in produzione** su
+> tutti i canali di assistenza **e sull'ecommerce** `object.ardy-lab.it`. Restano:
+> adempimenti organizzativi (firma Allegato A + revisione legale) e le **Termini &
+> Privacy dedicate del negozio** (punto 4).
 
 ### ❌ NON serve (sono obblighi solo per l'alto rischio)
 - Valutazione di conformità / marcatura CE
@@ -113,6 +137,14 @@ generazione reel/post.
   `ardy-unsubscribe.php`) e niente invii a indirizzi personali senza consenso.
   Da valutare a parte con il legale.
 - L'Informativa Privacy è già aggiornata e coerente con l'uso dell'AI: ottima base.
+- **Ecommerce `object.ardy-lab.it` (norme consumatori/GDPR, NON AI Act).** Uno
+  shop che vende a consumatori aggiunge obblighi propri, da mettere nelle sue
+  pagine legali: **diritto di recesso 14 giorni** (artt. 52 ss. Cod. Consumo),
+  **informazioni precontrattuali** (caratteristiche, prezzo totale IVA inclusa,
+  spese e tempi di spedizione, identità del venditore), **resi e garanzia legale
+  di conformità**, condizioni di **pagamento** (gateway usato) e **cookie del
+  checkout**. Il regime forfettario (no IVA) va indicato come già nei Termini
+  principali. Da rifinire col legale insieme al punto 4 della §3.
 
 ---
 
