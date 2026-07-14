@@ -7,11 +7,11 @@
 > `ardy-lab.it`, che ha le sue pagine legali).
 >
 > **Da completare prima di pubblicare** (segnaposto tra ⟦…⟧):
-> - ⟦GATEWAY DI PAGAMENTO⟧ effettivi (es. PayPal, Stripe, Satispay…).
 > - ⟦CORRIERE/SPEDIZIONIERE⟧, ⟦COSTI E TEMPI DI SPEDIZIONE⟧, ⟦AREA GEOGRAFICA⟧ servita.
-> - ⟦INDIRIZZO PER I RESI⟧ (se diverso dalla sede).
 > - Date di "ultimo aggiornamento" alla pubblicazione effettiva.
 > - Verifica del **plugin Cookie** attivo sul negozio (banner + Cookie Policy).
+>
+> Già compilati: pagamenti (Stripe, Klarna, PayPal, bonifico), indirizzo resi (= sede).
 >
 > Suggerimento: crea **tre pagine** su WordPress — "Termini e Condizioni di Vendita",
 > "Privacy Policy" e "Diritto di Recesso / Resi" — e linkale nel footer e nel checkout.
@@ -69,11 +69,19 @@ aggiungono al prezzo dei prodotti (v. §7).
 5.3 Ogni acquisto è accompagnato da regolare **documento fiscale**.
 
 ## 6. Pagamenti
-6.1 I metodi di pagamento accettati sono: ⟦GATEWAY DI PAGAMENTO — es. PayPal, carte di
-credito/debito tramite Stripe, ecc.⟧. Il pagamento è **contestuale** all'ordine, salvo diversa
-indicazione.
-6.2 I dati di pagamento sono trattati **direttamente dal prestatore di servizi di pagamento** su
-canali cifrati; Ardy Lab **non conserva** i numeri completi delle carte.
+6.1 I metodi di pagamento accettati sono:
+- **Carte di credito/debito** tramite **Stripe**;
+- **PayPal**;
+- **Klarna** (pagamento dilazionato/differito, ove disponibile);
+- **Bonifico bancario**.
+
+Per carte, PayPal e Klarna il pagamento è **contestuale** all'ordine. Per il **bonifico bancario**
+l'ordine è processato al **ricevimento dell'accredito**; il bene è riservato per il tempo indicato
+in fase di checkout, decorso il quale l'ordine può essere annullato.
+6.2 I dati di pagamento sono trattati **direttamente dal prestatore di servizi di pagamento**
+(Stripe, PayPal, Klarna) su canali cifrati; Ardy Lab **non conserva** i numeri completi delle carte.
+Scegliendo **Klarna**, il relativo servizio può effettuare **proprie verifiche** (anche di solvibilità)
+in qualità di titolare autonomo, secondo la propria informativa privacy.
 
 ## 7. Spedizione e consegna
 7.1 Le spedizioni sono effettuate tramite ⟦CORRIERE/SPEDIZIONIERE⟧ verso ⟦AREA GEOGRAFICA — es.
@@ -146,7 +154,8 @@ email: ardy.documenti@gmail.com. Per ogni richiesta sui tuoi dati puoi scrivere 
 ## 4. Strumenti e fornitori (responsabili del trattamento o titolari autonomi)
 - **Assistente virtuale (AI)**: il chatbot "Sole" elabora i messaggi tramite il servizio di
   intelligenza artificiale di **Anthropic** per generare le risposte.
-- **⟦GATEWAY DI PAGAMENTO⟧** per l'elaborazione dei pagamenti.
+- **Stripe, PayPal, Klarna** per l'elaborazione dei pagamenti (ciascuno titolare autonomo per i
+  dati di pagamento; Klarna può effettuare proprie verifiche di solvibilità per il pagamento differito).
 - **⟦CORRIERE/SPEDIZIONIERE⟧** per la consegna degli ordini.
 - **Brevo (ex Sendinblue)** per l'invio delle email (conferme ordine, comunicazioni).
 - **Aruba** (Aruba S.p.A.) per l'hosting; i server sono situati nell'Unione Europea.
@@ -158,10 +167,9 @@ corriere, autorità competenti quando previsto dalla legge, e ai fornitori di cu
 limitatamente alle finalità indicate. I dati **non sono diffusi** né ceduti a terzi per finalità proprie.
 
 ## 6. Trasferimento extra-UE
-Alcuni fornitori (es. Anthropic e l'eventuale gateway di pagamento) possono trattare dati fuori
-dall'Unione Europea, in particolare negli USA. In tali casi il trasferimento avviene sulla base di
-**garanzie adeguate** (clausole contrattuali standard della Commissione UE e/o adesione al
-Data Privacy Framework UE-USA).
+Alcuni fornitori (es. Anthropic, Stripe, PayPal) possono trattare dati fuori dall'Unione Europea,
+in particolare negli USA. In tali casi il trasferimento avviene sulla base di **garanzie adeguate**
+(clausole contrattuali standard della Commissione UE e/o adesione al Data Privacy Framework UE-USA).
 
 ## 7. Periodo di conservazione
 - Dati di ordini e fatturazione: per la durata del rapporto e poi per i **termini di legge** (di
@@ -197,14 +205,14 @@ obbligatorio) prima della scadenza dei 14 giorni.
 
 ## 2. Restituzione del bene
 Dopo aver comunicato il recesso, restituisci il bene senza ritardi ingiustificati e comunque entro
-**14 giorni** a: ⟦INDIRIZZO PER I RESI⟧. Il bene va reso **integro**, nel suo imballaggio e con gli
-accessori. Il **costo diretto della restituzione** è a carico del consumatore, salvo diversa
+**14 giorni** a: **Ardy di Michela Panella — Via James Joyce 4, 00143 Roma (RM)**. Il bene va reso
+**integro**, nel suo imballaggio e con gli accessori. Il **costo diretto della restituzione** è a carico del consumatore, salvo diversa
 indicazione.
 
 ## 3. Rimborso
 Ardy Lab rimborsa tutti i pagamenti ricevuti (incluse le spese di consegna standard) senza ritardi
 ingiustificati e comunque entro **14 giorni** dalla comunicazione del recesso, con lo stesso mezzo di
-pagamento usato per l'acquisto. Il rimborso può essere **sospeso** fino al ricevimento del bene o
+pagamento usato per l'acquisto (per il bonifico, sull'IBAN comunicato dal consumatore). Il rimborso può essere **sospeso** fino al ricevimento del bene o
 alla prova della spedizione. Il consumatore risponde della **diminuzione di valore** dei beni
 risultante da una manipolazione diversa da quella necessaria a valutarne natura e caratteristiche.
 
