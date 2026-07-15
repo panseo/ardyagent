@@ -409,6 +409,15 @@ alla prima chiamata verso `mybusinessaccountmanagement` (già enabled), e il cod
 hotel/B&B) — ma Ravi l'ha elencata tra le API "that must be enabled": abilitarla toglie al supporto
 l'appiglio "non avete seguito le istruzioni". Da verificare/abilitare anche le altre 4 mai controllate:
 **Place Actions, Notifications, Verifications, Business Profile Performance**.
+**Fatto (15/07):** Andrea ha **abilitato tutte le 8 API dell'elenco di Ravi** (le mancanti incluse). In
+attesa di propagazione, poi re-test.
+**Ipotesi ESCLUSA — verifica app OAuth / consent screen (15/07, verificata in console):** il warning giallo
+"La tua app deve essere verificata" **non c'entra col 403**. Stato pubblicazione = **"In produzione"**
+(quindi refresh token NON scadono a 7 gg, nessuna trappola modalità Testing), tipo utente Esterno, **1/100
+utenti** (ampio margine). Il warning + schermata "app non verificata" derivano solo dallo scope sensibile
+`business.manage` non approvato formalmente, ma **il tetto di 100 utenti non blocca** e per l'utente
+proprietario l'app funziona: infatti Calendar/Gmail girano e il token si rinnova. Il consenso OAuth è sano,
+non è quello il blocco. Non avviare la verifica formale (processo lungo, inutile per uso proprio).
 **Da fare (prossima sessione):** in console solo il punto 1, poi solo Google:
 1. **Abilitare tutte le API della lista di Ravi ancora spente** (Lodging + le 4 sopra), poi ri-lanciare
    `ardy-gbp-check.php`: se verde, stop (riabilitare il toggle, vedi sotto); se ancora 403 → punto 2.
