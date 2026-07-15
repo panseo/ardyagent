@@ -357,7 +357,7 @@ prima — nessun cambiamento nonostante l'API risulti enabled e le quote popolat
 sblocco possibile è il provisioning manuale lato Google, non azionabile da Cloud Console.
 **Fatto (11/07, pomeriggio):** inviato il sollecito di follow-up allo stesso thread di Ravi (dati già
 forniti il 04/07: account `ardy.documenti@gmail.com`, progetto `ardy-lab` / 532339794075).
-**Risposta Google ricevuta (~14/07, 3 giorni dopo il sollecito) — possibile causa reale trovata:** l'operatore
+**Risposta Google ricevuta (13/07, 2 giorni dopo il sollecito dell'11/07) — possibile causa reale trovata:** l'operatore
 elenca **8 API diverse** della "famiglia" Business Profile da abilitare (non solo "Google My Business
 API" v4, quella dei post — già confermata enabled). `ardy-gbp-check.php` chiama per primo un'API
 **diversa**: `mybusinessaccountmanagement.googleapis.com` (**"My Business Account Management API"**) — MAI
@@ -374,13 +374,27 @@ Business Business Information API"** risultano **già "API abilitata"** (badge v
 problema — si torna alla conclusione originale: il blocco è il **gate di allow-list/provisioning
 dell'account** lato Google, indipendente dall'enablement delle API in Cloud Console (tutte e 3 le API
 necessarie sono enabled, eppure `ardy-gbp-check.php` continua a dare 403).
+**Conferma da screenshot email (rivisto 15/07):** ricevuto lo screenshot integrale della mail di Ravi
+(datata **13/07 07:28 PM**). Contenuto = quanto già annotato: 8 API della famiglia Business Profile, con
+**"Google My Business API 4.9"** in cima che include le feature FoodMenus / Media / Reviews / LocalPosts,
+più My Business Account Management / Lodging / Place Actions / Notifications / Verifications / Business
+Information e Business Profile Performance API. **Lead principale ora più netto:** la mail dice
+testualmente di *fare login con l'email `<emailaddedtotheGoogleGroup>`* e cercare l'API nella "API
+Library" — cioè Google ha aggiunto **una specifica email a un Google Group** di accesso, e il
+provisioning dell'API privata è legato a QUELL'identità. Se l'email aggiunta al gruppo ≠
+`ardy.documenti@gmail.com` (l'account con cui operiamo e con cui `ardy-gbp-check.php` gira via OAuth), il
+403 persisterebbe anche con tutte le API enabled: staremmo bussando con l'identità sbagliata. Il
+placeholder `<emailaddedtotheGoogleGroup>` non compilato è quindi il **buco informativo chiave**, non un
+dettaglio secondario.
 **Da fare (prossima sessione):** nessuna altra leva lato Cloud Console/codice — solo attendere/sollecitare
 Google:
-1. Controllare la mail (anche SPAM) di `ardy.documenti@gmail.com` per la risposta al sollecito dell'11/07.
-2. Se continua il silenzio, nel prossimo messaggio al supporto Google far notare esplicitamente: (a) tutte
-   e 3 le API sono già enabled, (b) il loro placeholder `<emailaddedtotheGoogleGroup>` non è stato
-   compilato — chiedere conferma di quale email hanno effettivamente aggiunto al gruppo di accesso e a che
-   punto è il provisioning.
+1. **PRIORITÀ — rispondere subito a Ravi chiedendo l'email del gruppo:** il placeholder
+   `<emailaddedtotheGoogleGroup>` è il vero buco. Chiedere esplicitamente: «Quale indirizzo email avete
+   aggiunto al Google Group di accesso? Con quale account dobbiamo fare login per vedere l'API?» — perché
+   se non è `ardy.documenti@gmail.com` (l'identità dell'OAuth usato da `ardy-gbp-check.php`) il 403 resta
+   anche con tutte le API enabled. Ribadire nello stesso messaggio che (a) tutte e 3 le API usate dal
+   codice sono già enabled, (b) chiediamo a che punto è il provisioning.
+2. Controllare la mail (anche SPAM) di `ardy.documenti@gmail.com` per eventuali follow-up di Google.
 3. Ri-lanciare `ardy-gbp-check.php` periodicamente, finché non dà verde ("QUOTA SBLOCCATA").
 
 **Lato codice (già pronto, riabilitare SOLO a check verde):** il toggle Google nel pannello social
