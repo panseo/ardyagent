@@ -386,14 +386,26 @@ provisioning dell'API privata è legato a QUELL'identità. Se l'email aggiunta a
 403 persisterebbe anche con tutte le API enabled: staremmo bussando con l'identità sbagliata. Il
 placeholder `<emailaddedtotheGoogleGroup>` non compilato è quindi il **buco informativo chiave**, non un
 dettaglio secondario.
-**Da fare (prossima sessione):** nessuna altra leva lato Cloud Console/codice — solo attendere/sollecitare
-Google:
-1. **PRIORITÀ — rispondere subito a Ravi chiedendo l'email del gruppo:** il placeholder
-   `<emailaddedtotheGoogleGroup>` è il vero buco. Chiedere esplicitamente: «Quale indirizzo email avete
-   aggiunto al Google Group di accesso? Con quale account dobbiamo fare login per vedere l'API?» — perché
-   se non è `ardy.documenti@gmail.com` (l'identità dell'OAuth usato da `ardy-gbp-check.php`) il 403 resta
-   anche con tutte le API enabled. Ribadire nello stesso messaggio che (a) tutte e 3 le API usate dal
-   codice sono già enabled, (b) chiediamo a che punto è il provisioning.
+**Scoperta (15/07, ricontrollata la casella `ardy.documenti@gmail.com` via connettore Gmail):** nel thread
+del caso **[4-4300000041395]** c'è una mail di Ravi del **06/07** mai registrata in questo log:
+*«we confirmed that your project 532339794075 __has been allowlisted__, and access has been granted to
+the account ardy.documenti@gmail.com»* — quindi (a) l'email aggiunta al gruppo È `ardy.documenti@gmail.com`
+(placeholder di fatto risolto), (b) Google considera l'allowlist già fatta dal 06/07. **Contraddizione
+aperta:** il re-test dell'11/07 (15:19), 5 giorni DOPO quella conferma, dava ancora lo stesso 403 →
+o la propagazione non è mai avvenuta, o l'allowlist è registrata su qualcosa di sbagliato. È questo il
+punto da mettere davanti a Google. Due anomalie di casella notate: l'intero thread del caso è **nel
+Cestino** di Gmail (recuperarlo per non perderlo dopo 30 gg) e la mail del 13/07 (screenshot) **non è in
+questa casella** — il sollecito dell'11/07 è quindi partito da un altro indirizzo/form (verificare da
+quale, per tenere un solo filo col supporto).
+**Fatto (15/07):** creata **bozza di risposta in Gmail** (`ardy.documenti@gmail.com`, reply al thread del
+caso 4-4300000041395, in inglese, firma Michela) pronta da inviare. Contenuto: 3 API già enabled (badge
+verde), allowlist confermata da loro il 06/07 eppure 403 identico all'11/07 (prima chiamata =
+`GET mybusinessaccountmanagement.googleapis.com/v1/accounts` via OAuth di ardy.documenti), richiesta di
+confermare quale email è stata aggiunta al Google Group (placeholder non compilato) e di ri-verificare la
+propagazione dell'allowlist; nota che l'account è Gmail normale (avviso Workspace non applicabile).
+**Da fare (prossima sessione):** nessuna altra leva lato Cloud Console/codice — solo Google:
+1. **Inviare la bozza** (Andrea) dalla casella `ardy.documenti@gmail.com` — è nelle Bozze Gmail, thread
+   del caso 4-4300000041395. Prima: **ripristinare il thread dal Cestino**.
 2. Controllare la mail (anche SPAM) di `ardy.documenti@gmail.com` per eventuali follow-up di Google.
 3. Ri-lanciare `ardy-gbp-check.php` periodicamente, finché non dà verde ("QUOTA SBLOCCATA").
 
