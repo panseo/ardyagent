@@ -403,11 +403,20 @@ verde), allowlist confermata da loro il 06/07 eppure 403 identico all'11/07 (pri
 `GET mybusinessaccountmanagement.googleapis.com/v1/accounts` via OAuth di ardy.documenti), richiesta di
 confermare quale email è stata aggiunta al Google Group (placeholder non compilato) e di ri-verificare la
 propagazione dell'allowlist; nota che l'account è Gmail normale (avviso Workspace non applicabile).
-**Da fare (prossima sessione):** nessuna altra leva lato Cloud Console/codice — solo Google:
-1. **Inviare la bozza** (Andrea) dalla casella `ardy.documenti@gmail.com` — è nelle Bozze Gmail, thread
-   del caso 4-4300000041395. Prima: **ripristinare il thread dal Cestino**.
-2. Controllare la mail (anche SPAM) di `ardy.documenti@gmail.com` per eventuali follow-up di Google.
-3. Ri-lanciare `ardy-gbp-check.php` periodicamente, finché non dà verde ("QUOTA SBLOCCATA").
+**Scoperta (15/07, Andrea in console):** la **My Business Lodging API NON è abilitata** (pulsante "Abilita"
+ancora visibile). Non può essere la causa del 403 — l'enablement è per singolo servizio, il check fallisce
+alla prima chiamata verso `mybusinessaccountmanagement` (già enabled), e il codice non usa Lodging (è per
+hotel/B&B) — ma Ravi l'ha elencata tra le API "that must be enabled": abilitarla toglie al supporto
+l'appiglio "non avete seguito le istruzioni". Da verificare/abilitare anche le altre 4 mai controllate:
+**Place Actions, Notifications, Verifications, Business Profile Performance**.
+**Da fare (prossima sessione):** in console solo il punto 1, poi solo Google:
+1. **Abilitare tutte le API della lista di Ravi ancora spente** (Lodging + le 4 sopra), poi ri-lanciare
+   `ardy-gbp-check.php`: se verde, stop (riabilitare il toggle, vedi sotto); se ancora 403 → punto 2.
+2. **Inviare la bozza** (Andrea) dalla casella `ardy.documenti@gmail.com` — è nelle Bozze Gmail, thread
+   del caso 4-4300000041395. Prima: **ripristinare il thread dal Cestino** e far aggiornare la bozza con
+   "tutte le 8 API del vostro elenco sono ora enabled".
+3. Controllare la mail (anche SPAM) di `ardy.documenti@gmail.com` per eventuali follow-up di Google.
+4. Ri-lanciare `ardy-gbp-check.php` periodicamente, finché non dà verde ("QUOTA SBLOCCATA").
 
 **Lato codice (già pronto, riabilitare SOLO a check verde):** il toggle Google nel pannello social
 (`ardy-michela-app.html`, `socialDestHtml`) è stato **ri-disattivato** dopo l'esito negativo del check —
