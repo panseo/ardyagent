@@ -424,23 +424,23 @@ not have permission to get URL /v1/accounts from this server»*, `content-type: 
 Google, non l'API), progetto `532339794075`. **Chiude ogni ipotesi lato nostro:** l'enablement non era la
 causa, l'OAuth è sano, e nonostante l'allowlist confermata da Ravi il 06/07 (10 gg fa) la richiesta è
 respinta a monte. **Non è più questione di propagazione — il blocco è interamente lato Google.**
-**SECONDO THREAD di supporto (scoperto 15-16/07):** esiste un **secondo filo** col supporto GBP che **NON
-passa da `ardy.documenti@gmail.com`** (il connettore Gmail non lo vede): contiene la mail di Ravi del
-**13/07** (elenco 8 API) e quella del **15/07 17:26** *«Please share screenshots of the error, so we can
-troubleshoot the issue further»*. Michela le legge da un'altra casella. Il thread in `ardy.documenti`
-(caso **4-4300000041395**) invece si era chiuso l'08/07 (survey). **Da consolidare su un solo thread** per
-non far ripetere le stesse domande a Ravi. La bozza creata il 15/07 in `ardy.documenti` è quindi nel thread
-SBAGLIATO (superata): la risposta va data nel thread "vivo" dell'altra casella.
-**Fatto (16/07):** preparato il **testo di risposta a Ravi** (inglese, firma Michela) da incollare
-nell'altra casella + **screenshot del check del 16/07** in allegato (in italiano ma i dati chiave — HTTP
-403, URL API, corpo HTML grezzo, header, project number — sono neutri/inglese, e la mail li spiega). Testo:
-403 persiste con tutte le 8 API enabled + OAuth "In produzione" + allowlist confermata il 06/07 → chiedere
-di ri-verificare propagazione allowlist per 532339794075/ardy.documenti e confermare quale email è nel
-Google Group.
+**RETTIFICA "secondo thread" (16/07): NON esiste — è tutto UN solo thread** [4-4300000041395] dentro
+`ardy.documenti@gmail.com`. L'ipotesi di una seconda casella era sbagliata: le mail del 13 e 15/07 non si
+trovavano solo perché il thread era finito nel **Cestino** (ora ripristinato in Posta in arrivo). Verificato
+sui dettagli del messaggio: mail 15/07 15:26 = *da* googlebusinessprofile-support@google.com *a*
+`ardy.documenti@gmail.com`, oggetto Re: [4-4300000041395]. Cronologia reale del thread: 11/07 sollecito
+(SENT) → 13/07 Ravi elenca 8 API → 14/07 nostra risposta "già tutto enabled, 403 resta" (SENT) → 15/07
+10:41 nostra 2ª risposta (SENT, era la bozza generata qui) → **15/07 15:26 Ravi: «Please share screenshots
+of the error»** (ULTIMO messaggio, da riscontrare). Nessuna bozza in sospeso residua (verificato).
+**Fatto (16/07):** creata **nuova bozza in Gmail** (`ardy.documenti`, reply all'ultimo msg di Ravi
+15/07 15:26, inglese, firma Michela) pronta: descrive lo screenshot del check (GET
+`mybusinessaccountmanagement/v1/accounts` → 403 HTML "Forbidden / your client does not have permission",
+project 532339794075), ricorda che il 16/07 il 403 persiste con tutte le 8 API enabled e allowlist
+confermata il 06/07, chiede di ri-verificare la propagazione dell'allowlist e quale email è nel Google
+Group. **Manca solo: Andrea/Michela allega lo screenshot del check del 16/07 e invia.**
 **Da fare (prossima sessione):** solo Google:
-1. **Inviare la risposta + screenshot a Ravi** dal thread "vivo" (l'altra casella, non ardy.documenti).
-2. Consolidare su un solo thread; ignorare/eliminare la bozza vecchia in `ardy.documenti`.
-3. Ri-lanciare `ardy-gbp-check.php` periodicamente, finché non dà verde ("QUOTA SBLOCCATA").
+1. **Allegare lo screenshot del check + inviare la bozza** (thread 4-4300000041395 in `ardy.documenti`).
+2. Ri-lanciare `ardy-gbp-check.php` periodicamente, finché non dà verde ("QUOTA SBLOCCATA").
 
 **Lato codice (già pronto, riabilitare SOLO a check verde):** il toggle Google nel pannello social
 (`ardy-michela-app.html`, `socialDestHtml`) è stato **ri-disattivato** dopo l'esito negativo del check —
