@@ -418,14 +418,29 @@ utenti** (ampio margine). Il warning + schermata "app non verificata" derivano s
 `business.manage` non approvato formalmente, ma **il tetto di 100 utenti non blocca** e per l'utente
 proprietario l'app funziona: infatti Calendar/Gmail girano e il token si rinnova. Il consenso OAuth è sano,
 non è quello il blocco. Non avviare la verifica formale (processo lungo, inutile per uso proprio).
-**Da fare (prossima sessione):** in console solo il punto 1, poi solo Google:
-1. **Abilitare tutte le API della lista di Ravi ancora spente** (Lodging + le 4 sopra), poi ri-lanciare
-   `ardy-gbp-check.php`: se verde, stop (riabilitare il toggle, vedi sotto); se ancora 403 → punto 2.
-2. **Inviare la bozza** (Andrea) dalla casella `ardy.documenti@gmail.com` — è nelle Bozze Gmail, thread
-   del caso 4-4300000041395. Prima: **ripristinare il thread dal Cestino** e far aggiornare la bozza con
-   "tutte le 8 API del vostro elenco sono ora enabled".
-3. Controllare la mail (anche SPAM) di `ardy.documenti@gmail.com` per eventuali follow-up di Google.
-4. Ri-lanciare `ardy-gbp-check.php` periodicamente, finché non dà verde ("QUOTA SBLOCCATA").
+**RE-TEST DECISIVO (16/07 05:04):** rilanciato `ardy-gbp-check.php` DOPO aver abilitato tutte e 8 le API →
+**403 IDENTICO**. Corpo grezzo confermato: `<title>Error 403 (Forbidden)!!1</title>`, *«Your client does
+not have permission to get URL /v1/accounts from this server»*, `content-type: text/html` (front-end
+Google, non l'API), progetto `532339794075`. **Chiude ogni ipotesi lato nostro:** l'enablement non era la
+causa, l'OAuth è sano, e nonostante l'allowlist confermata da Ravi il 06/07 (10 gg fa) la richiesta è
+respinta a monte. **Non è più questione di propagazione — il blocco è interamente lato Google.**
+**SECONDO THREAD di supporto (scoperto 15-16/07):** esiste un **secondo filo** col supporto GBP che **NON
+passa da `ardy.documenti@gmail.com`** (il connettore Gmail non lo vede): contiene la mail di Ravi del
+**13/07** (elenco 8 API) e quella del **15/07 17:26** *«Please share screenshots of the error, so we can
+troubleshoot the issue further»*. Michela le legge da un'altra casella. Il thread in `ardy.documenti`
+(caso **4-4300000041395**) invece si era chiuso l'08/07 (survey). **Da consolidare su un solo thread** per
+non far ripetere le stesse domande a Ravi. La bozza creata il 15/07 in `ardy.documenti` è quindi nel thread
+SBAGLIATO (superata): la risposta va data nel thread "vivo" dell'altra casella.
+**Fatto (16/07):** preparato il **testo di risposta a Ravi** (inglese, firma Michela) da incollare
+nell'altra casella + **screenshot del check del 16/07** in allegato (in italiano ma i dati chiave — HTTP
+403, URL API, corpo HTML grezzo, header, project number — sono neutri/inglese, e la mail li spiega). Testo:
+403 persiste con tutte le 8 API enabled + OAuth "In produzione" + allowlist confermata il 06/07 → chiedere
+di ri-verificare propagazione allowlist per 532339794075/ardy.documenti e confermare quale email è nel
+Google Group.
+**Da fare (prossima sessione):** solo Google:
+1. **Inviare la risposta + screenshot a Ravi** dal thread "vivo" (l'altra casella, non ardy.documenti).
+2. Consolidare su un solo thread; ignorare/eliminare la bozza vecchia in `ardy.documenti`.
+3. Ri-lanciare `ardy-gbp-check.php` periodicamente, finché non dà verde ("QUOTA SBLOCCATA").
 
 **Lato codice (già pronto, riabilitare SOLO a check verde):** il toggle Google nel pannello social
 (`ardy-michela-app.html`, `socialDestHtml`) è stato **ri-disattivato** dopo l'esito negativo del check —
