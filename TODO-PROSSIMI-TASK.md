@@ -476,8 +476,13 @@ nascosto, nessun accesso non autorizzato. Posta ripristinabile dal Cestino (30 g
 **INVIATO ✅ (17/07):** risposta a Ravi spedita (thread 4-4300000041395) — conferma OAuth utente + refresh
 token, stesso account per progetto Cloud e scheda business, 8 API enabled, allowlist confermata il 06/07;
 chiede di escalare la verifica dell'allowlist sul backend. **Palla a Google.**
+**Pronta al cassetto (17/07):** email di **escalation L2** in `ardy-gbp-escalation-L2.md` — da inviare SOLO
+se Ravi rimbalza di nuovo con un altro copione (chiede cose già fornite / non affronta la natura HTML del
+403). Chiede escalation a engineering + verifica backend dell'allowlist. Piano B nel file: postare sul forum
+ufficiale (`google-my-business-api`) per scavalcare il supporto email.
 **Da fare (prossima sessione):** solo attendere Google:
-1. Controllare la risposta di Ravi al follow-up del 17/07 (mail `ardy.documenti`).
+1. Controllare la risposta di Ravi al follow-up del 17/07 (mail `ardy.documenti`). Se è un altro rimbalzo →
+   usare la bozza L2 pronta in `ardy-gbp-escalation-L2.md`.
 2. Ri-lanciare `ardy-gbp-check.php` periodicamente, finché non dà verde ("QUOTA SBLOCCATA") → poi
    riabilitare il toggle Google (vedi sotto) e pubblicare una fase di test.
 
