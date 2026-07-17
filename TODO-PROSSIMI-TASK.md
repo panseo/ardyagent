@@ -469,11 +469,17 @@ il colpevole è FUORI dal codice. Cercare (per probabilità): (1) **filtro Gmail
 (Gmail → ⚙ → Filtri); (2) **workflow n8n NON nel repo** con nodo Gmail Delete/Trash sul server
 n8n.ardy-lab.it (il lead-monitor è chiamato da n8n ogni 60 min, ma altri workflow lì non sono versionati);
 (3) app di terze parti (myaccount.google.com/permissions); (4) sicurezza/accessi (myaccount.google.com/security).
-**Da fare (prossima sessione):** solo Google:
-1. **Rivedere e inviare la bozza** di risposta a Ravi (thread 4-4300000041395 in `ardy.documenti`).
-2. Verificare che ardy.documenti gestisca la scheda su business.google.com (vedi sopra).
-3. Sistemare la falla del Cestino (filtro/automazione) — indipendente dal task GBP ma urgente.
-4. Ri-lanciare `ardy-gbp-check.php` periodicamente, finché non dà verde ("QUOTA SBLOCCATA").
+**RISOLTO — mistero Cestino (17/07):** NON era un filtro né un'automazione né il codice: **Michela aveva
+cestinato la posta manualmente per errore** (cancellazione di massa accidentale). Coerente con l'indagine
+(codice pulito → restava solo l'ipotesi cancellazione a mano). Nessun filtro impazzito, nessun workflow n8n
+nascosto, nessun accesso non autorizzato. Posta ripristinabile dal Cestino (30 gg).
+**INVIATO ✅ (17/07):** risposta a Ravi spedita (thread 4-4300000041395) — conferma OAuth utente + refresh
+token, stesso account per progetto Cloud e scheda business, 8 API enabled, allowlist confermata il 06/07;
+chiede di escalare la verifica dell'allowlist sul backend. **Palla a Google.**
+**Da fare (prossima sessione):** solo attendere Google:
+1. Controllare la risposta di Ravi al follow-up del 17/07 (mail `ardy.documenti`).
+2. Ri-lanciare `ardy-gbp-check.php` periodicamente, finché non dà verde ("QUOTA SBLOCCATA") → poi
+   riabilitare il toggle Google (vedi sotto) e pubblicare una fase di test.
 
 **Lato codice (già pronto, riabilitare SOLO a check verde):** il toggle Google nel pannello social
 (`ardy-michela-app.html`, `socialDestHtml`) è stato **ri-disattivato** dopo l'esito negativo del check —
