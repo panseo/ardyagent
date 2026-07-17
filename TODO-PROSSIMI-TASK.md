@@ -449,9 +449,12 @@ che gestisce la scheda business + refresh token». **Non pertinente al nostro ca
 refresh token (no service account, stesso token che fa girare Calendar/Gmail), spiega che un 403-HTML non è
 un errore di token (sarebbe 401/JSON) ma un gate di progetto, e chiede di **escalare + ri-verificare la
 propagazione dell'allowlist per 532339794075**. Pronta da rivedere e inviare (nessun allegato).
-**DA VERIFICARE (nuovo, dall'hint di Ravi):** l'account `ardy.documenti@gmail.com` **gestisce davvero la
-scheda Google "Ardy di Michela Panella"?** Controllare su business.google.com loggati come ardy.documenti.
-NON causa questo 403 (che è di progetto) ma sarebbe il muro successivo appena l'allowlist si sblocca.
+**VERIFICATO ✅ (17/07):** l'account `ardy.documenti@gmail.com` **gestisce la scheda Google "Ardy di Michela
+Panella"** (4,7★, 23 recensioni, Via Joyce 4 Roma) — schermata "La tua attività su Google" + badge *"Il
+profilo di questa attività è gestito da te"*, loggati come ardy.documenti. Quindi NESSUN disallineamento di
+identità: lo stesso account possiede il progetto Cloud 532339794075 **e** gestisce la scheda. Il "muro
+successivo" temuto non esiste → l'unica spiegazione residua del 403-HTML è l'allowlist non propagata lato
+Google. (Frase aggiunta alla bozza di risposta a Ravi per blindare l'argomento.)
 **⚠️ FUORI-TEMA ma serio (scoperto 16-17/07): quasi tutta la posta di `ardy.documenti` finisce nel
 Cestino.** Posta in arrivo ultimi 8 gg = 1 sola mail; ~200 nel Cestino (incl. il thread Google, che per
 questo va ripristinato a mano ogni volta). Il connettore Gmail NON può leggere/gestire filtri, sicurezza,
