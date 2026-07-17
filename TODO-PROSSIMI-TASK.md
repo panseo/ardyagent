@@ -478,8 +478,11 @@ token, stesso account per progetto Cloud e scheda business, 8 API enabled, allow
 chiede di escalare la verifica dell'allowlist sul backend. **Palla a Google.**
 **Pronta al cassetto (17/07):** email di **escalation L2** in `ardy-gbp-escalation-L2.md` — da inviare SOLO
 se Ravi rimbalza di nuovo con un altro copione (chiede cose già fornite / non affronta la natura HTML del
-403). Chiede escalation a engineering + verifica backend dell'allowlist. Piano B nel file: postare sul forum
-ufficiale (`google-my-business-api`) per scavalcare il supporto email.
+403). Chiede escalation a engineering + verifica backend dell'allowlist.
+**PIANO B — da fare SUBITO in parallelo (17/07):** post pubblico pronto in `ardy-gbp-planB-forum.md` per
+attaccare il blocco da un canale dove rispondono i Googler del backend, scavalcando il supporto L1. Dove:
+Google Issue Tracker (componente "Business Profile APIs") + Stack Overflow tag `google-my-business-api`.
+Privacy: pubblicare project number 532339794075 sì, Gmail/ID caso NO (fornire in privato). Da postare Andrea.
 **Da fare (prossima sessione):** solo attendere Google:
 1. Controllare la risposta di Ravi al follow-up del 17/07 (mail `ardy.documenti`). Se è un altro rimbalzo →
    usare la bozza L2 pronta in `ardy-gbp-escalation-L2.md`.
