@@ -438,9 +438,32 @@ of the error»** (ULTIMO messaggio, da riscontrare). Nessuna bozza in sospeso re
 project 532339794075), ricorda che il 16/07 il 403 persiste con tutte le 8 API enabled e allowlist
 confermata il 06/07, chiede di ri-verificare la propagazione dell'allowlist e quale email è nel Google
 Group. **Manca solo: Andrea/Michela allega lo screenshot del check del 16/07 e invia.**
+**Scambio 16/07 (inviato + risposte Ravi):** inviata risposta con screenshot — prima **in italiano**
+(05:15), Ravi ha chiesto di tradurre l'errore in inglese (08:44), re-inviata **in inglese** con screenshot
+(10:21). **Ravi ha ribattuto (16/07 19:07) con una risposta-fotocopia sull'OAuth:** «ogni richiesta deve
+avere un token OAuth 2.0; service account o token generati da terzi non supportati; fai OAuth con l'account
+che gestisce la scheda business + refresh token». **Non pertinente al nostro caso:** usiamo GIÀ OAuth utente
++ refresh token (no service account), e il 403 è **HTML front-end** (non 401 né JSON PERMISSION_DENIED) →
+è gate di PROGETTO/allowlist, non di token. Ravi sta rispondendo col copione senza guardare l'evidenza.
+**Fatto (16/07):** creata **nuova bozza** (reply al msg OAuth di Ravi, inglese) che: conferma OAuth utente +
+refresh token (no service account, stesso token che fa girare Calendar/Gmail), spiega che un 403-HTML non è
+un errore di token (sarebbe 401/JSON) ma un gate di progetto, e chiede di **escalare + ri-verificare la
+propagazione dell'allowlist per 532339794075**. Pronta da rivedere e inviare (nessun allegato).
+**DA VERIFICARE (nuovo, dall'hint di Ravi):** l'account `ardy.documenti@gmail.com` **gestisce davvero la
+scheda Google "Ardy di Michela Panella"?** Controllare su business.google.com loggati come ardy.documenti.
+NON causa questo 403 (che è di progetto) ma sarebbe il muro successivo appena l'allowlist si sblocca.
+**⚠️ FUORI-TEMA ma serio (scoperto 16-17/07): quasi tutta la posta di `ardy.documenti` finisce nel
+Cestino.** Posta in arrivo ultimi 8 gg = 1 sola mail; ~200 nel Cestino (incl. il thread Google, che per
+questo va ripristinato a mano ogni volta). Il connettore Gmail NON può leggere/gestire filtri, sicurezza,
+app autorizzate (solo UI web). **Sospetto:** un filtro con azione "Eliminala" o un'automazione. Indizio:
+esiste un'etichetta utente **`lead-processato`** (probabile n8n/script) — verificare se quell'automazione
+oltre a etichettare **archivia/cestina**. Azioni per Andrea/Michela: Gmail → Filtri (cercare "Eliminala"),
+myaccount.google.com/security (accessi/dispositivi), myaccount.google.com/permissions (app di terze parti).
 **Da fare (prossima sessione):** solo Google:
-1. **Allegare lo screenshot del check + inviare la bozza** (thread 4-4300000041395 in `ardy.documenti`).
-2. Ri-lanciare `ardy-gbp-check.php` periodicamente, finché non dà verde ("QUOTA SBLOCCATA").
+1. **Rivedere e inviare la bozza** di risposta a Ravi (thread 4-4300000041395 in `ardy.documenti`).
+2. Verificare che ardy.documenti gestisca la scheda su business.google.com (vedi sopra).
+3. Sistemare la falla del Cestino (filtro/automazione) — indipendente dal task GBP ma urgente.
+4. Ri-lanciare `ardy-gbp-check.php` periodicamente, finché non dà verde ("QUOTA SBLOCCATA").
 
 **Lato codice (già pronto, riabilitare SOLO a check verde):** il toggle Google nel pannello social
 (`ardy-michela-app.html`, `socialDestHtml`) è stato **ri-disattivato** dopo l'esito negativo del check —
