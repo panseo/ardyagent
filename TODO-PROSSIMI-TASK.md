@@ -458,10 +458,17 @@ Google. (Frase aggiunta alla bozza di risposta a Ravi per blindare l'argomento.)
 **⚠️ FUORI-TEMA ma serio (scoperto 16-17/07): quasi tutta la posta di `ardy.documenti` finisce nel
 Cestino.** Posta in arrivo ultimi 8 gg = 1 sola mail; ~200 nel Cestino (incl. il thread Google, che per
 questo va ripristinato a mano ogni volta). Il connettore Gmail NON può leggere/gestire filtri, sicurezza,
-app autorizzate (solo UI web). **Sospetto:** un filtro con azione "Eliminala" o un'automazione. Indizio:
-esiste un'etichetta utente **`lead-processato`** (probabile n8n/script) — verificare se quell'automazione
-oltre a etichettare **archivia/cestina**. Azioni per Andrea/Michela: Gmail → Filtri (cercare "Eliminala"),
-myaccount.google.com/security (accessi/dispositivi), myaccount.google.com/permissions (app di terze parti).
+app autorizzate (solo UI web). **Sospetto:** un filtro con azione "Eliminala" o un'automazione.
+**INDAGINE CODICE (17/07): il repo NON cestina la posta — scagionato.** Verificato tutto: l'UNICO file che
+tocca i messaggi Gmail è `ardy-lead-monitor.php`, che in `gmail_mark_processed()` fa solo
+`addLabelIds:[lead-processato]` + `removeLabelIds:[UNREAD]` — **nessun TRASH, nessun rimozione INBOX**, e
+tocca solo i 5 domini portali (ProntoPro/Homedeal/Cronoshare/Instapro/Habitissimo). `ardy-archivia-persi.php`
+archivia lead persi **nel DB**, non tocca Gmail. I workflow n8n nel repo (solo WhatsApp) non hanno nodi
+Gmail. Nessun'altra chiamata all'API Gmail nel repo. → L'etichetta `lead-processato` era una falsa pista;
+il colpevole è FUORI dal codice. Cercare (per probabilità): (1) **filtro Gmail con azione "Eliminala"**
+(Gmail → ⚙ → Filtri); (2) **workflow n8n NON nel repo** con nodo Gmail Delete/Trash sul server
+n8n.ardy-lab.it (il lead-monitor è chiamato da n8n ogni 60 min, ma altri workflow lì non sono versionati);
+(3) app di terze parti (myaccount.google.com/permissions); (4) sicurezza/accessi (myaccount.google.com/security).
 **Da fare (prossima sessione):** solo Google:
 1. **Rivedere e inviare la bozza** di risposta a Ravi (thread 4-4300000041395 in `ardy.documenti`).
 2. Verificare che ardy.documenti gestisca la scheda su business.google.com (vedi sopra).
