@@ -26,6 +26,15 @@ davvero l'allowlist — scavalcando il supporto di primo livello.
 
 ---
 
+## Stato (17/07)
+- **Stack Overflow: POSTATA** → `stackoverflow.com/staging-ground/79981674` (in Staging Ground,
+  revisione entro 24h poi pubblica automaticamente; URL pubblico sarà
+  `stackoverflow.com/questions/79981674`). ⚠️ Verificare che il testo salvato sia in inglese e dica
+  `GET` (Chrome traduceva "GET"→"SCARICA" solo in visualizzazione).
+- Issue Tracker: canale morto (read-only + nessuna issue esistente da stellare).
+- Reddit: opzione peer-experience non ancora usata (r/GoogleBusinessProfile, r/GoogleMyBusiness) —
+  utile solo per esperienza di altri, non per fix ufficiale. Testo in stile "storia + domanda diretta".
+
 ## Titolo
 
 Business Profile API returns HTTP 403 as text/html ("does not have permission to get URL /v1/accounts") on an allowlisted project
