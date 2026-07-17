@@ -6,11 +6,16 @@ davvero l'allowlist — scavalcando il supporto di primo livello.
 
 ## Dove postare (in ordine di efficacia)
 
-1. **Google Issue Tracker** — `issuetracker.google.com`
-   Cercare il componente **"Business Profile APIs"** (ex "Google My Business API") e
-   aprire una nuova issue tipo *Bug*. È il canale dove i Googler triageano il backend.
-2. **Stack Overflow** — tag **`google-my-business-api`** (+ `oauth-2.0`, `google-api`).
-   Buono per visibilità; a volte risponde staff Google. Usare lo stesso testo accorciato.
+1. **Stack Overflow** — tag **`google-my-business-api`** + `google-api` + `oauth-2.0`.
+   → **CANALE PRIMARIO.** Ask Question, incollare il corpo qui sotto. Serve login (Google).
+2. **Google Issue Tracker** — `issuetracker.google.com`, componente **585921**
+   ("Public Trackers > Google Business Profile APIs").
+   ⚠️ **VERIFICATO 17/07: componente in SOLA LETTURA** — "You do not have permission to
+   create issues in this component". NON si possono aprire issue nuove da esterni.
+   Uso alternativo: **cercare** una issue esistente sul 403/allowlist
+   (ricerca `component:585921 403 permission` o `component:585921 allowlist`), **stellarla**
+   ⭐ (le stelle alzano la priorità lato Google) ed eventualmente commentare "me too" col
+   solo project number 532339794075.
 
 ## Regole privacy (post PUBBLICO)
 
