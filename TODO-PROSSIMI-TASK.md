@@ -357,7 +357,7 @@ prima — nessun cambiamento nonostante l'API risulti enabled e le quote popolat
 sblocco possibile è il provisioning manuale lato Google, non azionabile da Cloud Console.
 **Fatto (11/07, pomeriggio):** inviato il sollecito di follow-up allo stesso thread di Ravi (dati già
 forniti il 04/07: account `ardy.documenti@gmail.com`, progetto `ardy-lab` / 532339794075).
-**Risposta Google ricevuta (~14/07, 3 giorni dopo il sollecito) — possibile causa reale trovata:** l'operatore
+**Risposta Google ricevuta (13/07, 2 giorni dopo il sollecito dell'11/07) — possibile causa reale trovata:** l'operatore
 elenca **8 API diverse** della "famiglia" Business Profile da abilitare (non solo "Google My Business
 API" v4, quella dei post — già confermata enabled). `ardy-gbp-check.php` chiama per primo un'API
 **diversa**: `mybusinessaccountmanagement.googleapis.com` (**"My Business Account Management API"**) — MAI
@@ -374,14 +374,120 @@ Business Business Information API"** risultano **già "API abilitata"** (badge v
 problema — si torna alla conclusione originale: il blocco è il **gate di allow-list/provisioning
 dell'account** lato Google, indipendente dall'enablement delle API in Cloud Console (tutte e 3 le API
 necessarie sono enabled, eppure `ardy-gbp-check.php` continua a dare 403).
-**Da fare (prossima sessione):** nessuna altra leva lato Cloud Console/codice — solo attendere/sollecitare
-Google:
-1. Controllare la mail (anche SPAM) di `ardy.documenti@gmail.com` per la risposta al sollecito dell'11/07.
-2. Se continua il silenzio, nel prossimo messaggio al supporto Google far notare esplicitamente: (a) tutte
-   e 3 le API sono già enabled, (b) il loro placeholder `<emailaddedtotheGoogleGroup>` non è stato
-   compilato — chiedere conferma di quale email hanno effettivamente aggiunto al gruppo di accesso e a che
-   punto è il provisioning.
-3. Ri-lanciare `ardy-gbp-check.php` periodicamente, finché non dà verde ("QUOTA SBLOCCATA").
+**Conferma da screenshot email (rivisto 15/07):** ricevuto lo screenshot integrale della mail di Ravi
+(datata **13/07 07:28 PM**). Contenuto = quanto già annotato: 8 API della famiglia Business Profile, con
+**"Google My Business API 4.9"** in cima che include le feature FoodMenus / Media / Reviews / LocalPosts,
+più My Business Account Management / Lodging / Place Actions / Notifications / Verifications / Business
+Information e Business Profile Performance API. **Lead principale ora più netto:** la mail dice
+testualmente di *fare login con l'email `<emailaddedtotheGoogleGroup>`* e cercare l'API nella "API
+Library" — cioè Google ha aggiunto **una specifica email a un Google Group** di accesso, e il
+provisioning dell'API privata è legato a QUELL'identità. Se l'email aggiunta al gruppo ≠
+`ardy.documenti@gmail.com` (l'account con cui operiamo e con cui `ardy-gbp-check.php` gira via OAuth), il
+403 persisterebbe anche con tutte le API enabled: staremmo bussando con l'identità sbagliata. Il
+placeholder `<emailaddedtotheGoogleGroup>` non compilato è quindi il **buco informativo chiave**, non un
+dettaglio secondario.
+**Scoperta (15/07, ricontrollata la casella `ardy.documenti@gmail.com` via connettore Gmail):** nel thread
+del caso **[4-4300000041395]** c'è una mail di Ravi del **06/07** mai registrata in questo log:
+*«we confirmed that your project 532339794075 __has been allowlisted__, and access has been granted to
+the account ardy.documenti@gmail.com»* — quindi (a) l'email aggiunta al gruppo È `ardy.documenti@gmail.com`
+(placeholder di fatto risolto), (b) Google considera l'allowlist già fatta dal 06/07. **Contraddizione
+aperta:** il re-test dell'11/07 (15:19), 5 giorni DOPO quella conferma, dava ancora lo stesso 403 →
+o la propagazione non è mai avvenuta, o l'allowlist è registrata su qualcosa di sbagliato. È questo il
+punto da mettere davanti a Google. Due anomalie di casella notate: l'intero thread del caso è **nel
+Cestino** di Gmail (recuperarlo per non perderlo dopo 30 gg) e la mail del 13/07 (screenshot) **non è in
+questa casella** — il sollecito dell'11/07 è quindi partito da un altro indirizzo/form (verificare da
+quale, per tenere un solo filo col supporto).
+**Fatto (15/07):** creata **bozza di risposta in Gmail** (`ardy.documenti@gmail.com`, reply al thread del
+caso 4-4300000041395, in inglese, firma Michela) pronta da inviare. Contenuto: 3 API già enabled (badge
+verde), allowlist confermata da loro il 06/07 eppure 403 identico all'11/07 (prima chiamata =
+`GET mybusinessaccountmanagement.googleapis.com/v1/accounts` via OAuth di ardy.documenti), richiesta di
+confermare quale email è stata aggiunta al Google Group (placeholder non compilato) e di ri-verificare la
+propagazione dell'allowlist; nota che l'account è Gmail normale (avviso Workspace non applicabile).
+**Scoperta (15/07, Andrea in console):** la **My Business Lodging API NON è abilitata** (pulsante "Abilita"
+ancora visibile). Non può essere la causa del 403 — l'enablement è per singolo servizio, il check fallisce
+alla prima chiamata verso `mybusinessaccountmanagement` (già enabled), e il codice non usa Lodging (è per
+hotel/B&B) — ma Ravi l'ha elencata tra le API "that must be enabled": abilitarla toglie al supporto
+l'appiglio "non avete seguito le istruzioni". Da verificare/abilitare anche le altre 4 mai controllate:
+**Place Actions, Notifications, Verifications, Business Profile Performance**.
+**Fatto (15/07):** Andrea ha **abilitato tutte le 8 API dell'elenco di Ravi** (le mancanti incluse). In
+attesa di propagazione, poi re-test.
+**Ipotesi ESCLUSA — verifica app OAuth / consent screen (15/07, verificata in console):** il warning giallo
+"La tua app deve essere verificata" **non c'entra col 403**. Stato pubblicazione = **"In produzione"**
+(quindi refresh token NON scadono a 7 gg, nessuna trappola modalità Testing), tipo utente Esterno, **1/100
+utenti** (ampio margine). Il warning + schermata "app non verificata" derivano solo dallo scope sensibile
+`business.manage` non approvato formalmente, ma **il tetto di 100 utenti non blocca** e per l'utente
+proprietario l'app funziona: infatti Calendar/Gmail girano e il token si rinnova. Il consenso OAuth è sano,
+non è quello il blocco. Non avviare la verifica formale (processo lungo, inutile per uso proprio).
+**RE-TEST DECISIVO (16/07 05:04):** rilanciato `ardy-gbp-check.php` DOPO aver abilitato tutte e 8 le API →
+**403 IDENTICO**. Corpo grezzo confermato: `<title>Error 403 (Forbidden)!!1</title>`, *«Your client does
+not have permission to get URL /v1/accounts from this server»*, `content-type: text/html` (front-end
+Google, non l'API), progetto `532339794075`. **Chiude ogni ipotesi lato nostro:** l'enablement non era la
+causa, l'OAuth è sano, e nonostante l'allowlist confermata da Ravi il 06/07 (10 gg fa) la richiesta è
+respinta a monte. **Non è più questione di propagazione — il blocco è interamente lato Google.**
+**RETTIFICA "secondo thread" (16/07): NON esiste — è tutto UN solo thread** [4-4300000041395] dentro
+`ardy.documenti@gmail.com`. L'ipotesi di una seconda casella era sbagliata: le mail del 13 e 15/07 non si
+trovavano solo perché il thread era finito nel **Cestino** (ora ripristinato in Posta in arrivo). Verificato
+sui dettagli del messaggio: mail 15/07 15:26 = *da* googlebusinessprofile-support@google.com *a*
+`ardy.documenti@gmail.com`, oggetto Re: [4-4300000041395]. Cronologia reale del thread: 11/07 sollecito
+(SENT) → 13/07 Ravi elenca 8 API → 14/07 nostra risposta "già tutto enabled, 403 resta" (SENT) → 15/07
+10:41 nostra 2ª risposta (SENT, era la bozza generata qui) → **15/07 15:26 Ravi: «Please share screenshots
+of the error»** (ULTIMO messaggio, da riscontrare). Nessuna bozza in sospeso residua (verificato).
+**Fatto (16/07):** creata **nuova bozza in Gmail** (`ardy.documenti`, reply all'ultimo msg di Ravi
+15/07 15:26, inglese, firma Michela) pronta: descrive lo screenshot del check (GET
+`mybusinessaccountmanagement/v1/accounts` → 403 HTML "Forbidden / your client does not have permission",
+project 532339794075), ricorda che il 16/07 il 403 persiste con tutte le 8 API enabled e allowlist
+confermata il 06/07, chiede di ri-verificare la propagazione dell'allowlist e quale email è nel Google
+Group. **Manca solo: Andrea/Michela allega lo screenshot del check del 16/07 e invia.**
+**Scambio 16/07 (inviato + risposte Ravi):** inviata risposta con screenshot — prima **in italiano**
+(05:15), Ravi ha chiesto di tradurre l'errore in inglese (08:44), re-inviata **in inglese** con screenshot
+(10:21). **Ravi ha ribattuto (16/07 19:07) con una risposta-fotocopia sull'OAuth:** «ogni richiesta deve
+avere un token OAuth 2.0; service account o token generati da terzi non supportati; fai OAuth con l'account
+che gestisce la scheda business + refresh token». **Non pertinente al nostro caso:** usiamo GIÀ OAuth utente
++ refresh token (no service account), e il 403 è **HTML front-end** (non 401 né JSON PERMISSION_DENIED) →
+è gate di PROGETTO/allowlist, non di token. Ravi sta rispondendo col copione senza guardare l'evidenza.
+**Fatto (16/07):** creata **nuova bozza** (reply al msg OAuth di Ravi, inglese) che: conferma OAuth utente +
+refresh token (no service account, stesso token che fa girare Calendar/Gmail), spiega che un 403-HTML non è
+un errore di token (sarebbe 401/JSON) ma un gate di progetto, e chiede di **escalare + ri-verificare la
+propagazione dell'allowlist per 532339794075**. Pronta da rivedere e inviare (nessun allegato).
+**VERIFICATO ✅ (17/07):** l'account `ardy.documenti@gmail.com` **gestisce la scheda Google "Ardy di Michela
+Panella"** (4,7★, 23 recensioni, Via Joyce 4 Roma) — schermata "La tua attività su Google" + badge *"Il
+profilo di questa attività è gestito da te"*, loggati come ardy.documenti. Quindi NESSUN disallineamento di
+identità: lo stesso account possiede il progetto Cloud 532339794075 **e** gestisce la scheda. Il "muro
+successivo" temuto non esiste → l'unica spiegazione residua del 403-HTML è l'allowlist non propagata lato
+Google. (Frase aggiunta alla bozza di risposta a Ravi per blindare l'argomento.)
+**⚠️ FUORI-TEMA ma serio (scoperto 16-17/07): quasi tutta la posta di `ardy.documenti` finisce nel
+Cestino.** Posta in arrivo ultimi 8 gg = 1 sola mail; ~200 nel Cestino (incl. il thread Google, che per
+questo va ripristinato a mano ogni volta). Il connettore Gmail NON può leggere/gestire filtri, sicurezza,
+app autorizzate (solo UI web). **Sospetto:** un filtro con azione "Eliminala" o un'automazione.
+**INDAGINE CODICE (17/07): il repo NON cestina la posta — scagionato.** Verificato tutto: l'UNICO file che
+tocca i messaggi Gmail è `ardy-lead-monitor.php`, che in `gmail_mark_processed()` fa solo
+`addLabelIds:[lead-processato]` + `removeLabelIds:[UNREAD]` — **nessun TRASH, nessun rimozione INBOX**, e
+tocca solo i 5 domini portali (ProntoPro/Homedeal/Cronoshare/Instapro/Habitissimo). `ardy-archivia-persi.php`
+archivia lead persi **nel DB**, non tocca Gmail. I workflow n8n nel repo (solo WhatsApp) non hanno nodi
+Gmail. Nessun'altra chiamata all'API Gmail nel repo. → L'etichetta `lead-processato` era una falsa pista;
+il colpevole è FUORI dal codice. Cercare (per probabilità): (1) **filtro Gmail con azione "Eliminala"**
+(Gmail → ⚙ → Filtri); (2) **workflow n8n NON nel repo** con nodo Gmail Delete/Trash sul server
+n8n.ardy-lab.it (il lead-monitor è chiamato da n8n ogni 60 min, ma altri workflow lì non sono versionati);
+(3) app di terze parti (myaccount.google.com/permissions); (4) sicurezza/accessi (myaccount.google.com/security).
+**RISOLTO — mistero Cestino (17/07):** NON era un filtro né un'automazione né il codice: **Michela aveva
+cestinato la posta manualmente per errore** (cancellazione di massa accidentale). Coerente con l'indagine
+(codice pulito → restava solo l'ipotesi cancellazione a mano). Nessun filtro impazzito, nessun workflow n8n
+nascosto, nessun accesso non autorizzato. Posta ripristinabile dal Cestino (30 gg).
+**INVIATO ✅ (17/07):** risposta a Ravi spedita (thread 4-4300000041395) — conferma OAuth utente + refresh
+token, stesso account per progetto Cloud e scheda business, 8 API enabled, allowlist confermata il 06/07;
+chiede di escalare la verifica dell'allowlist sul backend. **Palla a Google.**
+**Pronta al cassetto (17/07):** email di **escalation L2** in `ardy-gbp-escalation-L2.md` — da inviare SOLO
+se Ravi rimbalza di nuovo con un altro copione (chiede cose già fornite / non affronta la natura HTML del
+403). Chiede escalation a engineering + verifica backend dell'allowlist.
+**PIANO B — da fare SUBITO in parallelo (17/07):** post pubblico pronto in `ardy-gbp-planB-forum.md` per
+attaccare il blocco da un canale dove rispondono i Googler del backend, scavalcando il supporto L1. Dove:
+Google Issue Tracker (componente "Business Profile APIs") + Stack Overflow tag `google-my-business-api`.
+Privacy: pubblicare project number 532339794075 sì, Gmail/ID caso NO (fornire in privato). Da postare Andrea.
+**Da fare (prossima sessione):** solo attendere Google:
+1. Controllare la risposta di Ravi al follow-up del 17/07 (mail `ardy.documenti`). Se è un altro rimbalzo →
+   usare la bozza L2 pronta in `ardy-gbp-escalation-L2.md`.
+2. Ri-lanciare `ardy-gbp-check.php` periodicamente, finché non dà verde ("QUOTA SBLOCCATA") → poi
+   riabilitare il toggle Google (vedi sotto) e pubblicare una fase di test.
 
 **Lato codice (già pronto, riabilitare SOLO a check verde):** il toggle Google nel pannello social
 (`ardy-michela-app.html`, `socialDestHtml`) è stato **ri-disattivato** dopo l'esito negativo del check —
