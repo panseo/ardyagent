@@ -8,6 +8,32 @@
 
 ---
 
+## 📸 APERTO — Foto fasi: seguiti dopo il fix "foto Android" (19/07/2026)
+
+**Contesto (già fatto e deployato):** le foto pubblicate da **Android** sparivano in silenzio (testo sì,
+foto no), mentre da **iPhone** arrivavano. Causa: il server accetta solo JPG/PNG/WEBP ≤ 12 MB e scartava
+(`continue`) il resto; iOS converte da sé lo scatto in JPEG leggero alla selezione, Android inviava il file
+originale (spesso **HEIC/HEIF** o **JPEG > 12 MB**). Fix: normalizzazione lato client (canvas → JPEG ~1600px)
+**prima** dell'upload, applicata a `handleFotoUpload` (fase), `handleAvvioFotoUpload` (avvio),
+`handleSocialImgAdd`/`handlePendingImgAdd` (social), `handleSchedaFotoUpload` (foto scheda). File:
+`ardy-michela-app.html` (helper `fotoNormalizza`). Da qui sono emerse due code, **da valutare**:
+
+- [ ] **Modifica/ri-pubblica di una fase-lavorazione GIÀ pubblicata.** Oggi la lista "FASI PUBBLICATE"
+      è **sola lettura** by-design (`caricaFasiPubblicate` in `ardy-michela-app.html`): non si può rientrare
+      per, es., aggiungere una foto persa a un blocco già online (caso reale: fase *"Carteggiatura manuale
+      grana fine"* del 17/07, foto non arrivata). Il flusso **lavorazione** (`ardy-pubblica-lavorazione.php`)
+      **appende** ogni fase senza marcatore per-fase → ri-pubblicare **duplicherebbe** il blocco. Intervento:
+      portare qui lo stesso schema **idempotente** già presente nelle fasi-**progetto**
+      (`ardy-pubblica-fase-progetto.php`: marcatori `<!-- ardy-fase-ID -->` + `wp_pubblicata_at` azzerato al
+      salvataggio → sostituzione invece di duplicato) e aggiungere in dash un'azione "modifica/ri-pubblica"
+      sulle fasi pubblicate. Vera modifica al codice: richiede tempo + test a video.
+      **Workaround intanto:** pubblicare una **nuova fase** con la foto (col fix, ora passa).
+- [ ] **Diagnosi log foto 17/07** (opzionale, conferma tecnica): controllare `error_log` del server per
+      `ARDY PUBBLICA IMG: ricevute=… salvate_su_wp=…` e gli errori sideload/mime attorno al 17/07, per
+      confermare *perché* quella foto fu scartata (HEIC? > 12 MB?). Utile solo se si vuole la prova.
+
+---
+
 ## 🛒 APERTO — Ecommerce `object.ardy-lab.it` (Woo) + chat Sole per-oggetto (09/07/2026)
 
 Costruito in sessione `ardy-ecommerce-woocommerce`. Piano completo in **`PIANO-ECOMMERCE-OBJECT-WOO.md`**.
