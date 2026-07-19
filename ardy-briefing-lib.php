@@ -303,21 +303,6 @@ function ardy_riepilogo_settimana(PDO $db, array $staffDigits = []): string {
         }
     } catch (PDOException $e) { /* colonna/tabella assente o altro: salta */ }
 
-    // Follow-up generici in agenda (campo note follow-up del CRM)
-    try {
-        $rows = $db->query("SELECT nome, cognome, zona, data_followup FROM clienti
-                             WHERE data_followup IS NOT NULL AND data_followup <> ''
-                               AND data_followup >= CURDATE()
-                          ORDER BY data_followup ASC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
-        if ($rows) {
-            $out[] = "FOLLOW-UP in agenda:";
-            foreach ($rows as $r) {
-                $nome = trim(($r['nome'] ?? '') . ' ' . ($r['cognome'] ?? '')) ?: '(senza nome)';
-                $out[] = "- " . $r['data_followup'] . " · {$nome}" . ($r['zona'] ? " · " . $r['zona'] : '');
-            }
-        }
-    } catch (PDOException $e) { /* salta */ }
-
     // Fasi/aggiornamenti pubblicati di recente — CON cliente e nome fase (non solo il
     // conteggio), così Sole sa SE e SU CHI è stata pubblicata una fase.
     try {
