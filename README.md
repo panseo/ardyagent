@@ -36,7 +36,7 @@ ardyagent.ardy-lab.it/
 ├── ardy-sanitize.php          # Rete anti-sbrodolatura: ripulisce eventuale sintassi tool trapelata come testo
 ├── ardy-fasi-bozza-api.php    # API bozze fasi di lavorazione; `mode:'salva'` = bozza completa con foto (salva senza pubblicare)
 ├── ardy-save-lead.php         # Salva lead dal chatbot nel DB
-├── ardy-update-lead.php       # Aggiorna dati lead dalla dashboard (+ data consegna → email Trasporti)
+├── ardy-update-lead.php       # Aggiorna dati lead dalla dashboard (no invio email: la conferma consegna è manuale via Trasporti)
 ├── ardy-sopralluoghi-api.php  # API sopralluoghi MULTIPLI per cliente (lista/salva/elimina) — dashboard
 ├── ardy-sopralluoghi-lib.php  # Logica condivisa sopralluoghi (calendario + "mirror") usata da API e da Sole WhatsApp
 ├── ardy-db.php                # Connessione DB condivisa
@@ -467,7 +467,7 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
 - **Badge 💬 ha risposto**: sui clienti che hanno scritto (WA o chat sito) nelle ultime 48h e di
   cui non è ancora stata aperta la conversazione. Calcolato in `ardy-crm-api.php` (2 query aggregate
   su `web_messaggi`/`wa_messaggi` vs marker `conversazione_letta_at`); si spegne aprendo la sezione 💬
-- Dettaglio cliente con **tutti i campi modificabili** (nome, cognome, telefono, email, servizio, zona, mobile, budget, indirizzo, note, follow-up)
+- Dettaglio cliente con **tutti i campi modificabili** (nome, cognome, telefono, email, servizio, zona, mobile, budget, indirizzo, note)
 - Cambio stato cliente sotto toggle **"🔄 Aggiorna stato"** (mostra lo stato attuale)
 - Azioni rapide: contenuto AI, post social, **proforma**, email, WhatsApp, note interne
 - **🧹 Libera spazio** (solo su clienti archiviati CONSEGNATO): a lavoro concluso cancella
@@ -494,9 +494,10 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
   ognuna **un evento Google Calendar**. Aggiungi / sposta (💾) / elimina (🗑) si salvano da soli via
   `ardy-sopralluoghi-api.php` (NON passano dal bottone SALVA). Sincronizzata con i sopralluoghi che
   Sole fissa su WhatsApp (mirror + riconciliazione, vedi tabella `sopralluoghi`)
-- **📦 Data di consegna** *(giu 2026)*: campo nella scheda che, al salvataggio, invia al cliente l'email
-  di conferma consegna **riusando il modulo Trasporti** (`ardy_invia_avviso_trasporto`, scrive su
-  `clienti.trasporto_data`, guard "una sola email per data"). NB: "trasporto" = ritiro **o** consegna
+- **📦 Data di consegna ed email di conferma**: gestite **solo** dal modulo Trasporti
+  (`ardy-trasporti.php`, scrive su `clienti.trasporto_data`; l'email al cliente parte su azione manuale,
+  `mode=conferma`). NB: "trasporto" = ritiro **o** consegna. *(Il vecchio campo "Data di consegna" nella
+  scheda e l'invio automatico dell'email al salvataggio sono stati rimossi — lug 2026.)*
 - **Pubblicazione fasi** con foto (scatta dal telefono o galleria) sotto il bottone collassabile
   **🔨 Crea e pubblica nuova fase**; la prima foto diventa l'**immagine in evidenza** del post
 - **💾 Salva in bozza** delle fasi ("scatta ora, pubblica la sera"): nel form della fase il pulsante
@@ -935,7 +936,7 @@ inline negli endpoint.
   `https://ardyagent.ardy-lab.it/` apre direttamente la dashboard (resta dietro Basic Auth).
 - **UX scheda mobile (sopralluogo)** — primo test sul campo OK:
   - Textarea Note 6 righe + bottone **⛶ Espandi** → modale fullscreen (`#noteEditorOverlay`).
-  - Toggle **▾ Dati anagrafici** (Nome…Indirizzo + Data followup) e **▾ Azioni cliente**
+  - Toggle **▾ Dati anagrafici** (Nome…Indirizzo) e **▾ Azioni cliente**
     (Email/WA/Genera contenuto/Note interne) chiusi di default su mobile (≤768px).
   - Session ID rimossa dalla UI (resta nel DOM, popolata dal JS).
 

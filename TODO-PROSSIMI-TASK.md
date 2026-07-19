@@ -1,7 +1,7 @@
 # Ardy Lab — Task aperti & note utili
 
 > Solo task **aperti** + note operative + verifiche residue. Tutto ciò che è fatto **e deployato**
-> è rimosso (lo storico resta nei commit git). Ultima pulizia: 04/07/2026.
+> è rimosso (lo storico resta nei commit git). Ultima pulizia: 19/07/2026.
 
 > ⚠️ Promemoria sempre valido: se Sole tace su **tutti** i canali insieme (WhatsApp + webchat),
 > sospetta **credito Anthropic esaurito** (capitato il 21/06; si ricarica da Plans & Billing).
@@ -254,19 +254,6 @@ La direzione che vogliamo dare allo strumento, da affrontare per prossimi step:
    `ardy-proxy-lavorazione.php` → chat lavorazione). ⚠️ Verificare dal vivo dopo deploy che la riga compaia in
    un'email reale e che Sole sappia esporre il codice etico se richiesto.
 
-### 👥 Outreach — Import clienti AUTOMATICO post-Acconto — ✅ DEPLOYATO 25/06
-L'import **manuale** dei clienti CRM era già LIVE. Aggiunto l'**automatico**: quando un cliente entra per la
-prima volta in uno stato "impegnato" (`ACCONTO`, `RITIRATI`, `IN_LAVORAZIONE`, `COMPLETATO`, `CONSEGNATO`,
-`PAGATO` — gestisce anche il salto diretto Acconto→Ritirati/Lavorazione), viene aggiunto ai contatti outreach
-in **categoria `clienti`** con **stato `cliente`** (NON `da_contattare`), così resta **distinto dai lead freddi**
-e **fuori dalle campagne cold** (che targetizzano solo `da_contattare`) → privacy ok: è servizio/riattivazione,
-non cold-marketing. Hook in `ardy-update-lead.php` (riusa `$statoVecchio` già letto), logica in nuova lib
-condivisa `ardy-outreach-lib.php` (`ardy_outreach_aggiungi_cliente()`), **idempotente** (dedup per email/nome
-come l'import manuale, richiede email). Lib aggiunta al blocco deny del `.htaccess` (interna, non API).
-**Nota:** l'import *manuale* continua a usare stato `da_contattare` (azione esplicita di Michela); l'*automatico*
-usa `cliente` di proposito. ⚠️ Da verificare dal vivo: portare un cliente con email su ACCONTO → compare in
-Outreach categoria "clienti" con badge "cliente"; ri-salvare/altre transizioni NON creano doppioni.
-
 ### 🔌 Outreach — Altre fonti dati (VIES / P.IVA) — NOTA
 Portali aziendali IT quasi tutti gated → niente scraping. Vie aperte utili: **VIES** (ec.europa.eu, gratis,
 API senza chiave: P.IVA → ragione sociale + indirizzo ufficiale) **da integrare col futuro campo Partita IVA**;
@@ -282,6 +269,11 @@ INI-PEC non automatizzabile (captcha) → PEC via API a pagamento, eventuale tas
 ---
 
 ## ⏳ DA VERIFICARE DAL VIVO / AZIONI MANUALI
+- **📷 "Usa foto della scheda" nelle fasi (19/07, DEPLOYATO, da testare sul campo).** Nel form "Crea e pubblica
+  nuova fase" il pulsante **USA FOTO DELLA SCHEDA** apre le foto della scheda come miniature selezionabili; le
+  scelte vengono scaricate, normalizzate (`fotoNormalizza`) e aggiunte a `lavImmagini`. **Test:** creare una
+  fase includendo una foto della scheda → verificare che compaia nella **pagina di lavorazione pubblicata**
+  (non solo in anteprima). File: `ardy-michela-app.html` (`toggleFotoSchedaPicker`/`aggiungiFotoSchedaSelezionate`).
 - **✦ Avvio pagina lavorazione dal box "Periodo del lavoro" (04/07, da testare) — DEPLOYATO, mai provato dal vivo.**
   Nel box "📅 Periodo del lavoro" (compare passando un cliente a IN_LAVORAZIONE), sotto le date c'è ora una
   sezione **"✦ Avvia la pagina lavorazione"**: foto (SCATTA FOTO / DALLA GALLERIA) + bottone **PUBBLICA AVVIO
@@ -309,9 +301,6 @@ INI-PEC non automatizzabile (captcha) → PEC via API a pagamento, eventuale tas
     sparisce anche dal calendario. Aggiungere una **seconda** visita allo stesso cliente (es. "2°
     sopralluogo") → devono coesistere. Verificare che un sopralluogo fissato da **Sole su WhatsApp**
     compaia poi nella lista (riconciliazione "pigra" alla riapertura scheda).
-  - *Passo 2 — Data di consegna*: impostare il campo "📦 Data di consegna" su una scheda con email,
-    salvare → verificare che al cliente arrivi l'**email di conferma consegna** (riusa il modulo
-    Trasporti, guard "una sola email per data": ri-salvando la stessa data NON deve re-inviare).
   - *Sopralluoghi via Sole su WhatsApp (Fase 2)* — solo PHP, NIENTE re-paste n8n: da chat staff provare
     "aggiungi un 2° sopralluogo per Alberto giovedì alle 15" (deve AGGIUNGERE, non dire "ha già un
     appuntamento"); "che sopralluoghi ha Alberto?" (li elenca); "sposta il sopralluogo di Alberto" quando
@@ -481,24 +470,6 @@ profilo di questa attività è gestito da te"*, loggati come ardy.documenti. Qui
 identità: lo stesso account possiede il progetto Cloud 532339794075 **e** gestisce la scheda. Il "muro
 successivo" temuto non esiste → l'unica spiegazione residua del 403-HTML è l'allowlist non propagata lato
 Google. (Frase aggiunta alla bozza di risposta a Ravi per blindare l'argomento.)
-**⚠️ FUORI-TEMA ma serio (scoperto 16-17/07): quasi tutta la posta di `ardy.documenti` finisce nel
-Cestino.** Posta in arrivo ultimi 8 gg = 1 sola mail; ~200 nel Cestino (incl. il thread Google, che per
-questo va ripristinato a mano ogni volta). Il connettore Gmail NON può leggere/gestire filtri, sicurezza,
-app autorizzate (solo UI web). **Sospetto:** un filtro con azione "Eliminala" o un'automazione.
-**INDAGINE CODICE (17/07): il repo NON cestina la posta — scagionato.** Verificato tutto: l'UNICO file che
-tocca i messaggi Gmail è `ardy-lead-monitor.php`, che in `gmail_mark_processed()` fa solo
-`addLabelIds:[lead-processato]` + `removeLabelIds:[UNREAD]` — **nessun TRASH, nessun rimozione INBOX**, e
-tocca solo i 5 domini portali (ProntoPro/Homedeal/Cronoshare/Instapro/Habitissimo). `ardy-archivia-persi.php`
-archivia lead persi **nel DB**, non tocca Gmail. I workflow n8n nel repo (solo WhatsApp) non hanno nodi
-Gmail. Nessun'altra chiamata all'API Gmail nel repo. → L'etichetta `lead-processato` era una falsa pista;
-il colpevole è FUORI dal codice. Cercare (per probabilità): (1) **filtro Gmail con azione "Eliminala"**
-(Gmail → ⚙ → Filtri); (2) **workflow n8n NON nel repo** con nodo Gmail Delete/Trash sul server
-n8n.ardy-lab.it (il lead-monitor è chiamato da n8n ogni 60 min, ma altri workflow lì non sono versionati);
-(3) app di terze parti (myaccount.google.com/permissions); (4) sicurezza/accessi (myaccount.google.com/security).
-**RISOLTO — mistero Cestino (17/07):** NON era un filtro né un'automazione né il codice: **Michela aveva
-cestinato la posta manualmente per errore** (cancellazione di massa accidentale). Coerente con l'indagine
-(codice pulito → restava solo l'ipotesi cancellazione a mano). Nessun filtro impazzito, nessun workflow n8n
-nascosto, nessun accesso non autorizzato. Posta ripristinabile dal Cestino (30 gg).
 **INVIATO ✅ (17/07):** risposta a Ravi spedita (thread 4-4300000041395) — conferma OAuth utente + refresh
 token, stesso account per progetto Cloud e scheda business, 8 API enabled, allowlist confermata il 06/07;
 chiede di escalare la verifica dell'allowlist sul backend. **Palla a Google.**
@@ -573,20 +544,6 @@ post-pubblicazione; coordinare con `ardy-archivia-persi.php` (oggi sposta foto/r
 `_da_liberare/`) e con `ardy-elimina-cliente.php` (cancella `ARDY_UPLOAD_DIR/<session>`) perché dovranno
 agire anche su B2. ⚠️ Sul nuovo VPS no-panel il backup B2 va comunque rifatto in chiave no-cPanel (dump DB
 cron + sync media) — questo task copre proprio il lato media.
-
-### 🪑 Nuovo stato cliente "RITIRATI" — ✅ DEPLOYATO 25/06
-Stato per i mobili **già prelevati e in laboratorio**, ma con **lavori non ancora avviati** (limbo tra
-ACCONTO e IN_LAVORAZIONE). Implementato: posizione **tra ACCONTO e IN_LAVORAZIONE** nel flusso e nel filtro
-sidebar; badge teal (`.stato-RITIRATI`); mostra **Preventivi + Lavorazione** (può già preparare le fasi in
-bozza). Toccati: `ardy-michela-app.html` (chip filtro, `const stati`, `statiPrev`, `statiLav`,
-`FASI_BADGE_STATES`, dropdown import), `.css` (badge), e le whitelist/descrizioni stati lato Sole/import
-(`ardy-wa-crea-scheda.php`, `ardy-import-scheda-pdf.php`, `ardy-import-preventivi.php`, `ardy-wa-agent.php`,
-`ardy-proxy.php`). Nessuna migrazione DB (`clienti.stato` è stringa libera).
-**Follow-up rinviato (deciso):** promemoria "in giacenza da N giorni" (richiede colonna data + logica). Il
-segnale-scadenza (`faseSegnale`) resta escluso per RITIRATI perché i lavori non sono avviati (niente date).
-⚠️ Da verificare dal vivo dopo deploy: settare un cliente su RITIRATI, controllare badge/filtro e che
-compaiano sia Preventivi sia Lavorazione.
-
 
 ### 🚚 Trasporti — aggiungere il WhatsApp ai 2 messaggi (oggi solo email)
 Il flusso consegne/ritiri è LIVE solo via email: "è pronto" automatico al passaggio a COMPLETATO + messaggio
