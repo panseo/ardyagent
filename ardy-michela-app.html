@@ -2038,21 +2038,65 @@ let lavImmagini   = []; // array base64
 let lavWpPostId   = null;
 let lavWpPostLink = null;
 
-function handleFotoUpload(event) {
+// ── Normalizza una foto PRIMA dell'upload (fix "foto che non arriva" su Android) ──
+// Ridimensiona lato client (lato lungo max) e ri-codifica SEMPRE in JPEG, ritornando
+// il solo base64 (senza prefisso "data:...").
+//
+// Perché serve: il server accetta solo JPG/PNG/WEBP fino a 12 MB e SCARTA IN SILENZIO
+// tutto il resto (il testo si pubblica, la foto sparisce senza avvisi). Su iPhone il
+// problema non si vede perché iOS converte da sé la foto in un JPEG leggero quando la
+// scegli; Android invece invia il file ORIGINALE della fotocamera, che spesso è:
+//   • HEIC/HEIF ("alta efficienza") → rifiutato dal filtro formato del server, oppure
+//   • un JPEG ad altissima risoluzione oltre i 12 MB → rifiutato per dimensione.
+// Passando ogni scatto per il canvas lo trasformiamo in un JPEG ridotto (~1600px), che
+// supera sempre i controlli: così NON serve più fotografare a bassa risoluzione.
+// Se il browser non riesce proprio a decodificare il file, la Promise viene rifiutata
+// e il chiamante mostra un avviso ESPLICITO invece di perdere la foto in silenzio.
+function fotoNormalizza(file, maxLato = 1600, q = 0.85) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+        if (!w || !h) { reject(new Error('immagine vuota')); return; }
+        if (w > maxLato || h > maxLato) {
+          if (w >= h) { h = Math.round(h * maxLato / w); w = maxLato; }
+          else        { w = Math.round(w * maxLato / h); h = maxLato; }
+        }
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        const dataUrl = c.toDataURL('image/jpeg', q);
+        const b64 = dataUrl.split(',')[1];
+        if (!b64) { reject(new Error('codifica JPEG fallita')); return; }
+        resolve(b64);
+      };
+      img.onerror = () => reject(new Error('formato non supportato'));
+      img.src = fr.result;
+    };
+    fr.onerror = () => reject(new Error('lettura file fallita'));
+    fr.readAsDataURL(file);
+  });
+}
+
+async function handleFotoUpload(event) {
   const files   = Array.from(event.target.files);
   const preview = document.getElementById('lavPreview');
-  files.forEach(file => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const base64 = e.target.result.split(',')[1];
+  let scartate = 0;
+  for (const file of files) {
+    try {
+      const base64 = await fotoNormalizza(file);
       lavImmagini.push(base64);
       const img = document.createElement('img');
-      img.src = e.target.result;
+      img.src = 'data:image/jpeg;base64,' + base64;
       preview.appendChild(img);
       aggiornaContatoreFoto();
-    };
-    reader.readAsDataURL(file);
-  });
+    } catch (e) {
+      scartate++;
+    }
+  }
+  if (scartate) showToast('⚠ ' + scartate + ' foto non caricata/e (formato non supportato). Riprova con un\'altra foto.', 'error');
   // Azzera l'input così la stessa foto/scatto può essere riaggiunta
   event.target.value = '';
 }
@@ -2065,21 +2109,23 @@ function aggiornaContatoreFoto() {
 // ─── AVVIO PAGINA LAVORAZIONE (primo post, dal box "Periodo del lavoro") ──
 let avvioImmagini = []; // array base64, indipendente dalle foto della fase sotto
 
-function handleAvvioFotoUpload(event) {
+async function handleAvvioFotoUpload(event) {
   const files   = Array.from(event.target.files);
   const preview = document.getElementById('avvioPreview');
-  files.forEach(file => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const base64 = e.target.result.split(',')[1];
+  let scartate = 0;
+  for (const file of files) {
+    try {
+      const base64 = await fotoNormalizza(file);   // stesso fix Android della fase
       avvioImmagini.push(base64);
       const img = document.createElement('img');
-      img.src = e.target.result;
+      img.src = 'data:image/jpeg;base64,' + base64;
       preview.appendChild(img);
       aggiornaContatoreFotoAvvio();
-    };
-    reader.readAsDataURL(file);
-  });
+    } catch (e) {
+      scartate++;
+    }
+  }
+  if (scartate) showToast('⚠ ' + scartate + ' foto non caricata/e (formato non supportato). Riprova con un\'altra foto.', 'error');
   event.target.value = ''; // permette di riaggiungere lo stesso scatto
 }
 
@@ -2563,12 +2609,11 @@ function handleSchedaFotoUpload(event) {
   const status = document.getElementById('schedaFotoStatus');
   status.textContent = '⏳ Carico le foto…';
 
-  const readers = files.map(file => new Promise(resolve => {
-    const reader = new FileReader();
-    reader.onload  = e => resolve({ data: e.target.result.split(',')[1] });
-    reader.onerror = () => resolve(null);
-    reader.readAsDataURL(file);
-  }));
+  // Normalizza ogni scatto (→ JPEG ridotto) come nella fase: le foto scattate da
+  // Android non vengono più scartate dal server per formato/dimensione.
+  const readers = files.map(file =>
+    fotoNormalizza(file).then(b64 => ({ data: b64 })).catch(() => null)
+  );
 
   Promise.all(readers).then(async images => {
     images = images.filter(Boolean);
@@ -3105,12 +3150,8 @@ async function handleSocialImgAdd(event) {
   for (const file of files) {
     showToast('⏳ Carico la foto…', 'success');
     try {
-      const base64 = await new Promise((res, rej) => {
-        const r = new FileReader();
-        r.onload  = e => res(e.target.result.split(',')[1]);
-        r.onerror = rej;
-        r.readAsDataURL(file);
-      });
+      // Normalizza (→ JPEG ridotto) come nella fase: evita gli scarti su Android.
+      const base64 = await fotoNormalizza(file);
       const resp = await fetch(SOCIAL_FOTO_URL, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ immagine: base64 })
@@ -3433,12 +3474,8 @@ async function handlePendingImgAdd(id, event) {
   for (const file of files) {
     showToast('⏳ Carico la foto…', 'success');
     try {
-      const base64 = await new Promise((res, rej) => {
-        const r = new FileReader();
-        r.onload  = e => res(e.target.result.split(',')[1]);
-        r.onerror = rej;
-        r.readAsDataURL(file);
-      });
+      // Normalizza (→ JPEG ridotto) come nella fase: evita gli scarti su Android.
+      const base64 = await fotoNormalizza(file);
       const resp = await fetch(SOCIAL_FOTO_URL, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ immagine: base64 })
