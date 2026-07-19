@@ -230,14 +230,6 @@
               </div>
               <textarea class="info-value editable" id="dNoteConsegna" rows="4" oninput="markDirty()" placeholder="Es: per la consegna mancano 4 bulloni M6x45 e 2 M6x70 testa esagonale con dadi e rondelle..."></textarea>
             </div>
-            <div class="info-cell anag-field">
-              <div class="info-label">Data followup</div>
-              <input type="date" class="info-value editable" id="dDataFollowup" oninput="markDirty()" style="width:100%;">
-            </div>
-            <div class="info-cell anag-field">
-              <div class="info-label">📦 Data di consegna <small style="color:var(--text-dim);font-size:9px;">(invia email di conferma al cliente)</small></div>
-              <input type="date" class="info-value editable" id="dDataConsegna" oninput="markDirty()" style="width:100%;">
-            </div>
             <div class="info-cell full">
               <div class="info-label">📅 Appuntamenti <small style="color:var(--text-dim);font-size:9px;">(sopralluoghi, consegne e ritiri — ogni riga è un evento su Google Calendar, si salvano da soli; un ritiro = presa in carico → stato RITIRATI)</small></div>
               <div id="soprList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
@@ -973,11 +965,8 @@ function renderDetail() {
   document.getElementById('dIndirizzo').value       = l.Indirizzo ?? '';
   document.getElementById('dNote').value            = l.Note      ?? '';
   document.getElementById('dNoteConsegna').value    = l.NoteConsegna ?? '';
-  document.getElementById('dDataFollowup').value    = l.Data_followup ?? '';
   // Sopralluoghi: lista a parte (si salva da sola, non passa dal bottone SALVA)
   caricaSopralluoghi(l.Session_ID ?? '');
-  // trasporto_data è una DATE "YYYY-MM-DD" → entra diretta nel campo date
-  document.getElementById('dDataConsegna').value     = l.Trasporto_data ? String(l.Trasporto_data).slice(0, 10) : '';
   document.getElementById('dInizioLavoro').value        = l.Inizio_lavoro ?? '';
   document.getElementById('dFineLavoroPrevista').value  = l.Fine_lavoro_prevista ?? '';
   document.getElementById('dSessionId').textContent = l.Session_ID ?? '—';
@@ -1423,7 +1412,6 @@ async function saveLead() {
     stato:          currentLead.Stato,
     note:           document.getElementById('dNote').value,
     note_consegna:  document.getElementById('dNoteConsegna').value,
-    data_followup:  document.getElementById('dDataFollowup').value,
     nome:           document.getElementById('dNomeEdit').value.trim(),
     cognome:        document.getElementById('dCognomeEdit').value.trim(),
     telefono:       document.getElementById('dTelefono').value.trim(),
@@ -1442,10 +1430,8 @@ async function saveLead() {
   const vFinSave = document.getElementById('dFineLavoroPrevista').value;
   if (vIniSave) payload.inizio_lavoro        = vIniSave;
   if (vFinSave) payload.fine_lavoro_prevista = vFinSave;
-  // Data di consegna (trasporto_data): inviata solo se valorizzata (anti-clobber).
-  // Al salvataggio il backend manda al cliente l'email di conferma (modulo Trasporti).
-  const vConsSave = document.getElementById('dDataConsegna').value;
-  if (vConsSave) payload.trasporto_data = vConsSave;
+  // La data di consegna (trasporto_data) e l'invio email di conferma sono gestiti
+  // solo dal modulo Trasporti (🚚 TRASPORTI), dove l'invio è un'azione manuale.
 
   try {
     const res  = await fetch(UPDATE_URL, {
@@ -1469,7 +1455,6 @@ async function saveLead() {
           Stato: currentLead.Stato,
           Note: payload.note,
           NoteConsegna: payload.note_consegna,
-          Data_followup: payload.data_followup,
           Nome: payload.nome,
           Cognome: payload.cognome,
           Telefono: payload.telefono,
@@ -1482,7 +1467,6 @@ async function saveLead() {
           // Aggiorna in memoria solo le date effettivamente inviate (vedi anti-clobber)
           ...('inizio_lavoro'        in payload ? { Inizio_lavoro: payload.inizio_lavoro } : {}),
           ...('fine_lavoro_prevista' in payload ? { Fine_lavoro_prevista: payload.fine_lavoro_prevista } : {}),
-          ...('trasporto_data'       in payload ? { Trasporto_data: payload.trasporto_data } : {}),
         });
         currentLead = allLeads[idx];
       }
@@ -3596,7 +3580,6 @@ async function salvaNuovoCliente() {
     mobile:        pezzoLeggi('nc-mobili').join(' · '),
     budget:        document.getElementById('nc-budget').value.trim(),
     stato:         document.getElementById('nc-stato').value,
-    data_followup: document.getElementById('nc-followup').value,
     note:          document.getElementById('nc-note').value.trim(),
     source:        'manuale_dashboard',
   };
@@ -3619,7 +3602,7 @@ async function salvaNuovoCliente() {
         Indirizzo: payload.indirizzo, Servizio: payload.servizio,
         Zona: payload.zona, Mobile: payload.mobile,
         Budget: payload.budget, Stato: payload.stato,
-        Data_followup: payload.data_followup, Note: payload.note,
+        Note: payload.note,
         Session_ID: data.session_id ?? newSessionId,
       };
       allLeads.unshift(nuovoLead);
@@ -3628,7 +3611,7 @@ async function salvaNuovoCliente() {
         closeNuovoCliente();
         // Reset form
         ['nc-nome','nc-cognome','nc-telefono','nc-email','nc-indirizzo',
-         'nc-zona','nc-budget','nc-note','nc-followup'].forEach(id => {
+         'nc-zona','nc-budget','nc-note'].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.value = '';
         });
@@ -3649,7 +3632,7 @@ async function salvaNuovoCliente() {
       Indirizzo: payload.indirizzo, Servizio: payload.servizio,
       Zona: payload.zona, Mobile: payload.mobile,
       Budget: payload.budget, Stato: payload.stato,
-      Data_followup: payload.data_followup, Note: payload.note,
+      Note: payload.note,
       Session_ID: newSessionId,
     };
     allLeads.unshift(nuovoLead);
@@ -5030,10 +5013,6 @@ async function archiviaPersi() {
             <option value="SOPRALLUOGO">SOPRALLUOGO</option>
             <option value="PREVENTIVO">PREVENTIVO</option>
           </select>
-        </div>
-        <div class="dark-field">
-          <label>Data followup</label>
-          <input type="date" id="nc-followup">
         </div>
         <div class="dark-field full">
           <label>Note</label>

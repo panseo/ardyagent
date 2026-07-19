@@ -124,18 +124,10 @@ try {
     // (anche più d'uno) sono gestiti da ardy-sopralluoghi-api.php, che cura calendario
     // e allineamento di clienti.sopralluogo_at/gcal_event_id.
 
-    // Data di consegna impostata/cambiata dalla dashboard → invia al cliente l'email di
-    // conferma (consegna/ritiro) riusando il modulo Trasporti. La funzione ha già il
-    // guard "una sola email per data" (trasporto_avviso_data): ri-salvare la stessa data
-    // NON re-invia. Best-effort, non blocca il salvataggio.
-    if (array_key_exists('trasporto_data', $input) && !empty($input['trasporto_data'])) {
-        try {
-            require_once __DIR__ . '/ardy-trasporti.php';
-            ardy_invia_avviso_trasporto($db, $sessionId);
-        } catch (Throwable $e) {
-            error_log('ARDY UPDATE LEAD avviso consegna: ' . $e->getMessage());
-        }
-    }
+    // Nota: l'email di conferma consegna NON parte più in automatico dal salvataggio.
+    // La data di consegna (trasporto_data) resta un campo aggiornabile, ma l'invio
+    // dell'email al cliente avviene SOLO come azione manuale dal modulo Trasporti
+    // (ardy-trasporti.php, mode=conferma).
 
     echo json_encode(['success' => true]);
 
