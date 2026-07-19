@@ -110,10 +110,25 @@ try {
         foreach ($ar as $row) { $waMsgMap[$row['p9']] = (string) $row['m']; }
     } catch (PDOException $e) { /* tabella assente: nessun messaggio WhatsApp */ }
 
+    // Stato dell'ULTIMO preventivo per cliente (per il badge "preventivo inviato / da
+    // fare" nella card di dashboard). Una sola query aggregata per session_id, non una
+    // per cliente. Difensivo: se la tabella 'preventivi' non esiste, la mappa resta
+    // vuota → il badge mostra "da fare" per i clienti in stato PREVENTIVO.
+    $prevStatoMap = []; // session_id => 'bozza'|'inviato'|'accettato'|'rifiutato'
+    try {
+        $pr = $db->query(
+            "SELECT p.session_id, p.stato
+               FROM preventivi p
+               JOIN (SELECT session_id, MAX(id) mid FROM preventivi GROUP BY session_id) x
+                 ON x.mid = p.id"
+        )->fetchAll();
+        foreach ($pr as $row) { $prevStatoMap[$row['session_id']] = (string) $row['stato']; }
+    } catch (PDOException $e) { /* tabella preventivi assente: nessun badge preventivo */ }
+
     $rows = $db->query(
         "SELECT " . ARDY_CLIENTI_COLS . " FROM clienti WHERE deleted_at IS NULL ORDER BY updated_at DESC"
     )->fetchAll();
-    echo json_encode(array_map(function ($r) use ($webMsgMap, $waMsgMap) {
+    echo json_encode(array_map(function ($r) use ($webMsgMap, $waMsgMap, $prevStatoMap) {
         // Ultimo messaggio del cliente = il più recente tra canale web e WhatsApp.
         $tsWeb = $webMsgMap[$r['session_id'] ?? ''] ?? '';
         $last9 = substr(preg_replace('/\D+/', '', (string)($r['telefono'] ?? '')), -9);
@@ -121,7 +136,10 @@ try {
         $ultimo = ($tsWeb > $tsWa) ? $tsWeb : $tsWa; // confronto lessicografico OK su 'Y-m-d H:i:s'
         $letta  = (string)($r['conversazione_letta_at'] ?? '');
         $haRisposto = ($ultimo !== '') && ($letta === '' || $ultimo > $letta);
-        return ardy_map_cliente($r, false, $haRisposto, $ultimo);
+        $c = ardy_map_cliente($r, false, $haRisposto, $ultimo);
+        // Stato ultimo preventivo (stringa vuota se il cliente non ne ha nessuno).
+        $c['Preventivo_stato'] = $prevStatoMap[$r['session_id'] ?? ''] ?? '';
+        return $c;
     }, $rows));
 
 } catch (PDOException $e) {

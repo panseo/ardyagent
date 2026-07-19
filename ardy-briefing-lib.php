@@ -155,6 +155,69 @@ function ardy_riepilogo_settimana(PDO $db, array $staffDigits = []): string {
         }
     } catch (PDOException $e) { /* salta */ }
 
+    // 🧾 PREVENTIVI DA GESTIRE: clienti fermi in stato PREVENTIVO. È la scadenza che
+    // Sole deve citare nel briefing del mattino, distinguendo due casi:
+    //   ✍️ preventivo DA FARE          → nessun documento ancora (o solo una bozza salvata);
+    //   📤 preventivo INVIATO da SOLLECITARE → il preventivo è già partito, si aspetta la
+    //      risposta del cliente (con da quanti giorni è stato inviato → quanto sollecitare).
+    // L'ultimo preventivo di ogni cliente arriva da una sola query aggregata (per
+    // session_id). Difensivo: se la tabella 'preventivi' manca, tutti risultano "da fare"
+    // (fallback ragionevole: senza documento tracciato il preventivo è comunque da fare).
+    try {
+        $rows = $db->query(
+            "SELECT nome, cognome, mobile, session_id
+               FROM clienti
+              WHERE UPPER(stato) = 'PREVENTIVO' AND deleted_at IS NULL
+           ORDER BY updated_at DESC"
+        )->fetchAll(PDO::FETCH_ASSOC);
+        if ($rows) {
+            $prevMap = []; // session_id => ['stato'=>..., 'quando'=>...]
+            try {
+                $pr = $db->query(
+                    "SELECT p.session_id, p.stato, COALESCE(p.data_emissione, p.created_at) AS quando
+                       FROM preventivi p
+                       JOIN (SELECT session_id, MAX(id) mid FROM preventivi GROUP BY session_id) x
+                         ON x.mid = p.id"
+                )->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($pr as $r) $prevMap[$r['session_id']] = $r;
+            } catch (PDOException $e) { /* tabella preventivi assente: tutti "da fare" */ }
+
+            $daFare = [];
+            $daSollecitare = [];
+            $oggiTs = strtotime('today');
+            foreach ($rows as $r) {
+                $nome = trim(($r['nome'] ?? '') . ' ' . ($r['cognome'] ?? '')) ?: '(senza nome)';
+                $mob  = $r['mobile'] ? ' · ' . $r['mobile'] : '';
+                $p    = $prevMap[$r['session_id']] ?? null;
+                $st   = $p ? strtolower(trim((string)$p['stato'])) : '';
+                if ($st === 'inviato') {
+                    $note = '';
+                    if (!empty($p['quando'])) {
+                        $gg = (int)floor(($oggiTs - strtotime((string)$p['quando'] . ' 00:00:00')) / 86400);
+                        if ($gg > 0)       $note = " · inviato da {$gg}g";
+                        elseif ($gg === 0) $note = " · inviato oggi";
+                    }
+                    $daSollecitare[] = "- {$nome}{$mob}{$note}";
+                } else {
+                    // nessun preventivo, oppure bozza/rifiutato → è ancora DA FARE
+                    $extra = ($st === 'bozza') ? ' · bozza salvata, da inviare' : '';
+                    $daFare[] = "- {$nome}{$mob}{$extra}";
+                }
+            }
+            if ($daFare || $daSollecitare) {
+                $out[] = "🧾 PREVENTIVI DA GESTIRE: " . (count($daFare) + count($daSollecitare));
+                if ($daFare) {
+                    $out[] = "  ✍️ Preventivo DA FARE: " . count($daFare);
+                    foreach ($daFare as $l) $out[] = $l;
+                }
+                if ($daSollecitare) {
+                    $out[] = "  📤 Preventivo INVIATO — da sollecitare risposta: " . count($daSollecitare);
+                    foreach ($daSollecitare as $l) $out[] = $l;
+                }
+            }
+        }
+    } catch (PDOException $e) { /* colonna/tabella assente o altro: salta */ }
+
     // Quadro clienti per stato
     try {
         $byStato = $db->query("SELECT COALESCE(NULLIF(stato,''),'-') s, COUNT(*) c FROM clienti GROUP BY s")
