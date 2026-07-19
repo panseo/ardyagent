@@ -42,6 +42,23 @@ function ardy_dossier_data($v) {
     try { return (new DateTime($v))->format('d/m/Y'); } catch (Exception $e) { return (string) $v; }
 }
 
+// Data + ora (gli appuntamenti hanno un orario preciso, es. "07/07/2026 11:30").
+function ardy_dossier_dataora($v) {
+    if (!$v) return '';
+    try { return (new DateTime($v))->format('d/m/Y H:i'); } catch (Exception $e) { return (string) $v; }
+}
+
+// Emoji + etichetta del tipo appuntamento, coerenti con dashboard e backend
+// (ardy-sopralluoghi-lib.php): sopralluogo · ritiro · intervento · consegna.
+function ardy_dossier_appuntamento_label($tipo) {
+    switch ($tipo) {
+        case 'ritiro':     return '📦 Ritiro';
+        case 'intervento': return '🛠️ Intervento sul posto';
+        case 'consegna':   return '🚚 Consegna';
+        default:           return '🔎 Sopralluogo';
+    }
+}
+
 function ardy_dossier_euro($v) {
     if ($v === null || $v === '') return '';
     return '€ ' . number_format((float) $v, 2, ',', '.');
@@ -110,7 +127,33 @@ function ardy_genera_dossier(PDO $db, string $sessionId, bool $perCliente = fals
     }
     $md .= "\n";
 
-    // 2) Preventivi
+    // 2) Appuntamenti (sopralluoghi · ritiri · interventi sul posto · consegne)
+    // Dalla tabella `sopralluoghi`: il campo "Prossimo appuntamento" qui sopra è solo
+    // il mirror del prossimo; qui c'è lo storico completo con tipo, data/ora ed etichetta.
+    try {
+        $qa = $db->prepare("SELECT tipo, data_ora, etichetta, note
+                            FROM sopralluoghi WHERE session_id = :sid ORDER BY data_ora ASC");
+        $qa->execute([':sid' => $sid]);
+        $apps = $qa->fetchAll(PDO::FETCH_ASSOC);
+        if ($apps) {
+            $md .= "## Appuntamenti (" . count($apps) . ")\n";
+            foreach ($apps as $a) {
+                $label  = ardy_dossier_appuntamento_label((string) ($a['tipo'] ?? 'sopralluogo'));
+                $quando = ardy_dossier_dataora($a['data_ora'] ?? '');
+                $et     = trim((string) ($a['etichetta'] ?? ''));
+                $riga   = "- **{$label}**" . ($quando ? " · {$quando}" : '');
+                // Etichetta libera solo se aggiunge info (diversa dal nome del tipo).
+                if ($et !== '' && stripos($label, $et) === false) $riga .= " · {$et}";
+                $md .= $riga . "\n";
+                // Note dell'appuntamento: interne, mai nella versione per il cliente.
+                if (!$perCliente && trim((string) ($a['note'] ?? '')) !== '')
+                    $md .= "  - Note: " . ardy_dossier_tronca(str_replace("\n", ' ', $a['note']), 300) . "\n";
+            }
+            $md .= "\n";
+        }
+    } catch (PDOException $e) { error_log('ARDY DOSSIER appuntamenti: ' . $e->getMessage()); }
+
+    // 3) Preventivi
     try {
         $qp = $db->prepare("SELECT numero, oggetto, stato, grand_total, voci_json, data_emissione, created_at
                             FROM preventivi WHERE session_id = :sid ORDER BY created_at DESC");
@@ -140,7 +183,7 @@ function ardy_genera_dossier(PDO $db, string $sessionId, bool $perCliente = fals
         }
     } catch (PDOException $e) { error_log('ARDY DOSSIER preventivi: ' . $e->getMessage()); }
 
-    // 3) Fasi di lavorazione (la "prova" del lavoro svolto)
+    // 4) Fasi di lavorazione (la "prova" del lavoro svolto)
     // Per la versione cliente (perCliente) si mostrano SOLO le fasi pubblicate:
     // le bozze non devono mai arrivare al cliente (coerente col widget pubblico).
     try {
@@ -162,7 +205,7 @@ function ardy_genera_dossier(PDO $db, string $sessionId, bool $perCliente = fals
         }
     } catch (PDOException $e) { error_log('ARDY DOSSIER fasi: ' . $e->getMessage()); }
 
-    // 4) Chat WhatsApp (match per telefono; web non ancora persistita)
+    // 5) Chat WhatsApp (match per telefono; web non ancora persistita)
     $tel9 = ardy_dossier_last9($c['telefono'] ?? '');
     if (!$senzaChat && $tel9 !== '') {
         try {
@@ -201,7 +244,7 @@ function ardy_genera_dossier(PDO $db, string $sessionId, bool $perCliente = fals
         }
     }
 
-    // 5) Chat WEB (per session_id) — ora persistita da ardy-proxy.php
+    // 6) Chat WEB (per session_id) — ora persistita da ardy-proxy.php
     if (!$senzaChat) try {
         require_once __DIR__ . '/ardy-web-memoria.php';
         $web = ardy_web_storico($db, $sid, 40);
