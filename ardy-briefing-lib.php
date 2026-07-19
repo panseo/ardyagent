@@ -296,7 +296,7 @@ function ardy_riepilogo_settimana(PDO $db, array $staffDigits = []): string {
             foreach ($rows as $r) {
                 $nome  = trim(($r['nome'] ?? '') . ' ' . ($r['cognome'] ?? '')) ?: '(senza nome)';
                 $tipo  = (string) ($r['tipo'] ?? 'sopralluogo');
-                $label = $tipo === 'ritiro' ? 'Ritiro' : ($tipo === 'consegna' ? 'Consegna' : 'Sopralluogo');
+                $label = $tipo === 'ritiro' ? 'Ritiro' : ($tipo === 'consegna' ? 'Consegna' : ($tipo === 'intervento' ? 'Intervento sul posto' : 'Sopralluogo'));
                 $quando = date('d/m/Y H:i', strtotime((string)$r['sopralluogo_at']));
                 $out[] = "- {$quando} · {$label} · {$nome}" . ($r['zona'] ? " · " . $r['zona'] : '');
             }

@@ -412,13 +412,13 @@ if ($staff) {
         ],
         [
             'name'        => 'fissa_appuntamento_staff',
-            'description' => 'AGGIUNGE un appuntamento nel calendario di Ardy Lab PER CONTO di un cliente del CRM (lo stai facendo tu, dello staff). L\'appuntamento può essere di tre tipi (campo `tipo`): un SOPRALLUOGO (visita/valutazione), un RITIRO (vai a prendere gli oggetti dal cliente) o una CONSEGNA (riporti il lavoro finito al cliente). Scegli il tipo giusto: una consegna NON è un sopralluogo. Un cliente può avere PIÙ appuntamenti: questo tool ne aggiunge SEMPRE uno nuovo, non è un doppione. Identifica il cliente per nome; se esistono più schede con quel nome ti verrà restituito l\'elenco e dovrai richiamare il tool col session_id giusto. Usalo solo dopo che lo staff ha indicato giorno e ora precisi.',
+            'description' => 'AGGIUNGE un appuntamento nel calendario di Ardy Lab PER CONTO di un cliente del CRM (lo stai facendo tu, dello staff). L\'appuntamento può essere di quattro tipi (campo `tipo`): un SOPRALLUOGO (visita/valutazione), un RITIRO (vai a prendere gli oggetti dal cliente), un INTERVENTO SUL POSTO (lavoro fatto a casa del cliente tra ritiro e consegna: verniciatura telai, tagli o restauri strutturali, ecc.) o una CONSEGNA (riporti il lavoro finito al cliente). Scegli il tipo giusto: una consegna NON è un sopralluogo. Un cliente può avere PIÙ appuntamenti: questo tool ne aggiunge SEMPRE uno nuovo, non è un doppione. Identifica il cliente per nome; se esistono più schede con quel nome ti verrà restituito l\'elenco e dovrai richiamare il tool col session_id giusto. Usalo solo dopo che lo staff ha indicato giorno e ora precisi.',
             'input_schema' => [
                 'type'       => 'object',
                 'properties' => [
                     'nome'       => ['type' => 'string', 'description' => 'Nome (o nome e cognome) del cliente.'],
                     'start'      => ['type' => 'string', 'description' => 'Data e ora inizio, ISO 8601. Es: 2026-06-23T10:00:00+02:00'],
-                    'tipo'       => ['type' => 'string', 'enum' => ['sopralluogo', 'consegna', 'ritiro'], 'description' => 'Tipo di appuntamento: "sopralluogo" (visita, default), "consegna" (riconsegna del lavoro al cliente), "ritiro" (presa in carico degli oggetti). Se lo staff dice "consegna"/"consegnare" usa "consegna"; se dice "ritiro"/"ritirare" usa "ritiro".'],
+                    'tipo'       => ['type' => 'string', 'enum' => ['sopralluogo', 'ritiro', 'intervento', 'consegna'], 'description' => 'Tipo di appuntamento: "sopralluogo" (visita, default), "ritiro" (presa in carico degli oggetti), "intervento" (lavoro sul posto tra ritiro e consegna: verniciatura telai, tagli/restauri strutturali, ecc.), "consegna" (riconsegna del lavoro al cliente). Se lo staff dice "consegna"/"consegnare" usa "consegna"; se dice "ritiro"/"ritirare" usa "ritiro"; se dice "intervento"/"lavoro sul posto"/"verniciare"/"tagliare"/"restaurare sul posto" usa "intervento".'],
                     'session_id' => ['type' => 'string', 'description' => 'Opzionale: session_id della scheda esatta, per disambiguare gli omonimi (formato wa-XXXXXXXXXXXXXXXX).'],
                     'etichetta'  => ['type' => 'string', 'description' => 'Opzionale: etichetta libera dell\'appuntamento (es. "2° sopralluogo", "consegna comodini"). Se la ometti si usa il nome del tipo.'],
                 ],
@@ -1084,8 +1084,8 @@ if (($bookingMade || $rescheduled) && $bookingWhen instanceof DateTime && $leadE
     $quando = trim(ucfirst($gg) . ' ' . $bookingWhen->format('j') . ' ' . $mm . ' ' . $bookingWhen->format('Y') . ' alle ' . $bookingWhen->format('H:i'));
     try {
         $isMoveC = $rescheduled && !$bookingMade;
-        // Testo coerente col tipo: sopralluogo / consegna / ritiro.
-        $tLabelC = ($bookingTipo === 'ritiro') ? 'Ritiro' : ($bookingTipo === 'consegna' ? 'Consegna' : 'Sopralluogo');
+        // Testo coerente col tipo: sopralluogo / ritiro / intervento / consegna.
+        $tLabelC = ($bookingTipo === 'ritiro') ? 'Ritiro' : ($bookingTipo === 'consegna' ? 'Consegna' : ($bookingTipo === 'intervento' ? 'Intervento sul posto' : 'Sopralluogo'));
         $tLowerC = mb_strtolower($tLabelC);
         $mailC = waNewMailer();
         $mailC->setFrom('noreply@ardy-lab.it', 'Ardy Lab');
