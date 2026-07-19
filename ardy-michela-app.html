@@ -244,8 +244,9 @@
               <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;border-top:1px dashed var(--border);padding-top:8px;">
                 <select id="soprNewTipo" class="info-value editable" title="Tipo di appuntamento" style="flex:0 0 auto;min-width:120px;">
                   <option value="sopralluogo">🔎 Sopralluogo</option>
-                  <option value="consegna">🚚 Consegna</option>
                   <option value="ritiro">📦 Ritiro</option>
+                  <option value="intervento">🛠️ Intervento sul posto</option>
+                  <option value="consegna">🚚 Consegna</option>
                 </select>
                 <input type="datetime-local" id="soprNewData" class="info-value editable" style="flex:1 1 180px;min-width:160px;">
                 <input type="text" id="soprNewEtichetta" class="info-value editable" placeholder="Etichetta (es. 2° sopralluogo)" style="flex:1 1 160px;min-width:140px;">
@@ -2307,14 +2308,17 @@ async function caricaSopralluoghi(sessionId) {
 }
 
 // Tipi di appuntamento, coerenti col backend (ardy-sopralluoghi-lib.php):
-// sopralluogo (visita) · consegna (riconsegna al cliente) · ritiro (presa in carico).
-function soprNormTipo(t) { return (t === 'ritiro' || t === 'consegna') ? t : 'sopralluogo'; }
-function soprCosa(t)     { return t === 'ritiro' ? 'Ritiro' : (t === 'consegna' ? 'Consegna' : 'Sopralluogo'); }
+// sopralluogo (visita) · ritiro (presa in carico) · intervento (lavoro sul posto
+// tra ritiro e consegna: verniciatura telai, tagli/restauri strutturali, ecc.) ·
+// consegna (riconsegna al cliente).
+function soprNormTipo(t) { return (t === 'ritiro' || t === 'consegna' || t === 'intervento') ? t : 'sopralluogo'; }
+function soprCosa(t)     { return t === 'ritiro' ? 'Ritiro' : (t === 'consegna' ? 'Consegna' : (t === 'intervento' ? 'Intervento sul posto' : 'Sopralluogo')); }
 function soprOpzioniTipo(tipo) {
   const s = (v) => tipo === v ? ' selected' : '';
   return `<option value="sopralluogo"${s('sopralluogo')}>🔎 Sopralluogo</option>`
-       + `<option value="consegna"${s('consegna')}>🚚 Consegna</option>`
-       + `<option value="ritiro"${s('ritiro')}>📦 Ritiro</option>`;
+       + `<option value="ritiro"${s('ritiro')}>📦 Ritiro</option>`
+       + `<option value="intervento"${s('intervento')}>🛠️ Intervento sul posto</option>`
+       + `<option value="consegna"${s('consegna')}>🚚 Consegna</option>`;
 }
 
 function renderSopralluoghi(items) {

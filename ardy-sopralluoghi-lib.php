@@ -37,15 +37,18 @@ function sopr_norm_data($raw): ?string {
 
 // Etichetta predefinita per tipo (usata anche per non ripeterla nel titolo evento).
 function sopr_tipo_label(string $tipo): string {
-    if ($tipo === 'ritiro')   return 'Ritiro';
-    if ($tipo === 'consegna') return 'Consegna';
+    if ($tipo === 'ritiro')     return 'Ritiro';
+    if ($tipo === 'consegna')   return 'Consegna';
+    if ($tipo === 'intervento') return 'Intervento sul posto';
     return 'Sopralluogo';
 }
 
 // Tipi di appuntamento ammessi (sopralluogo = visita/valutazione, ritiro = presa in
-// carico degli oggetti, consegna = riconsegna del lavoro finito al cliente).
+// carico degli oggetti, intervento = lavoro sul posto tra ritiro e consegna —
+// es. verniciatura telai, tagli/restauri strutturali — consegna = riconsegna del
+// lavoro finito al cliente).
 function sopr_tipi_validi(): array {
-    return ['sopralluogo', 'ritiro', 'consegna'];
+    return ['sopralluogo', 'ritiro', 'intervento', 'consegna'];
 }
 
 // Titolo evento calendario coerente con quelli creati altrove. Il tipo decide
