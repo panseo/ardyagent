@@ -422,6 +422,18 @@
                   <input type="file" id="lavFotoInput" accept="image/*" multiple>
                 </label>
               </div>
+              <!-- Riuso delle foto già presenti sulla scheda (es. lo stato "prima" del
+                   mobile scattato al sopralluogo) come foto di questa fase. -->
+              <div class="lav-foto-buttons">
+                <button type="button" class="lav-foto-btn lav-foto-btn-alt" onclick="toggleFotoSchedaPicker()" style="width:100%;background:none;">
+                  📷 USA FOTO DELLA SCHEDA
+                </button>
+              </div>
+              <div id="fotoSchedaPicker" style="display:none;margin-bottom:12px;padding:10px;border:1px dashed var(--border);border-radius:6px;">
+                <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">Tocca le foto della scheda da includere in questa fase (diventano le foto «prima»).</div>
+                <div class="lav-preview" id="fotoSchedaPickerGrid"></div>
+                <button type="button" class="btn-secondary" id="btnAddFotoScheda" onclick="aggiungiFotoSchedaSelezionate()" style="width:100%;margin-top:4px;display:none;">➕ Aggiungi le selezionate alla fase</button>
+              </div>
               <div class="lav-foto-buttons">
                 <label class="lav-foto-btn" for="lavVideoCamera">
                   🎥 REGISTRA VIDEO
@@ -1054,6 +1066,10 @@ function aggiornaSezioniVisibili(stato) {
     document.getElementById('lavPreview').innerHTML = '';
     lavImmagini   = [];
     lavVideoUrls  = [];
+    // Selettore "usa foto della scheda": chiudi e azzera la selezione
+    const fsp = document.getElementById('fotoSchedaPicker');
+    if (fsp) fsp.style.display = 'none';
+    fotoSchedaSelezionate = new Set();
     document.getElementById('socialPanel').style.display  = 'none';
     document.getElementById('lavVideoPreview').innerHTML   = '';
     document.getElementById('lavFotoCount').textContent    = '';
@@ -2266,6 +2282,92 @@ async function caricaFotoScheda(sessionId) {
   } catch (e) {
     status.textContent = 'Errore nel caricamento delle foto.';
   }
+}
+
+// ─── Riuso delle foto della scheda dentro una fase ("USA FOTO DELLA SCHEDA") ──
+// Le foto della scheda (di solito lo stato "prima" scattato al sopralluogo) possono
+// entrare in una fase di lavorazione come foto "prima": le scarichiamo, le passiamo
+// per fotoNormalizza (stesso JPEG base64 di uno scatto nuovo) e le aggiungiamo a
+// lavImmagini → si pubblicano con la fase, identiche alle altre.
+let fotoSchedaSelezionate = new Set();
+
+async function toggleFotoSchedaPicker() {
+  const panel = document.getElementById('fotoSchedaPicker');
+  if (!panel) return;
+  if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  await renderFotoSchedaPicker();
+}
+
+async function renderFotoSchedaPicker() {
+  const grid = document.getElementById('fotoSchedaPickerGrid');
+  const btn  = document.getElementById('btnAddFotoScheda');
+  if (!grid) return;
+  fotoSchedaSelezionate = new Set();
+  if (btn) btn.style.display = 'none';
+  grid.innerHTML = '<div style="font-size:11px;color:var(--text-dim);">Carico…</div>';
+  const sessionId = currentLead && currentLead.Session_ID;
+  if (!sessionId) { grid.innerHTML = '<div style="font-size:11px;color:#c87070;">Scheda senza sessione.</div>'; return; }
+  try {
+    const r = await fetch('ardy-lead-foto.php?session_id=' + encodeURIComponent(sessionId));
+    const data = await r.json();
+    const foto = (data && data.foto) || [];
+    if (!foto.length) { grid.innerHTML = '<div style="font-size:11px;color:var(--text-dim);">Nessuna foto sulla scheda.</div>'; return; }
+    grid.innerHTML = '';
+    foto.forEach(f => {
+      const url = 'ardy-lead-foto.php?session_id=' + encodeURIComponent(sessionId) + '&file=' + encodeURIComponent(f.file);
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:relative;cursor:pointer;';
+      wrap.title = 'Tocca per selezionare/deselezionare';
+      const img = document.createElement('img');
+      img.src = url; img.loading = 'lazy';
+      const check = document.createElement('div');
+      check.textContent = '✓';
+      check.style.cssText = 'position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#0e0e0e;font-size:12px;line-height:20px;text-align:center;display:none;';
+      wrap.appendChild(img); wrap.appendChild(check);
+      wrap.onclick = () => {
+        if (fotoSchedaSelezionate.has(f.file)) {
+          fotoSchedaSelezionate.delete(f.file); check.style.display = 'none'; img.style.outline = '';
+        } else {
+          fotoSchedaSelezionate.add(f.file); check.style.display = 'block'; img.style.outline = '2px solid var(--accent)';
+        }
+        if (btn) btn.style.display = fotoSchedaSelezionate.size ? 'block' : 'none';
+      };
+      grid.appendChild(wrap);
+    });
+  } catch (e) {
+    grid.innerHTML = '<div style="font-size:11px;color:#c87070;">Errore nel caricamento.</div>';
+  }
+}
+
+async function aggiungiFotoSchedaSelezionate() {
+  const sessionId = currentLead && currentLead.Session_ID;
+  if (!sessionId || !fotoSchedaSelezionate.size) return;
+  const btn = document.getElementById('btnAddFotoScheda');
+  const preview = document.getElementById('lavPreview');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Aggiungo…'; }
+  let ok = 0, ko = 0;
+  for (const file of fotoSchedaSelezionate) {
+    try {
+      const url  = 'ardy-lead-foto.php?session_id=' + encodeURIComponent(sessionId) + '&file=' + encodeURIComponent(file);
+      const resp = await fetch(url);
+      const blob = await resp.blob();
+      const base64 = await fotoNormalizza(blob);
+      lavImmagini.push(base64);
+      if (preview) {
+        const img = document.createElement('img');
+        img.src = 'data:image/jpeg;base64,' + base64;
+        preview.appendChild(img);
+      }
+      ok++;
+    } catch (e) { ko++; }
+  }
+  aggiornaContatoreFoto();
+  if (btn) { btn.disabled = false; btn.textContent = '➕ Aggiungi le selezionate alla fase'; }
+  const panel = document.getElementById('fotoSchedaPicker');
+  if (panel) panel.style.display = 'none';
+  fotoSchedaSelezionate = new Set();
+  showToast(ok ? `📸 ${ok} foto della scheda aggiunte alla fase` + (ko ? ` (${ko} non caricate)` : '') : '⚠ Nessuna foto aggiunta', ok ? 'success' : 'error');
 }
 
 // ─── Sopralluoghi del cliente (lista di N visite, ognuna un evento Google Calendar) ───
