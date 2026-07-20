@@ -144,6 +144,13 @@ curl_close($tiCh);
 $tiData = json_decode((string)$tiRaw, true);
 $liveScope = is_array($tiData) ? ($tiData['scope'] ?? '') : '';
 $liveAud   = is_array($tiData) ? ($tiData['aud'] ?? ($tiData['azp'] ?? '')) : '';
+// email dell'account che ha dato il consenso (torna solo se il token ha lo
+// scope openid/email — aggiunto in ardy-gbp-auth.php proprio per smascherare
+// eventuali consensi partiti dall'account sbagliato).
+$liveEmail = is_array($tiData) ? ($tiData['email'] ?? '') : '';
+// Account allowlisted (nel Google Group). Solo questi passano il gate.
+$allowedAccounts = ['ardy.documenti@gmail.com', 'a.panseo@gmail.com'];
+$emailAllowed = $liveEmail !== '' && in_array(strtolower($liveEmail), $allowedAccounts, true);
 
 $hasBusinessManage = stripos($liveScope, 'business.manage') !== false
                   || stripos($storedScope, 'business.manage') !== false;
@@ -169,12 +176,28 @@ if ($looksLikeGcal) {
 } elseif ($httpCode === 200) {
     echo "<div class='box ok'><b>✅ Token corretto e funzionante</b> — scope <code>business.manage</code> "
        . "concesso e l'API risponde 200.</div>";
+} elseif ($liveEmail !== '' && !$emailAllowed) {
+    echo "<div class='box err'><b>🎯 ACCOUNT SBAGLIATO: il token è di <code>" . h($liveEmail) . "</code>.</b><br>"
+       . "Ha lo scope <code>business.manage</code> (per questo il consenso mostrava “Google Business”) ma "
+       . "<b>questo account NON è nel Google Group allowlisted</b> (solo <code>ardy.documenti@gmail.com</code> "
+       . "e <code>a.panseo@gmail.com</code> lo sono). Il client è lo stesso per qualunque utente, perciò "
+       . "<code>aud</code> tornava giusto e traeva in inganno: il gate scatta sull'<b>account</b>, non sul "
+       . "progetto. Ecco perché il Playground (dove hai loggato l'account giusto) dà 200 e il server 403.<br>"
+       . "<b>Fix:</b> ri-autorizza da <code>ardy-gbp-auth.php</code> e nel <b>selettore account</b> scegli "
+       . "esplicitamente <code>ardy.documenti@gmail.com</code>, poi rilancia questo check.</div>";
+} elseif ($liveEmail === '') {
+    echo "<div class='box warn'><b>Token con <code>business.manage</code> ma l'API risponde $httpCode — e non so di quale account è.</b><br>"
+       . "Il token è stato creato <b>prima</b> di aggiungere lo scope <code>email</code>, quindi non posso "
+       . "mostrarti l'account che l'ha autorizzato: è proprio il sospetto n.1 (consenso partito da un account "
+       . "NON allowlisted, che il browser può aver auto-scelto). <b>Ri-autorizza da <code>ardy-gbp-auth.php</code></b> "
+       . "(ora forza il selettore account e chiede anche <code>email</code>): scegli <code>ardy.documenti@gmail.com</code>, "
+       . "poi torna qui — il box ti dirà nero su bianco l'account del token.</div>";
 } else {
-    echo "<div class='box warn'><b>Token con <code>business.manage</code> ma l'API risponde $httpCode.</b><br>"
-       . "Lo scope è quello giusto (sotto), quindi <b>non</b> è OPcache né un problema di token. "
-       . "Se persiste il 403-HTML nonostante il Playground dia 200 con lo stesso client+account, "
-       . "ri-autorizza da <code>ardy-gbp-auth.php</code> assicurandoti di scegliere lo stesso account "
-       . "usato nel Playground (il browser potrebbe averne auto-selezionato un altro).</div>";
+    echo "<div class='box warn'><b>Token di <code>" . h($liveEmail) . "</code> (allowlisted) con <code>business.manage</code>, ma l'API risponde $httpCode.</b><br>"
+       . "Account giusto, scope giusto, client giusto: esclusi token/account/scope/OPcache. Se il 403-HTML "
+       . "persiste mentre il Playground dà 200 con questo stesso account, il test decisivo è confrontare la "
+       . "stessa <code>curl -H 'Authorization: Bearer &lt;token&gt;'</code> lanciata dalla shell del server "
+       . "vs da un'altra macchina col medesimo access_token (isola un blocco IP/rete lato Google).</div>";
 }
 
 echo "<table class='muted' style='border-collapse:collapse;width:100%;font-size:13px'>";
@@ -183,6 +206,7 @@ echo "<tr><td style='padding:4px 8px'>Ultima modifica file</td><td style='paddin
 echo "<tr><td style='padding:4px 8px'>refresh_token salvato</td><td style='padding:4px 8px'>" . ($hasRefresh ? '✅ sì' : '❌ no') . "</td></tr>";
 echo "<tr><td style='padding:4px 8px'>Scope salvato nel file</td><td style='padding:4px 8px'><code>" . h($storedScope ?: '(assente)') . "</code></td></tr>";
 echo "<tr><td style='padding:4px 8px'>Scope concessi (tokeninfo)</td><td style='padding:4px 8px'><code>" . h($liveScope ?: ('(tokeninfo HTTP ' . $tiCode . ')')) . "</code></td></tr>";
+echo "<tr><td style='padding:4px 8px'>Account del token (email)</td><td style='padding:4px 8px'>" . ($liveEmail !== '' ? ('<code>' . h($liveEmail) . '</code>' . ($emailAllowed ? ' ✅ allowlisted' : ' ⛔ NON allowlisted')) : '<i>ignoto — token creato prima dello scope email; ri-autorizza per vederlo</i>') . "</td></tr>";
 echo "<tr><td style='padding:4px 8px'>Client dell'access_token (aud)</td><td style='padding:4px 8px'><code>" . h($liveAud ?: '—') . "</code>" . ($liveAud ? ($audMatchesGbp ? ' ✅ = client GBP' : ' ⚠️ ≠ client GBP configurato') : '') . "</td></tr>";
 echo "<tr><td style='padding:4px 8px'>Client GBP configurato</td><td style='padding:4px 8px'><code>" . h($gbpClient) . "</code></td></tr>";
 echo "</table>";

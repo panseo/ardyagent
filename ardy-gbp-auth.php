@@ -73,10 +73,19 @@ $params = http_build_query([
     'client_id'     => $CLIENT_ID,
     'redirect_uri'  => $REDIRECT_URI,
     'response_type' => 'code',
-    // SOLO business.manage: è la chiave del fix (niente bundle con Calendar/Gmail).
-    'scope'         => 'https://www.googleapis.com/auth/business.manage',
+    // business.manage (la chiave del fix: niente bundle con Calendar/Gmail) +
+    // openid/email — scope NON sensibili, servono solo a far tornare l'EMAIL
+    // dell'account nel token, così ardy-gbp-check.php può mostrare CHI ha dato
+    // il consenso (deve essere ardy.documenti / a.panseo: se il browser ha
+    // auto-scelto un altro account, il token ha business.manage ma non è
+    // allowlisted → 403). Non re-innescano il drop del bundle: quello capitava
+    // solo con più scope SENSIBILI insieme su app non verificata.
+    'scope'         => 'openid email https://www.googleapis.com/auth/business.manage',
     'access_type'   => 'offline',
-    'prompt'        => 'consent',
+    // select_account: forza il SELETTORE account (evita che il browser
+    // autoscelga l'account sbagliato saltando la scelta — causa n.1 del 403
+    // residuo). consent: forza lo schermo consenso → torna il refresh_token.
+    'prompt'        => 'select_account consent',
     'state'         => $state,
 ]);
 header('Location: https://accounts.google.com/o/oauth2/v2/auth?' . $params);
