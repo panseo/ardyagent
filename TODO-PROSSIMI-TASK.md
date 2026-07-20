@@ -585,6 +585,29 @@ aggiungendo `X-Goog-User-Project: 532339794075`** e confronta:
   col MEDESIMO access_token; se (a) fallisce e (b) va → è l'IP/rete del server (blocco a monte lato Google).
 **⏭️ Prossimo passo:** ri-deployare `ardy-gbp-check.php`, ricaricarlo, leggere il box "Secondo tentativo".
 
+**🔎 SECONDO TENTATIVO = ANCORA 403 (20/07 16:20) — escluso pure il quota project.** Con `X-Goog-User-Project:
+532339794075` la `GET /v1/accounts` dà lo stesso 403-HTML. E `ardy-gcal.php` prova che l'auth via header
+`Authorization: Bearer` **funziona da questo server** (Calendar/Gmail girano con lo stesso identico pattern
+curl) → non è header strippato / richiesta anonima. Rimane un solo sospetto che regge TUTTE le prove:
+**il consenso è partito dall'account SBAGLIATO.** tokeninfo mostrava `aud`=kg0asdq e scope `business.manage`
+ma **NON l'email** (il token non aveva scope identità): e `aud` è lo stesso per qualunque utente, quindi un
+token con quei valori esatti può appartenere a un account NON allowlisted (il browser può averlo auto-scelto
+aprendo `ardy-gbp-auth.php`). Solo `ardy.documenti@gmail.com` e `a.panseo@gmail.com` sono nel Google Group →
+un altro account passa lo scope ma **prende 403 al gate**. Nel Playground i 200 erano con login esplicito
+degli account giusti.
+
+**✅ FIX + DIAGNOSI SMASCHERA-ACCOUNT (20/07, branch `claude/gbp-403-error-o7mo0y`):**
+- **`ardy-gbp-auth.php`**: scope ora `openid email …/business.manage` (i due scope base NON sensibili non
+  re-innescano il drop del bundle) → il token porta l'EMAIL; e `prompt=select_account consent` **forza il
+  selettore account** (niente più auto-scelta silenziosa dell'account sbagliato).
+- **`ardy-gbp-check.php`**: mostra **"Account del token (email)"** e confronta con l'allow-list; se il token è
+  di un account NON allowlisted → verdetto rosso *"🎯 ACCOUNT SBAGLIATO"* con l'email esatta e l'istruzione di
+  ri-autorizzare scegliendo `ardy.documenti`. Se l'email è ignota (token vecchio senza scope email) → dice di
+  ri-autorizzare per rivelarla.
+**⏭️ Prossimo passo per Andrea:** ri-deployare i 2 file → aprire `ardy-gbp-auth.php`, nel **selettore** scegliere
+**esplicitamente `ardy.documenti@gmail.com`** (consenso con “Google Business”) → aprire `ardy-gbp-check.php`:
+la riga "Account del token" dirà se ora è l'account giusto e, se sì, l'API dovrebbe passare a **200 verde**.
+
 **Lato codice (già pronto, riabilitare SOLO a check verde):** il toggle Google nel pannello social
 (`ardy-michela-app.html`, `socialDestHtml`) è stato **ri-disattivato** dopo l'esito negativo del check —
 era stato riabilitato per errore in base a un annuncio poi smentito dal test dal vivo. `inviaSocial()` è
