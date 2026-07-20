@@ -564,6 +564,27 @@ dice quale dei 3 casi è. Aggiunto un blocco "Diagnostica del token in uso" che:
 `https://ardyagent.ardy-lab.it/ardy-gbp-check.php` → leggere il box "Diagnostica del token in uso": dirà nero
 su bianco se è OPcache (99% dei casi qui) o altro. Poi agire di conseguenza (riavvio FPM) e ri-testare.
 
+**🔬 ESITO AUTO-DIAGNOSI (20/07 16:15) — token PERFETTO, eppure 403. Tutte e 3 le ipotesi ELIMINATE:**
+il box ha risposto *"Token con `business.manage` ma l'API risponde 403"*. Dettaglio:
+- Scope concessi (tokeninfo) = `…/auth/business.manage` ✅ · Scope salvato nel file = idem ✅
+- refresh_token salvato ✅ · file token fresco (mtime 15:59) ✅
+- Client dell'access_token (aud) = `532339794075-kg0asdq…` ✅ **= client GBP** (lo stesso che nel Playground dà 200)
+→ **NON è OPcache, NON è token sbagliato, NON è scope/account mancante.** Il token è identico (client+scope+
+account) a quello che nel Playground risponde **200**, ma la stessa `GET /v1/accounts` dal server dà **403-HTML**
+GFE ("does not have permission to get URL /v1/accounts"). Due richieste equivalenti, esiti diversi ⇒ la
+differenza è nel **transporto/header**, non nel token.
+
+**🧪 SECONDO TENTATIVO AGGIUNTO AL CHECK (branch `claude/gbp-403-error-o7mo0y`):** ipotesi principale = manca
+l'header **`X-Goog-User-Project`** (quota project), che il Playground allega da solo e che alcune API private di
+Google pretendono con credenziali utente. Il check ora, quando la 1ª chiamata NON è 200, **rifà la stessa GET
+aggiungendo `X-Goog-User-Project: 532339794075`** e confronta:
+- se passa a **200** → 🎯 causa trovata: aggiungere quell'header a `gbp_api_get()` e al POST localPost in
+  `ardy-gbp.php` (fix definitivo, poi il flusso è sbloccato);
+- se resta **403** → non è il quota project: test decisivo = lanciare la stessa
+  `curl -H 'Authorization: Bearer <token>' …/v1/accounts` (a) dalla shell del server e (b) da un'altra macchina
+  col MEDESIMO access_token; se (a) fallisce e (b) va → è l'IP/rete del server (blocco a monte lato Google).
+**⏭️ Prossimo passo:** ri-deployare `ardy-gbp-check.php`, ricaricarlo, leggere il box "Secondo tentativo".
+
 **Lato codice (già pronto, riabilitare SOLO a check verde):** il toggle Google nel pannello social
 (`ardy-michela-app.html`, `socialDestHtml`) è stato **ri-disattivato** dopo l'esito negativo del check —
 era stato riabilitato per errore in base a un annuncio poi smentito dal test dal vivo. `inviaSocial()` è
