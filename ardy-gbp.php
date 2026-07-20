@@ -4,30 +4,98 @@
 // -----------------------------------------------------------
 // Pubblica un "post" (localPost) sulla scheda Google Business
 // "Ardy di Michela Panella" quando viene completata una fase di
-// lavorazione. Riusa il token OAuth di Calendar/Gmail
-// (ardy-gcal-token.json) che ora include lo scope `business.manage`.
+// lavorazione.
+//
+// Token DEDICATO (ardy-gbp-token.json): NON riusa più il token di
+// Calendar/Gmail. Quel token, con lo scope `business.manage` messo in
+// bundle con Calendar/Gmail su un'app non verificata, non lo otteneva
+// davvero (403 HTML al front-end). Un consenso DEDICATO al solo
+// `business.manage` (ardy-gbp-auth.php) lo concede correttamente —
+// verificato con OAuth Playground: stessa chiamata → 200. Il client
+// OAuth è ARDY_GBP_CLIENT_* se definito in ardy-config.php, altrimenti
+// fallback su ARDY_GCAL_CLIENT_*.
 //
 // ⚠️ L'endpoint dei post vive ancora sull'host LEGACY
 //    https://mybusiness.googleapis.com/v4 (le API "nuove" v1
-//    coprono solo account/location, non i post). L'accesso è
-//    soggetto all'approvazione Google (quota 0 → 300): finché non
-//    è approvata, le chiamate tornano 403/429.
+//    coprono solo account/location, non i post).
 // -----------------------------------------------------------
 
 require_once __DIR__ . '/ardy-config.php';
-require_once __DIR__ . '/ardy-gcal.php'; // gcal_get_access_token()
 
 // Cache di account/location: risolverli costa 2 chiamate API, le
 // facciamo una volta sola e salviamo il risultato (id stabili).
 if (!defined('GBP_LOCATION_CACHE')) {
     define('GBP_LOCATION_CACHE', __DIR__ . '/ardy-gbp-location.json');
 }
+if (!defined('GBP_TOKEN_FILE')) {
+    define('GBP_TOKEN_FILE', __DIR__ . '/ardy-gbp-token.json');
+}
+
+// Credenziali del client OAuth per Business Profile. Default: le stesse
+// del client "social" già usato (che ha lo scope business.manage e il
+// redirect ardy-gbp-auth.php registrati). Override in ardy-config.php.
+function gbp_client_id(): string {
+    return defined('ARDY_GBP_CLIENT_ID') ? ARDY_GBP_CLIENT_ID : ARDY_GCAL_CLIENT_ID;
+}
+function gbp_client_secret(): string {
+    return defined('ARDY_GBP_CLIENT_SECRET') ? ARDY_GBP_CLIENT_SECRET : ARDY_GCAL_CLIENT_SECRET;
+}
 
 // -----------------------------------------------------------
-// Token: stesso di Calendar/Gmail (scope business.manage incluso)
+// Token DEDICATO business.manage (ardy-gbp-token.json): ritorna un
+// access_token valido, rinnovandolo col refresh_token se scaduto. Il
+// file lo crea ardy-gbp-auth.php dopo il consenso una-tantum.
 // -----------------------------------------------------------
 function gbp_get_access_token(): ?string {
-    return gcal_get_access_token();
+    if (!is_file(GBP_TOKEN_FILE)) {
+        error_log('ARDY GBP: token file non trovato — autorizza da ardy-gbp-auth.php');
+        return null;
+    }
+    $token = json_decode((string)@file_get_contents(GBP_TOKEN_FILE), true);
+    if (!$token) {
+        error_log('ARDY GBP: token file non valido');
+        return null;
+    }
+
+    $expiresAt = ($token['created_at'] ?? 0) + ($token['expires_in'] ?? 3600) - 60;
+    if (time() < $expiresAt && !empty($token['access_token'])) {
+        return $token['access_token'];
+    }
+
+    if (empty($token['refresh_token'])) {
+        error_log('ARDY GBP: no refresh_token — ri-autorizza da ardy-gbp-auth.php');
+        return null;
+    }
+
+    $ch = curl_init('https://oauth2.googleapis.com/token');
+    curl_setopt($ch, CURLOPT_POST,           true);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT,        15);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+        'client_id'     => gbp_client_id(),
+        'client_secret' => gbp_client_secret(),
+        'refresh_token' => $token['refresh_token'],
+        'grant_type'    => 'refresh_token',
+    ]));
+    $response = curl_exec($ch);
+    $err      = curl_error($ch);
+    curl_close($ch);
+    if ($err) {
+        error_log('ARDY GBP: errore rinnovo token: ' . $err);
+        return null;
+    }
+
+    $newToken = json_decode((string)$response, true);
+    if (empty($newToken['access_token'])) {
+        error_log('ARDY GBP: rinnovo fallito: ' . substr((string)$response, 0, 300));
+        return null;
+    }
+    // Google non re-invia il refresh_token ad ogni giro: preservalo.
+    $newToken['refresh_token'] = $token['refresh_token'];
+    $newToken['created_at']    = time();
+    @file_put_contents(GBP_TOKEN_FILE, json_encode($newToken, JSON_PRETTY_PRINT));
+    return $newToken['access_token'];
 }
 
 // -----------------------------------------------------------
@@ -115,7 +183,7 @@ function gbp_get_parent(string $token, bool $forceRefresh = false): ?string {
 function gbp_create_local_post(string $summary, string $imageUrl = '', string $ctaUrl = ''): array {
     $token = gbp_get_access_token();
     if (!$token) {
-        return ['success' => false, 'http' => 0, 'error' => 'Nessun access token (ri-autorizza ardy-gcal-auth.php)'];
+        return ['success' => false, 'http' => 0, 'error' => 'Nessun access token (autorizza da ardy-gbp-auth.php)'];
     }
 
     $parent = gbp_get_parent($token);
