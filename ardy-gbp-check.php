@@ -193,11 +193,29 @@ if ($looksLikeGcal) {
        . "(ora forza il selettore account e chiede anche <code>email</code>): scegli <code>ardy.documenti@gmail.com</code>, "
        . "poi torna qui — il box ti dirà nero su bianco l'account del token.</div>";
 } else {
+    // Account giusto+allowlisted, scope giusto, client giusto, non OPcache, non
+    // quota project, header non strippato (gcal gira). Non resta nulla di
+    // esprimibile via token: l'unica variabile è la RICHIESTA in uscita dal
+    // server (PHP-curl vs IP/egress) rispetto al Playground. Un curl da shell,
+    // stesso token, disambigua: 200 ⇒ è la config PHP-curl del server; 403 ⇒ è
+    // l'IP/egress del server (bloccato a monte da Google per questa API).
+    $shellCmd = "TOK=$(php -r 'echo json_decode(file_get_contents(\"" . $tokFile . "\"),true)[\"access_token\"] ?? \"\";')\n"
+              . "curl -sS -o /dev/null -w '%{http_code}\\n' \\\n"
+              . "  -H \"Authorization: Bearer \$TOK\" \\\n"
+              . "  '" . $API_URL . "'";
     echo "<div class='box warn'><b>Token di <code>" . h($liveEmail) . "</code> (allowlisted) con <code>business.manage</code>, ma l'API risponde $httpCode.</b><br>"
-       . "Account giusto, scope giusto, client giusto: esclusi token/account/scope/OPcache. Se il 403-HTML "
-       . "persiste mentre il Playground dà 200 con questo stesso account, il test decisivo è confrontare la "
-       . "stessa <code>curl -H 'Authorization: Bearer &lt;token&gt;'</code> lanciata dalla shell del server "
-       . "vs da un'altra macchina col medesimo access_token (isola un blocco IP/rete lato Google).</div>";
+       . "🔒 <b>Ogni ipotesi lato token è esclusa:</b> account giusto+allowlisted, scope giusto, client giusto, "
+       . "non OPcache, non quota project, header non strippato (Calendar/Gmail girano con lo stesso <code>Bearer</code>). "
+       . "Resta solo la <b>richiesta in uscita dal server</b> vs il Playground. <b>Test decisivo</b> — lancia questo "
+       . "<b>dalla shell SSH del server</b> (legge il token dal file, niente da incollare):</div>";
+    echo "<pre>" . h($shellCmd) . "</pre>";
+    echo "<div class='box muted'>Come leggere l'esito:<br>"
+       . "• stampa <b>200</b> → il problema è la <b>config PHP-curl</b> del server (es. <code>http_proxy</code>/"
+       . "<code>https_proxy</code> nell'env di PHP-FPM, o una <code>curl.*</code> in <code>php.ini</code>): la "
+       . "chiamata di per sé va, è PHP a instradarla male. Confronta l'env di FPM con quello della shell.<br>"
+       . "• stampa <b>403</b> → è l'<b>IP/egress del server</b> ad essere respinto a monte da Google per questa "
+       . "API: verifica lo stesso comando da un'altra macchina (deve dare 200 come il Playground) e, se confermato, "
+       . "il canale giusto è Google col <b>public IP del server</b>, non più token/account.</div>";
 }
 
 echo "<table class='muted' style='border-collapse:collapse;width:100%;font-size:13px'>";
@@ -251,6 +269,42 @@ if ($projForHeader !== '' && $httpCode !== 200) {
            . "Bearer &lt;token&gt;' " . h($API_URL) . "</code> (a) dalla shell del server e (b) da un'altra macchina "
            . "col MEDESIMO access_token, e confrontare: se (a) fallisce e (b) va, è l'IP/rete del server.</div>";
         echo "<pre>" . h(substr((string)$resp2, 0, 400)) . "</pre>";
+    }
+}
+
+// --- Terzo tentativo: User-Agent + X-Goog-User-Project ----------------
+// PHP-curl di DEFAULT non manda alcun `User-Agent`. Diversi backend privati
+// di Google respingono a monte le richieste senza UA con proprio l'HTML
+// "does not have permission to get URL". Playground e browser un UA ce
+// l'hanno (Calendar/Gmail sono più permissive → per questo girano lo stesso).
+// Qui rifacciamo la GET con un UA esplicito (+ quota project): se passa a 200,
+// è un fix di codice pulito (CURLOPT_USERAGENT in gbp_api_get e nel POST).
+if ($httpCode !== 200) {
+    echo "<h2 style='font-size:15px'>Terzo tentativo — con <code>User-Agent</code></h2>";
+    $hdr3 = ['Authorization: Bearer ' . $token];
+    if ($projForHeader !== '') { $hdr3[] = 'X-Goog-User-Project: ' . $projForHeader; }
+    $ch3 = curl_init($API_URL);
+    curl_setopt($ch3, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch3, CURLOPT_TIMEOUT,        30);
+    curl_setopt($ch3, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch3, CURLOPT_HTTPHEADER,     $hdr3);
+    curl_setopt($ch3, CURLOPT_USERAGENT,      'ardyagent-gbp/1.0 (+https://ardyagent.ardy-lab.it)');
+    $resp3 = curl_exec($ch3);
+    $code3 = (int)curl_getinfo($ch3, CURLINFO_HTTP_CODE);
+    $err3  = curl_error($ch3);
+    curl_close($ch3);
+
+    if ($err3) {
+        echo "<div class='box warn'><b>Errore di rete sul terzo tentativo:</b> " . h($err3) . "</div>";
+    } elseif ($code3 === 200) {
+        echo "<div class='box ok'><b>🎯 TROVATO: con un <code>User-Agent</code> esplicito l'API risponde <b>200</b>.</b><br>"
+           . "PHP-curl non ne mandava uno e il front-end Google respingeva a monte. <b>Fix:</b> aggiungere "
+           . "<code>curl_setopt(\$ch, CURLOPT_USERAGENT, 'ardyagent-gbp/1.0');</code> a <code>gbp_api_get()</code> "
+           . "e alla POST dei localPost in <code>ardy-gbp.php</code>. Fatto quello, il flusso è sbloccato.</div>";
+    } else {
+        echo "<div class='box muted'><b>Nessun cambiamento: HTTP $code3 anche con <code>User-Agent</code>.</b><br>"
+           . "Nemmeno l'UA. A questo punto va escluso il livello PHP-curl col test da shell qui sopra.</div>";
+        echo "<pre>" . h(substr((string)$resp3, 0, 400)) . "</pre>";
     }
 }
 
