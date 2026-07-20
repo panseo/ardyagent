@@ -647,6 +647,25 @@ quell'env, darebbe 200).
 shell (box in alto) stampa **200 o 403**? Con questi due dati chiudo: proxy/PHP-curl → fix in `ardy-gbp.php`;
 IP puro → si apre il canale con Google sull'IP del server (o si sposta la chiamata su un egress che funziona).
 
+**🎯 CAUSA TROVATA (20/07 16:37) — EGRESS IPv6.** Il box "Ambiente di rete PHP" ha rivelato: **nessun proxy**,
+ma **IP di egress = `2001:41d0:2005:100::79b`** → **IPv6** (range `2001:41d0` = OVH), IP Google contattato pure
+IPv6 (`2001:4860…`), HTTP/1.1, libcurl 7.76.1. Il server esce verso l'API Business su **IPv6** e l'API **privata
+Business Profile rifiuta l'egress IPv6** (mentre `oauth2/tokeninfo`, Calendar/Gmail — endpoint pubblici — lo
+accettano, e il Playground gira su IPv4 di Google → 200). Ecco perché: stesso token valido, stesso account
+allowlisted, ma 403 solo dal server e solo su quell'API.
+
+**✅ FIX APPLICATO (20/07, branch `claude/gbp-403-error-o7mo0y`):** `CURL_IPRESOLVE_V4` (forza IPv4) su tutte le
+chiamate GBP:
+- **`ardy-gbp.php`**: aggiunto `curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4)` in `gbp_api_get()` (GET
+  account/location) **e** nella POST dei localPost. Guardato da `defined('CURL_IPRESOLVE_V4')` per sicurezza.
+- **`ardy-gbp-check.php`**: aggiunto **quarto tentativo** che rifà la GET forzando IPv4 → se 200, conferma la
+  causa e dice che il fix è già in `ardy-gbp.php`.
+Le chiamate di refresh token (oauth2.googleapis.com) NON toccate: endpoint pubblico, gira su IPv6 senza problemi.
+**⏭️ Prossimo passo per Andrea:** ri-deployare `ardy-gbp.php` + `ardy-gbp-check.php` → ricaricare il check → il
+box **"Quarto tentativo — forza IPv4"** deve essere **verde (200)**. A quel punto: riabilitare il toggle Google
+(vedi sotto, rimettere `true` nel `tog('google', …)`) e pubblicare una fase di test per verificare che il post
+compaia davvero sulla scheda.
+
 **Lato codice (già pronto, riabilitare SOLO a check verde):** il toggle Google nel pannello social
 (`ardy-michela-app.html`, `socialDestHtml`) è stato **ri-disattivato** dopo l'esito negativo del check —
 era stato riabilitato per errore in base a un annuncio poi smentito dal test dal vivo. `inviaSocial()` è

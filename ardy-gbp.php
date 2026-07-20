@@ -107,6 +107,10 @@ function gbp_api_get(string $url, string $token): array {
     curl_setopt($ch, CURLOPT_TIMEOUT,        30);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER,     ['Authorization: Bearer ' . $token]);
+    // Forza IPv4: l'egress IPv6 del server (OVH 2001:41d0…) viene respinto a
+    // monte dall'API Business (privata), mentre su IPv4 — come il Playground —
+    // risponde 200. Diagnosticato in ardy-gbp-check.php (quarto tentativo).
+    if (defined('CURL_IPRESOLVE_V4')) { curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4); }
     $resp = curl_exec($ch);
     $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $err  = curl_error($ch);
@@ -219,6 +223,8 @@ function gbp_create_local_post(string $summary, string $imageUrl = '', string $c
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_TIMEOUT,        30);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    // Forza IPv4 (vedi gbp_api_get): l'API Business rifiuta l'egress IPv6 OVH.
+    if (defined('CURL_IPRESOLVE_V4')) { curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4); }
     curl_setopt($ch, CURLOPT_POSTFIELDS,     json_encode($post));
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         'Authorization: Bearer ' . $token,

@@ -343,6 +343,44 @@ if ($httpCode !== 200) {
     }
 }
 
+// --- Quarto tentativo: forza IPv4 -------------------------------------
+// L'"Ambiente di rete PHP" ha rivelato un egress IPv6 (2001:41d0… = OVH).
+// L'API Business (privata/allowlisted) respinge l'egress IPv6 mentre gli
+// endpoint pubblici (oauth2/tokeninfo, Calendar/Gmail) lo accettano — e il
+// Playground gira su IPv4 di Google → 200. Qui rifacciamo la GET forzando
+// IPv4: se passa a 200, è LA causa e il fix è CURL_IPRESOLVE_V4 su tutte le
+// chiamate GBP (già applicato in ardy-gbp.php).
+if ($httpCode !== 200 && defined('CURL_IPRESOLVE_V4')) {
+    echo "<h2 style='font-size:15px'>Quarto tentativo — forza <code>IPv4</code></h2>";
+    $ch4 = curl_init($API_URL);
+    curl_setopt($ch4, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch4, CURLOPT_TIMEOUT,        30);
+    curl_setopt($ch4, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch4, CURLOPT_HTTPHEADER,     ['Authorization: Bearer ' . $token]);
+    curl_setopt($ch4, CURLOPT_IPRESOLVE,      CURL_IPRESOLVE_V4);
+    $resp4     = curl_exec($ch4);
+    $code4     = (int)curl_getinfo($ch4, CURLINFO_HTTP_CODE);
+    $err4      = curl_error($ch4);
+    $localIp4  = (string)curl_getinfo($ch4, CURLINFO_LOCAL_IP);
+    curl_close($ch4);
+
+    if ($err4) {
+        echo "<div class='box warn'><b>Errore di rete sul quarto tentativo:</b> " . h($err4) . "</div>";
+    } elseif ($code4 === 200) {
+        echo "<div class='box ok'><b>🎯 CAUSA TROVATA: forzando <code>IPv4</code> l'API risponde <b>200</b>.</b><br>"
+           . "Egress IPv4 <code>" . h($localIp4) . "</code> (contro l'IPv6 <code>2001:41d0…</code> di default). "
+           . "L'API Business rifiutava l'uscita IPv6 del server OVH. <b>Fix già applicato in "
+           . "<code>ardy-gbp.php</code></b> (<code>CURL_IPRESOLVE_V4</code> su <code>gbp_api_get()</code> e sulla "
+           . "POST dei localPost): il flusso di pubblicazione ora esce su IPv4. Puoi riabilitare il toggle Google "
+           . "e pubblicare una fase di test.</div>";
+    } else {
+        echo "<div class='box muted'><b>Nessun cambiamento: HTTP $code4 anche forzando IPv4</b> (egress "
+           . "<code>" . h($localIp4 ?: '—') . "</code>).<br>Allora non è l'IPv6: resta il test <code>curl</code> "
+           . "da shell (config PHP-curl vs IP) descritto sopra.</div>";
+        echo "<pre>" . h(substr((string)$resp4, 0, 400)) . "</pre>";
+    }
+}
+
 // --- Dettaglio tecnico -------------------------------------------------
 echo "<h2 style='font-size:15px'>Dettaglio risposta</h2>";
 echo "<p class='muted'>HTTP <b>$httpCode</b>" . ($status ? " · status <b>" . h($status) . "</b>" : "")
