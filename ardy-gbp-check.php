@@ -187,6 +187,49 @@ echo "<tr><td style='padding:4px 8px'>Client dell'access_token (aud)</td><td sty
 echo "<tr><td style='padding:4px 8px'>Client GBP configurato</td><td style='padding:4px 8px'><code>" . h($gbpClient) . "</code></td></tr>";
 echo "</table>";
 
+// --- Secondo tentativo: X-Goog-User-Project ---------------------------
+// Playground 200 vs server 403 con TOKEN IDENTICO ⇒ la differenza è nel
+// transporto, non nel token. Il Playground allega automaticamente l'header
+// `X-Goog-User-Project` (quota project); alcune API private di Google lo
+// pretendono quando le chiami con credenziali utente e, senza, il front-end
+// può respingere a monte con proprio l'HTML "does not have permission to
+// get URL". Qui rifacciamo la STESSA chiamata aggiungendo quell'header e
+// confrontiamo: se passa a 200, è quello il fix (va messo in gbp_api_get).
+$projForHeader = preg_match('/^(\d+)-/', $gbpClient, $qm) ? $qm[1] : '';
+if ($projForHeader !== '' && $httpCode !== 200) {
+    echo "<h2 style='font-size:15px'>Secondo tentativo — con <code>X-Goog-User-Project</code></h2>";
+    $ch2 = curl_init($API_URL);
+    curl_setopt($ch2, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch2, CURLOPT_TIMEOUT,        30);
+    curl_setopt($ch2, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch2, CURLOPT_HTTPHEADER,     [
+        'Authorization: Bearer ' . $token,
+        'X-Goog-User-Project: ' . $projForHeader,
+    ]);
+    $resp2 = curl_exec($ch2);
+    $code2 = (int)curl_getinfo($ch2, CURLINFO_HTTP_CODE);
+    $err2  = curl_error($ch2);
+    curl_close($ch2);
+
+    if ($err2) {
+        echo "<div class='box warn'><b>Errore di rete sul secondo tentativo:</b> " . h($err2) . "</div>";
+    } elseif ($code2 === 200) {
+        echo "<div class='box ok'><b>🎯 TROVATO: con l'header <code>X-Goog-User-Project: "
+           . h($projForHeader) . "</code> l'API risponde <b>200</b>.</b><br>"
+           . "Era questa la differenza col Playground (che lo allega da solo). <b>Fix:</b> aggiungere "
+           . "questo header a tutte le chiamate in <code>ardy-gbp.php</code> "
+           . "(<code>gbp_api_get()</code> e il POST dei localPost). Fatto quello, il flusso è sbloccato.</div>";
+    } else {
+        echo "<div class='box muted'><b>Nessun cambiamento: HTTP $code2 anche con <code>X-Goog-User-Project</code>.</b><br>"
+           . "Non è (solo) il quota project. Con token provatamente valido (business.manage, client giusto) "
+           . "e questo header, il 403 resta ⇒ la richiesta dal server è respinta a monte per un motivo che "
+           . "NON dipende dal token. Prossimo test decisivo: lanciare la stessa <code>curl -H 'Authorization: "
+           . "Bearer &lt;token&gt;' " . h($API_URL) . "</code> (a) dalla shell del server e (b) da un'altra macchina "
+           . "col MEDESIMO access_token, e confrontare: se (a) fallisce e (b) va, è l'IP/rete del server.</div>";
+        echo "<pre>" . h(substr((string)$resp2, 0, 400)) . "</pre>";
+    }
+}
+
 // --- Dettaglio tecnico -------------------------------------------------
 echo "<h2 style='font-size:15px'>Dettaglio risposta</h2>";
 echo "<p class='muted'>HTTP <b>$httpCode</b>" . ($status ? " · status <b>" . h($status) . "</b>" : "")
