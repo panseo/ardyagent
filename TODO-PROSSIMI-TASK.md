@@ -545,6 +545,25 @@ Ipotesi principale = **#1 (opcache / `ardy-gbp.php` non aggiornato)**: è la spi
 Nota: se il redirect Playground era stato aggiunto al client, si può rimuovere (pulizia). Il caso email
 Ravi si può chiudere (il problema non era loro). a.panseo resta come account alternativo già funzionante.
 
+**✅ AUTO-DIAGNOSI AGGIUNTA AL CHECK (20/07, branch `claude/gbp-403-error-o7mo0y`):** invece di indovinare
+fra i 3 controlli manuali, `ardy-gbp-check.php` ora **smaschera da solo il token che sta davvero usando** e
+dice quale dei 3 casi è. Aggiunto un blocco "Diagnostica del token in uso" che:
+- legge dal file token: mtime, `refresh_token` presente, `scope` salvato;
+- chiama `oauth2.googleapis.com/tokeninfo` sull'access_token effettivo → mostra gli **scope realmente
+  concessi** e il **client (`aud`)** dietro il token;
+- emette un verdetto automatico:
+  - scope = `calendar`/`gmail` e NON `business.manage` → **🎯 token gcal ancora servito = OPcache**: il file
+    è giusto, è `ardy-gbp.php` a essere vecchio → **riavviare PHP-FPM / svuotare OPcache** (chiude il caso #1
+    senza aprire i file sul server);
+  - manca `business.manage` → consenso partito male / account sbagliato → ri-auth da `ardy-gbp-auth.php`;
+  - ha `business.manage` ma l'API dà comunque 403 → non è OPcache né token: ri-auth scegliendo **esplicitamente**
+    lo stesso account del Playground (il browser può averne auto-scelto un altro).
+- il footer "Progetto del client OAuth" ora deriva dal **client GBP effettivo** (`gbp_client_id()`), non più
+  dal client gcal.
+**⏭️ Prossimo passo per Andrea:** deployare `ardy-gbp-check.php` aggiornato → ricaricare
+`https://ardyagent.ardy-lab.it/ardy-gbp-check.php` → leggere il box "Diagnostica del token in uso": dirà nero
+su bianco se è OPcache (99% dei casi qui) o altro. Poi agire di conseguenza (riavvio FPM) e ri-testare.
+
 **Lato codice (già pronto, riabilitare SOLO a check verde):** il toggle Google nel pannello social
 (`ardy-michela-app.html`, `socialDestHtml`) è stato **ri-disattivato** dopo l'esito negativo del check —
 era stato riabilitato per errore in base a un annuncio poi smentito dal test dal vivo. `inviaSocial()` è

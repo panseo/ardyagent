@@ -116,6 +116,77 @@ if ($httpCode === 200) {
     echo "<div class='box warn'><b>Risposta inattesa (HTTP $httpCode).</b> Vedi il dettaglio sotto.</div>";
 }
 
+// --- Diagnostica del TOKEN in uso -------------------------------------
+// Il 403-HTML "does not have permission to get URL /v1/accounts" arriva dal
+// front-end Google PRIMA del servizio. Con progetto allowlisted (verificato
+// a 200 dal Playground) l'unica variabile residua è il TOKEN che il codice
+// sta davvero usando. Qui lo smascheriamo: (a) cosa c'è salvato nel file,
+// (b) cosa dice Google (tokeninfo) sugli scope realmente concessi e sul
+// client (aud) dietro l'access_token. Serve a capire se ardy-gbp.php sta
+// ancora servendo il vecchio token gcal (bytecode vecchio in OPcache).
+echo "<h2 style='font-size:15px'>Diagnostica del token in uso</h2>";
+
+$tokFile  = defined('GBP_TOKEN_FILE') ? GBP_TOKEN_FILE : (__DIR__ . '/ardy-gbp-token.json');
+$stored   = is_file($tokFile) ? json_decode((string)@file_get_contents($tokFile), true) : null;
+$storedScope = is_array($stored) ? ($stored['scope'] ?? '') : '';
+$hasRefresh  = is_array($stored) && !empty($stored['refresh_token']);
+$fileMtime   = is_file($tokFile) ? date('d/m/Y H:i:s', filemtime($tokFile)) : '—';
+
+// tokeninfo: rivela scope realmente concessi + client (aud) dell'access_token.
+[$tiCode, $tiData] = [0, null];
+$tiCh = curl_init('https://oauth2.googleapis.com/tokeninfo?access_token=' . rawurlencode($token));
+curl_setopt($tiCh, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($tiCh, CURLOPT_TIMEOUT,        15);
+curl_setopt($tiCh, CURLOPT_SSL_VERIFYPEER, true);
+$tiRaw  = curl_exec($tiCh);
+$tiCode = (int)curl_getinfo($tiCh, CURLINFO_HTTP_CODE);
+curl_close($tiCh);
+$tiData = json_decode((string)$tiRaw, true);
+$liveScope = is_array($tiData) ? ($tiData['scope'] ?? '') : '';
+$liveAud   = is_array($tiData) ? ($tiData['aud'] ?? ($tiData['azp'] ?? '')) : '';
+
+$hasBusinessManage = stripos($liveScope, 'business.manage') !== false
+                  || stripos($storedScope, 'business.manage') !== false;
+$looksLikeGcal = (stripos($liveScope, 'calendar') !== false || stripos($liveScope, 'gmail') !== false)
+              && stripos($liveScope, 'business.manage') === false;
+$gbpClient = gbp_client_id();
+$audMatchesGbp = $liveAud !== '' && $gbpClient !== '' && strpos($gbpClient, (string)$liveAud) === 0;
+
+if ($looksLikeGcal) {
+    echo "<div class='box err'><b>🎯 Token SBAGLIATO: è quello di Calendar/Gmail, non quello dedicato.</b><br>"
+       . "Gli scope realmente concessi (sotto) contengono <code>calendar</code>/<code>gmail</code> ma "
+       . "<b>non</b> <code>business.manage</code>. Significa che <code>ardy-gbp.php</code> sta ancora "
+       . "eseguendo la versione VECCHIA (<code>return gcal_get_access_token()</code>): è <b>OPcache</b> "
+       . "che serve bytecode vecchio. <b>Da fare sul server:</b> svuota PHP OPcache / riavvia PHP-FPM "
+       . "(es. <code>systemctl reload php*-fpm</code>), poi rilancia questo check. Il file token è già "
+       . "corretto — è solo il codice a non essere ricaricato.</div>";
+} elseif (!$hasBusinessManage) {
+    echo "<div class='box warn'><b>⚠️ Il token NON ha lo scope <code>business.manage</code>.</b><br>"
+       . "Il consenso è partito senza concedere lo scope giusto (o con l'account sbagliato). "
+       . "Ri-autorizza da <code>ardy-gbp-auth.php</code> scegliendo esplicitamente l'account che "
+       . "gestisce la scheda (<code>ardy.documenti</code> o <code>a.panseo</code>) e verifica che nel "
+       . "consenso compaia <b>“Google Business”</b>.</div>";
+} elseif ($httpCode === 200) {
+    echo "<div class='box ok'><b>✅ Token corretto e funzionante</b> — scope <code>business.manage</code> "
+       . "concesso e l'API risponde 200.</div>";
+} else {
+    echo "<div class='box warn'><b>Token con <code>business.manage</code> ma l'API risponde $httpCode.</b><br>"
+       . "Lo scope è quello giusto (sotto), quindi <b>non</b> è OPcache né un problema di token. "
+       . "Se persiste il 403-HTML nonostante il Playground dia 200 con lo stesso client+account, "
+       . "ri-autorizza da <code>ardy-gbp-auth.php</code> assicurandoti di scegliere lo stesso account "
+       . "usato nel Playground (il browser potrebbe averne auto-selezionato un altro).</div>";
+}
+
+echo "<table class='muted' style='border-collapse:collapse;width:100%;font-size:13px'>";
+echo "<tr><td style='padding:4px 8px'>File token</td><td style='padding:4px 8px'><code>" . h(basename($tokFile)) . "</code>" . (is_file($tokFile) ? '' : ' <b>(MANCANTE)</b>') . "</td></tr>";
+echo "<tr><td style='padding:4px 8px'>Ultima modifica file</td><td style='padding:4px 8px'>" . h($fileMtime) . "</td></tr>";
+echo "<tr><td style='padding:4px 8px'>refresh_token salvato</td><td style='padding:4px 8px'>" . ($hasRefresh ? '✅ sì' : '❌ no') . "</td></tr>";
+echo "<tr><td style='padding:4px 8px'>Scope salvato nel file</td><td style='padding:4px 8px'><code>" . h($storedScope ?: '(assente)') . "</code></td></tr>";
+echo "<tr><td style='padding:4px 8px'>Scope concessi (tokeninfo)</td><td style='padding:4px 8px'><code>" . h($liveScope ?: ('(tokeninfo HTTP ' . $tiCode . ')')) . "</code></td></tr>";
+echo "<tr><td style='padding:4px 8px'>Client dell'access_token (aud)</td><td style='padding:4px 8px'><code>" . h($liveAud ?: '—') . "</code>" . ($liveAud ? ($audMatchesGbp ? ' ✅ = client GBP' : ' ⚠️ ≠ client GBP configurato') : '') . "</td></tr>";
+echo "<tr><td style='padding:4px 8px'>Client GBP configurato</td><td style='padding:4px 8px'><code>" . h($gbpClient) . "</code></td></tr>";
+echo "</table>";
+
 // --- Dettaglio tecnico -------------------------------------------------
 echo "<h2 style='font-size:15px'>Dettaglio risposta</h2>";
 echo "<p class='muted'>HTTP <b>$httpCode</b>" . ($status ? " · status <b>" . h($status) . "</b>" : "")
@@ -128,8 +199,8 @@ echo "<p class='muted'>Header risposta:</p>";
 echo "<pre>" . h(trim($rawHeaders) ?: '(nessun header)') . "</pre>";
 
 // Il prefisso numerico del client_id OAuth = Project Number del progetto Cloud.
-$projNum = (defined('ARDY_GCAL_CLIENT_ID') && preg_match('/^(\d+)-/', ARDY_GCAL_CLIENT_ID, $pm))
-    ? $pm[1] : '(non ricavabile)';
+// Usa il client GBP effettivamente in uso (non più il gcal): è quello che conta.
+$projNum = preg_match('/^(\d+)-/', gbp_client_id(), $pm) ? $pm[1] : '(non ricavabile)';
 echo "<hr><p class='muted'><b>Progetto del client OAuth</b> (Project Number ricavato dal "
    . "client_id): <code>" . h($projNum) . "</code><br>Deve coincidere col progetto Cloud dove "
    . "hai <b>abilitato le API My Business</b> e <b>inviato il form di accesso</b>. Se è diverso, "
