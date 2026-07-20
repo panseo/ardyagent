@@ -8,13 +8,12 @@
 //
 // Uso: aprire https://ardyagent.ardy-lab.it/ardy-gbp-check.php nel browser.
 //
-// Riusa il token OAuth di Calendar/Gmail (ardy-gcal-token.json). Per leggere
-// gli account serve però lo scope `business.manage`: se non c'è ancora,
-// lo script lo segnala e basta ri-autorizzare (vedi nota in fondo).
+// Usa il token DEDICATO Business Profile (ardy-gbp-token.json), con il
+// solo scope `business.manage`. Se manca, autorizzare da ardy-gbp-auth.php.
 // -----------------------------------------------------------
 
-require_once __DIR__ . '/ardy-config.php'; // costanti ARDY_GCAL_* (caricarlo PRIMA di gcal)
-require_once __DIR__ . '/ardy-gcal.php';   // per gcal_get_access_token()
+require_once __DIR__ . '/ardy-config.php';
+require_once __DIR__ . '/ardy-gbp.php';    // per gbp_get_access_token() (token dedicato)
 
 // Difesa in profondità: se il Basic Auth a monte (.htaccess) non venisse
 // applicato, questo guard rifiuta comunque le richieste non autenticate.
@@ -29,7 +28,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 // È la chiamata più semplice che attraversa il gate di quota.
 $API_URL = 'https://mybusinessaccountmanagement.googleapis.com/v1/accounts';
 
-$token = gcal_get_access_token();
+$token = gbp_get_access_token();
 
 echo "<!doctype html><html lang='it'><head><meta charset='utf-8'>";
 echo "<title>Ardy — Diagnostica Google Business Profile API</title>";
@@ -43,8 +42,8 @@ echo "<p class='muted'>Controllo eseguito il " . date('d/m/Y H:i:s') . " (Europe
 
 if (!$token) {
     echo "<div class='box err'><b>❌ Nessun access token disponibile.</b><br>"
-       . "Il file <code>ardy-gcal-token.json</code> manca o è scaduto senza refresh_token. "
-       . "Ri-autorizza da <code>ardy-gcal-auth.php</code>.</div></body></html>";
+       . "Il file <code>ardy-gbp-token.json</code> manca o è scaduto senza refresh_token. "
+       . "Autorizza da <code>ardy-gbp-auth.php</code>.</div></body></html>";
     exit;
 }
 
@@ -85,14 +84,13 @@ if ($httpCode === 200) {
        . "Puoi procedere a costruire la pubblicazione dei post delle fasi.</div>";
 } elseif ($httpCode === 401) {
     echo "<div class='box err'><b>❌ Token non valido / scaduto (401).</b><br>"
-       . "Ri-autorizza da <code>ardy-gcal-auth.php</code>.</div>";
+       . "Ri-autorizza da <code>ardy-gbp-auth.php</code>.</div>";
 } elseif ($httpCode === 403 && (stripos($status, 'PERMISSION_DENIED') !== false || stripos($reason, 'SCOPE') !== false)
           && stripos($msg, 'scope') !== false) {
     echo "<div class='box warn'><b>⚠️ Manca lo scope <code>business.manage</code>.</b><br>"
-       . "Il progetto sembra autorizzato ma il token attuale (Calendar/Gmail) non include lo scope giusto. "
-       . "Aggiungi <code>https://www.googleapis.com/auth/business.manage</code> in "
-       . "<code>ardy-gcal-auth.php</code> e ri-autorizza (consenso) per ottenere un nuovo token. "
-       . "Poi rilancia questo check.</div>";
+       . "Il token dedicato non include lo scope giusto. "
+       . "Ri-autorizza da <code>ardy-gbp-auth.php</code> (consenso a business.manage) "
+       . "per ottenere un nuovo token, poi rilancia questo check.</div>";
 } elseif ($httpCode === 429 || stripos($status, 'RESOURCE_EXHAUSTED') !== false) {
     echo "<div class='box err'><b>⛔ QUOTA ANCORA A ZERO / esaurita (429).</b><br>"
        . "La richiesta di aumento quota <b>non è ancora stata approvata</b> "
@@ -137,7 +135,7 @@ echo "<hr><p class='muted'><b>Progetto del client OAuth</b> (Project Number rica
    . "hai <b>abilitato le API My Business</b> e <b>inviato il form di accesso</b>. Se è diverso, "
    . "è quello il motivo del 403.</p>";
 
-echo "<p class='muted'>Per abilitare lo scope la prima volta: in <code>ardy-gcal-auth.php</code> "
-   . "aggiungi <code>https://www.googleapis.com/auth/business.manage</code> all'array degli scope, "
-   . "apri quel file nel browser, completa il consenso Google, poi torna qui.</p>";
+echo "<p class='muted'>Per (ri)autorizzare: apri <code>ardy-gbp-auth.php</code> nel browser, "
+   . "completa il consenso Google (scope <code>business.manage</code>) con l'account che gestisce "
+   . "la scheda, poi torna qui.</p>";
 echo "</body></html>";

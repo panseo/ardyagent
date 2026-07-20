@@ -39,6 +39,14 @@ To save everyone time, here is the complete, verified state of the integration:
 4. **Allowlist**: on July 6 you confirmed in writing that project 532339794075 was
    allowlisted and access granted to `ardy.documenti@gmail.com`.
 5. **OAuth app**: status "In production", `business.manage` scope authorized.
+6. **Scope never granted (key symptom on your side)**: the `business.manage` scope is
+   registered in the OAuth consent screen (Data Access), yet the consent screen
+   classifies it as a **non-sensitive** scope (Calendar/Gmail correctly show as
+   sensitive/restricted), and after user consent the scope is **never actually granted** —
+   it does not appear in the account's authorized permissions, and re-consenting does not
+   add it. A write-level scope like `business.manage` being treated as non-sensitive and
+   silently dropped strongly indicates the Business Profile API is not truly linked/active
+   for this project on Google's side — i.e. the provisioning did not actually take effect.
 
 Despite all of the above, the request:
 `GET https://mybusinessaccountmanagement.googleapis.com/v1/accounts`

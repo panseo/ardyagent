@@ -480,11 +480,49 @@ se Ravi rimbalza di nuovo con un altro copione (chiede cose già fornite / non a
 attaccare il blocco da un canale dove rispondono i Googler del backend, scavalcando il supporto L1. Dove:
 Google Issue Tracker (componente "Business Profile APIs") + Stack Overflow tag `google-my-business-api`.
 Privacy: pubblicare project number 532339794075 sì, Gmail/ID caso NO (fornire in privato). Da postare Andrea.
-**Da fare (prossima sessione):** solo attendere Google:
-1. Controllare la risposta di Ravi al follow-up del 17/07 (mail `ardy.documenti`). Se è un altro rimbalzo →
-   usare la bozza L2 pronta in `ardy-gbp-escalation-L2.md`.
-2. Ri-lanciare `ardy-gbp-check.php` periodicamente, finché non dà verde ("QUOTA SBLOCCATA") → poi
-   riabilitare il toggle Google (vedi sotto) e pubblicare una fase di test.
+**🎯 SVOLTA (20/07) — la diagnosi si ribalta: NON è il progetto, è l'account ardy.documenti.**
+Ravi (18/07) ha aggiunto **`a.panseo@gmail.com`** al Google Group come secondo account di test. Test fatto
+via **OAuth 2.0 Playground** (con le credenziali del client "Ardy lab social" 532339794075-kg0asdq…, redirect
+playground aggiunto, consenso fresco solo scope `business.manage`, login come **a.panseo**):
+- `GET mybusinessaccountmanagement/v1/accounts` → **HTTP 200 OK** con dati reali (account personale "Andrea
+  Panella" + location group "Kok cucine e living").
+- `GET mybusinessbusinessinformation/v1/accounts/109239154951108936988/locations` → **200**, tra le location
+  c'è **"Ardy di Michela Panella"** (`locations/12362250276127196060`).
+→ **Il progetto 532339794075 È allowlisted e FUNZIONA** (a.panseo lo prova). Il 403 di `ardy-gbp-check.php`
+è **specifico dell'account ardy.documenti**, il cui provisioning/aggancio al gruppo è rotto (nonostante Ravi
+lo dia per attivo). Coerente col fatto che per ardy.documenti lo scope business.manage non veniva mai
+concesso, mentre per a.panseo (aggiunto oggi, consenso fresco) sì. **a.panseo = account COMPLETO** (API ok +
+gestisce la scheda Ardy).
+**Nota codice:** `ardy-gbp.php` → `gbp_get_access_token()` ritorna `gcal_get_access_token()` = token
+condiviso di ardy.documenti (`ardy-gcal-token.json`). Non c'è flusso separato (`ardy-gbp-auth.php` non
+esiste). Per usare a.panseo servirebbe un token OAuth separato (solo business.manage) + relativo auth/refresh.
+**COLPO DI SCENA (20/07): ANCHE ardy.documenti dà 200 dal Playground!** Rifatto lo stesso test loggato come
+`ardy.documenti` (consenso fresco, solo scope `business.manage`) → **HTTP 200 OK** (account personale "Ardy",
+`accounts/102932459424802940851`). Quindi né il progetto né l'account erano il problema: **la causa vera è
+il TOKEN del codice.** `ardy-gbp-check.php` riusava il token condiviso di Calendar/Gmail
+(`ardy-gcal-token.json`), che **non ha mai avuto davvero `business.manage`**: quello scope, in bundle con
+Calendar/Gmail su app non verificata, veniva scartato (in "autorizzazioni" non compariva "Google Business").
+Richiesto **da solo** viene concesso → 200.
+
+**✅ FIX IMPLEMENTATO (20/07) — token GBP dedicato (branch google-business-block):**
+- **`ardy-gbp-auth.php`** (nuovo): flusso OAuth col SOLO scope `business.manage`, salva `ardy-gbp-token.json`.
+- **`ardy-gbp.php`**: `gbp_get_access_token()` ora legge/rinnova `ardy-gbp-token.json` (non più il token gcal);
+  client via `ARDY_GBP_CLIENT_*` con fallback `ARDY_GCAL_CLIENT_*`.
+- **`ardy-gbp-check.php`**: usa il token dedicato; messaggi d'errore puntano a `ardy-gbp-auth.php`.
+- **`.htaccess`**: `ardy-gbp-auth.php` sotto Basic Auth; `ardy-gbp-token.json` già coperto dal deny `.json`.
+
+**DEPLOY (Andrea) — passi:**
+1. In `ardy-config.php` aggiungere il client "Ardy lab social" (quello provato nel Playground, che ha lo
+   scope + il redirect `ardy-gbp-auth.php` registrati):
+   `define('ARDY_GBP_CLIENT_ID', '532339794075-kg0asdq…apps.googleusercontent.com');`
+   `define('ARDY_GBP_CLIENT_SECRET', 'GOCSPX-…');` (il secret NUOVO generato nel Playground).
+2. Deployare i file modificati/nuovi.
+3. Aprire **una volta** `https://ardyagent.ardy-lab.it/ardy-gbp-auth.php` → consenso come **ardy.documenti**
+   (scope business.manage) → "Token Business Profile salvato!".
+4. Aprire `ardy-gbp-check.php` → deve dare **verde** ("QUOTA SBLOCCATA").
+5. Ad account verde: riabilitare il toggle Google (vedi sotto) e pubblicare una fase di test.
+Nota: se il redirect Playground era stato aggiunto al client, si può rimuovere (pulizia). Il caso email
+Ravi si può chiudere (il problema non era loro). a.panseo resta come account alternativo già funzionante.
 
 **Lato codice (già pronto, riabilitare SOLO a check verde):** il toggle Google nel pannello social
 (`ardy-michela-app.html`, `socialDestHtml`) è stato **ri-disattivato** dopo l'esito negativo del check —
