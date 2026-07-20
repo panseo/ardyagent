@@ -2501,20 +2501,27 @@ async function eliminaSopralluogo(id) {
   } catch (e) { showToast('⚠ Errore di rete', 'error'); }
 }
 
-// ─── Fasi pubblicate (sola lettura: solo titolo + data) ───
+// ─── Fasi pubblicate: ogni fase è un accordion (contenuto + foto + social) ───
+// Cliccando la fase si espande: mostra il testo pubblicato, le foto e il box
+// "pubblica sui social" (FB/IG/Google) con Anteprima e Pubblica — utile per
+// spingere una fase già pubblicata anche su Google (ora sbloccato).
+let fasiPubblicateCache = [];
 async function caricaFasiPubblicate(sessionId) {
   const wrap = document.getElementById('fasiPubblicateWrap');
   const cont = document.getElementById('fasiPubblicateList');
   if (!wrap || !cont) return;
   cont.innerHTML = '';
   wrap.style.display = 'none';
+  fasiPubblicateCache = [];
   if (!sessionId) return;
   try {
     const r = await fetch('ardy-get-fasi.php?session_id=' + encodeURIComponent(sessionId));
     const fasi = await r.json();
     if (!Array.isArray(fasi) || !fasi.length) return;
+    fasiPubblicateCache = fasi;
     const link = currentLead && currentLead.wp_post_link;
-    cont.innerHTML = fasi.map(f => {
+    cont.innerHTML = fasi.map((f, idx) => {
+      const fid    = (f.id != null && f.id !== '') ? String(f.id) : ('idx' + idx);
       const isCom  = (f.fase_tipo === 'comunicazione');
       const titolo = (f.fase_nome && f.fase_nome.trim())
         ? f.fase_nome
@@ -2523,9 +2530,35 @@ async function caricaFasiPubblicate(sessionId) {
       const nFoto  = Array.isArray(f.foto_urls) ? f.foto_urls.length : 0;
       const badge  = isCom ? '<span style="color:#e08a3c;">⚠</span> ' : '';
       const foto   = nFoto ? ` · 📷 ${nFoto}` : '';
-      return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:6px;">
-        <span style="font-size:13px;">${badge}${escHtml(titolo)}</span>
-        <span style="font-size:11px;color:var(--text-dim);white-space:nowrap;">${escHtml(data)}${foto}</span>
+      const testo  = (f.testo_generato && f.testo_generato.trim())
+        ? f.testo_generato : (f.testo_breve || '');
+      const imgs   = Array.isArray(f.foto_urls) ? f.foto_urls : [];
+      const imgsHtml = imgs.length
+        ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;">`
+          + imgs.map(u => `<img src="${safeUrl(u)}" alt="" loading="lazy" style="height:70px;border-radius:4px;object-fit:cover;">`).join('')
+          + `</div>` : '';
+      // Le comunicazioni straordinarie non vanno sui social (come nel form nuova fase).
+      const socialBlock = isCom ? '' : `
+        <div style="margin-top:10px;border-top:1px dashed var(--border);padding-top:10px;">
+          <div class="lav-title" style="margin-bottom:6px;">📲 Pubblica sui social</div>
+          ${socialDestHtml('fase_' + fid, ['none'])}
+          <textarea class="lav-textarea" id="faseSocialText_${fid}" style="min-height:100px;margin-top:8px;">${escHtml(testo)}</textarea>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+            <button class="btn-secondary" style="flex:1 1 120px;" onclick="apriAnteprimaIgFase('${escHtml(fid)}')">👁 Anteprima</button>
+            <button class="btn-pubblica" style="flex:2 1 140px;" onclick="pubblicaFaseSocial('${escHtml(fid)}')">📲 Pubblica</button>
+          </div>
+          <p style="font-size:11px;color:var(--text-dim);margin:6px 2px 0;">Scegli i social e ripubblica questa fase (utile per aggiungere Google).</p>
+        </div>`;
+      return `<div style="border:1px solid var(--border);border-radius:6px;margin-bottom:6px;overflow:hidden;">
+        <button type="button" onclick="toggleFasePub('${escHtml(fid)}')" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;background:none;border:none;color:inherit;padding:8px 10px;cursor:pointer;text-align:left;font-family:inherit;">
+          <span style="font-size:13px;">${badge}${escHtml(titolo)}</span>
+          <span style="font-size:11px;color:var(--text-dim);white-space:nowrap;">${escHtml(data)}${foto} <span class="acc-chevron" id="faseChev_${fid}">▾</span></span>
+        </button>
+        <div id="faseBody_${fid}" style="display:none;padding:0 10px 10px;">
+          ${testo ? `<div style="font-size:13px;white-space:pre-wrap;margin:8px 0;">${escHtml(testo)}</div>` : ''}
+          ${imgsHtml}
+          ${socialBlock}
+        </div>
       </div>`;
     }).join('');
     if (link) {
@@ -2533,6 +2566,64 @@ async function caricaFasiPubblicate(sessionId) {
     }
     wrap.style.display = 'block';
   } catch (e) { /* lista facoltativa: in caso di errore resta nascosta */ }
+}
+
+// Apre/chiude il contenuto di una fase pubblicata.
+function toggleFasePub(fid) {
+  const body = document.getElementById('faseBody_' + fid);
+  const chev = document.getElementById('faseChev_' + fid);
+  if (!body) return;
+  const open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  if (chev) chev.textContent = open ? '▴' : '▾';
+}
+
+// Anteprima Instagram per una fase già pubblicata (riusa l'overlay condiviso).
+function apriAnteprimaIgFase(fid) {
+  const f = fasiPubblicateCache.find((x, i) => (x.id != null ? String(x.id) : ('idx' + i)) === String(fid));
+  if (!f) return;
+  igPreviewImgs = Array.isArray(f.foto_urls) ? f.foto_urls.slice() : [];
+  igPreviewIdx  = 0;
+  const ta = document.getElementById('faseSocialText_' + fid);
+  document.getElementById('igCaption').textContent = (ta ? ta.value : (f.testo_generato || '')) || '';
+  renderIgPreview();
+  document.getElementById('igPreviewOverlay').classList.add('open');
+}
+
+// Pubblica sui social una fase già pubblicata. Legge la selezione DIRETTAMENTE
+// dal DOM (niente fallback FB/IG di getSelectedPlatforms) così non si ripubblica
+// per sbaglio; riusa lo stesso motore inviaSocial() del resto della dashboard.
+async function pubblicaFaseSocial(fid) {
+  const f = fasiPubblicateCache.find((x, i) => (x.id != null ? String(x.id) : ('idx' + i)) === String(fid));
+  if (!f) return;
+  const ta = document.getElementById('faseSocialText_' + fid);
+  const testo = (ta ? ta.value : (f.testo_generato || '')).trim();
+  if (!testo) { showToast('⚠ Il testo è vuoto', 'error'); return; }
+  const wrap = document.getElementById('dest_fase_' + fid);
+  const piattaforme = wrap ? [...wrap.querySelectorAll('.social-toggle.sel')].map(b => b.dataset.plat) : [];
+  if (!piattaforme.length) { showToast('⚠ Scegli almeno un social', 'error'); return; }
+  const postLink = (currentLead && currentLead.wp_post_link) || '';
+  const cliente  = (currentLead && currentLead.Nome) || '';
+  try {
+    const data = await inviaSocial({
+      testo_social: testo,
+      testo,
+      immagini:  Array.isArray(f.foto_urls) ? f.foto_urls : [],
+      post_link: postLink,
+      fase:      f.fase_nome || '',
+      mobile:    '',
+      cliente,
+      piattaforme,
+    });
+    if (data.success) {
+      if (data.confermato === false)
+        showToast('📤 Inviato ai social — verifica che sia pubblicato', '');
+      else
+        showToast('✓ Pubblicato su ' + platLabel(data.piattaforme || piattaforme), 'success');
+    } else {
+      showToast('⚠ ' + (data.error || 'Errore social'), 'error');
+    }
+  } catch (e) { showToast('⚠ Errore di rete', 'error'); }
 }
 
 // ─── Fasi previste (bozze): lista nel pannello Lavorazione ─

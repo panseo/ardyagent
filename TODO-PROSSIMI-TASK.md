@@ -682,6 +682,13 @@ Basic Auth in `.htaccess`, `ardy-gbp.php` (lib) nel deny.
 **Google** tra le destinazioni → pubblicare una **fase di test** → verificare che il post compaia davvero sulla
 scheda Google "Ardy di Michela Panella" (non solo `success:true`).
 
+**✅ Elenco "Fasi pubblicate" ora è a fisarmonica (20/07):** ogni fase pubblicata è **cliccabile e si espande**
+(`caricaFasiPubblicate` in `ardy-michela-app.html`) mostrando: il **testo** pubblicato, le **foto**, e il box
+**"📲 Pubblica sui social"** con le 3 iconcine **FB/IG/Google** + **Anteprima** + **Pubblica**. Google parte
+**deselezionato** e la selezione si legge dal DOM (niente fallback FB/IG) per non ripubblicare per sbaglio.
+Riusa il motore esistente (`socialDestHtml`, `inviaSocial`, `renderIgPreview`). Utile per spingere su **Google**
+le fasi già pubblicate prima dello sblocco. (Le comunicazioni straordinarie restano senza social.)
+
 ---
 
 ## 📋 TASK DA SVILUPPARE (aperti)
