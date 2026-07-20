@@ -521,6 +521,27 @@ Richiesto **da solo** viene concesso → 200.
    (scope business.manage) → "Token Business Profile salvato!".
 4. Aprire `ardy-gbp-check.php` → deve dare **verde** ("QUOTA SBLOCCATA").
 5. Ad account verde: riabilitare il toggle Google (vedi sotto) e pubblicare una fase di test.
+
+**⏳ STATO DEBUG (20/07 ~16:00) — fix deployato ma check ancora 403. Da chiudere:**
+Fatto finora: (a) `ARDY_GBP_CLIENT_ID/SECRET` messi in `ardy-config.php` = client "Ardy lab social"
+(`532339794075-kg0asdq…`) + secret NUOVO `eIV0`; (b) aperto `ardy-gbp-auth.php` → nel consenso **è comparso
+"Google Business"** (scope concesso) → pagina "Token Business Profile salvato!"; (c) **eppure
+`ardy-gbp-check.php` dà ancora 403-HTML** ("does not have permission to get URL /v1/accounts").
+Contesto Playground: **la stessa chiamata dà 200** sia con ardy.documenti sia con a.panseo (client kg0asdq +
+eIV0, scope business.manage). Quindi token+account+progetto SONO buoni: il check non sta usando il token
+nuovo, o il consenso è partito con l'account sbagliato.
+**3 controlli da fare (in ordine di probabilità), sul SERVER:**
+1. **`ardy-gbp.php` è la versione nuova?** Aprirlo: `gbp_get_access_token()` deve contenere
+   `is_file(GBP_TOKEN_FILE)` / `ardy-gbp-token.json`. Se dice ancora `return gcal_get_access_token();` → NON
+   deployato, ricaricarlo. **Se è nuovo ma resta 403 → è OPCACHE:** svuotare PHP OPcache / riavviare PHP-FPM
+   (server con `opcache.validate_timestamps=0` servono bytecode vecchio).
+2. **Account del consenso:** con quale account è stato aperto `ardy-gbp-auth.php`? Deve essere
+   `ardy.documenti` (o a.panseo). Se il browser ne ha auto-scelto un altro → token di account non
+   provisionato → 403. Ri-fare scegliendo esplicitamente ardy.documenti.
+3. **Scope del token:** aprire `ardy-gbp-token.json` sul server, controllare che la riga `"scope"` contenga
+   `business.manage` (e che ci sia `refresh_token`). Se manca lo scope → il consenso non l'ha concesso.
+Ipotesi principale = **#1 (opcache / `ardy-gbp.php` non aggiornato)**: è la spiegazione che quadra con
+"token salvato + Google Business concesso, ma check 403".
 Nota: se il redirect Playground era stato aggiunto al client, si può rimuovere (pulizia). Il caso email
 Ravi si può chiudere (il problema non era loro). a.panseo resta come account alternativo già funzionante.
 
