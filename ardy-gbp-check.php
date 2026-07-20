@@ -57,6 +57,9 @@ $raw      = curl_exec($ch);
 $err      = curl_error($ch);
 $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $hdrSize  = (int)curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+$primaryIp = (string)curl_getinfo($ch, CURLINFO_PRIMARY_IP);   // IP di Google contattato
+$localIp   = (string)curl_getinfo($ch, CURLINFO_LOCAL_IP);     // IP/egress della richiesta
+$httpVer   = (int)curl_getinfo($ch, CURLINFO_HTTP_VERSION);    // 2=HTTP/2, 3=1.1...
 curl_close($ch);
 
 $rawHeaders = substr((string)$raw, 0, $hdrSize);
@@ -227,6 +230,38 @@ echo "<tr><td style='padding:4px 8px'>Scope concessi (tokeninfo)</td><td style='
 echo "<tr><td style='padding:4px 8px'>Account del token (email)</td><td style='padding:4px 8px'>" . ($liveEmail !== '' ? ('<code>' . h($liveEmail) . '</code>' . ($emailAllowed ? ' ✅ allowlisted' : ' ⛔ NON allowlisted')) : '<i>ignoto — token creato prima dello scope email; ri-autorizza per vederlo</i>') . "</td></tr>";
 echo "<tr><td style='padding:4px 8px'>Client dell'access_token (aud)</td><td style='padding:4px 8px'><code>" . h($liveAud ?: '—') . "</code>" . ($liveAud ? ($audMatchesGbp ? ' ✅ = client GBP' : ' ⚠️ ≠ client GBP configurato') : '') . "</td></tr>";
 echo "<tr><td style='padding:4px 8px'>Client GBP configurato</td><td style='padding:4px 8px'><code>" . h($gbpClient) . "</code></td></tr>";
+echo "</table>";
+
+// --- Ambiente di rete PHP (proxy / curl) -------------------------------
+// La richiesta ARRIVA a Google (il 403 ha gli header google: alt-svc, logo)
+// ma il suo front-end la respinge, mentre lo STESSO token via oauth2/tokeninfo
+// passa e dal Playground l'API dà 200. Se PHP-FPM ha un proxy in env, la
+// richiesta esce da un IP/percorso diverso da quello che ci si aspetta: qui lo
+// mostriamo, insieme all'IP di egress e alla versione HTTP effettiva.
+$proxyEnv = [];
+foreach (['http_proxy','https_proxy','HTTP_PROXY','HTTPS_PROXY','no_proxy','NO_PROXY','ALL_PROXY'] as $k) {
+    $v = getenv($k);
+    if ($v !== false && $v !== '') { $proxyEnv[$k] = $v; }
+}
+$curlVer = function_exists('curl_version') ? (curl_version()['version'] ?? '?') : '?';
+$httpVerLabel = $httpVer === 3 ? 'HTTP/1.1' : ($httpVer === 2 ? 'HTTP/2' : ($httpVer === 30 ? 'HTTP/3' : ('code ' . $httpVer)));
+echo "<h2 style='font-size:15px'>Ambiente di rete PHP</h2>";
+if ($proxyEnv) {
+    echo "<div class='box warn'><b>⚠️ Proxy configurato nell'ambiente PHP:</b> <code>"
+       . h(implode('  ', array_map(fn($k,$v)=>"$k=$v", array_keys($proxyEnv), $proxyEnv))) . "</code>.<br>"
+       . "Le chiamate curl escono attraverso questo proxy: se non è lo stesso percorso di Calendar/Gmail (o "
+       . "tratta diversamente <code>mybusinessaccountmanagement.googleapis.com</code>), è un forte candidato "
+       . "per il 403. Il test <code>curl</code> da shell (che NON eredita l'env di PHP-FPM) lo conferma: se da "
+       . "shell dà 200, il colpevole è il proxy nell'env di FPM.</div>";
+} else {
+    echo "<div class='box muted'>Nessuna variabile proxy (<code>http_proxy</code>/<code>https_proxy</code>/…) "
+       . "nell'ambiente di PHP: la richiesta non passa da un proxy noto a livello env.</div>";
+}
+echo "<table class='muted' style='border-collapse:collapse;width:100%;font-size:13px'>";
+echo "<tr><td style='padding:4px 8px'>IP di egress (LOCAL_IP)</td><td style='padding:4px 8px'><code>" . h($localIp ?: '—') . "</code> ← è questo che Google vede come sorgente</td></tr>";
+echo "<tr><td style='padding:4px 8px'>IP Google contattato</td><td style='padding:4px 8px'><code>" . h($primaryIp ?: '—') . "</code></td></tr>";
+echo "<tr><td style='padding:4px 8px'>Versione HTTP negoziata</td><td style='padding:4px 8px'>" . h($httpVerLabel) . "</td></tr>";
+echo "<tr><td style='padding:4px 8px'>Versione libcurl</td><td style='padding:4px 8px'><code>" . h($curlVer) . "</code></td></tr>";
 echo "</table>";
 
 // --- Secondo tentativo: X-Goog-User-Project ---------------------------
