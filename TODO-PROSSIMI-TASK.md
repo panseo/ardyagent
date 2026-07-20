@@ -608,6 +608,28 @@ degli account giusti.
 **esplicitamente `ardy.documenti@gmail.com`** (consenso con “Google Business”) → aprire `ardy-gbp-check.php`:
 la riga "Account del token" dirà se ora è l'account giusto e, se sì, l'API dovrebbe passare a **200 verde**.
 
+**🧨 ESITO (20/07 16:27) — ACCOUNT GIUSTO, MA 403 LO STESSO. Ora è escluso TUTTO il lato token.** Ri-autorizzato
+con `ardy.documenti`: il check mostra **Account del token = `ardy.documenti@gmail.com` ✅ allowlisted**, scope
+`email business.manage openid` ✅, aud kg0asdq ✅, refresh ✅ — eppure `GET /v1/accounts` = **403-HTML** (e 403
+pure con `X-Goog-User-Project`). Riepilogo ipotesi ELIMINATE: OPcache, token/scope sbagliati, account
+sbagliato, quota project, header strippato (Calendar/Gmail girano con lo stesso `Bearer`). Lo **stesso account**
+nel Playground dà 200. ⇒ l'unica variabile rimasta è la **richiesta in uscita dal server** (PHP-curl o IP/egress)
+vs il Playground.
+
+**🧪 DUE TEST AGGIUNTI AL CHECK (20/07, branch `claude/gbp-403-error-o7mo0y`) per isolare l'ultimo miglio:**
+1. **Terzo tentativo automatico — `User-Agent`:** PHP-curl di default non manda UA e vari backend privati Google
+   respingono a monte le richieste senza UA (browser/Playground ce l'hanno → per questo Calendar/Gmail, più
+   permissive, girano). Il check rifà la GET con UA esplicito (+ quota project): **se 200 → fix di codice
+   pulito** (`CURLOPT_USERAGENT` in `gbp_api_get()` e nella POST di `ardy-gbp.php`).
+2. **Test da shell (copia-incolla, legge il token dal file):** se anche l'UA non basta, il box "allowlisted ma
+   403" stampa un comando `curl` pronto da lanciare **via SSH sul server**. Esito: **200** ⇒ è la config
+   PHP-curl (proxy `http_proxy`/`https_proxy` nell'env FPM, o `curl.*` in `php.ini`); **403** ⇒ è l'IP/egress
+   del server, respinto a monte da Google → confrontare da un'altra macchina e, se confermato, aprire il canale
+   con Google fornendo il **public IP del server** (non più token/account).
+**⏭️ Prossimo passo per Andrea:** ri-deployare `ardy-gbp-check.php`, ricaricarlo e leggere **"Terzo tentativo —
+con User-Agent"**. Se verde → dimmelo, aggiungo l'UA a `ardy-gbp.php` e chiudiamo. Se no → lancia il comando da
+shell del box e riportami se stampa 200 o 403.
+
 **Lato codice (già pronto, riabilitare SOLO a check verde):** il toggle Google nel pannello social
 (`ardy-michela-app.html`, `socialDestHtml`) è stato **ri-disattivato** dopo l'esito negativo del check —
 era stato riabilitato per errore in base a un annuncio poi smentito dal test dal vivo. `inviaSocial()` è
