@@ -630,6 +630,23 @@ vs il Playground.
 con User-Agent"**. Se verde → dimmelo, aggiungo l'UA a `ardy-gbp.php` e chiudiamo. Se no → lancia il comando da
 shell del box e riportami se stampa 200 o 403.
 
+**🧱 ESITO (20/07 16:33) — 403 ANCHE con User-Agent.** Non è l'UA. Osservazione chiave: il 403 porta gli header
+di Google (`alt-svc: h3`, logo google.com) ⇒ **la richiesta ARRIVA a Google**, è il suo front-end a respingerla;
+e dallo STESSO server, con lo STESSO token, `tokeninfo` (oauth2.googleapis.com) passa mentre l'API Business dà
+403 ⇒ è specifico dell'**endpoint Business + questo server** (host = cPanel `micoperibg`, path
+`/home/micoperibg/public_html/ardyagent.ardy-lab.it/`). Restano 2 possibilità: (a) **config PHP-curl** del server
+(proxy nell'env FPM / instradamento) oppure (b) **IP/egress** del server rifiutato a monte dall'API Business.
+
+**🔬 DIAGNOSTICA "Ambiente di rete PHP" AGGIUNTA (20/07, branch `claude/gbp-403-error-o7mo0y`):** il check ora
+mostra a costo zero: **variabili proxy** nell'env PHP (`http_proxy`/`https_proxy`/…), **IP di egress**
+(`CURLINFO_LOCAL_IP` = ciò che Google vede come sorgente), IP Google contattato, versione **HTTP** negoziata e
+versione libcurl. Se compare un proxy nell'env FPM → candidato n.1 del 403 (e il `curl` da shell, che NON eredita
+quell'env, darebbe 200).
+**⏭️ Prossimo passo per Andrea (2 dati da riportare):** ri-deployare `ardy-gbp-check.php`, ricaricarlo, e dirmi:
+(1) il box **"Ambiente di rete PHP"** segnala un **proxy**? qual è l'**IP di egress**? (2) il comando `curl` da
+shell (box in alto) stampa **200 o 403**? Con questi due dati chiudo: proxy/PHP-curl → fix in `ardy-gbp.php`;
+IP puro → si apre il canale con Google sull'IP del server (o si sposta la chiamata su un egress che funziona).
+
 **Lato codice (già pronto, riabilitare SOLO a check verde):** il toggle Google nel pannello social
 (`ardy-michela-app.html`, `socialDestHtml`) è stato **ri-disattivato** dopo l'esito negativo del check —
 era stato riabilitato per errore in base a un annuncio poi smentito dal test dal vivo. `inviaSocial()` è
