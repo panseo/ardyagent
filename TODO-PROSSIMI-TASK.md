@@ -339,8 +339,13 @@ INI-PEC non automatizzabile (captcha) → PEC via API a pagamento, eventuale tas
 
 ---
 
-## 🌐 GOOGLE BUSINESS PROFILE — post automatici delle fasi (ANCORA IN ATTESA — check dal vivo 04/07 negativo)
+## 🌐 GOOGLE BUSINESS PROFILE — post automatici delle fasi (✅ SBLOCCATO 20/07 — era egress IPv6)
 **Obiettivo**: pubblicare i post delle fasi sul profilo Google Business **Ardy di Michela Panella**.
+**✅ RISOLTO (20/07):** il 403 persistente NON era mai un problema di Google/allowlist/account: il server OVH
+usciva su **IPv6** e l'API Business (privata) rifiuta l'egress IPv6. Forzato **IPv4** (`CURL_IPRESOLVE_V4`) in
+`ardy-gbp.php` → `ardy-gbp-check.php` "Quarto tentativo — forza IPv4" dà **200** (egress `57.131.47.5`). Toggle
+Google **riabilitato** in `ardy-michela-app.html`. ⏭️ Resta solo: pubblicare una **fase di test** e verificare
+che il post compaia sulla scheda. (Cronistoria completa del debug più sotto.)
 **STATO REALE (04/07):** nonostante l'attesa dei 7-10 gg lav. fosse scaduta, `ardy-gbp-check.php` in
 produzione ha dato **403 "ACCESSO ALLA BUSINESS PROFILE API NON CONCESSO"** — risposta HTML generica di
 Google (non un errore JSON dell'API), cioè la richiesta è respinta **prima** di arrivare al servizio: il
@@ -666,16 +671,16 @@ box **"Quarto tentativo — forza IPv4"** deve essere **verde (200)**. A quel pu
 (vedi sotto, rimettere `true` nel `tog('google', …)`) e pubblicare una fase di test per verificare che il post
 compaia davvero sulla scheda.
 
-**Lato codice (già pronto, riabilitare SOLO a check verde):** il toggle Google nel pannello social
-(`ardy-michela-app.html`, `socialDestHtml`) è stato **ri-disattivato** dopo l'esito negativo del check —
-era stato riabilitato per errore in base a un annuncio poi smentito dal test dal vivo. `inviaSocial()` è
-già cablato per spedire in parallelo a `ardy-pubblica-social.php` (Facebook/Instagram, via n8n) e
-`ardy-gbp-post.php` (Google, diretto — nessuna modifica al nodo n8n); basta rimettere `false` nell'ultimo
-argomento del `tog('google', …)` in `socialDestHtml` per riattivarlo. Fix di sicurezza già applicato e
-valido a prescindere dall'esito: `ardy-gbp-post.php`/`ardy-gbp-check.php` ora protetti da Basic Auth in
-`.htaccess` (prima erano esposti senza protezione), `ardy-gbp.php` (lib) nel deny.
-**Ad approvazione confermata:** riabilitare il toggle (vedi sopra) → pubblicare una fase di test →
-verificare che il post compaia davvero sulla scheda Google (non solo `success:true`).
+**Lato codice — ✅ toggle RIABILITATO (20/07, a check verde):** il toggle Google nel pannello social
+(`ardy-michela-app.html`, `socialDestHtml`) è ora **attivo** (`tog('google',…,false)`) dopo il 200 su IPv4.
+Resta **deselezionato di default** (`selArr = facebook/instagram`): il bottone è cliccabile ma non pubblica su
+Google finché Michela non lo sceglie. `inviaSocial()` è già cablato per spedire in parallelo a
+`ardy-pubblica-social.php` (Facebook/Instagram, via n8n) e `ardy-gbp-post.php` (Google, diretto — nessuna
+modifica al nodo n8n). Fix di sicurezza già applicato: `ardy-gbp-post.php`/`ardy-gbp-check.php` protetti da
+Basic Auth in `.htaccess`, `ardy-gbp.php` (lib) nel deny.
+**⏭️ Ultima verifica dal vivo:** deployare `ardy-michela-app.html` → in una lavorazione, selezionare anche
+**Google** tra le destinazioni → pubblicare una **fase di test** → verificare che il post compaia davvero sulla
+scheda Google "Ardy di Michela Panella" (non solo `success:true`).
 
 ---
 
