@@ -339,13 +339,14 @@ try {
         // invece di crearne una nuova, mantenendo il suo "ordine" di lavoro.
         $db->prepare(
             "UPDATE fasi SET fase_nome=:fase, fase_tipo=:tipo, testo_breve=:breve, testo_generato=:generato,
-                foto_urls=:foto, video_urls=:video, stato='pubblicata', prezzo=:prezzo
+                testo_social=:social, foto_urls=:foto, video_urls=:video, stato='pubblicata', prezzo=:prezzo
              WHERE id=:id AND session_id=:sid"
         )->execute([
             ':fase'     => $faseNome,
             ':tipo'     => $tipo,
             ':breve'    => $noteBrevi,
             ':generato' => $testoGenerato,
+            ':social'   => $testoSocial,
             ':foto'     => json_encode($savedImageUrls),
             ':video'    => json_encode($videoUrlsClean),
             ':prezzo'   => $prezzo,
@@ -353,13 +354,14 @@ try {
             ':sid'      => $sessionId,
         ]);
     } else {
-        $db->prepare("INSERT INTO fasi (session_id, fase_nome, fase_tipo, testo_breve, testo_generato, foto_urls, video_urls, prezzo) VALUES (:sid, :fase, :tipo, :breve, :generato, :foto, :video, :prezzo)")
+        $db->prepare("INSERT INTO fasi (session_id, fase_nome, fase_tipo, testo_breve, testo_generato, testo_social, foto_urls, video_urls, prezzo) VALUES (:sid, :fase, :tipo, :breve, :generato, :social, :foto, :video, :prezzo)")
            ->execute([
                ':sid'      => $sessionId,
                ':fase'     => $faseNome,
                ':tipo'     => $tipo,
                ':breve'    => $noteBrevi,
                ':generato' => $testoGenerato,
+               ':social'   => $testoSocial,
                ':foto'     => json_encode($savedImageUrls),
                ':video'    => json_encode($videoUrlsClean),
                ':prezzo'   => $prezzo,
