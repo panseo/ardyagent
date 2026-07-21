@@ -689,6 +689,19 @@ scheda Google "Ardy di Michela Panella" (non solo `success:true`).
 Riusa il motore esistente (`socialDestHtml`, `inviaSocial`, `renderIgPreview`). Utile per spingere su **Google**
 le fasi già pubblicate prima dello sblocco. (Le comunicazioni straordinarie restano senza social.)
 
+**✅ Contenuti social ≠ sito cliente (20/07):** il box per-fase precompilava col `testo_generato` (il testo del
+**sito cliente**, rivolto al cliente: "la *sua* cucina…") e finiva su FB/IG **e** Google. Ora il box usa la
+**caption social** (`testo_social`, tono brand/pubblico), separata e mostrata distinta dal "Testo del sito
+cliente" (etichettato). Dettagli:
+- **`inviaSocial`**: su **Google** la caption va **senza hashtag** (helper `stripHashtags`); FB/IG li tengono.
+- **`fasi.testo_social`**: nuova colonna (migration) salvata alla pubblicazione (`ardy-pubblica-lavorazione.php`)
+  → le fasi nuove hanno già la caption.
+- **`ardy-genera-social.php`** (nuovo endpoint, Basic Auth): per le fasi **vecchie** senza caption, la genera al
+  volo dalle note (`generaCaptionSocial`, stesso prompt di `generaTestoSocial` + "post pubblico, non rivolto al
+  cliente") e la mette in **cache** su `fasi.testo_social`. Chiamato all'apertura della fase; bottone **✨ Rigenera**
+  per riscriverla. Aggiunto al `<FilesMatch>` del `.htaccess`.
+⚠️ Serve far girare **`ardy-migrate.php`** in produzione (crea la colonna `testo_social`).
+
 ---
 
 ## 📋 TASK DA SVILUPPARE (aperti)

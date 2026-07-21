@@ -508,6 +508,10 @@ $fasiCols = [
     'ordine'     => "ALTER TABLE fasi ADD COLUMN ordine INT NULL AFTER stato",
     'prezzo'     => "ALTER TABLE fasi ADD COLUMN prezzo DECIMAL(10,2) NULL AFTER ordine",
     'video_urls' => "ALTER TABLE fasi ADD COLUMN video_urls TEXT NULL AFTER foto_urls",
+    // Caption social (FB/IG, e Google senza hashtag): DIVERSA dal testo del
+    // sito cliente (testo_generato). Salvata alla pubblicazione così la si
+    // riusa nel pannello per-fase senza rigenerarla ogni volta.
+    'testo_social' => "ALTER TABLE fasi ADD COLUMN testo_social TEXT NULL AFTER testo_generato",
     // Aggancio della stessa tabella fasi ai progetti di design (vedi PIANO-DASH-DESIGN.md):
     // una fase appartiene O a un cliente (session_id) O a un progetto (progetto_id).
     'progetto_id' => "ALTER TABLE fasi ADD COLUMN progetto_id BIGINT NULL AFTER session_id",

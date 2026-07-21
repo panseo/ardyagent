@@ -2537,25 +2537,31 @@ async function caricaFasiPubblicate(sessionId) {
         ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;">`
           + imgs.map(u => `<img src="${safeUrl(u)}" alt="" loading="lazy" style="height:70px;border-radius:4px;object-fit:cover;">`).join('')
           + `</div>` : '';
-      // Le comunicazioni straordinarie non vanno sui social (come nel form nuova fase).
+      // Il box social usa la CAPTION (testo_social), diversa dal testo del sito
+      // (testo_generato). Se manca (fasi vecchie) la genero al volo all'apertura.
+      // Le comunicazioni straordinarie non vanno sui social.
       const socialBlock = isCom ? '' : `
         <div style="margin-top:10px;border-top:1px dashed var(--border);padding-top:10px;">
           <div class="lav-title" style="margin-bottom:6px;">📲 Pubblica sui social</div>
           ${socialDestHtml('fase_' + fid, ['none'])}
-          <textarea class="lav-textarea" id="faseSocialText_${fid}" style="min-height:100px;margin-top:8px;">${escHtml(testo)}</textarea>
+          <textarea class="lav-textarea" id="faseSocialText_${fid}" placeholder="Caption per i social…" style="min-height:100px;margin-top:8px;">${escHtml(f.testo_social || '')}</textarea>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
-            <button class="btn-secondary" style="flex:1 1 120px;" onclick="apriAnteprimaIgFase('${escHtml(fid)}')">👁 Anteprima</button>
-            <button class="btn-pubblica" style="flex:2 1 140px;" onclick="pubblicaFaseSocial('${escHtml(fid)}')">📲 Pubblica</button>
+            <button class="btn-secondary" style="flex:1 1 100px;" onclick="rigeneraFaseSocial('${escHtml(fid)}', this)">✨ Rigenera</button>
+            <button class="btn-secondary" style="flex:1 1 100px;" onclick="apriAnteprimaIgFase('${escHtml(fid)}')">👁 Anteprima</button>
+            <button class="btn-pubblica" style="flex:2 1 130px;" onclick="pubblicaFaseSocial('${escHtml(fid)}')">📲 Pubblica</button>
           </div>
-          <p style="font-size:11px;color:var(--text-dim);margin:6px 2px 0;">Scegli i social e ripubblica questa fase (utile per aggiungere Google).</p>
+          <p style="font-size:11px;color:var(--text-dim);margin:6px 2px 0;">Testo brand per FB/IG. Su Google va lo stesso, senza hashtag. Diverso dal testo del sito qui sopra.</p>
         </div>`;
+      const testoBlock = testo ? `
+          <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin:8px 0 2px;">Testo del sito cliente</div>
+          <div style="font-size:13px;white-space:pre-wrap;margin:0 0 8px;">${escHtml(testo)}</div>` : '';
       return `<div style="border:1px solid var(--border);border-radius:6px;margin-bottom:6px;overflow:hidden;">
         <button type="button" onclick="toggleFasePub('${escHtml(fid)}')" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;background:none;border:none;color:inherit;padding:8px 10px;cursor:pointer;text-align:left;font-family:inherit;">
           <span style="font-size:13px;">${badge}${escHtml(titolo)}</span>
           <span style="font-size:11px;color:var(--text-dim);white-space:nowrap;">${escHtml(data)}${foto} <span class="acc-chevron" id="faseChev_${fid}">▾</span></span>
         </button>
         <div id="faseBody_${fid}" style="display:none;padding:0 10px 10px;">
-          ${testo ? `<div style="font-size:13px;white-space:pre-wrap;margin:8px 0;">${escHtml(testo)}</div>` : ''}
+          ${testoBlock}
           ${imgsHtml}
           ${socialBlock}
         </div>
@@ -2568,7 +2574,12 @@ async function caricaFasiPubblicate(sessionId) {
   } catch (e) { /* lista facoltativa: in caso di errore resta nascosta */ }
 }
 
-// Apre/chiude il contenuto di una fase pubblicata.
+function findFasePub(fid) {
+  return fasiPubblicateCache.find((x, i) => (x.id != null ? String(x.id) : ('idx' + i)) === String(fid));
+}
+
+// Apre/chiude il contenuto di una fase pubblicata. All'apertura, se la caption
+// social non c'è ancora (fasi vecchie), la genera al volo.
 function toggleFasePub(fid) {
   const body = document.getElementById('faseBody_' + fid);
   const chev = document.getElementById('faseChev_' + fid);
@@ -2576,16 +2587,61 @@ function toggleFasePub(fid) {
   const open = body.style.display === 'none';
   body.style.display = open ? 'block' : 'none';
   if (chev) chev.textContent = open ? '▴' : '▾';
+  if (open) ensureFaseSocial(fid);
+}
+
+// Genera (una volta, poi in cache) la caption social per una fase che non ce
+// l'ha. Chiamata all'apertura; l'endpoint salva testo_social sulla fase.
+async function ensureFaseSocial(fid) {
+  const f = findFasePub(fid);
+  if (!f || f.fase_tipo === 'comunicazione' || f.id == null) return;
+  const ta = document.getElementById('faseSocialText_' + fid);
+  if (!ta || ta.value.trim() || (f.testo_social && f.testo_social.trim())) return; // già presente
+  ta.placeholder = 'Genero la caption per i social…';
+  try {
+    const r = await fetch('ardy-genera-social.php', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: (currentLead && currentLead.Session_ID) || '', fase_id: f.id })
+    });
+    const d = await r.json();
+    if (d && d.success && d.testo_social) {
+      f.testo_social = d.testo_social;
+      if (!ta.value.trim()) ta.value = d.testo_social;
+    }
+  } catch (e) { /* la caption resta vuota, si può scrivere/rigenerare a mano */ }
+  finally { ta.placeholder = 'Caption per i social…'; }
+}
+
+// Forza la rigenerazione della caption (bottone ✨ Rigenera).
+async function rigeneraFaseSocial(fid, btn) {
+  const f = findFasePub(fid);
+  if (!f || f.id == null) return;
+  const ta = document.getElementById('faseSocialText_' + fid);
+  const old = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  try {
+    const r = await fetch('ardy-genera-social.php', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: (currentLead && currentLead.Session_ID) || '', fase_id: f.id, force: true })
+    });
+    const d = await r.json();
+    if (d && d.success && d.testo_social) {
+      f.testo_social = d.testo_social;
+      if (ta) ta.value = d.testo_social;
+      showToast('✨ Caption rigenerata', 'success');
+    } else showToast('⚠ ' + ((d && d.error) || 'Generazione non riuscita'), 'error');
+  } catch (e) { showToast('⚠ Errore di rete', 'error'); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = old; } }
 }
 
 // Anteprima Instagram per una fase già pubblicata (riusa l'overlay condiviso).
 function apriAnteprimaIgFase(fid) {
-  const f = fasiPubblicateCache.find((x, i) => (x.id != null ? String(x.id) : ('idx' + i)) === String(fid));
+  const f = findFasePub(fid);
   if (!f) return;
   igPreviewImgs = Array.isArray(f.foto_urls) ? f.foto_urls.slice() : [];
   igPreviewIdx  = 0;
   const ta = document.getElementById('faseSocialText_' + fid);
-  document.getElementById('igCaption').textContent = (ta ? ta.value : (f.testo_generato || '')) || '';
+  document.getElementById('igCaption').textContent = (ta ? ta.value : (f.testo_social || '')) || '';
   renderIgPreview();
   document.getElementById('igPreviewOverlay').classList.add('open');
 }
@@ -2594,10 +2650,10 @@ function apriAnteprimaIgFase(fid) {
 // dal DOM (niente fallback FB/IG di getSelectedPlatforms) così non si ripubblica
 // per sbaglio; riusa lo stesso motore inviaSocial() del resto della dashboard.
 async function pubblicaFaseSocial(fid) {
-  const f = fasiPubblicateCache.find((x, i) => (x.id != null ? String(x.id) : ('idx' + i)) === String(fid));
+  const f = findFasePub(fid);
   if (!f) return;
   const ta = document.getElementById('faseSocialText_' + fid);
-  const testo = (ta ? ta.value : (f.testo_generato || '')).trim();
+  const testo = (ta ? ta.value : (f.testo_social || '')).trim();
   if (!testo) { showToast('⚠ Il testo è vuoto', 'error'); return; }
   const wrap = document.getElementById('dest_fase_' + fid);
   const piattaforme = wrap ? [...wrap.querySelectorAll('.social-toggle.sel')].map(b => b.dataset.plat) : [];
@@ -3411,6 +3467,18 @@ function renderIgPreview() {
 // Google Business è indipendente e va direttamente ad ardy-gbp-post.php
 // (stesso payload, gestito interamente lato server). Si pubblica su un
 // sottoinsieme qualsiasi delle tre; i risultati vengono uniti.
+// Toglie gli hashtag (e ripulisce righe/spazi vuoti risultanti). Serve per
+// Google Business, che riusa la caption FB/IG ma senza hashtag.
+function stripHashtags(t) {
+  if (!t) return '';
+  return String(t)
+    .replace(/#[\p{L}\p{N}_]+/gu, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+}
+
 async function inviaSocial(payload) {
   const piattaforme = Array.isArray(payload.piattaforme) ? payload.piattaforme : [];
   const metaPlats   = piattaforme.filter(p => p !== 'google');
@@ -3427,7 +3495,9 @@ async function inviaSocial(payload) {
     tasks.push(fetch(GBP_URL, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        testo: payload.testo_social || payload.testo,
+        // Google Business riusa la caption social ma SENZA hashtag (stonano
+        // sulla scheda): li togliamo qui, FB/IG li tengono.
+        testo: stripHashtags(payload.testo_social || payload.testo),
         immagini: payload.immagini, post_link: payload.post_link,
         fase: payload.fase, mobile: payload.mobile, cliente: payload.cliente,
       })
