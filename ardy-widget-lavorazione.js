@@ -229,11 +229,52 @@
         'background:#c8a96e;color:#fff;border-color:#c8a96e;' +
       '}' +
 
+      // Lightbox galleria fasi
+      '#ardy-lightbox {' +
+        'position:fixed;inset:0;z-index:10000;' +
+        'background:rgba(20,18,15,0.92);' +
+        'display:none;align-items:center;justify-content:center;' +
+        'opacity:0;transition:opacity 0.25s ease;' +
+      '}' +
+      '#ardy-lightbox.open { display:flex;opacity:1; }' +
+      '#ardy-lightbox .ardy-lb-img {' +
+        'max-width:92vw;max-height:88vh;border-radius:6px;' +
+        'box-shadow:0 8px 40px rgba(0,0,0,0.5);' +
+        'object-fit:contain;' +
+      '}' +
+      '#ardy-lightbox .ardy-lb-close,' +
+      '#ardy-lightbox .ardy-lb-prev,' +
+      '#ardy-lightbox .ardy-lb-next {' +
+        'position:absolute;background:rgba(0,0,0,0.35);border:none;color:#fff;' +
+        'cursor:pointer;display:flex;align-items:center;justify-content:center;' +
+        'border-radius:50%;transition:background 0.2s;font-family:"DM Sans",sans-serif;' +
+      '}' +
+      '#ardy-lightbox .ardy-lb-close:hover,' +
+      '#ardy-lightbox .ardy-lb-prev:hover,' +
+      '#ardy-lightbox .ardy-lb-next:hover { background:rgba(200,169,110,0.9); }' +
+      '#ardy-lightbox .ardy-lb-close {' +
+        'top:20px;right:24px;width:44px;height:44px;font-size:26px;line-height:1;' +
+      '}' +
+      '#ardy-lightbox .ardy-lb-prev,' +
+      '#ardy-lightbox .ardy-lb-next {' +
+        'top:50%;transform:translateY(-50%);width:48px;height:48px;font-size:30px;line-height:1;' +
+      '}' +
+      '#ardy-lightbox .ardy-lb-prev { left:16px; }' +
+      '#ardy-lightbox .ardy-lb-next { right:16px; }' +
+      '#ardy-lightbox .ardy-lb-count {' +
+        'position:absolute;bottom:20px;left:50%;transform:translateX(-50%);' +
+        'color:rgba(255,255,255,0.85);font-size:13px;font-family:"DM Sans",sans-serif;' +
+        'background:rgba(0,0,0,0.35);padding:4px 12px;border-radius:20px;' +
+      '}' +
+      '.ardy-galleria-item { cursor:zoom-in; }' +
+
       '@media(max-width:480px) {' +
         '#ardy-lav-panel {' +
           'width:calc(100vw - 16px);right:8px;bottom:88px;max-height:70vh;' +
         '}' +
         '#ardy-lav-toggle { bottom:16px;right:16px;width:54px;height:54px; }' +
+        '#ardy-lightbox .ardy-lb-prev,' +
+        '#ardy-lightbox .ardy-lb-next { width:40px;height:40px;font-size:24px; }' +
       '}';
 
     document.head.appendChild(style);
@@ -554,12 +595,83 @@
     }
   }
 
+  // ── LIGHTBOX GALLERIA ──
+  // Le foto delle fasi sono pubblicate come <a class="ardy-galleria-item" href="fotoPiena">.
+  // Qui intercettiamo il click e apriamo un lightbox a schermo intero con
+  // navigazione prev/next (frecce, tastiera, tap fuori per chiudere).
+  function initLightbox() {
+    var overlay = document.createElement('div');
+    overlay.id = 'ardy-lightbox';
+    overlay.innerHTML =
+      '<button class="ardy-lb-close" aria-label="Chiudi">×</button>' +
+      '<button class="ardy-lb-prev" aria-label="Foto precedente">‹</button>' +
+      '<img class="ardy-lb-img" alt="" />' +
+      '<button class="ardy-lb-next" aria-label="Foto successiva">›</button>' +
+      '<div class="ardy-lb-count"></div>';
+    document.body.appendChild(overlay);
+
+    var imgEl   = overlay.querySelector('.ardy-lb-img');
+    var countEl = overlay.querySelector('.ardy-lb-count');
+    var prevEl  = overlay.querySelector('.ardy-lb-prev');
+    var nextEl  = overlay.querySelector('.ardy-lb-next');
+    var items   = [];   // URL delle foto, ricostruito ad ogni apertura
+    var current = 0;
+
+    function collect() {
+      items = Array.prototype.slice
+        .call(document.querySelectorAll('.ardy-galleria-item[data-ardy-galleria]'))
+        .map(function (a) { return a.getAttribute('href'); })
+        .filter(function (h) { return !!h; });
+    }
+    function show(i) {
+      if (!items.length) return;
+      current = (i + items.length) % items.length;
+      imgEl.src = items[current];
+      var multi = items.length > 1;
+      countEl.textContent = (current + 1) + ' / ' + items.length;
+      countEl.style.display = multi ? 'block' : 'none';
+      prevEl.style.display  = multi ? 'flex' : 'none';
+      nextEl.style.display  = multi ? 'flex' : 'none';
+    }
+    function open(href) {
+      collect();
+      var idx = items.indexOf(href);
+      show(idx < 0 ? 0 : idx);
+      overlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function close() {
+      overlay.classList.remove('open');
+      imgEl.removeAttribute('src');
+      document.body.style.overflow = '';
+    }
+
+    document.addEventListener('click', function (e) {
+      if (!e.target || !e.target.closest) return;
+      var a = e.target.closest('.ardy-galleria-item[data-ardy-galleria]');
+      if (!a) return;
+      e.preventDefault();
+      open(a.getAttribute('href'));
+    });
+    prevEl.onclick  = function (e) { e.stopPropagation(); show(current - 1); };
+    nextEl.onclick  = function (e) { e.stopPropagation(); show(current + 1); };
+    overlay.querySelector('.ardy-lb-close').onclick = close;
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', function (e) {
+      if (!overlay.classList.contains('open')) return;
+      if (e.key === 'Escape') close();
+      else if (e.key === 'ArrowLeft')  show(current - 1);
+      else if (e.key === 'ArrowRight') show(current + 1);
+    });
+  }
+
   // ── INIT ──
   function init() {
     extractContext();
     if (!wpPostId) return; // Non siamo su una pagina con post ID
     injectStyles();
     injectHTML();
+    initLightbox();
   }
 
   if (document.readyState === 'loading') {

@@ -184,11 +184,14 @@ $dataOra  = date('d/m/Y H:i');
 $existingThumb   = $wpPostId ? has_post_thumbnail($wpPostId) : false;
 $featuredImageId = (!$existingThumb && !empty($savedImageIds)) ? $savedImageIds[0] : null;
 
-$fotoHtml = '';
-foreach ($savedImageUrls as $idx => $url) {
-    if ($featuredImageId !== null && $idx === 0) continue; // la copertina non va nell'editor
-    $fotoHtml .= '<img src="' . esc_url($url) . '" style="max-width:100%;margin:10px 0;border-radius:6px;" />' . "\n";
+// Galleria della fase: se il post ha una copertina, la prima foto (= immagine in
+// evidenza) non va ripetuta nell'editor. Le restanti diventano una galleria a
+// griglia cliccabile (lightbox nel widget) invece di una lunga colonna di <img>.
+$galleriaUrls = $savedImageUrls;
+if ($featuredImageId !== null && !empty($galleriaUrls)) {
+    array_shift($galleriaUrls); // la copertina non va nell'editor
 }
+$fotoHtml = ardyBuildGalleriaFoto($galleriaUrls);
 
 // Video della fase (già caricati su WP Media Library via ardy-upload-video.php).
 // Accetta solo URL http(s) per evitare injection nel post.
@@ -510,6 +513,39 @@ Regole:
     $titolo = preg_replace('/\s+/', ' ', $titolo);
     if ($titolo === '' || mb_strlen($titolo) > 120) return $fallback;
     return $titolo;
+}
+
+/**
+ * Costruisce l'HTML della galleria foto di una fase.
+ *  - 0 foto  → stringa vuota
+ *  - 1 foto  → immagine singola a tutta larghezza (cliccabile per ingrandire)
+ *  - 2+ foto → griglia responsive di anteprime quadrate (lightbox nel widget)
+ * Ogni foto è un <a> con href alla versione piena e classe .ardy-galleria-item:
+ * il widget lavorazione intercetta il click e apre il lightbox; se il JS non
+ * carica, il link apre comunque la foto a piena risoluzione (degrado elegante).
+ */
+function ardyBuildGalleriaFoto(array $urls): string {
+    $urls = array_values(array_filter($urls, function ($u) { return is_string($u) && $u !== ''; }));
+    $n = count($urls);
+    if ($n === 0) return '';
+
+    if ($n === 1) {
+        return '<a href="' . esc_url($urls[0]) . '" class="ardy-galleria-item" data-ardy-galleria="1" '
+            . 'style="display:block;margin:12px 0;">'
+            . '<img src="' . esc_url($urls[0]) . '" loading="lazy" alt="" '
+            . 'style="max-width:100%;border-radius:6px;display:block;" /></a>' . "\n";
+    }
+
+    $items = '';
+    foreach ($urls as $url) {
+        $items .= '<a href="' . esc_url($url) . '" class="ardy-galleria-item" data-ardy-galleria="1" '
+            . 'style="display:block;overflow:hidden;border-radius:6px;position:relative;">'
+            . '<img src="' . esc_url($url) . '" loading="lazy" alt="" '
+            . 'style="width:100%;aspect-ratio:1/1;object-fit:cover;display:block;" /></a>';
+    }
+    return '<div class="ardy-galleria" '
+        . 'style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin:14px 0;">'
+        . $items . '</div>' . "\n";
 }
 
 function generaTestoFase(string $noteBrevi, string $faseNome, string $mobile): string {
