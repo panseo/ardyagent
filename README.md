@@ -70,6 +70,7 @@ ardyagent.ardy-lab.it/
 ├── ardy-lista-musica.php      # Elenca le tracce in assets/reel-music/
 ├── ardy-guida-michela.html    # Guida d'uso dashboard (HTML stampabile) — linkata dalla dashboard
 ├── ardy-migrate.php           # Migrazione schema DB (idempotente) — UNICO posto con DDL, girato da deploy.sh
+├── ardy-health.php            # Cruscotto salute produzione (DB, integrazioni, token Google, errori PHP, disco) — HTML semaforo + JSON (?format=json) per monitor esterni; linkato dalla dashboard (🩺 STATO)
 ├── MANUALE-SOLE.md            # Mansionario dell'assistente AI Sole (canali, mansioni, regole)
 ├── ardy-notifica-michela.php  # Notifiche WhatsApp a Michela (Sole "segretaria") — libreria + endpoint n8n
 ├── ardy-chiusura-sessioni.php # Cron orario: notifica Michela alla "chiusura" chat (inattive >1h, web+WA)
@@ -809,6 +810,20 @@ posto dove si creano/alterano tabelle e colonne. Prima ogni endpoint faceva DDL
 volta sola al deploy. È idempotente (IF NOT EXISTS + try/catch su 1050/1060 + `colExists`/`indexExists`),
 quindi rieseguirlo è sicuro. **Nuova tabella o colonna → aggiungerla a `ardy-migrate.php`**, mai
 inline negli endpoint.
+
+### Monitoraggio (`ardy-health.php`)
+Cruscotto che verifica in un colpo solo le parti che possono rompersi **in silenzio**:
+DB + tabella core, config integrazioni (WhatsApp/GBP/GCal/Brevo), token Google
+(presenza `refresh_token` + freschezza `access_token`), cartelle scrivibili, errori PHP
+di oggi (coda del log), spazio disco. Ogni check è isolato in try/catch.
+
+- **Da dashboard:** menu **☰ → 🩺 STATO** (semaforo HTML, auto-refresh 60s).
+- **Monitor esterno:** `ardy-health.php?format=json` — keyword `"status":"ok"`, HTTP **503**
+  sui guasti veri (rosso), **200** altrimenti. Protetto da Basic Auth: nel monitor
+  (UptimeRobot/Better Stack) imposta le credenziali admin. Nessuna chiamata di rete esterna,
+  sicuro da colpire ogni pochi minuti.
+- **Nota:** il conteggio "errori PHP di oggi" è grezzo — `error_log()` è usato anche per
+  eventi informativi (es. `ARDY LEAD MONITOR`), quindi un numero > 0 non è di per sé un guasto.
 
 ---
 
