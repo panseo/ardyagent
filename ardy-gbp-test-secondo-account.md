@@ -11,7 +11,7 @@ il blocco è specifico dell'account o del progetto. Secondo account fornito:
 
 **Perché il Playground:** permette di rifare la chiamata API autenticati come `a.panseo`
 **senza toccare il token di produzione** (`ardy-gcal-token.json`, usato da
-Calendar/Gmail/lead-monitor). Nessun rischio per la produzione.
+Calendar/Gmail). Nessun rischio per la produzione.
 
 **Perché con le NOSTRE credenziali OAuth (non quelle di default del Playground):** la
 allowlist GBP è **per-progetto**. Il test è valido solo se la chiamata passa dal nostro
