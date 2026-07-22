@@ -21,6 +21,7 @@
 // -----------------------------------------------------------
 
 require_once __DIR__ . '/ardy-config.php';
+require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-auth.php';
 
 date_default_timezone_set('Europe/Rome');
