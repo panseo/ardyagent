@@ -823,7 +823,7 @@ di oggi (coda del log), spazio disco. Ogni check è isolato in try/catch.
   (UptimeRobot/Better Stack) imposta le credenziali admin. Nessuna chiamata di rete esterna,
   sicuro da colpire ogni pochi minuti.
 - **Nota:** il conteggio "errori PHP di oggi" è grezzo — `error_log()` è usato anche per
-  eventi informativi (es. `ARDY LEAD MONITOR`), quindi un numero > 0 non è di per sé un guasto.
+  eventi informativi (es. `ARDY WA AGENT`), quindi un numero > 0 non è di per sé un guasto.
 
 ---
 

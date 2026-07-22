@@ -8,6 +8,23 @@
 
 ---
 
+## 🗑️ RIMOSSO — Monitor lead portali (22/07/2026)
+
+Il modulo **Monitor lead** (leggeva le email dei portali ProntoPro/Homedeal/Cronoshare/Instapro/
+Habitissimo via Gmail, classificava con Claude e avvisava Michela su WA) è stato **eliminato**:
+di fatto inutile finché non esistono connettori diretti ai portali lead.
+
+- **Codice rimosso:** `ardy-lead-monitor.php` (endpoint chiamato ogni 60 min da n8n).
+- **⚠️ DA FARE A MANO su n8n (non fatto dal codice):** disattivare/eliminare il workflow n8n
+  **"Lead Monitor"** (il nodo Schedule ogni ora + HTTP Request verso `ardy-lead-monitor.php`).
+  Finché resta attivo continuerà a colpire un URL ora inesistente (404, innocuo ma inutile).
+- **Effetti collaterali Gmail:** l'etichetta `lead-processato` e i messaggi già marcati letti
+  restano; nessuna azione necessaria.
+- **NON toccato (feature diversa):** il **Funnel / primo contatto lead** — `ardy-lead-contatto.php`,
+  `ardy-save-lead.php`, `ardy-update-lead.php`, `ardy-lead-foto.php` e il CRM restano attivi.
+
+---
+
 ## 📸 APERTO — Foto fasi: seguiti dopo il fix "foto Android" (19/07/2026)
 
 **Contesto (già fatto e deployato):** le foto pubblicate da **Android** sparivano in silenzio (testo sì,
