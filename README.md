@@ -909,6 +909,10 @@ di oggi (coda del log), spazio disco. Ogni check è isolato in try/catch.
 
 ## 📝 Note sessioni
 
+**Luglio 2026 — Preventivi nelle scadenze (briefing Sole + badge dashboard)**
+- **Briefing del mattino**: nuovo blocco **🧾 PREVENTIVI DA GESTIRE** in `ardy-briefing-lib.php` (`ardy_riepilogo_settimana`). Elenca i clienti fermi in stato `PREVENTIVO` distinguendo **✍️ preventivo DA FARE** (nessun documento o solo bozza) da **📤 preventivo INVIATO — da sollecitare risposta** (con "inviato da Ng"). Così Sole cita queste scadenze nel buongiorno su WhatsApp e nell'email del briefing, con la specifica giusta. Difensivo: se la tabella `preventivi` manca, i clienti risultano "da fare".
+- **Dashboard**: la card cliente (stato `PREVENTIVO`) mostra un badge del preventivo — **📤 preventivo inviato** / **📝 preventivo da fare** (e ✓ accettato / ✗ rifiutato). Lo stato dell'ultimo preventivo è esposto da `ardy-crm-api.php` (`Preventivo_stato`, query aggregata per `session_id`) e reso da `preventivoBadge()` in `ardy-michela-app.html`.
+
 **Giugno 2026 — Sessione 19/06 (rotazione chiavi, backlog sicurezza, migrazione DDL, indice clienti)**
 - **Chiavi sensibili ruotate**: Token Meta/WhatsApp, API key Anthropic e `WA_LOOKUP_SECRET` rigenerati (erano trapelati in un export del workflow n8n) e aggiornati in `ardy-config.php` + nodo n8n. Verificato dal vivo su WhatsApp.
 - **Backlog sicurezza chiuso** (4 fix): `state` anti-CSRF nell'OAuth Google (`ardy-gcal-auth.php`); query `get_stats` parametrizzata (`ardy-outreach-api.php`); ownership check sul download PDF preventivo (`ardy-preventivo.php`); delimitatori anti prompt-injection nella caption reel (`ardy-crea-reel.php`).

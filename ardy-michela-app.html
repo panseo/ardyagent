@@ -742,6 +742,23 @@ function faseSegnale(l) {
   return { color:'yellow', label:'Date da pianificare' };
 }
 
+// Badge preventivo per la card in lista: solo per i clienti in stato PREVENTIVO,
+// così a colpo d'occhio si distingue chi ha il preventivo ancora DA FARE da chi
+// l'ha già ricevuto (INVIATO, in attesa di risposta → da sollecitare). Lo stato
+// arriva da l.Preventivo_stato (ultimo preventivo del cliente, via ardy-crm-api.php).
+function preventivoBadge(l) {
+  if ((l.Stato || '').toUpperCase() !== 'PREVENTIVO') return '';
+  const ps = (l.Preventivo_stato || '').toLowerCase();
+  if (ps === 'inviato')
+    return '<span class="stato-badge" style="background:rgba(76,175,114,.22);color:#7fd49b;" title="Preventivo inviato al cliente: in attesa di risposta, da sollecitare">📤 preventivo inviato</span>';
+  if (ps === 'accettato')
+    return '<span class="stato-badge" style="background:rgba(76,175,114,.30);color:#8fdca5;" title="Preventivo accettato dal cliente">✓ preventivo accettato</span>';
+  if (ps === 'rifiutato')
+    return '<span class="stato-badge" style="background:rgba(224,92,92,.20);color:#e59090;" title="Preventivo rifiutato dal cliente">✗ preventivo rifiutato</span>';
+  // nessun preventivo o solo bozza → ancora da fare/inviare
+  return '<span class="stato-badge" style="background:rgba(224,138,60,.20);color:#e0a566;" title="Preventivo ancora da fare o da inviare al cliente">📝 preventivo da fare</span>';
+}
+
 function renderList() {
   const search = document.getElementById('search').value.toLowerCase();
   let filtered = allLeads.filter(l => {
@@ -780,12 +797,14 @@ function renderList() {
     const seg = faseSegnale(l);
     const dot = seg ? `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${SEG_COLORI[seg.color]};margin-right:7px;flex:0 0 auto;"></span>` : '';
     const segLabel = seg ? `<span class="lead-seg" style="color:${SEG_COLORI[seg.color]};font-size:10px;">${escHtml(seg.label)}</span>` : '';
+    const prevBadge = preventivoBadge(l);
     return `
     <div class="lead-item ${currentLead && currentLead.Session_ID === l.Session_ID ? 'active' : ''}"
          onclick="selectLead(${allLeads.indexOf(l)})">
       <div class="lead-nome" style="display:flex;align-items:center;">${dot}<span>${escHtml(l.Nome)} ${escHtml(l.Cognome)}</span></div>
       <div class="lead-meta">
         <span class="stato-badge stato-${(l.Stato??'LEAD').toUpperCase().replace(/[^A-Z]/g,'')}">${escHtml(l.Stato ?? 'LEAD')}</span>
+        ${prevBadge}
         ${l.ha_risposto ? '<span class="stato-badge" style="background:rgba(76,175,114,.22);color:#7fd49b;" title="Il cliente ha scritto di recente (ultime 48h) e non hai ancora aperto la chat">💬 ha risposto</span>' : ''}
         ${(l.NoteConsegna && l.NoteConsegna.trim()) ? '<span class="stato-badge" style="background:rgba(120,160,90,.20);color:#a9c47a;" title="Ci sono note consegna da evadere">📦 consegna</span>' : ''}
         <span class="lead-zona">${escHtml(l.Zona)}</span>
