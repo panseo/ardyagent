@@ -95,6 +95,7 @@ Quando Michela o Andrea scrivono a Sole su WhatsApp, lei legge il CRM **dal vivo
 - **Stato attuale di un cliente** (es. *"Tavolo Fratino che stato ha?"*) dall'elenco dei clienti attivi;
 - **Fasi pubblicate di recente**, con nome cliente e nome fase;
 - **Note consegna** — cosa serve/manca per consegnare un lavoro (es. *"cosa manca per la consegna di Rossi?"* → "4 bulloni M6×45…"), prese dal box "Note consegna" della scheda;
+- **Preventivi da gestire** — i clienti in stato PREVENTIVO divisi in *da fare* (nessun documento ancora, o solo una bozza) e *inviato — da sollecitare risposta* (con da quanti giorni è uscito). Così al buongiorno Sole segnala queste scadenze con la specifica giusta, senza doverle chiedere;
 - **Calendario** (impegni di oggi/domani), lavori urgenti, appuntamenti (sopralluoghi/ritiri/interventi/consegne), morosi.
 
 > Sole **non** rimanda più alla dashboard per queste cose né chiede di "girarle i dati": li ha già aggiornati a ogni messaggio.
