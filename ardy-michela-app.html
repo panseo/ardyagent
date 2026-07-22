@@ -169,50 +169,60 @@
         </button>
         <div class="acc-body">
           <div class="info-grid" style="margin-bottom:16px;">
-            <div class="info-cell full" id="datiAnagToggleCell">
-              <button type="button" id="datiAnagToggleBtn" onclick="toggleDatiAnagrafici()"
-                      style="width:100%;text-align:left;background:none;border:1px dashed var(--border);
-                             color:var(--text-dim);padding:8px 12px;border-radius:6px;
-                             font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;">
-                ▾ Dati anagrafici (Nome, Telefono, Indirizzo, Budget…)
-              </button>
-            </div>
-            <div class="info-cell anag-field">
+            <div class="info-cell">
               <div class="info-label">Nome</div>
               <input class="info-value editable" id="dNomeEdit" oninput="markDirty()">
             </div>
-            <div class="info-cell anag-field">
+            <div class="info-cell">
               <div class="info-label">Cognome</div>
               <input class="info-value editable" id="dCognomeEdit" oninput="markDirty()">
             </div>
-            <div class="info-cell anag-field">
+            <div class="info-cell">
               <div class="info-label">Telefono</div>
               <input class="info-value editable" id="dTelefono" oninput="markDirty()">
             </div>
-            <div class="info-cell anag-field">
+            <div class="info-cell">
               <div class="info-label">Email</div>
               <input class="info-value editable" id="dEmail" oninput="markDirty()">
             </div>
-            <div class="info-cell anag-field">
+            <div class="info-cell">
               <div class="info-label">Servizio</div>
               <input class="info-value editable" id="dServizio" oninput="markDirty()">
             </div>
-            <div class="info-cell anag-field">
+            <div class="info-cell">
               <div class="info-label">Zona</div>
               <input class="info-value editable" id="dZona" oninput="markDirty()">
             </div>
-            <div class="info-cell anag-field">
+            <div class="info-cell">
               <div class="info-label">Mobile / Pezzo</div>
               <input class="info-value editable" id="dMobile" oninput="markDirty()">
             </div>
-            <div class="info-cell anag-field">
+            <div class="info-cell">
               <div class="info-label">Budget</div>
               <input class="info-value editable" id="dBudget" oninput="markDirty()">
             </div>
-            <div class="info-cell full anag-field">
+            <div class="info-cell full">
               <div class="info-label">Indirizzo</div>
               <input class="info-value editable" id="dIndirizzo" oninput="markDirty()">
             </div>
+            <!-- Session ID: dato tecnico (per Sole/n8n), non utile in dashboard.
+                 Resta nel DOM perché il JS lo popola (rimuoverlo romperebbe il riempimento). -->
+            <div class="info-cell" style="display:none;">
+              <div class="info-label">Session ID</div>
+              <div class="info-value" id="dSessionId" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-dim);">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ 1a. SCHEDA OPERATIVA (note, appuntamenti, foto) ═══ -->
+      <div class="acc-section" id="acc-scheda-operativa">
+        <button class="acc-header" onclick="toggleAcc('acc-scheda-operativa')">
+          <span class="acc-title">🗒️ Scheda operativa</span>
+          <span class="acc-chevron">▾</span>
+        </button>
+        <div class="acc-body">
+          <div class="info-grid" style="margin-bottom:16px;">
             <div class="info-cell full">
               <div class="info-label" style="display:flex;align-items:center;gap:8px;">
                 <span>Note <small style="color:var(--text-dim);font-size:9px;">(modificabile)</small></span>
@@ -246,12 +256,6 @@
                 <button type="button" class="btn btn--primary" onclick="aggiungiSopralluogo()">➕ Aggiungi</button>
               </div>
             </div>
-            <!-- Session ID: dato tecnico (per Sole/n8n), non utile in dashboard.
-                 Resta nel DOM perché il JS lo popola (rimuoverlo romperebbe il riempimento). -->
-            <div class="info-cell" style="display:none;">
-              <div class="info-label">Session ID</div>
-              <div class="info-value" id="dSessionId" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-dim);">—</div>
-            </div>
           </div>
 
           <!-- Foto della scheda -->
@@ -269,32 +273,6 @@
             </div>
             <div class="lav-foto-count" id="schedaFotoStatus"></div>
             <div class="lav-preview" id="schedaFotoGrid"></div>
-          </div>
-
-          <!-- Azioni contestuali -->
-          <button type="button" id="azioniToggleBtn" onclick="toggleAzioniCliente()"
-                  style="width:100%;text-align:left;background:none;border:1px dashed var(--border);
-                         color:var(--text-dim);padding:8px 12px;border-radius:6px;margin-bottom:8px;
-                         font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;">
-            ▾ Azioni cliente (email, WA, contenuti)
-          </button>
-          <div class="acc-azioni" id="azioniClienteBody">
-            <button class="azione-btn" onclick="openModal('email')">
-              <span class="azione-icon">📧</span>
-              <span class="azione-label">Email cliente</span>
-            </button>
-            <button class="azione-btn" onclick="openModal('whatsapp')">
-              <span class="azione-icon">💬</span>
-              <span class="azione-label">Messaggio WA</span>
-            </button>
-            <button class="azione-btn" onclick="openModal('contenuto')">
-              <span class="azione-icon">✍️</span>
-              <span class="azione-label">Genera contenuto</span>
-            </button>
-            <button class="azione-btn" onclick="openModal('note_interne')">
-              <span class="azione-icon">📋</span>
-              <span class="azione-label">Note interne</span>
-            </button>
           </div>
         </div>
       </div>
@@ -1104,7 +1082,7 @@ function aggiornaSezioniVisibili(stato) {
   let apri = 'acc-dati';
   if (s === 'PREVENTIVO') apri = 'acc-preventivi';
   else if (showLav)       apri = 'acc-lavorazione';
-  ['acc-dati','acc-preventivi','acc-lavorazione','acc-reel','acc-faq'].forEach(id => {
+  ['acc-dati','acc-scheda-operativa','acc-preventivi','acc-lavorazione','acc-reel','acc-faq'].forEach(id => {
     document.getElementById(id).classList.toggle('open', id === apri);
   });
 }
@@ -1806,41 +1784,6 @@ function saveNoteEditor() {
   }
   closeNoteEditor();
 }
-
-// Collassa/espande i campi anagrafici (Nome…Indirizzo) per arrivare in fretta
-// a Note e Foto da mobile durante un sopralluogo. Default: chiuso su mobile,
-// aperto su desktop.
-function toggleDatiAnagrafici(force) {
-  const cells = document.querySelectorAll('.acc-body .info-cell.anag-field');
-  const btn = document.getElementById('datiAnagToggleBtn');
-  if (!cells.length || !btn) return;
-  const hidden = cells[0].style.display === 'none';
-  const show = (typeof force === 'boolean') ? force : hidden;
-  cells.forEach(c => { c.style.display = show ? '' : 'none'; });
-  btn.innerHTML = show
-    ? '▴ Dati anagrafici (nascondi)'
-    : '▾ Dati anagrafici (Nome, Telefono, Indirizzo, Budget…)';
-}
-// Collassa/espande le azioni contestuali (email, WA, contenuti, note interne):
-// in sopralluogo non servono e occupano lo schermo. Default chiuso su mobile.
-function toggleAzioniCliente(force) {
-  const body = document.getElementById('azioniClienteBody');
-  const btn = document.getElementById('azioniToggleBtn');
-  if (!body || !btn) return;
-  const hidden = body.style.display === 'none';
-  const show = (typeof force === 'boolean') ? force : hidden;
-  body.style.display = show ? '' : 'none';
-  btn.innerHTML = show
-    ? '▴ Azioni cliente (nascondi)'
-    : '▾ Azioni cliente (email, WA, contenuti)';
-}
-// Al primo render della scheda: chiudi su mobile (≤768px).
-document.addEventListener('DOMContentLoaded', () => {
-  if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) {
-    toggleDatiAnagrafici(false);
-    toggleAzioniCliente(false);
-  }
-});
 
 async function generaContenuto() {
   const btn = document.getElementById('btnGenera');
