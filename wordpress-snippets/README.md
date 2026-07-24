@@ -31,7 +31,7 @@ base per la **centralizzazione** dei widget front-end (vedi sotto).
 |---|---|---|---|---|---|---|
 | `ardychat.js` | ardychat | 15170 | js | site_wide_footer | Chat generale del sito sulla pagina `/ardy-agent/` (→ `ardy-proxy.php`, elementi `ac-*`) | ✅ **Centralizzato** → `../ardy-chat-site.js` (vedi sotto) |
 | `chat-corsi.html` | Chat per i corsi | 15246 | html | site_wide_footer | `<script>` che adatta `/ardy-agent/?corso=` in "modalità corso" (intestazione, suggerimenti, primo messaggio) | ✅ **Centralizzato** → `../ardy-chat-corsi.js` (vedi sotto) |
-| `pulsante-flottante-ovunque.php` | Pulsante flottante ovunque | 15243 | php | everywhere | Bottone flottante "Chatta con Ardy" → `/ardy-agent/`; salta le pagine `/lavori-in-corso/`, `/project/` e categoria 102 | ⚠️ Parziale (la condizione è PHP server-side; markup/CSS sì) |
+| `pulsante-flottante-ovunque.php` | Pulsante flottante ovunque | 15243 | php | everywhere | Bottone flottante "Chatta con Ardy" → `/ardy-agent/`; salta le pagine `/lavori-in-corso/`, `/project/` e categoria "lavori-in-corso" | ⚠️ Parziale (la condizione è PHP server-side; markup/CSS sì) |
 | `pulsante-corsi.php` | Pulsante corsi | 15245 | php | everywhere | Filtro `the_content`: CTA "Info su questo corso" sulle 9 pagine corso → `/ardy-agent/?corso=` | ⚠️ Parziale (mappa slug + filtro PHP) |
 | `corsi-dato-strutturato.php` | Corsi dato strutturato | 15240 | php | everywhere | Schema.org `Course` sui corsi (SEO, hook `wp_head`) | ❌ No (backup-only) |
 | `snippet-yoast.php` | Snippet yoast | 15241 | php | everywhere | Schema `LocalBusiness` via filtro `wpseo_schema_organization` (SEO) | ❌ No (backup-only) |
