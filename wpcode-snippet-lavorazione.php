@@ -1,16 +1,18 @@
-<!-- 
+<!--
   ARDY LAB — Widget Chat Lavorazione
   Da inserire in WPCode come snippet "HTML" con condizione:
   - Posizione: Footer (prima di </body>)
-  - Condizione: Solo pagine della categoria "lavori-in-corso" (ID: 102)
-  
+  - Condizione: Solo pagine della categoria "lavori-in-corso"
+
   Oppure se WPCode non supporta la condizione per categoria,
   inserisci come snippet PHP con questo codice:
 -->
 
 <?php
-// Verifica che siamo su un post della categoria "lavori-in-corso" (ID 102)
-if ( is_single() && has_category( 102 ) ) :
+// Verifica che siamo su un post della categoria "lavori-in-corso".
+// Controllo per SLUG (non per ID numerico): se la categoria viene ricreata
+// in WP admin con un ID diverso, questa condizione continua a funzionare.
+if ( is_single() && has_category( 'lavori-in-corso' ) ) :
 ?>
 <script src="https://ardyagent.ardy-lab.it/ardy-widget-lavorazione.js" defer></script>
 <?php endif; ?>

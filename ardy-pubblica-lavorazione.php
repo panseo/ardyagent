@@ -224,7 +224,22 @@ if ($isComunicazione) {
 // -----------------------------------------------------------
 // 9. CREA O AGGIORNA POST WORDPRESS
 // -----------------------------------------------------------
-$categoria = 102;
+// La categoria "Lavori in corso" pilota anche il permalink pubblico e i
+// controlli lato tema (widget chat cliente, pulsante flottante) che si
+// basano sullo slug/ID categoria. La cerchiamo per slug invece di un ID
+// fisso: se viene ricreata da WP admin con un ID diverso (es. dopo una
+// pulizia che l'ha cancellata per sbaglio), l'endpoint si autoallinea
+// invece di pubblicare pagine senza categoria (→ link ?p=ID invece che
+// /lavori-in-corso/...).
+$catSlug = 'lavori-in-corso';
+$catTerm = get_category_by_slug($catSlug);
+if ($catTerm && !is_wp_error($catTerm)) {
+    $categoria = (int) $catTerm->term_id;
+} else {
+    $newCat   = wp_insert_term('Lavori in corso', 'category', ['slug' => $catSlug]);
+    $categoria = !is_wp_error($newCat) ? (int) $newCat['term_id'] : (int) get_option('default_category');
+    error_log('ARDY PUBBLICA: categoria "lavori-in-corso" non trovata, ricreata con ID ' . $categoria);
+}
 
 // Questo endpoint gira senza utente WordPress loggato: di default WP applica
 // kses al contenuto e rimuove <video>/<source>, gli attributi style e può

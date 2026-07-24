@@ -10,7 +10,7 @@ Sistema di gestione clienti, preventivi, agente AI e integrazioni social per **A
 |---|---|
 | Dashboard (Michela + Andrea) | `https://ardyagent.ardy-lab.it` — la root del dominio apre direttamente la dashboard (`DirectoryIndex ardy-michela-app.html`) |
 | Chatbot pubblico | `https://ardy-lab.it/ardy-agent/` |
-| Widget lavorazione | Iniettato automaticamente su pagine categoria "Lavori in corso" (ID 102) |
+| Widget lavorazione | Iniettato automaticamente su pagine categoria "Lavori in corso" (slug `lavori-in-corso`) |
 | n8n Automazione | `https://n8n.ardy-lab.it` |
 | VPS (WHM) | IP: `57.131.47.5` — accesso solo via WHM/cPanel |
 | Database | `micoperibg_ardyagent` su `localhost` |
@@ -323,7 +323,7 @@ Chat contestuale integrata nelle pagine di avanzamento lavoro su WordPress.
 - `ardy-verify-client.php` — verifica identità cliente
 
 ### Flusso
-1. Pagina WordPress categoria "Lavori in corso" (ID 102)
+1. Pagina WordPress categoria "Lavori in corso" (slug `lavori-in-corso`)
 2. Snippet Divi inietta il widget + box informativo
 3. Cliente clicca 🪑 → schermata verifica telefono
 4. Telefono verificato contro DB (`clienti.telefono` + `clienti.wp_post_id`)
@@ -347,7 +347,7 @@ Chat contestuale integrata nelle pagine di avanzamento lavoro su WordPress.
 ### Snippet Divi (Opzioni tema → Integrazione → Parte inferiore post)
 Inietta automaticamente:
 - Box informativo dorato che spiega al cliente come usare l'assistente
-- Caricamento widget JS (solo su pagine categoria 102)
+- Caricamento widget JS (solo su pagine categoria "lavori-in-corso")
 
 ---
 
