@@ -1,15 +1,22 @@
 <!-- Ardy Lab — Widget Lavorazione + Info Banner -->
 <script>
 (function(){
-  // Verifica che sia una pagina di lavorazione (categoria 102)
+  // Verifica che sia una pagina di lavorazione (categoria "lavori-in-corso")
   var postMatch = document.body.className.match(/postid-(\d+)/);
   if (!postMatch) return;
   var postId = postMatch[1];
 
-  fetch('/wp-json/wp/v2/posts/' + postId)
+  // _embed=wp:term include le tassonomie (categorie/tag) del post: controlliamo
+  // lo SLUG invece dell'ID numerico, così se la categoria viene ricreata con un
+  // ID diverso in WP admin questo controllo continua a funzionare.
+  fetch('/wp-json/wp/v2/posts/' + postId + '?_embed=wp:term')
     .then(function(r){ return r.json(); })
     .then(function(d){
-      if (!d.categories || !d.categories.includes(102)) return;
+      var termGroups = (d._embedded && d._embedded['wp:term']) || [];
+      var isLavorazione = termGroups.some(function(group){
+        return group.some(function(t){ return t.slug === 'lavori-in-corso'; });
+      });
+      if (!isLavorazione) return;
 
       // Inietta il box informativo PRIMA del contenuto
       var entry = document.querySelector('.entry-content') || document.querySelector('article');
