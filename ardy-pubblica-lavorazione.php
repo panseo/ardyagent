@@ -178,20 +178,11 @@ if ($isComunicazione) {
 // -----------------------------------------------------------
 $dataOra  = date('d/m/Y H:i');
 
-// Copertina FISSA: la prima foto del lavoro diventa l'immagine in evidenza.
-// La impostiamo solo se il post non ne ha già una (così resta la prima foto
-// in assoluto). Quella foto NON viene ripetuta nell'editor.
-$existingThumb   = $wpPostId ? has_post_thumbnail($wpPostId) : false;
-$featuredImageId = (!$existingThumb && !empty($savedImageIds)) ? $savedImageIds[0] : null;
-
-// Galleria della fase: se il post ha una copertina, la prima foto (= immagine in
-// evidenza) non va ripetuta nell'editor. Le restanti diventano una galleria a
-// griglia cliccabile (lightbox nel widget) invece di una lunga colonna di <img>.
-$galleriaUrls = $savedImageUrls;
-if ($featuredImageId !== null && !empty($galleriaUrls)) {
-    array_shift($galleriaUrls); // la copertina non va nell'editor
-}
-$fotoHtml = ardyBuildGalleriaFoto($galleriaUrls);
+// Niente più tentativo di impostare l'immagine in evidenza da qui: il fallback
+// per le anteprime (box del blog Divi) è gestito lato WordPress con un filtro
+// che usa la prima foto del post — vedi wordpress-snippets/lavorazioni-copertina-fallback.php.
+// Tutte le foto della fase entrano quindi nella galleria, nessuna esclusa.
+$fotoHtml = ardyBuildGalleriaFoto($savedImageUrls);
 
 // Video della fase (già caricati su WP Media Library via ardy-upload-video.php).
 // Accetta solo URL http(s) per evitare injection nel post.
@@ -301,11 +292,6 @@ kses_init_filters();
 if (!$wpPostId) {
     echo json_encode(['success' => false, 'error' => 'Errore pubblicazione WordPress']);
     exit();
-}
-
-// Imposta l'immagine in evidenza (copertina per il modulo DIVI Blog in home)
-if ($featuredImageId !== null) {
-    set_post_thumbnail($wpPostId, $featuredImageId);
 }
 
 // -----------------------------------------------------------
