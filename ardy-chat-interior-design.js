@@ -125,6 +125,18 @@
       '}' +
       '.ardy-id-sugg:hover { background:#c8a96e;color:#fff;border-color:#c8a96e; }' +
 
+      // Invito esplicito a fotografare l'ambiente. Compare SOLO su dispositivi con
+      // puntatore "coarse" (telefoni/tablet): su desktop l'attributo capture viene
+      // ignorato e si aprirebbe il selettore file, rendendo l'invito una bugia.
+      '#ardy-id-camcta {' +
+        'display:none;width:calc(100% - 32px);margin:0 16px 10px;padding:11px 12px;' +
+        'border:1px dashed rgba(200,169,110,0.6);border-radius:10px;background:#fff;' +
+        'color:#8b7340;font-family:"DM Sans",sans-serif;font-size:13px;font-weight:600;' +
+        'cursor:pointer;text-align:center;transition:all 0.2s;' +
+      '}' +
+      '#ardy-id-camcta.visible { display:block; }' +
+      '#ardy-id-camcta:hover { background:#c8a96e;color:#fff;border-color:#c8a96e;border-style:solid; }' +
+
       // Anteprime delle foto in coda di invio (immagini di riferimento del cliente)
       '#ardy-id-preview { display:none;flex-wrap:wrap;gap:6px;padding:0 16px 10px; }' +
       '#ardy-id-preview.visible { display:flex; }' +
@@ -187,6 +199,7 @@
       '</div>' +
       '<div id="ardy-id-messages"></div>' +
       '<div id="ardy-id-suggestions"></div>' +
+      '<button id="ardy-id-camcta">📷 Fai la foto al tuo ambiente</button>' +
       '<div id="ardy-id-preview"></div>' +
       '<div id="ardy-id-inputbar">' +
         '<button class="ardy-id-iconbtn" id="ardy-id-cam" title="Scatta una foto" aria-label="Scatta una foto">📷</button>' +
@@ -217,6 +230,14 @@
 
     document.getElementById('ardy-id-attach').onclick = function () { fileInput.click(); };
     document.getElementById('ardy-id-cam').onclick    = function () { camInput.click(); };
+
+    // L'invito a fotografare l'ambiente si mostra solo dove la fotocamera si apre
+    // davvero (telefoni/tablet): su desktop resta il 📎 e l'icona 📷.
+    var camCta = document.getElementById('ardy-id-camcta');
+    camCta.onclick = function () { camInput.click(); };
+    if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+      camCta.classList.add('visible');
+    }
 
     document.getElementById('ardy-id-close').onclick = closePanel;
     document.getElementById('ardy-id-send').onclick = sendMessage;
@@ -387,6 +408,8 @@
       var b = document.getElementById(id);
       if (b) b.disabled = true;
     });
+    var camCta = document.getElementById('ardy-id-camcta');
+    if (camCta) camCta.classList.remove('visible');
     pendingImages = [];
     renderPreviews();
     addMessage('Per ora ci fermiamo qui 🌿 Per continuare scrivi o chiama Michela al ' + MICHELA_TEL + ': sarà felice di parlartene.', 'agent');

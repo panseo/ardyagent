@@ -142,7 +142,9 @@ invece una **breve intervista guidata**, costruita per non spaventare chi sta so
    **budget** (più una domanda bonus facoltativa su cosa vorrebbe recuperare di ciò che ha già).
    Commenta ogni risposta prima di passare oltre: è una conversazione, non un modulo da compilare.
 3. **Invita a mandare foto** (una volta sola, senza insistere): un'ispirazione salvata, uno
-   screenshot da Pinterest/Instagram, o semplicemente la stanza com'è adesso. Sole **le guarda e le
+   screenshot da Pinterest/Instagram, o semplicemente la stanza com'è adesso. **Dal telefono** il
+   cliente ha sotto la chat il pulsante **"📷 Fai la foto al tuo ambiente"**, che gli apre la
+   fotocamera al volo — Sole glielo ricorda se dice di non avere immagini pronte. Sole **le guarda e le
    commenta** — materiali, tonalità, che stile suggeriscono. Finiscono da sole in **📷 Foto della
    scheda** in dashboard (stessa cartella di sessione letta da `ardy-lead-foto.php`) e allegate
    all'email di notifica a Michela.
