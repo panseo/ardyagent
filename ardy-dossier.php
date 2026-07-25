@@ -125,6 +125,23 @@ function ardy_genera_dossier(PDO $db, string $sessionId, bool $perCliente = fals
     if (!$perCliente && trim((string) ($c['note_consegna'] ?? '')) !== '') {
         $md .= "\n**📦 Note consegna (cosa serve/manca per consegnare):** " . ardy_dossier_tronca($c['note_consegna'], 800) . "\n";
     }
+    // Consulenza Interior Design: preferenze raccolte da Sole nella webchat dedicata
+    // (o inserite a mano in dashboard). Client-safe: sono i gusti del cliente stesso.
+    if (!empty($c['interior_design_attivo'])) {
+        $md .= "\n## Consulenza Interior Design\n";
+        $interior = [
+            'Stile preferito'   => $c['interior_design_stile']  ?? '',
+            'Colori preferiti'  => $c['interior_design_colori'] ?? '',
+            'Luce degli ambienti' => $c['interior_design_luce'] ?? '',
+            'Budget'            => $c['interior_design_budget'] ?? '',
+        ];
+        foreach ($interior as $k => $v) {
+            if (trim((string) $v) !== '') $md .= "- **{$k}:** {$v}\n";
+        }
+        if (trim((string) ($c['interior_design_note'] ?? '')) !== '') {
+            $md .= "- **Note:** " . ardy_dossier_tronca($c['interior_design_note'], 800) . "\n";
+        }
+    }
     $md .= "\n";
 
     // 2) Appuntamenti (sopralluoghi · ritiri · interventi sul posto · consegne)

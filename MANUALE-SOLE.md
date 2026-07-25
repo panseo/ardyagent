@@ -27,6 +27,7 @@ di Ardy Lab: i canali su cui lavora, le mansioni, le regole che segue e i suoi l
 | **Chatbot del sito** | `ardy-lab.it/ardy-agent/` | Visitatori del sito (soprattutto nuovi contatti) |
 | **Widget lavorazione** | Pagine "Lavori in corso" del sito | Clienti con un lavoro in corso (riconosciuti dal telefono) |
 | **Galleria Diffusa (B&B)** | `ardy-lab.it/galleria-diffusa` | Titolari di B&B interessati alla partnership Galleria Diffusa |
+| **Consulenza Interior Design** | `ardy-lab.it/interior-design` | Chi vuole una consulenza di arredamento con Michela |
 | **WhatsApp** | Numero dedicato **+39 379 375 6437** | Chiunque scriva: lead, clienti, ex clienti |
 
 Su WhatsApp Sole capisce **con chi sta parlando** e si comporta di conseguenza (modalità):
@@ -128,6 +129,24 @@ nel CRM). Non promette mai condizioni economiche precise: quelle le concorda Mic
 > autoportante `ardy-chat-experience.js` (→ `ardy-proxy.php`), regole in `ardy-system.txt`
 > (sezione "GALLERIA DIFFUSA — PARTNER B&B").
 
+### 9. Raccogliere la consulenza di Interior Design — *lug 2026*
+Michela, oltre al restauro, offre una **consulenza di interior design**. Sulla pagina
+`ardy-lab.it/interior-design` (ma anche in chat normale o su WhatsApp, se il cliente la chiede)
+Sole cambia percorso: niente qualifica restauro, niente forbice di prezzo sul mobile. Raccoglie
+invece, una domanda alla volta, **stile preferito, colori, luce degli ambienti e budget**, insieme
+ai soliti dati anagrafici (nome, telefono, email, zona), e salva il lead nel CRM con
+`servizio` = "Consulenza Interior Design".
+
+**Sulla webchat dedicata** Sole fa un passo in più: con il tool `attiva_interior_design`
+**accende la sezione 🛋️ Interior Design** nella scheda del cliente in dashboard e ci scrive dentro
+le preferenze raccolte — così Michela arriva al primo incontro sapendo già i gusti del cliente.
+La stessa sezione Andrea e Michela possono attivarla a mano dal bottone **🛋️ Attiva Interior
+Design** nella scheda (utile quando la richiesta arriva per telefono o su WhatsApp).
+Sole non dà mai prezzi precisi per la consulenza: li concorda Michela a voce.
+> Dove vive: pagina/loader in `wordpress-snippets/interior-design-page.html`, widget chat
+> autoportante `ardy-chat-interior-design.js` (→ `ardy-proxy.php`), regole in `ardy-system.txt`
+> (sezione "CONSULENZA INTERIOR DESIGN") + istruzioni sul tool dentro `ardy-proxy.php`.
+
 ---
 
 ## ✍️ Cosa scrive Sole per Michela (dalla dashboard)
@@ -159,8 +178,9 @@ Per i clienti che non pagano, Sole indossa un secondo cappello — più formale 
 | `fissa_appuntamento_calendario` | Crea davvero l'evento del sopralluogo |
 | `sposta_appuntamento` | Sposta un sopralluogo già fissato (su WhatsApp è legato al numero di chi scrive) |
 | `salva_lead_crm` | Salva/aggiorna il cliente nel CRM |
+| `attiva_interior_design` | Accende la sezione Interior Design nella scheda e ci salva stile/colori/luce/budget |
 
-Su **WhatsApp** (lato cliente) Sole usa lo stesso set di strumenti del sito, più la **ricezione e valutazione delle foto** del mobile. Il **codice di accesso** e lo strumento **`cerca_cliente`** restano invece **solo sul sito** (su WhatsApp il riconoscimento è il numero, vedi sopra).
+Su **WhatsApp** (lato cliente) Sole usa lo stesso set di strumenti del sito, più la **ricezione e valutazione delle foto** del mobile. Il **codice di accesso**, lo strumento **`cerca_cliente`** e **`attiva_interior_design`** restano invece **solo sul sito** (su WhatsApp il riconoscimento è il numero, vedi sopra; per una richiesta di interior design arrivata su WhatsApp la sezione si attiva col bottone in dashboard).
 
 **Lato staff (solo WhatsApp titolare — Michela/Andrea):** *giu 2026*
 
@@ -199,6 +219,7 @@ Su **WhatsApp** (lato cliente) Sole usa lo stesso set di strumenti del sito, pi�
 |---|---|
 | Personalità e regole generali (chatbot) | `ardy-system.txt` |
 | Chatbot pubblico + tool calendario/CRM + notifiche Michela | `ardy-proxy.php` |
+| Webchat Galleria Diffusa (B&B) / Consulenza Interior Design | `ardy-chat-experience.js`, `ardy-chat-interior-design.js` |
 | Widget lavorazione (clienti in corso) + calendario visite | `ardy-proxy-lavorazione.php`, `ardy-widget-lavorazione.js` |
 | WhatsApp — istruzioni e modalità | `ardy-whatsapp-system.txt` |
 | WhatsApp — chi è il numero (lead/cliente) + riepilogo CRM live per staff | `ardy-wa-lookup.php` |
