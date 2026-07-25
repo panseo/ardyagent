@@ -135,9 +135,23 @@
       '#ardy-xp-send:hover { transform:scale(1.05); }' +
       '#ardy-xp-send:disabled { opacity:0.5;cursor:default;transform:none; }' +
 
-      '@media(max-width:480px) {' +
-        '#ardy-xp-panel { width:calc(100vw - 16px);right:8px;bottom:88px;max-height:72vh; }' +
+      // MOBILE: la chat si apre A TUTTO SCHERMO. Il pannello "a finestrella" su
+      // telefono era schiacciato tra la pagina che scorre dietro e le barre di
+      // sistema, e l'area messaggi restava altissima due dita. Qui prende tutto:
+      // niente bordi, messaggi in flex:1, e il toggle sparisce mentre è aperta.
+      // 100dvh (non 100vh) tiene conto della barra indirizzi che si ritrae.
+      '@media(max-width:600px) {' +
+        '#ardy-xp-panel {' +
+          'top:0;left:0;right:0;bottom:0;width:100%;height:100dvh;max-height:none;' +
+          'border-radius:0;border:none;transform:none;' +
+          'padding-bottom:env(safe-area-inset-bottom,0px);' +
+        '}' +
+        '#ardy-xp-panel.visible { transform:none; }' +
+        '#ardy-xp-header { padding-top:calc(16px + env(safe-area-inset-top,0px)); }' +
+        '#ardy-xp-messages { max-height:none;min-height:0;flex:1; }' +
+        '#ardy-xp-close { font-size:28px;padding:0 8px; }' +
         '#ardy-xp-toggle { bottom:16px;right:16px;padding:0 18px;font-size:14px; }' +
+        '#ardy-xp-toggle.hidden { display:none; }' +
       '}';
     document.head.appendChild(style);
   }
@@ -197,13 +211,30 @@
     ]);
   }
 
+  // Su telefono la chat è a tutto schermo: mentre è aperta il toggle sparisce e
+  // la pagina sotto non deve scorrere (altrimenti "scappa" dietro alla chat).
+  function isFullscreen() {
+    return window.matchMedia && window.matchMedia('(max-width:600px)').matches;
+  }
+
+  var prevBodyOverflow = '';
+
   function togglePanel() {
     var panel = document.getElementById('ardy-xp-panel');
     if (!isOpen) {
       panel.classList.add('open');
       setTimeout(function () { panel.classList.add('visible'); }, 10);
+      document.getElementById('ardy-xp-toggle').classList.add('hidden');
+      if (isFullscreen()) {
+        prevBodyOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+      }
       startChat();
-      setTimeout(function () { document.getElementById('ardy-xp-input').focus(); }, 300);
+      // Su mobile NON diamo il focus automatico: aprirebbe la tastiera subito,
+      // coprendo il messaggio di benvenuto proprio mentre presenta la proposta.
+      if (!isFullscreen()) {
+        setTimeout(function () { document.getElementById('ardy-xp-input').focus(); }, 300);
+      }
       isOpen = true;
     } else {
       closePanel();
@@ -214,6 +245,8 @@
     var panel = document.getElementById('ardy-xp-panel');
     panel.classList.remove('visible');
     setTimeout(function () { panel.classList.remove('open'); }, 300);
+    document.getElementById('ardy-xp-toggle').classList.remove('hidden');
+    document.body.style.overflow = prevBodyOverflow;
     isOpen = false;
   }
 
@@ -233,6 +266,21 @@
     });
   }
 
+  // Sole scrive in markdown (**grassetto**): stampandolo con textContent gli
+  // asterischi finivano a schermo. Qui li rendiamo <strong> costruendo NODI DOM
+  // — mai innerHTML — così nessun testo del modello può iniettare markup.
+  function appendRichText(el, text) {
+    var re = /\*\*([^*]+)\*\*/g, last = 0, m;
+    while ((m = re.exec(text)) !== null) {
+      if (m.index > last) el.appendChild(document.createTextNode(text.slice(last, m.index)));
+      var strong = document.createElement('strong');
+      strong.textContent = m[1];
+      el.appendChild(strong);
+      last = m.index + m[0].length;
+    }
+    if (last < text.length) el.appendChild(document.createTextNode(text.slice(last)));
+  }
+
   function addMessage(text, role) {
     var container = document.getElementById('ardy-xp-messages');
     var row = document.createElement('div');
@@ -242,7 +290,7 @@
     avatar.textContent = role === 'agent' ? '✨' : 'Tu';
     var bubble = document.createElement('div');
     bubble.className = 'ardy-xp-bubble';
-    bubble.textContent = text;
+    appendRichText(bubble, text);
     row.appendChild(avatar);
     row.appendChild(bubble);
     container.appendChild(row);
