@@ -588,7 +588,12 @@
           message:   text,
           history:   historyDaInviare(),
           images:    imagesToSend.map(function (i) { return { data: i.data, type: i.type }; }),
-          sessionId: sessionId
+          sessionId: sessionId,
+          // Dichiara da quale pagina arriva la conversazione. Il proxy lo usa per
+          // accendere la sezione Interior Design in modo DETERMINISTICO, senza
+          // dipendere dal fatto che il modello si ricordi di chiamare il tool:
+          // chi scrive da questa pagina è un lead interior design per definizione.
+          origine:   'interior-design'
         })
       });
       var data = await res.json();

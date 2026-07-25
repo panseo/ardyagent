@@ -122,6 +122,13 @@ $images    = $input['images']    ?? [];
 $sessionId = $input['sessionId'] ?? 'unknown_' . time();
 $cleanSession = preg_replace('/[^a-zA-Z0-9_\-]/', '', $sessionId);
 
+// Pagina di provenienza dichiarata dal widget (oggi: 'interior-design').
+// Serve a rendere DETERMINISTICO ciò che altrimenti dipenderebbe dal fatto che
+// il modello si ricordi di chiamare un tool: chi scrive dalla webchat dedicata
+// è un lead di quel servizio per definizione, anche se salta l'intervista.
+$origine = preg_replace('/[^a-z0-9_\-]/', '', strtolower((string)($input['origine'] ?? '')));
+$isInteriorDesign = ($origine === 'interior-design');
+
 // ── Lead da portale: link firmato ?lead=<sid>&tok=<hmac16> ──
 $leadSessionId = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string)($input['leadSessionId'] ?? ''));
 $leadToken     = (string)($input['leadToken'] ?? '');
@@ -220,7 +227,17 @@ $system .= "\n\n## CONSULENZA INTERIOR DESIGN — ACCENDERE LA SEZIONE (tool att
     . "- Va al **Passo 7** dell'intervista, subito DOPO `salva_lead_crm` e solo se quel salvataggio è riuscito (la scheda deve già esistere). Durante l'intervista non chiamare nulla: prima le domande, poi i dati, poi i due salvataggi in quest'ordine.\n"
     . "- Puoi richiamarlo più volte se il cliente aggiunge dettagli dopo: ogni chiamata aggiunge quello che passi, senza cancellare il resto.\n"
     . "- Passa solo i campi che hai davvero raccolto: non inventare stile, colori, luce o budget che il cliente non ti ha detto.\n"
+    . "- Nel campo `note` scrivi SEMPRE un **riepilogo discorsivo della conversazione**: è quello che Michela legge per prima. Poche righe, come le racconteresti a voce — cosa vuole fare, che sensazioni ha espresso, cosa hai capito dei suoi gusti, cosa ha mandato in foto, eventuali vincoli. Serve soprattutto quando l'intervista resta a metà: i campi singoli saranno vuoti, il riepilogo no.\n"
     . "- Non annunciare il tool al cliente: parlagli di Michela e del prossimo passo, non del CRM.\n";
+
+// Contesto di pagina: la conversazione arriva dalla webchat dedicata all'interior
+// design. Dirglielo qui evita che debba dedurlo dal discorso — e soprattutto che
+// tratti da restauro chi apre con "vorrei rinnovare il salotto".
+if ($isInteriorDesign) {
+    $system .= "\n\n## SEI SULLA PAGINA CONSULENZA INTERIOR DESIGN\n"
+        . "Questa conversazione arriva da `ardy-lab.it/interior-design`: chi ti scrive è interessato alla **consulenza di interior design**, non a un restauro. Applica da subito l'intervista guidata descritta sopra (permesso → cinque domande → foto → dati in fondo), senza dover capire prima di cosa si tratta.\n"
+        . "Se il cliente salta l'intervista e ti detta subito i suoi dati, va benissimo: salvalo comunque con `salva_lead_crm` e usa le `note` per riassumere quel poco che sai. Non costringerlo a rispondere alle domande se ha fretta.\n";
+}
 
 // ── Contesto lead da portale (link firmato) ──
 // Se il lead arriva dal link nel WhatsApp di primo contatto, ha già una scheda:
@@ -341,7 +358,7 @@ $tools = [
                 'colori' => ['type' => 'string', 'description' => 'Colori o palette preferiti'],
                 'luce'   => ['type' => 'string', 'description' => 'Luce naturale ed esposizione degli ambienti da arredare'],
                 'budget' => ['type' => 'string', 'description' => 'Forbice di budget indicativa per la consulenza/arredamento'],
-                'note'   => ['type' => 'string', 'description' => 'Altre note utili: ambienti coinvolti, esigenze particolari, gusti']
+                'note'   => ['type' => 'string', 'description' => 'RIEPILOGO DISCORSIVO della conversazione, in poche righe: cosa vuole fare il cliente, che gusti ha espresso, ambienti coinvolti, cosa ha mandato in foto, vincoli o esigenze particolari. È il campo che Michela legge per primo — compilalo sempre, anche se l\'intervista è rimasta a metà.']
             ],
             'required' => []
         ]
@@ -672,6 +689,32 @@ while ($iteration < $maxIterations) {
                 if (isset($r['success'])) {
                     $leadSaved = true;
                     $leadData  = $toolInput;   // per il riepilogo WhatsApp a Michela
+
+                    // ── Lead dalla webchat Interior Design ──────────────────
+                    // Accende la sezione SENZA aspettare `attiva_interior_design`:
+                    // la provenienza è certezza, la chiamata al tool è una speranza.
+                    // Se il cliente salta l'intervista e detta subito i dati (o Sole
+                    // dimentica il tool), Michela vedrebbe altrimenti un lead generico
+                    // con la sezione spenta. Forza anche il `servizio`, così in lista
+                    // si legge da dove arriva. Idempotente: COALESCE non sovrascrive
+                    // né i dati raccolti né chi/quando ha attivato per primo.
+                    if ($isInteriorDesign) {
+                        try {
+                            $dbId = ardyDB();
+                            $servizioDetto = trim((string) ($toolInput['servizio'] ?? ''));
+                            $forzaServizio = ($servizioDetto === '' || stripos($servizioDetto, 'interior') === false);
+                            $sqlId = "UPDATE clienti SET
+                                        interior_design_attivo = 1,
+                                        interior_design_attivato_da = COALESCE(interior_design_attivato_da, 'sole'),
+                                        interior_design_attivato_at = COALESCE(interior_design_attivato_at, NOW()),
+                                        " . ($forzaServizio ? "servizio = 'Consulenza Interior Design'," : "") . "
+                                        updated_at = NOW()
+                                      WHERE session_id = :sid";
+                            $dbId->prepare($sqlId)->execute([':sid' => $cleanSession]);
+                        } catch (PDOException $e) {
+                            error_log('ARDY INTERIOR AUTO-ATTIVAZIONE: ' . $e->getMessage());
+                        }
+                    }
 
                     // Codice di accesso: generato UNA volta sola per scheda. Con questo
                     // il cliente potrà poi chiedere lo stato del lavoro (tool cerca_cliente).
