@@ -217,7 +217,8 @@ $system .= "\n\n## CODICE DI ACCESSO E STATO DEL LAVORO (tool cerca_cliente)\n\n
 $system .= "\n\n## CONSULENZA INTERIOR DESIGN — ACCENDERE LA SEZIONE (tool attiva_interior_design)\n\n"
     . "Qui sulla webchat, oltre a salvare il lead, puoi **accendere la sezione Interior Design** nella scheda del cliente in dashboard: è lì che Michela trova stile, colori, luce e budget in chiaro.\n"
     . "- Chiama `attiva_interior_design` SOLO se il cliente ha chiesto esplicitamente la consulenza di interior design (non per un restauro).\n"
-    . "- Chiamalo DOPO `salva_lead_crm` (la scheda deve già esistere), e puoi richiamarlo più volte man mano che raccogli i dati: ogni chiamata aggiunge quello che passi, senza cancellare il resto.\n"
+    . "- Va al **Passo 7** dell'intervista, subito DOPO `salva_lead_crm` e solo se quel salvataggio è riuscito (la scheda deve già esistere). Durante l'intervista non chiamare nulla: prima le domande, poi i dati, poi i due salvataggi in quest'ordine.\n"
+    . "- Puoi richiamarlo più volte se il cliente aggiunge dettagli dopo: ogni chiamata aggiunge quello che passi, senza cancellare il resto.\n"
     . "- Passa solo i campi che hai davvero raccolto: non inventare stile, colori, luce o budget che il cliente non ti ha detto.\n"
     . "- Non annunciare il tool al cliente: parlagli di Michela e del prossimo passo, non del CRM.\n";
 

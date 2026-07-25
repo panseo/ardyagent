@@ -29,10 +29,13 @@
   var MICHELA_TEL = '+39 379 375 6437';
   var MAX_MSGS  = 30;
 
-  var msgCount    = 0;
-  var history     = [];
-  var isOpen      = false;
-  var chatStarted = false;
+  var MAX_IMAGES  = 4;   // per messaggio (il proxy taglia comunque a ARDY_MAX_IMAGES_PER_MSG)
+
+  var msgCount      = 0;
+  var history       = [];
+  var pendingImages = [];
+  var isOpen        = false;
+  var chatStarted   = false;
   var sessionId   = 'id_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
 
   // ── Si attiva solo sulla pagina Interior Design ──
@@ -122,7 +125,37 @@
       '}' +
       '.ardy-id-sugg:hover { background:#c8a96e;color:#fff;border-color:#c8a96e; }' +
 
-      '#ardy-id-inputbar { display:flex;gap:8px;padding:12px 16px;border-top:1px solid #e8e4de;background:#fff; }' +
+      // Invito esplicito a fotografare l'ambiente. Compare SOLO su dispositivi con
+      // puntatore "coarse" (telefoni/tablet): su desktop l'attributo capture viene
+      // ignorato e si aprirebbe il selettore file, rendendo l'invito una bugia.
+      '#ardy-id-camcta {' +
+        'display:none;width:calc(100% - 32px);margin:0 16px 10px;padding:11px 12px;' +
+        'border:1px dashed rgba(200,169,110,0.6);border-radius:10px;background:#fff;' +
+        'color:#8b7340;font-family:"DM Sans",sans-serif;font-size:13px;font-weight:600;' +
+        'cursor:pointer;text-align:center;transition:all 0.2s;' +
+      '}' +
+      '#ardy-id-camcta.visible { display:block; }' +
+      '#ardy-id-camcta:hover { background:#c8a96e;color:#fff;border-color:#c8a96e;border-style:solid; }' +
+
+      // Anteprime delle foto in coda di invio (immagini di riferimento del cliente)
+      '#ardy-id-preview { display:none;flex-wrap:wrap;gap:6px;padding:0 16px 10px; }' +
+      '#ardy-id-preview.visible { display:flex; }' +
+      '.ardy-id-thumb-wrap { position:relative;width:54px;height:54px; }' +
+      '.ardy-id-thumb { width:54px;height:54px;object-fit:cover;border-radius:8px;border:1px solid #e8e4de; }' +
+      '.ardy-id-thumb-del {' +
+        'position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;' +
+        'border:none;background:#1a1a1a;color:#fff;font-size:13px;line-height:1;cursor:pointer;' +
+        'display:flex;align-items:center;justify-content:center;padding:0;' +
+      '}' +
+      '.ardy-id-bubble img { display:block;max-width:100%;border-radius:8px;margin-top:6px; }' +
+
+      '#ardy-id-inputbar { display:flex;gap:8px;padding:12px 16px;border-top:1px solid #e8e4de;background:#fff;align-items:center; }' +
+      '.ardy-id-iconbtn {' +
+        'background:none;border:1px solid #e8e4de;border-radius:8px;padding:0 10px;height:38px;' +
+        'font-size:17px;cursor:pointer;transition:all 0.2s;flex-shrink:0;' +
+      '}' +
+      '.ardy-id-iconbtn:hover { border-color:#c8a96e;background:#faf9f6; }' +
+      '.ardy-id-iconbtn:disabled { opacity:0.4;cursor:default; }' +
       '#ardy-id-input {' +
         'flex:1;border:1px solid #ddd;border-radius:8px;padding:10px 14px;font-size:14px;' +
         'font-family:"DM Sans",sans-serif;outline:none;background:#faf9f6;color:#333;transition:border-color 0.2s;' +
@@ -160,22 +193,105 @@
         '<span class="ardy-h-ico">🛋️</span>' +
         '<div>' +
           '<h3>Consulenza Interior Design</h3>' +
-          '<p>Raccontala a Sole: stile, colori, luce e budget</p>' +
+          '<p>Cinque domande veloci: stile, colori, luce, budget</p>' +
         '</div>' +
         '<button id="ardy-id-close">×</button>' +
       '</div>' +
       '<div id="ardy-id-messages"></div>' +
       '<div id="ardy-id-suggestions"></div>' +
+      '<button id="ardy-id-camcta">📷 Fai la foto al tuo ambiente</button>' +
+      '<div id="ardy-id-preview"></div>' +
       '<div id="ardy-id-inputbar">' +
-        '<input type="text" id="ardy-id-input" placeholder="Scrivi la tua domanda..." />' +
+        '<button class="ardy-id-iconbtn" id="ardy-id-cam" title="Scatta una foto" aria-label="Scatta una foto">📷</button>' +
+        '<button class="ardy-id-iconbtn" id="ardy-id-attach" title="Allega un\'immagine di riferimento" aria-label="Allega un\'immagine">📎</button>' +
+        '<input type="text" id="ardy-id-input" placeholder="Scrivi la tua risposta..." />' +
         '<button id="ardy-id-send">→</button>' +
       '</div>';
     document.body.appendChild(panel);
+
+    // Input file nascosti: uno per la galleria, uno che apre direttamente la
+    // fotocamera sul telefono (capture) — come nella chat generale del sito.
+    var fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.multiple = true;
+    fileInput.style.display = 'none';
+    panel.appendChild(fileInput);
+
+    var camInput = document.createElement('input');
+    camInput.type = 'file';
+    camInput.accept = 'image/*';
+    camInput.setAttribute('capture', 'environment');
+    camInput.style.display = 'none';
+    panel.appendChild(camInput);
+
+    fileInput.addEventListener('change', function () { processFiles(fileInput.files); fileInput.value = ''; });
+    camInput.addEventListener('change', function ()  { processFiles(camInput.files);  camInput.value  = ''; });
+
+    document.getElementById('ardy-id-attach').onclick = function () { fileInput.click(); };
+    document.getElementById('ardy-id-cam').onclick    = function () { camInput.click(); };
+
+    // L'invito a fotografare l'ambiente si mostra solo dove la fotocamera si apre
+    // davvero (telefoni/tablet): su desktop resta il 📎 e l'icona 📷.
+    var camCta = document.getElementById('ardy-id-camcta');
+    camCta.onclick = function () { camInput.click(); };
+    if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+      camCta.classList.add('visible');
+    }
 
     document.getElementById('ardy-id-close').onclick = closePanel;
     document.getElementById('ardy-id-send').onclick = sendMessage;
     document.getElementById('ardy-id-input').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') sendMessage();
+    });
+  }
+
+  // ── Foto di riferimento (stili, oggetti, ambienti del cliente) ──
+  // Il proxy accetta già le immagini: le valida sul MIME reale, le comprime, le
+  // salva nella cartella della sessione e le allega all'email a Michela.
+  function processFiles(files) {
+    Array.from(files).forEach(function (file) {
+      if (!file.type.startsWith('image/')) return;
+      if (pendingImages.length >= MAX_IMAGES) {
+        addMessage('Per ora fermiamoci a ' + MAX_IMAGES + ' immagini per messaggio: mandami le altre nel prossimo. 🙂', 'agent');
+        return;
+      }
+      if (file.size > 8 * 1024 * 1024) {
+        addMessage('Quell\'immagine è un po\' troppo pesante (oltre 8MB). Puoi mandarmene una più leggera?', 'agent');
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        pendingImages.push({
+          data:    e.target.result.split(',')[1],
+          type:    file.type,
+          preview: e.target.result
+        });
+        renderPreviews();
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function renderPreviews() {
+    var el = document.getElementById('ardy-id-preview');
+    el.innerHTML = '';
+    if (!pendingImages.length) { el.classList.remove('visible'); return; }
+    el.classList.add('visible');
+    pendingImages.forEach(function (img, idx) {
+      var wrap = document.createElement('div');
+      wrap.className = 'ardy-id-thumb-wrap';
+      var thumb = document.createElement('img');
+      thumb.className = 'ardy-id-thumb';
+      thumb.src = img.preview;
+      var del = document.createElement('button');
+      del.className = 'ardy-id-thumb-del';
+      del.textContent = '×';
+      del.title = 'Togli questa immagine';
+      del.onclick = function () { pendingImages.splice(idx, 1); renderPreviews(); };
+      wrap.appendChild(thumb);
+      wrap.appendChild(del);
+      el.appendChild(wrap);
     });
   }
 
@@ -185,15 +301,19 @@
     // La chat parte con un saluto di Sole già "incorniciato" sulla consulenza di
     // interior design. Mettendolo anche nella history, il modello mantiene il
     // contesto per tutte le risposte successive (anche con il system prompt dedicato).
-    var greet = 'Ciao! Sono Sole, l\'assistente virtuale (AI) di Ardy Lab 👋 Vedo che ti interessa una ' +
-      'consulenza di interior design con Michela. Raccontami un po\': che ambiente vuoi arredare o rinnovare?';
+    // ⚠️ Il saluto CHIEDE IL PERMESSO e non fa ancora nessuna domanda: è il "Passo 0"
+    // dell'intervista guidata (vedi ardy-system.txt → CONSULENZA INTERIOR DESIGN).
+    // Non trasformarlo in una prima domanda: il cliente deve poter dire di no.
+    var greet = 'Ciao! Sono Sole, l\'assistente virtuale (AI) di Ardy Lab 👋 Se ti va, ti faccio ' +
+      'cinque domande veloci sui tuoi gusti — stile, colori, luce e budget — così Michela arriva al ' +
+      'primo incontro sapendo già come vorresti stare a casa tua. Sono due minuti. Iniziamo?';
     addMessage(greet, 'agent');
     history.push({ role: 'assistant', content: greet });
     initSuggestions([
-      'Vorrei rinnovare il soggiorno',
-      'Non so ancora che stile mi piace',
-      'Ho già un\'idea di budget',
-      'Vorrei fissare un incontro con Michela'
+      'Sì, iniziamo',
+      'Come funziona la consulenza?',
+      'Che cosa mi chiedi di preciso?',
+      'Preferisco parlare con Michela'
     ]);
   }
 
@@ -233,7 +353,7 @@
     });
   }
 
-  function addMessage(text, role) {
+  function addMessage(text, role, imgPreviews) {
     var container = document.getElementById('ardy-id-messages');
     var row = document.createElement('div');
     row.className = 'ardy-id-msg ' + role;
@@ -242,7 +362,14 @@
     avatar.textContent = role === 'agent' ? '🛋️' : 'Tu';
     var bubble = document.createElement('div');
     bubble.className = 'ardy-id-bubble';
-    bubble.textContent = text;
+    if (text) bubble.textContent = text;
+    if (imgPreviews && imgPreviews.length) {
+      imgPreviews.forEach(function (src) {
+        var img = document.createElement('img');
+        img.src = src;
+        bubble.appendChild(img);
+      });
+    }
     row.appendChild(avatar);
     row.appendChild(bubble);
     container.appendChild(row);
@@ -277,6 +404,14 @@
     input.disabled = true;
     input.placeholder = 'Conversazione terminata';
     send.disabled = true;
+    ['ardy-id-attach', 'ardy-id-cam'].forEach(function (id) {
+      var b = document.getElementById(id);
+      if (b) b.disabled = true;
+    });
+    var camCta = document.getElementById('ardy-id-camcta');
+    if (camCta) camCta.classList.remove('visible');
+    pendingImages = [];
+    renderPreviews();
     addMessage('Per ora ci fermiamo qui 🌿 Per continuare scrivi o chiama Michela al ' + MICHELA_TEL + ': sarà felice di parlartene.', 'agent');
   }
 
@@ -286,23 +421,43 @@
 
     var input = document.getElementById('ardy-id-input');
     var text = input.value.trim();
-    if (!text) return;
+    // Si può inviare anche solo una foto, senza testo (es. "questo è lo stile che mi piace").
+    if (!text && !pendingImages.length) return;
 
     input.value = '';
-    addMessage(text, 'user');
+    var imagesToSend = pendingImages.slice();
+    pendingImages = [];
+    renderPreviews();
+
+    addMessage(text || null, 'user', imagesToSend.map(function (i) { return i.preview; }));
     msgCount++;
 
     var suggEl = document.getElementById('ardy-id-suggestions');
     if (suggEl) suggEl.style.display = 'none';
 
-    history.push({ role: 'user', content: text });
+    // Le immagini restano nella history in base64: così il modello continua a
+    // "vederle" anche nei messaggi successivi, non solo in quello in cui arrivano.
+    if (imagesToSend.length) {
+      var content = imagesToSend.map(function (i) {
+        return { type: 'image', source: { type: 'base64', media_type: i.type, data: i.data } };
+      });
+      if (text) content.push({ type: 'text', text: text });
+      history.push({ role: 'user', content: content });
+    } else {
+      history.push({ role: 'user', content: text });
+    }
     showTyping();
 
     try {
       var res = await fetch(PROXY_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history: history, images: [], sessionId: sessionId })
+        body: JSON.stringify({
+          message:   text,
+          history:   history,
+          images:    imagesToSend.map(function (i) { return { data: i.data, type: i.type }; }),
+          sessionId: sessionId
+        })
       });
       var data = await res.json();
       hideTyping();
