@@ -156,8 +156,11 @@
       '}' +
       '.ardy-id-iconbtn:hover { border-color:#c8a96e;background:#faf9f6; }' +
       '.ardy-id-iconbtn:disabled { opacity:0.4;cursor:default; }' +
+      // min-width:0 è indispensabile: senza, l'input non scende sotto la sua
+      // larghezza intrinseca (~20 caratteri) e su schermi stretti spinge il
+      // tasto invio fuori dal pannello. Si vede solo da quando ci sono 📷 e 📎.
       '#ardy-id-input {' +
-        'flex:1;border:1px solid #ddd;border-radius:8px;padding:10px 14px;font-size:14px;' +
+        'flex:1;min-width:0;border:1px solid #ddd;border-radius:8px;padding:10px 14px;font-size:14px;' +
         'font-family:"DM Sans",sans-serif;outline:none;background:#faf9f6;color:#333;transition:border-color 0.2s;' +
       '}' +
       '#ardy-id-input:focus { border-color:#c8a96e; }' +
@@ -166,13 +169,28 @@
       '#ardy-id-send {' +
         'background:linear-gradient(135deg,#c8a96e,#a8864a);border:none;border-radius:8px;padding:0 16px;' +
         'cursor:pointer;color:#fff;font-size:16px;transition:all 0.2s;display:flex;align-items:center;justify-content:center;' +
+        'flex-shrink:0;height:38px;' +
       '}' +
       '#ardy-id-send:hover { transform:scale(1.05); }' +
       '#ardy-id-send:disabled { opacity:0.5;cursor:default;transform:none; }' +
 
-      '@media(max-width:480px) {' +
-        '#ardy-id-panel { width:calc(100vw - 16px);right:8px;bottom:88px;max-height:72vh; }' +
+      // MOBILE: la chat si apre A TUTTO SCHERMO. Il pannello "a finestrella" su
+      // telefono era schiacciato tra la pagina che scorre dietro e le barre di
+      // sistema, e l'area messaggi restava altissima due dita. Qui prende tutto:
+      // niente bordi, messaggi in flex:1, e il toggle sparisce mentre è aperta.
+      // 100dvh (non 100vh) tiene conto della barra indirizzi che si ritrae.
+      '@media(max-width:600px) {' +
+        '#ardy-id-panel {' +
+          'top:0;left:0;right:0;bottom:0;width:100%;height:100dvh;max-height:none;' +
+          'border-radius:0;border:none;transform:none;' +
+          'padding-bottom:env(safe-area-inset-bottom,0px);' +
+        '}' +
+        '#ardy-id-panel.visible { transform:none; }' +
+        '#ardy-id-header { padding-top:calc(16px + env(safe-area-inset-top,0px)); }' +
+        '#ardy-id-messages { max-height:none;min-height:0;flex:1; }' +
+        '#ardy-id-close { font-size:28px;padding:0 8px; }' +
         '#ardy-id-toggle { bottom:16px;right:16px;padding:0 18px;font-size:14px; }' +
+        '#ardy-id-toggle.hidden { display:none; }' +
       '}';
     document.head.appendChild(style);
   }
@@ -317,13 +335,30 @@
     ]);
   }
 
+  // Su telefono la chat è a tutto schermo: mentre è aperta il toggle sparisce e
+  // la pagina sotto non deve scorrere (altrimenti "scappa" dietro alla chat).
+  function isFullscreen() {
+    return window.matchMedia && window.matchMedia('(max-width:600px)').matches;
+  }
+
+  var prevBodyOverflow = '';
+
   function togglePanel() {
     var panel = document.getElementById('ardy-id-panel');
     if (!isOpen) {
       panel.classList.add('open');
       setTimeout(function () { panel.classList.add('visible'); }, 10);
+      document.getElementById('ardy-id-toggle').classList.add('hidden');
+      if (isFullscreen()) {
+        prevBodyOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+      }
       startChat();
-      setTimeout(function () { document.getElementById('ardy-id-input').focus(); }, 300);
+      // Su mobile NON diamo il focus automatico: aprirebbe la tastiera subito,
+      // coprendo il messaggio di benvenuto proprio mentre chiede il permesso.
+      if (!isFullscreen()) {
+        setTimeout(function () { document.getElementById('ardy-id-input').focus(); }, 300);
+      }
       isOpen = true;
     } else {
       closePanel();
@@ -334,6 +369,8 @@
     var panel = document.getElementById('ardy-id-panel');
     panel.classList.remove('visible');
     setTimeout(function () { panel.classList.remove('open'); }, 300);
+    document.getElementById('ardy-id-toggle').classList.remove('hidden');
+    document.body.style.overflow = prevBodyOverflow;
     isOpen = false;
   }
 
@@ -353,6 +390,21 @@
     });
   }
 
+  // Sole scrive in markdown (**grassetto**): stampandolo con textContent gli
+  // asterischi finivano a schermo. Qui li rendiamo <strong> costruendo NODI DOM
+  // — mai innerHTML — così nessun testo del modello può iniettare markup.
+  function appendRichText(el, text) {
+    var re = /\*\*([^*]+)\*\*/g, last = 0, m;
+    while ((m = re.exec(text)) !== null) {
+      if (m.index > last) el.appendChild(document.createTextNode(text.slice(last, m.index)));
+      var strong = document.createElement('strong');
+      strong.textContent = m[1];
+      el.appendChild(strong);
+      last = m.index + m[0].length;
+    }
+    if (last < text.length) el.appendChild(document.createTextNode(text.slice(last)));
+  }
+
   function addMessage(text, role, imgPreviews) {
     var container = document.getElementById('ardy-id-messages');
     var row = document.createElement('div');
@@ -362,7 +414,7 @@
     avatar.textContent = role === 'agent' ? '🛋️' : 'Tu';
     var bubble = document.createElement('div');
     bubble.className = 'ardy-id-bubble';
-    if (text) bubble.textContent = text;
+    if (text) appendRichText(bubble, text);
     if (imgPreviews && imgPreviews.length) {
       imgPreviews.forEach(function (src) {
         var img = document.createElement('img');
