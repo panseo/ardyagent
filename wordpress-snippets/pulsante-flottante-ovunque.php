@@ -8,10 +8,12 @@
  */
 
 add_action('wp_footer', function () {
-    // Salta le pagine con chat dedicata: "Lavori in corso" (cliente) e
-    // "Galleria Diffusa" (widget partner B&B) — lì il bottone lead confonde.
+    // Salta le pagine con chat dedicata: "Lavori in corso" (cliente), "Galleria
+    // Diffusa" (widget partner B&B) e "Interior Design" (consulenza arredamento)
+    // — lì il bottone lead confonde e, con z-index più alto, coprirebbe il toggle
+    // del widget dedicato.
     $uri = $_SERVER['REQUEST_URI'] ?? '';
-    if (is_singular() && (in_category('lavori-in-corso') || strpos($uri, '/lavori-in-corso/') !== false || strpos($uri, '/project/') !== false || strpos($uri, '/galleria-diffusa') !== false)) {
+    if (is_singular() && (in_category('lavori-in-corso') || strpos($uri, '/lavori-in-corso/') !== false || strpos($uri, '/project/') !== false || strpos($uri, '/galleria-diffusa') !== false || strpos($uri, '/interior-design') !== false)) {
         return;
     }
     ?>
