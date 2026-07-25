@@ -155,7 +155,11 @@ invece una **breve intervista guidata**, costruita per non spaventare chi sta so
 Poi salva il lead nel CRM con `servizio` = "Consulenza Interior Design".
 
 > **Conseguenza voluta:** chi abbandona a metà intervista non lascia una scheda (senza telefono non
-> si può creare). È il prezzo di non chiedere i contatti a freddo.
+> si può creare). È il prezzo di non chiedere i contatti a freddo — ripagato dal fatto che **chi
+> arriva in fondo è motivato**: ha risposto a cinque domande e spesso mandato foto.
+> Non è comunque un buco nero: la conversazione resta in `web_messaggi` e il job orario
+> `ardy-chiusura-sessioni.php` avvisa Michela lo stesso con «💬 Chat conclusa — (non in CRM)»,
+> perché interroga i messaggi e non richiede una riga in `clienti`.
 
 **Sulla webchat dedicata** Sole fa un passo in più: con il tool `attiva_interior_design`
 **accende la sezione 🛋️ Interior Design** nella scheda del cliente in dashboard e ci scrive dentro
