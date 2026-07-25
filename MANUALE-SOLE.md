@@ -132,10 +132,28 @@ nel CRM). Non promette mai condizioni economiche precise: quelle le concorda Mic
 ### 9. Raccogliere la consulenza di Interior Design — *lug 2026*
 Michela, oltre al restauro, offre una **consulenza di interior design**. Sulla pagina
 `ardy-lab.it/interior-design` (ma anche in chat normale o su WhatsApp, se il cliente la chiede)
-Sole cambia percorso: niente qualifica restauro, niente forbice di prezzo sul mobile. Raccoglie
-invece, una domanda alla volta, **stile preferito, colori, luce degli ambienti e budget**, insieme
-ai soliti dati anagrafici (nome, telefono, email, zona), e salva il lead nel CRM con
-`servizio` = "Consulenza Interior Design".
+Sole cambia percorso: niente qualifica restauro, niente forbice di prezzo sul mobile. Conduce
+invece una **breve intervista guidata**, costruita per non spaventare chi sta solo curiosando:
+
+1. **Chiede prima il permesso** — non parte con le domande di sua iniziativa: annuncia che sono
+   cinque domande da due minuti e aspetta il "sì". Se il cliente preferisce di no, gli dà il numero
+   di Michela e non insiste.
+2. **Una domanda per messaggio**, in ordine fisso: ambiente → **stile** → **colori** → **luce** →
+   **budget** (più una domanda bonus facoltativa su cosa vorrebbe recuperare di ciò che ha già).
+   Commenta ogni risposta prima di passare oltre: è una conversazione, non un modulo da compilare.
+3. **Invita a mandare foto** (una volta sola, senza insistere): un'ispirazione salvata, uno
+   screenshot da Pinterest/Instagram, o semplicemente la stanza com'è adesso. Sole **le guarda e le
+   commenta** — materiali, tonalità, che stile suggeriscono. Finiscono da sole in **📷 Foto della
+   scheda** in dashboard (stessa cartella di sessione letta da `ardy-lead-foto.php`) e allegate
+   all'email di notifica a Michela.
+4. **I dati anagrafici arrivano SOLO alla fine**, dopo il riepilogo e su richiesta esplicita
+   ("se vuoi che Michela ti ricontatti, mi lasci nome, telefono ed email?"), sempre lasciando la
+   via d'uscita del numero di Michela. Mai prima, mai durante.
+
+Poi salva il lead nel CRM con `servizio` = "Consulenza Interior Design".
+
+> **Conseguenza voluta:** chi abbandona a metà intervista non lascia una scheda (senza telefono non
+> si può creare). È il prezzo di non chiedere i contatti a freddo.
 
 **Sulla webchat dedicata** Sole fa un passo in più: con il tool `attiva_interior_design`
 **accende la sezione 🛋️ Interior Design** nella scheda del cliente in dashboard e ci scrive dentro
