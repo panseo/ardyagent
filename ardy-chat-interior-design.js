@@ -265,8 +265,59 @@
   }
 
   // ── Foto di riferimento (stili, oggetti, ambienti del cliente) ──
-  // Il proxy accetta già le immagini: le valida sul MIME reale, le comprime, le
-  // salva nella cartella della sessione e le allega all'email a Michela.
+  // Il proxy le valida sul MIME reale, le salva nella cartella della sessione e
+  // le allega all'email a Michela.
+  //
+  // ⚠️ RIDIMENSIONIAMO QUI, PRIMA DI INVIARE, e non è un'ottimizzazione: è ciò
+  // che tiene in piedi la conversazione. La compressione del proxy vale solo per
+  // il messaggio corrente, mentre la history che rispediamo a ogni turno viaggia
+  // verso l'API così com'è. Una foto da telefono non toccata (4-8MB → ~+33% in
+  // base64) sfonda il limite di 5MB per immagine dell'API: il primo messaggio con
+  // foto passa e il SECONDO fa fallire tutta la chiamata ("Errore nella risposta
+  // AI"). Salvando solo la versione ridotta, `images` e `history` restano leggere.
+  var MAX_SIDE = 1600;   // lato lungo in px: più che sufficiente per giudicare uno stile
+  var JPEG_Q   = 0.82;
+
+  function downscale(file, cb) {
+    function disegna(src, w, h) {
+      var scale = Math.min(1, MAX_SIDE / Math.max(w, h));
+      var nw = Math.max(1, Math.round(w * scale));
+      var nh = Math.max(1, Math.round(h * scale));
+      var canvas = document.createElement('canvas');
+      canvas.width = nw; canvas.height = nh;
+      try {
+        canvas.getContext('2d').drawImage(src, 0, 0, nw, nh);
+        var url = canvas.toDataURL('image/jpeg', JPEG_Q);
+        cb({ data: url.split(',')[1], type: 'image/jpeg', preview: url });
+      } catch (e) { cb(null); }
+    }
+
+    function viaImg() {
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        var img = new Image();
+        img.onload  = function () { disegna(img, img.naturalWidth, img.naturalHeight); };
+        img.onerror = function () { cb(null); };
+        img.src = e.target.result;
+      };
+      reader.onerror = function () { cb(null); };
+      reader.readAsDataURL(file);
+    }
+
+    // createImageBitmap con imageOrientation applica l'EXIF: senza, le foto
+    // scattate in verticale finirebbero ruotate una volta passate dal canvas.
+    if (window.createImageBitmap) {
+      try {
+        createImageBitmap(file, { imageOrientation: 'from-image' }).then(function (bm) {
+          disegna(bm, bm.width, bm.height);
+          if (bm.close) bm.close();
+        }).catch(viaImg);
+        return;
+      } catch (e) { /* opzioni non supportate: si prosegue col fallback */ }
+    }
+    viaImg();
+  }
+
   function processFiles(files) {
     Array.from(files).forEach(function (file) {
       if (!file.type.startsWith('image/')) return;
@@ -274,20 +325,21 @@
         addMessage('Per ora fermiamoci a ' + MAX_IMAGES + ' immagini per messaggio: mandami le altre nel prossimo. 🙂', 'agent');
         return;
       }
-      if (file.size > 8 * 1024 * 1024) {
-        addMessage('Quell\'immagine è un po\' troppo pesante (oltre 8MB). Puoi mandarmene una più leggera?', 'agent');
+      // Soglia alta: tanto quello che parte è la versione ridimensionata. Serve
+      // solo a non far masticare al telefono un file enorme.
+      if (file.size > 25 * 1024 * 1024) {
+        addMessage('Quell\'immagine è davvero pesante. Puoi mandarmene una più leggera?', 'agent');
         return;
       }
-      var reader = new FileReader();
-      reader.onload = function (e) {
-        pendingImages.push({
-          data:    e.target.result.split(',')[1],
-          type:    file.type,
-          preview: e.target.result
-        });
+      downscale(file, function (img) {
+        if (!img) {
+          addMessage('Non sono riuscita a leggere quell\'immagine. Ne proviamo un\'altra?', 'agent');
+          return;
+        }
+        if (pendingImages.length >= MAX_IMAGES) return;  // ricontrollo: downscale è asincrono
+        pendingImages.push(img);
         renderPreviews();
-      };
-      reader.readAsDataURL(file);
+      });
     });
   }
 
@@ -467,6 +519,34 @@
     addMessage('Per ora ci fermiamo qui 🌿 Per continuare scrivi o chiama Michela al ' + MICHELA_TEL + ': sarà felice di parlartene.', 'agent');
   }
 
+  // Seconda difesa: anche ridotte, le foto pesano. Se la conversazione ne
+  // accumula parecchie, ogni turno le rispedirebbe TUTTE — richiesta sempre più
+  // grande e costo token che cresce senza motivo. Teniamo le immagini solo negli
+  // ultimi IMG_TURNI messaggi che ne contengono; nei più vecchi resta una nota
+  // testuale: Sole le ha già viste e commentate, quindi il filo non si perde.
+  var IMG_TURNI = 2;
+
+  function historyDaInviare() {
+    var conImmagini = [];
+    history.forEach(function (m, i) {
+      if (Array.isArray(m.content) && m.content.some(function (b) { return b.type === 'image'; })) {
+        conImmagini.push(i);
+      }
+    });
+    if (conImmagini.length <= IMG_TURNI) return history;
+    var daAlleggerire = conImmagini.slice(0, conImmagini.length - IMG_TURNI);
+    return history.map(function (m, i) {
+      if (daAlleggerire.indexOf(i) === -1) return m;
+      var testo = m.content.filter(function (b) { return b.type === 'text'; })
+                           .map(function (b) { return b.text; }).join(' ');
+      var n = m.content.filter(function (b) { return b.type === 'image'; }).length;
+      return {
+        role: m.role,
+        content: (testo ? testo + ' ' : '') + '[' + n + (n === 1 ? ' foto inviata' : ' foto inviate') + ' in precedenza]'
+      };
+    });
+  }
+
   async function sendMessage() {
     if (!chatStarted) startChat();
     if (msgCount >= MAX_MSGS) { disableInput(); return; }
@@ -506,7 +586,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message:   text,
-          history:   history,
+          history:   historyDaInviare(),
           images:    imagesToSend.map(function (i) { return { data: i.data, type: i.type }; }),
           sessionId: sessionId
         })
