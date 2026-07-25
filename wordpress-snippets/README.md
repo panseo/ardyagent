@@ -53,6 +53,7 @@ base per la **centralizzazione** dei widget front-end (vedi sotto).
 | `ardychat` | `../ardy-chat-site.js` | `https://ardyagent.ardy-lab.it/ardy-chat-site.js` | snippet HTML (footer) con `<script src=...>` |
 | `Chat per i corsi` | `../ardy-chat-corsi.js` | `https://ardyagent.ardy-lab.it/ardy-chat-corsi.js` | snippet HTML (footer) con `<script src=...>` |
 | `Galleria Diffusa (B&B)` | `../ardy-chat-experience.js` | `https://ardyagent.ardy-lab.it/ardy-chat-experience.js` | snippet HTML in **Site Wide Footer** (il widget si auto-limita a `/galleria-diffusa`) |
+| `Consulenza Interior Design` | `../ardy-chat-interior-design.js` | `https://ardyagent.ardy-lab.it/ardy-chat-interior-design.js` | snippet HTML in **Site Wide Footer** (il widget si auto-limita a `/interior-design`) |
 
 > **Galleria Diffusa:** widget chat **autoportante** (inietta UI propria, come quello
 > "Lavori in corso") che mette Sole in *modalità partner B&B* e usa `ardy-proxy.php`
@@ -72,6 +73,19 @@ base per la **centralizzazione** dei widget front-end (vedi sotto).
 > 4. **Save + Active.** Site-wide è sicuro: il widget si attiva solo sull'URL
 > `/galleria-diffusa` (gate interno), non compare altrove. **Non** mettere qui
 > `window.ARDY_XP=true` (lo attiverebbe ovunque).
+
+> **Consulenza Interior Design:** stessa struttura di Galleria Diffusa. Widget chat
+> autoportante che mette Sole in *modalità interior design*: raccoglie stile, colori
+> preferiti, luce e budget oltre ai dati anagrafici, salva il lead nel CRM e **accende
+> la sezione 🛋️ Interior Design** nella scheda cliente in dashboard (tool
+> `attiva_interior_design` in `ardy-proxy.php`). Si attiva SOLO su `/interior-design`
+> (URL, elemento `#interior-design` o `window.ARDY_ID`). Contenuto pagina in
+> `interior-design-page.html`; loader in uno **snippet WPCode HTML, Site Wide Footer**:
+> ```html
+> <script src="https://ardyagent.ardy-lab.it/ardy-chat-interior-design.js"></script>
+> ```
+> Valgono le stesse trappole: tipo **HTML** (mai *JavaScript*), e **non** mettere
+> `window.ARDY_ID=true` nel loader site-wide.
 
 **Loader da incollare in WPCode** (snippet "ardychat"):
 1. Cambia il **tipo** dello snippet da *JavaScript* a **HTML Snippet**.

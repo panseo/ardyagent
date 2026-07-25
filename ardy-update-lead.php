@@ -35,7 +35,9 @@ try {
         'indirizzo', 'stato', 'note', 'note_consegna',
         'data_followup', 'inizio_lavoro', 'fine_lavoro_prevista',
         'trasporto_data',
-        'wp_post_id', 'wp_post_link'
+        'wp_post_id', 'wp_post_link',
+        'interior_design_attivo', 'interior_design_stile', 'interior_design_colori',
+        'interior_design_luce', 'interior_design_budget', 'interior_design_note',
     ];
 
     $set    = ['`updated_at` = NOW()']; // aggiorna sempre il timestamp
@@ -117,6 +119,23 @@ try {
             } catch (Throwable $e) {
                 error_log('ARDY UPDATE LEAD outreach add: ' . $e->getMessage());
             }
+        }
+    }
+
+    // Attivazione manuale della sezione Interior Design (bottone di Andrea/Michela in
+    // dashboard): la prima volta che il flag passa a 1, registra chi/quando. Se Sole
+    // l'ha già attivata dalla webchat dedicata (ardy-proxy.php), attivato_da/attivato_at
+    // sono già valorizzati e qui non si toccano.
+    if (array_key_exists('interior_design_attivo', $input) && (int) $input['interior_design_attivo'] === 1) {
+        try {
+            $qid = $db->prepare("SELECT interior_design_attivato_at FROM clienti WHERE session_id = :sid LIMIT 1");
+            $qid->execute([':sid' => $sessionId]);
+            if (trim((string) $qid->fetchColumn()) === '') {
+                $db->prepare("UPDATE clienti SET interior_design_attivato_da = 'manuale', interior_design_attivato_at = NOW() WHERE session_id = :sid")
+                   ->execute([':sid' => $sessionId]);
+            }
+        } catch (PDOException $e) {
+            error_log('ARDY UPDATE LEAD interior design attivazione: ' . $e->getMessage());
         }
     }
 

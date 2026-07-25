@@ -486,6 +486,16 @@ $clientiCols = [
     'faq_pubblicata_at'       => "ALTER TABLE clienti ADD COLUMN faq_pubblicata_at DATETIME NULL",
     'foto_archiviate_at'      => "ALTER TABLE clienti ADD COLUMN foto_archiviate_at DATETIME NULL",
     'telefono_last9'          => "ALTER TABLE clienti ADD COLUMN telefono_last9 VARCHAR(9) NULL AFTER telefono",
+    // Consulenza Interior Design (lug 2026): sezione a parte nella scheda cliente,
+    // attivata da Sole (webchat dedicata) o da Andrea/Michela con un bottone in dashboard.
+    'interior_design_attivo'       => "ALTER TABLE clienti ADD COLUMN interior_design_attivo TINYINT(1) NOT NULL DEFAULT 0",
+    'interior_design_attivato_da'  => "ALTER TABLE clienti ADD COLUMN interior_design_attivato_da VARCHAR(20) NULL", // 'sole' | 'manuale'
+    'interior_design_attivato_at'  => "ALTER TABLE clienti ADD COLUMN interior_design_attivato_at DATETIME NULL",
+    'interior_design_stile'        => "ALTER TABLE clienti ADD COLUMN interior_design_stile VARCHAR(255) NULL",
+    'interior_design_colori'       => "ALTER TABLE clienti ADD COLUMN interior_design_colori VARCHAR(255) NULL",
+    'interior_design_luce'         => "ALTER TABLE clienti ADD COLUMN interior_design_luce VARCHAR(255) NULL",
+    'interior_design_budget'       => "ALTER TABLE clienti ADD COLUMN interior_design_budget VARCHAR(100) NULL",
+    'interior_design_note'         => "ALTER TABLE clienti ADD COLUMN interior_design_note TEXT NULL",
 ];
 foreach ($clientiCols as $col => $sql) {
     if (!colExists($pdo, 'clienti', $col)) {

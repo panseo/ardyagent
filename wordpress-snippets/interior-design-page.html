@@ -1,0 +1,115 @@
+<!--
+  CONSULENZA INTERIOR DESIGN — contenuto pagina WordPress  ardy-lab.it/interior-design
+  ============================================================================
+  Incolla questo in un blocco "HTML personalizzato" della pagina WordPress
+  /interior-design (o in un Code Module di Divi).
+
+  Cosa fa già:
+  - imposta il contesto pagina (#interior-design) così la webchat di Sole
+    "modalità interior design" si attiva SOLO qui;
+  - i bottoni "Parla con Sole" aprono la chat via window.ardyIdOpen().
+
+  ⚠️ IL LOADER DEL WIDGET VA IN WPCODE, NON QUI.
+  Molti editor/temi (Divi, blocco HTML) RIMUOVONO i tag <script> incollati nel
+  contenuto della pagina → il widget non parte. Per questo il loader si mette in
+  uno snippet WPCode (vedi README.md, sezione "Consulenza Interior Design"): un
+  solo <script src="...ardy-chat-interior-design.js"> in Site Wide Footer. Il
+  widget si auto-limita alla pagina /interior-design (gate sull'URL), quindi non
+  compare altrove. I due <script> qui in fondo restano solo come fallback per
+  editor che NON strippano gli script: se usi WPCode, sono inerti.
+
+  Fonte attiva del widget: ../ardy-chat-interior-design.js (servito da
+  https://ardyagent.ardy-lab.it/ardy-chat-interior-design.js). Questo file HTML è
+  solo un BACKUP del contenuto pagina (la cartella wordpress-snippets non viene
+  deployata).
+-->
+
+<style>
+  #interior-design, #interior-design * { box-sizing:border-box; }
+  @media (max-width:600px) {
+    #interior-design { padding-left:6px !important; padding-right:6px !important; }
+    #interior-design .id-grid { flex-direction:column !important; gap:12px !important; }
+    #interior-design .id-card { min-width:0 !important; width:100% !important; padding:18px 16px !important; }
+    #interior-design h1 { font-size:32px !important; }
+    #interior-design section { padding-left:0 !important; padding-right:0 !important; }
+    #interior-design .id-hero { padding-top:8px !important; padding-bottom:18px !important; }
+  }
+</style>
+
+<div id="interior-design" style="max-width:980px;margin:0 auto;padding:8px 18px 40px;font-family:'DM Sans',sans-serif;color:#2d2d2d;">
+
+  <!-- ── HERO ──────────────────────────────────────────────────────── -->
+  <section class="id-hero" style="text-align:center;padding:40px 0 28px;">
+    <p style="letter-spacing:2px;text-transform:uppercase;font-size:13px;color:#a8864a;margin:0 0 10px;">Ardy Lab · con Michela</p>
+    <h1 style="font-family:'Crimson Pro',serif;font-size:40px;line-height:1.1;margin:0 0 14px;color:#1a1a1a;">Consulenza di Interior Design</h1>
+    <p style="font-size:19px;line-height:1.5;color:#555;max-width:620px;margin:0 auto 22px;">
+      Michela non restaura soltanto: progetta anche gli ambienti. Stile, colori,
+      luce e arredi scelti insieme, con lo stesso occhio artigianale che mettiamo
+      nel restauro. Il primo passo è raccontare come vorresti stare a casa tua.
+    </p>
+    <p style="font-size:15px;color:#888;margin:0;">
+      Rispondi a qualche domanda di <strong>Sole</strong> qui sotto, oppure scrivi o chiama Michela: <strong>+39 379 375 6437</strong>
+    </p>
+  </section>
+
+  <!-- ── COME FUNZIONA (3 passi) ────────────────────────────────────── -->
+  <section style="padding:30px 0;border-top:1px solid #eee;">
+    <h2 style="font-family:'Crimson Pro',serif;font-size:28px;text-align:center;margin:0 0 26px;color:#1a1a1a;">Come funziona</h2>
+    <div class="id-grid" style="display:flex;flex-wrap:wrap;gap:20px;justify-content:center;">
+      <div class="id-card" style="flex:1;min-width:230px;background:#faf9f6;border:1px solid #eee;border-radius:14px;padding:22px;">
+        <div style="font-size:30px;">💬</div>
+        <h3 style="font-family:'Crimson Pro',serif;font-size:19px;margin:10px 0 6px;">1 · Racconti a Sole</h3>
+        <p style="font-size:15px;line-height:1.5;color:#666;margin:0;">
+          Poche domande, una alla volta: che <strong>stile</strong> ti piace, quali
+          <strong>colori</strong> ti fanno stare bene, quanta <strong>luce</strong>
+          hanno gli ambienti e che <strong>budget</strong> hai in mente.
+        </p>
+      </div>
+      <div class="id-card" style="flex:1;min-width:230px;background:#faf9f6;border:1px solid #eee;border-radius:14px;padding:22px;">
+        <div style="font-size:30px;">📋</div>
+        <h3 style="font-family:'Crimson Pro',serif;font-size:19px;margin:10px 0 6px;">2 · Michela legge la tua scheda</h3>
+        <p style="font-size:15px;line-height:1.5;color:#666;margin:0;">
+          Le tue risposte diventano una scheda: Michela arriva al primo incontro
+          sapendo già i tuoi gusti, senza farti ripetere tutto da capo.
+        </p>
+      </div>
+      <div class="id-card" style="flex:1;min-width:230px;background:#faf9f6;border:1px solid #eee;border-radius:14px;padding:22px;">
+        <div style="font-size:30px;">🛋️</div>
+        <h3 style="font-family:'Crimson Pro',serif;font-size:19px;margin:10px 0 6px;">3 · Progettate insieme</h3>
+        <p style="font-size:15px;line-height:1.5;color:#666;margin:0;">
+          Un incontro (a casa tua o nel nostro laboratorio) per vedere gli spazi,
+          scegliere materiali e finiture e capire cosa recuperare di ciò che hai già.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── PERCHÉ NOI ─────────────────────────────────────────────────── -->
+  <section style="padding:30px 0;border-top:1px solid #eee;">
+    <h2 style="font-family:'Crimson Pro',serif;font-size:28px;text-align:center;margin:0 0 22px;color:#1a1a1a;">Perché con noi</h2>
+    <ul style="font-size:16px;line-height:1.7;color:#555;max-width:700px;margin:0 auto;padding-left:20px;">
+      <li><strong>Occhio da bottega:</strong> Michela è restauratrice — sa cosa vale la pena recuperare e cosa no.</li>
+      <li><strong>Nessun catalogo obbligato:</strong> si parte da quello che hai già e dai tuoi gusti, non da un modello preconfezionato.</li>
+      <li><strong>Pezzi unici:</strong> se serve, restauriamo o realizziamo noi ciò che manca.</li>
+      <li><strong>Un solo interlocutore</strong> dal progetto alla realizzazione.</li>
+    </ul>
+  </section>
+
+  <!-- ── CTA FINALE ─────────────────────────────────────────────────── -->
+  <section style="text-align:center;padding:36px 24px;margin-top:24px;background:#1a1a1a;border-radius:18px;color:#fff;">
+    <h2 style="font-family:'Crimson Pro',serif;font-size:26px;margin:0 0 10px;color:#c8a96e;">Iniziamo da come vorresti stare a casa tua</h2>
+    <p style="font-size:16px;color:rgba(255,255,255,0.8);max-width:560px;margin:0 auto 16px;">
+      Bastano cinque minuti: rispondi alle domande di Sole su stile, colori, luce e
+      budget. Da lì Michela ti richiama o fissate insieme un primo incontro.
+    </p>
+    <p style="font-size:15px;color:#c8a96e;margin:0 0 6px;">👉 Tocca <strong>🛋️ Parla con Sole</strong> per aprire la chat.</p>
+    <p style="font-size:14px;color:rgba(255,255,255,0.6);margin:0;">Michela · +39 379 375 6437</p>
+  </section>
+
+</div>
+
+<!-- Contesto pagina per il widget (ridondante con #interior-design, ma esplicito) -->
+<script>window.ARDY_ID = true;</script>
+
+<!-- LOADER WIDGET (fonte attiva: ardy-chat-interior-design.js sul nostro server) -->
+<script src="https://ardyagent.ardy-lab.it/ardy-chat-interior-design.js"></script>

@@ -148,6 +148,8 @@
         </div>
         <div style="display:flex;gap:6px;margin-left:8px;align-self:flex-start;flex-wrap:wrap;justify-content:flex-end;">
           <button id="btnDossier" class="btn btn--link" onclick="apriDossier()" title="Apri il dossier completo del cliente: anagrafica, preventivi, fasi, chat WhatsApp.">📄 Dossier</button>
+          <button id="btnAttivaInterior" class="btn" onclick="attivaInterior()" title="Attiva per questo cliente la sezione Consulenza Interior Design (stile, colori, luce, budget)."
+            style="display:none;">🛋️ Attiva Interior Design</button>
           <button id="btnReinviaGrazie" class="btn" onclick="reinviaGrazie()" title="Reinvia al cliente l'email (e WhatsApp se configurato) di ringraziamento alla consegna: recensione Google, social, newsletter."
             style="display:none;">📧 Reinvia ringraziamento</button>
           <button id="btnLiberaSpazio" class="btn" onclick="liberaSpazioCliente()" title="Lavoro concluso: cancella foto e reel dal server per liberare spazio. Tiene scheda, preventivi (con PDF), fasi e pagina sito."
@@ -274,6 +276,43 @@
             <div class="lav-foto-count" id="schedaFotoStatus"></div>
             <div class="lav-preview" id="schedaFotoGrid"></div>
           </div>
+        </div>
+      </div>
+
+      <!-- ═══ 1c. INTERIOR DESIGN (sezione attivabile) ═══ -->
+      <div class="acc-section" id="acc-interior" style="display:none;">
+        <button class="acc-header" onclick="toggleAcc('acc-interior')">
+          <span class="acc-title">🛋️ Interior Design</span>
+          <span class="acc-chevron">▾</span>
+        </button>
+        <div class="acc-body">
+          <div id="interiorOrigine" style="font-size:11px;color:var(--text-dim);margin-bottom:10px;"></div>
+          <div class="info-grid" style="margin-bottom:16px;">
+            <div class="info-cell">
+              <div class="info-label">Stile preferito</div>
+              <input class="info-value editable" id="dInteriorStile" oninput="markDirty()" placeholder="Es. minimal, boho, industriale…">
+            </div>
+            <div class="info-cell">
+              <div class="info-label">Colori preferiti</div>
+              <input class="info-value editable" id="dInteriorColori" oninput="markDirty()" placeholder="Es. toni caldi, verde salvia…">
+            </div>
+            <div class="info-cell">
+              <div class="info-label">Luce degli ambienti</div>
+              <input class="info-value editable" id="dInteriorLuce" oninput="markDirty()" placeholder="Es. sud, molto luminoso…">
+            </div>
+            <div class="info-cell">
+              <div class="info-label">Budget consulenza</div>
+              <input class="info-value editable" id="dInteriorBudget" oninput="markDirty()">
+            </div>
+            <div class="info-cell full">
+              <div class="info-label">Note interior design <small style="color:var(--text-dim);font-size:9px;">(ambienti, esigenze, gusti)</small></div>
+              <textarea class="info-value editable" id="dInteriorNote" rows="5" oninput="markDirty()"></textarea>
+            </div>
+          </div>
+          <button type="button" class="btn btn--danger btn--sm" onclick="disattivaInterior()"
+                  title="Nasconde la sezione Interior Design da questa scheda. I dati restano salvati.">
+            ✕ Disattiva Interior Design
+          </button>
         </div>
       </div>
 
@@ -807,6 +846,7 @@ function renderList() {
         ${prevBadge}
         ${l.ha_risposto ? '<span class="stato-badge" style="background:rgba(76,175,114,.22);color:#7fd49b;" title="Il cliente ha scritto di recente (ultime 48h) e non hai ancora aperto la chat">💬 ha risposto</span>' : ''}
         ${(l.NoteConsegna && l.NoteConsegna.trim()) ? '<span class="stato-badge" style="background:rgba(120,160,90,.20);color:#a9c47a;" title="Ci sono note consegna da evadere">📦 consegna</span>' : ''}
+        ${l.InteriorDesignAttivo ? '<span class="stato-badge" style="background:rgba(200,169,110,.22);color:#d9bb84;" title="Questo cliente ha una consulenza di interior design attiva">🛋️ interior</span>' : ''}
         <span class="lead-zona">${escHtml(l.Zona)}</span>
         ${segLabel}
       </div>
@@ -982,6 +1022,14 @@ function renderDetail() {
   document.getElementById('dFineLavoroPrevista').value  = l.Fine_lavoro_prevista ?? '';
   document.getElementById('dSessionId').textContent = l.Session_ID ?? '—';
 
+  // Interior Design: sezione e bottone di attivazione (vedi aggiornaSezioneInterior)
+  document.getElementById('dInteriorStile').value  = l.InteriorDesignStile  ?? '';
+  document.getElementById('dInteriorColori').value = l.InteriorDesignColori ?? '';
+  document.getElementById('dInteriorLuce').value   = l.InteriorDesignLuce   ?? '';
+  document.getElementById('dInteriorBudget').value = l.InteriorDesignBudget ?? '';
+  document.getElementById('dInteriorNote').value   = l.InteriorDesignNote   ?? '';
+  aggiornaSezioneInterior();
+
   // Foto della scheda — sempre, in ogni stato
   caricaFotoScheda(l.Session_ID ?? '');
 
@@ -1101,9 +1149,46 @@ function aggiornaSezioniVisibili(stato) {
   let apri = 'acc-dati';
   if (s === 'PREVENTIVO') apri = 'acc-preventivi';
   else if (showLav)       apri = 'acc-lavorazione';
-  ['acc-dati','acc-scheda-operativa','acc-preventivi','acc-lavorazione','acc-reel','acc-faq'].forEach(id => {
+  ['acc-dati','acc-scheda-operativa','acc-interior','acc-preventivi','acc-lavorazione','acc-reel','acc-faq'].forEach(id => {
     document.getElementById(id).classList.toggle('open', id === apri);
   });
+}
+
+// ─── INTERIOR DESIGN ──────────────────────────────────────
+// Sezione a parte della scheda, spenta di default. Si accende in due modi:
+// Sole la attiva dalla webchat dedicata (tool attiva_interior_design), oppure
+// Andrea/Michela premono "🛋️ Attiva Interior Design" qui in dashboard.
+function aggiornaSezioneInterior() {
+  const attivo = !!(currentLead && currentLead.InteriorDesignAttivo);
+  document.getElementById('acc-interior').style.display    = attivo ? '' : 'none';
+  document.getElementById('btnAttivaInterior').style.display = attivo ? 'none' : 'inline-block';
+
+  const orig = document.getElementById('interiorOrigine');
+  if (!attivo) { orig.textContent = ''; return; }
+  const da = (currentLead.InteriorDesignAttivatoDa === 'sole')
+    ? 'Attivata da Sole su richiesta del cliente'
+    : 'Attivata a mano dalla dashboard';
+  const quando = currentLead.InteriorDesignAttivatoAt
+    ? ' · ' + String(currentLead.InteriorDesignAttivatoAt).replace('T', ' ').slice(0, 16)
+    : '';
+  orig.textContent = da + quando;
+}
+
+function attivaInterior() {
+  if (!currentLead) return;
+  currentLead.InteriorDesignAttivo = true;
+  aggiornaSezioneInterior();
+  document.getElementById('acc-interior').classList.add('open');
+  markDirty();
+  showToast('🛋️ Sezione attivata — ricordati di salvare', 'success');
+}
+
+function disattivaInterior() {
+  if (!currentLead) return;
+  if (!confirm('Nascondere la sezione Interior Design da questa scheda? I dati già inseriti restano salvati.')) return;
+  currentLead.InteriorDesignAttivo = false;
+  aggiornaSezioneInterior();
+  markDirty();
 }
 
 // Avviso "scadenza vicina": scatta a 4 giorni SIA per l'inizio (lavoro che sta per
@@ -1436,6 +1521,12 @@ async function saveLead() {
     zona:           document.getElementById('dZona').value.trim(),
     budget:         document.getElementById('dBudget').value.trim(),
     indirizzo:      document.getElementById('dIndirizzo').value.trim(),
+    interior_design_attivo: currentLead.InteriorDesignAttivo ? 1 : 0,
+    interior_design_stile:  document.getElementById('dInteriorStile').value.trim(),
+    interior_design_colori: document.getElementById('dInteriorColori').value.trim(),
+    interior_design_luce:   document.getElementById('dInteriorLuce').value.trim(),
+    interior_design_budget: document.getElementById('dInteriorBudget').value.trim(),
+    interior_design_note:   document.getElementById('dInteriorNote').value,
   };
 
   // Anti-clobber date: invia inizio/fine SOLO se valorizzate. Così un salvataggio
@@ -1479,6 +1570,12 @@ async function saveLead() {
           Zona: payload.zona,
           Budget: payload.budget,
           Indirizzo: payload.indirizzo,
+          InteriorDesignAttivo:  !!payload.interior_design_attivo,
+          InteriorDesignStile:   payload.interior_design_stile,
+          InteriorDesignColori:  payload.interior_design_colori,
+          InteriorDesignLuce:    payload.interior_design_luce,
+          InteriorDesignBudget:  payload.interior_design_budget,
+          InteriorDesignNote:    payload.interior_design_note,
           // Aggiorna in memoria solo le date effettivamente inviate (vedi anti-clobber)
           ...('inizio_lavoro'        in payload ? { Inizio_lavoro: payload.inizio_lavoro } : {}),
           ...('fine_lavoro_prevista' in payload ? { Fine_lavoro_prevista: payload.fine_lavoro_prevista } : {}),

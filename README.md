@@ -28,6 +28,8 @@ ardyagent.ardy-lab.it/
 ├── ardy-proxy-lavorazione.php # Proxy API Claude per widget lavorazione (con calendario)
 ├── ardy-chat-site.js          # Chat generale del sito /ardy-agent/ (servita dal server; in WPCode solo loader)
 ├── ardy-chat-corsi.js         # Chat in "modalità corso" /ardy-agent/?corso= (servita dal server; in WPCode solo loader)
+├── ardy-chat-experience.js    # Webchat "Galleria Diffusa" per i B&B partner /galleria-diffusa (servita dal server; in WPCode solo loader)
+├── ardy-chat-interior-design.js # Webchat "Consulenza Interior Design" /interior-design (servita dal server; in WPCode solo loader)
 ├── ardy-widget-lavorazione.js # Widget chat contestuale per pagine lavorazione
 ├── ardy-verify-client.php     # Verifica identità cliente (telefono + wp_post_id)
 ├── ardy-whatsapp-webhook.php  # Webhook WhatsApp Cloud API (estrae il media id delle foto; salva ogni messaggio in arrivo in wa_messaggi via ardy-wa-store → risposte visibili in dash anche senza n8n)
@@ -122,6 +124,12 @@ Altre colonne (gestite da `ardy-migrate.php`): `inizio_lavoro`, `fine_lavoro_pre
 lavoro → pallini in lista), `note_consegna` (promemoria consegna), `deleted_at` (cestino soft-delete),
 `conversazione_letta_at` (marker "conversazione vista": quando Michela/Andrea apre la chat del cliente
 si salva NOW() → spegne il badge **💬 ha risposto** finché il cliente non riscrive).
+
+Consulenza Interior Design *(lug 2026)*: `interior_design_attivo` (0/1 — accende la sezione dedicata
+nella scheda), `interior_design_attivato_da` (`sole` se l'ha attivata Sole dalla webchat, `manuale` se
+Andrea/Michela dal bottone in dashboard), `interior_design_attivato_at`, più i dati raccolti in chat:
+`interior_design_stile`, `interior_design_colori`, `interior_design_luce`, `interior_design_budget`,
+`interior_design_note`.
 
 Campi chiave per il widget lavorazione:
 - `telefono` — usato per verifica identità cliente
@@ -474,6 +482,13 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
 - **🧹 Libera spazio** (solo su clienti archiviati CONSEGNATO): a lavoro concluso cancella
   dal server **foto + reel** del cliente per recuperare spazio, tenendo scheda/preventivi+PDF/fasi/
   pagina sito; segna `foto_archiviate_at` e il bottone diventa "Spazio liberato"
+- **🛋️ Interior Design** *(lug 2026)*: sezione della scheda **spenta di default**. Si accende in due
+  modi — Sole la attiva dalla webchat dedicata `ardy-lab.it/interior-design` (tool
+  `attiva_interior_design`, solo canale web) su richiesta del cliente, oppure Andrea/Michela premono
+  **🛋️ Attiva Interior Design** in alto nella scheda. Dentro: stile preferito, colori, luce degli
+  ambienti, budget e note, tutti modificabili (si salvano col bottone SALVA MODIFICHE). Una riga in
+  cima dice **chi** l'ha attivata e **quando**; **✕ Disattiva** la richiude senza perdere i dati.
+  In lista compare il badge **🛋️ interior**, e i dati finiscono anche nel Dossier
 - **📄 Dossier**: apre il quadro completo del cliente in Markdown (anagrafica, preventivi, fasi,
   chat WhatsApp + web) da `ardy-dossier.php` — copia/scarica. Lo stesso dossier (client-safe, senza
   note interne) alimenta il contesto di Sole su web e WhatsApp
@@ -908,6 +923,14 @@ di oggi (coda del log), spazio disco. Ogni check è isolato in try/catch.
 ---
 
 ## 📝 Note sessioni
+
+**Luglio 2026 — Consulenza Interior Design (webchat dedicata + sezione in dashboard)**
+- **Webchat dedicata** `ardy-chat-interior-design.js` sulla pagina `ardy-lab.it/interior-design` (contenuto pagina in `wordpress-snippets/interior-design-page.html`, loader di una riga in WPCode Site Wide Footer). Widget autoportante sullo stampo di Galleria Diffusa: riusa `ardy-proxy.php`, si auto-limita all'URL `/interior-design`, espone `window.ardyIdOpen()` per i CTA della pagina.
+- **Sole in modalità interior design**: nuova sezione in `ardy-system.txt` (raccolta di **stile, colori, luce, budget** + anagrafica, salvataggio con `servizio` = "Consulenza Interior Design"). Le istruzioni sul tool stanno nell'appendice **solo-web** di `ardy-proxy.php`, non nel documento condiviso con WhatsApp.
+- **Nuovo tool `attiva_interior_design`** (`ardy-proxy.php`, canale web): accende `clienti.interior_design_attivo` e scrive stile/colori/luce/budget/note. Richiamabile più volte — ogni chiamata aggiunge senza sovrascrivere (`COALESCE`); traccia `attivato_da='sole'` + `attivato_at` alla prima attivazione.
+- **Dashboard**: accordion **🛋️ Interior Design** nella scheda, nascosto finché non è attivo, con i campi modificabili e la riga "chi/quando l'ha attivata". Bottone **🛋️ Attiva Interior Design** in alto per Andrea/Michela (attivazione `manuale`, tracciata in `ardy-update-lead.php`), **✕ Disattiva** che nasconde senza perdere i dati, badge **🛋️ interior** in lista.
+- **Dossier**: blocco "Consulenza Interior Design" in `ardy-dossier.php` (client-safe: sono i gusti del cliente stesso) → finisce anche nel contesto di Sole.
+- **DB** (`ardy-migrate.php`): 8 colonne `interior_design_*` su `clienti`.
 
 **Luglio 2026 — Preventivi nelle scadenze (briefing Sole + badge dashboard)**
 - **Briefing del mattino**: nuovo blocco **🧾 PREVENTIVI DA GESTIRE** in `ardy-briefing-lib.php` (`ardy_riepilogo_settimana`). Elenca i clienti fermi in stato `PREVENTIVO` distinguendo **✍️ preventivo DA FARE** (nessun documento o solo bozza) da **📤 preventivo INVIATO — da sollecitare risposta** (con "inviato da Ng"). Così Sole cita queste scadenze nel buongiorno su WhatsApp e nell'email del briefing, con la specifica giusta. Difensivo: se la tabella `preventivi` manca, i clienti risultano "da fare".

@@ -212,6 +212,15 @@ $system .= "\n\n## CODICE DI ACCESSO E STATO DEL LAVORO (tool cerca_cliente)\n\n
     . "- Se NON ha un codice, **non** cercare per nome o telefono (sulla chat non è possibile per tutela della privacy). Invitalo a lasciare i suoi dati così gliene generiamo uno, oppure a contattare direttamente Ardy Lab.\n"
     . "Non inventare mai uno stato: riferisci solo ciò che il tool ti restituisce.\n";
 
+// Istruzioni SOLO-WEB sul tool attiva_interior_design (vedi sopra: il documento
+// condiviso ardy-system.txt non può nominarlo, su WhatsApp il tool non esiste).
+$system .= "\n\n## CONSULENZA INTERIOR DESIGN — ACCENDERE LA SEZIONE (tool attiva_interior_design)\n\n"
+    . "Qui sulla webchat, oltre a salvare il lead, puoi **accendere la sezione Interior Design** nella scheda del cliente in dashboard: è lì che Michela trova stile, colori, luce e budget in chiaro.\n"
+    . "- Chiama `attiva_interior_design` SOLO se il cliente ha chiesto esplicitamente la consulenza di interior design (non per un restauro).\n"
+    . "- Chiamalo DOPO `salva_lead_crm` (la scheda deve già esistere), e puoi richiamarlo più volte man mano che raccogli i dati: ogni chiamata aggiunge quello che passi, senza cancellare il resto.\n"
+    . "- Passa solo i campi che hai davvero raccolto: non inventare stile, colori, luce o budget che il cliente non ti ha detto.\n"
+    . "- Non annunciare il tool al cliente: parlagli di Michela e del prossimo passo, non del CRM.\n";
+
 // ── Contesto lead da portale (link firmato) ──
 // Se il lead arriva dal link nel WhatsApp di primo contatto, ha già una scheda:
 // Sole lo saluta per nome e sa già cosa ha chiesto, senza ripartire da zero.
@@ -319,6 +328,21 @@ $tools = [
                 'motivo'    => ['type' => 'string', 'description' => 'Categoria: reclamo | pagamento | modifica | fuori_standard | altro']
             ],
             'required' => ['messaggio']
+        ]
+    ],
+    [
+        'name'        => 'attiva_interior_design',
+        'description' => 'Attiva la sezione Interior Design nella scheda del cliente e salva le sue preferenze di arredamento. Usalo SOLO quando il cliente chiede ESPLICITAMENTE una consulenza di interior design (non per un restauro). Chiamalo DOPO aver già chiamato salva_lead_crm con servizio = "Consulenza Interior Design", così la scheda del cliente esiste già. Puoi chiamarlo anche più volte nella stessa conversazione per aggiungere via via le informazioni raccolte.',
+        'input_schema' => [
+            'type'       => 'object',
+            'properties' => [
+                'stile'  => ['type' => 'string', 'description' => 'Stile di arredamento preferito (es. minimal, boho, industriale, classico, scandinavo...)'],
+                'colori' => ['type' => 'string', 'description' => 'Colori o palette preferiti'],
+                'luce'   => ['type' => 'string', 'description' => 'Luce naturale ed esposizione degli ambienti da arredare'],
+                'budget' => ['type' => 'string', 'description' => 'Forbice di budget indicativa per la consulenza/arredamento'],
+                'note'   => ['type' => 'string', 'description' => 'Altre note utili: ambienti coinvolti, esigenze particolari, gusti']
+            ],
+            'required' => []
         ]
     ],
     [
@@ -775,6 +799,46 @@ while ($iteration < $maxIterations) {
                     $toolResult = $ok
                         ? 'Michela è stata avvisata su WhatsApp.'
                         : 'Avviso registrato (eventuale invio WhatsApp gestito a parte).';
+                }
+
+            } elseif ($toolName === 'attiva_interior_design') {
+                try {
+                    $db  = ardyDB();
+                    $chk = $db->prepare("SELECT interior_design_attivo FROM clienti WHERE session_id = :sid LIMIT 1");
+                    $chk->execute([':sid' => $cleanSession]);
+                    $riga = $chk->fetch(PDO::FETCH_ASSOC);
+                    if (!$riga) {
+                        $toolResult = 'Errore: nessuna scheda cliente trovata per questa sessione. Chiama prima salva_lead_crm, poi riprova.';
+                    } else {
+                        $giaAttivo = !empty($riga['interior_design_attivo']);
+                        $upd = $db->prepare(
+                            "UPDATE clienti SET
+                                interior_design_attivo = 1,
+                                interior_design_attivato_da = COALESCE(interior_design_attivato_da, 'sole'),
+                                interior_design_attivato_at = COALESCE(interior_design_attivato_at, NOW()),
+                                interior_design_stile  = COALESCE(:stile,  interior_design_stile),
+                                interior_design_colori = COALESCE(:colori, interior_design_colori),
+                                interior_design_luce   = COALESCE(:luce,   interior_design_luce),
+                                interior_design_budget = COALESCE(:budget, interior_design_budget),
+                                interior_design_note   = COALESCE(:note,   interior_design_note),
+                                updated_at = NOW()
+                             WHERE session_id = :sid"
+                        );
+                        $upd->execute([
+                            ':stile'  => $toolInput['stile']  ?? null,
+                            ':colori' => $toolInput['colori'] ?? null,
+                            ':luce'   => $toolInput['luce']   ?? null,
+                            ':budget' => $toolInput['budget'] ?? null,
+                            ':note'   => $toolInput['note']   ?? null,
+                            ':sid'    => $cleanSession,
+                        ]);
+                        $toolResult = $giaAttivo
+                            ? 'Preferenze Interior Design aggiornate nella scheda del cliente.'
+                            : 'Sezione Interior Design attivata: Michela la vedrà nella scheda del cliente in dashboard.';
+                    }
+                } catch (PDOException $e) {
+                    error_log('ARDY ATTIVA INTERIOR DESIGN ERROR: ' . $e->getMessage());
+                    $toolResult = 'Errore tecnico nell\'attivazione della sezione Interior Design. Riprova.';
                 }
 
             } elseif ($toolName === 'cerca_cliente') {
