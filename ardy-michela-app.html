@@ -288,6 +288,18 @@
         <div class="acc-body">
           <div id="interiorOrigine" style="font-size:11px;color:var(--text-dim);margin-bottom:10px;"></div>
           <div class="info-grid" style="margin-bottom:16px;">
+            <!-- Il riepilogo sta in CIMA: è ciò che Michela legge per primo, ed è
+                 l'unica cosa valorizzata quando l'intervista resta a metà. -->
+            <div class="info-cell full">
+              <div class="info-label" style="display:flex;align-items:center;gap:8px;">
+                <span>💬 Riepilogo di Sole <small style="color:var(--text-dim);font-size:9px;">(la conversazione riassunta — modificabile)</small></span>
+                <button type="button" onclick="openNoteEditor('dInteriorNote')" title="Apri editor a tutto schermo"
+                        style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--text-dim);
+                               border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;">⛶ Espandi</button>
+              </div>
+              <textarea class="info-value editable" id="dInteriorNote" rows="5" oninput="markDirty()"
+                        placeholder="Lo compila Sole al termine della chat: cosa vuole fare il cliente, gusti, ambienti, foto inviate."></textarea>
+            </div>
             <div class="info-cell">
               <div class="info-label">Stile preferito</div>
               <input class="info-value editable" id="dInteriorStile" oninput="markDirty()" placeholder="Es. minimal, boho, industriale…">
@@ -304,11 +316,17 @@
               <div class="info-label">Budget consulenza</div>
               <input class="info-value editable" id="dInteriorBudget" oninput="markDirty()">
             </div>
-            <div class="info-cell full">
-              <div class="info-label">Note interior design <small style="color:var(--text-dim);font-size:9px;">(ambienti, esigenze, gusti)</small></div>
-              <textarea class="info-value editable" id="dInteriorNote" rows="5" oninput="markDirty()"></textarea>
-            </div>
           </div>
+
+          <!-- Foto di riferimento mandate in chat. Stessa sorgente delle foto della
+               scheda: qui sono ripetute perché per una consulenza di arredamento
+               sono il materiale principale, non un allegato secondario. -->
+          <div id="interiorFotoBox" style="display:none;margin-bottom:16px;">
+            <div class="lav-title" style="font-size:11px;margin-bottom:8px;">🖼️ Immagini di riferimento del cliente</div>
+            <div class="lav-foto-count" id="interiorFotoStatus"></div>
+            <div class="lav-preview" id="interiorFotoGrid"></div>
+          </div>
+
           <button type="button" class="btn btn--danger btn--sm" onclick="disattivaInterior()"
                   title="Nasconde la sezione Interior Design da questa scheda. I dati restano salvati.">
             ✕ Disattiva Interior Design
@@ -2340,9 +2358,29 @@ async function caricaFotoScheda(sessionId) {
       const url = 'ardy-lead-foto.php?session_id=' + encodeURIComponent(sessionId) + '&file=' + encodeURIComponent(f.file);
       return `<a href="${url}" target="_blank"><img src="${url}" loading="lazy"></a>`;
     }).join('');
+    // Le stesse foto anche dentro la sezione Interior Design: le immagini di
+    // riferimento mandate in chat sono IL materiale di quella consulenza, e
+    // cercarle in un altro accordion significa non trovarle.
+    mostraFotoInterior(sessionId, foto);
   } catch (e) {
     status.textContent = 'Errore nel caricamento delle foto.';
   }
+}
+
+// Ripete la griglia foto dentro l'accordion Interior Design (stessa sorgente:
+// ardy-lead-foto.php legge la cartella in cui la chat salva gli allegati).
+function mostraFotoInterior(sessionId, foto) {
+  const box    = document.getElementById('interiorFotoBox');
+  const grid   = document.getElementById('interiorFotoGrid');
+  const status = document.getElementById('interiorFotoStatus');
+  if (!box || !grid) return;
+  if (!foto.length) { box.style.display = 'none'; return; }
+  box.style.display = '';
+  status.textContent = `📸 ${foto.length} foto ricevute in chat`;
+  grid.innerHTML = foto.map(f => {
+    const url = 'ardy-lead-foto.php?session_id=' + encodeURIComponent(sessionId) + '&file=' + encodeURIComponent(f.file);
+    return `<a href="${url}" target="_blank"><img src="${url}" loading="lazy"></a>`;
+  }).join('');
 }
 
 // ─── Riuso delle foto della scheda dentro una fase ("USA FOTO DELLA SCHEDA") ──
