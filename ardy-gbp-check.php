@@ -504,9 +504,32 @@ if ($httpCode === 200) {
     $imgTest = trim((string)($_GET['img'] ?? ''));
     echo "<h3 style='font-size:14px'>L'immagine del post</h3>";
     if ($imgTest === '' || !filter_var($imgTest, FILTER_VALIDATE_URL)) {
-        echo "<p class='muted'>Aggiungi <code>?img=&lt;url della foto&gt;</code> a questa pagina per "
-           . "controllare che Google possa scaricarla (serve pubblica, JPG/PNG, almeno 250×250, sotto i 5 MB). "
-           . "L'URL è quello che compare nel log della pubblicazione fallita, campo <code>media=</code>.</p>";
+        echo "<p class='muted'>Serve l'URL della foto che il post avrebbe usato: pubblica, JPG/PNG, almeno "
+           . "250×250, sotto i 5 MB. Puoi incollarlo in <code>?img=&lt;url&gt;</code> (lo trovi nel log della "
+           . "pubblicazione fallita, campo <code>media=</code>), oppure prenderlo da qui:</p>";
+        // Le immagini che la dash design manderebbe davvero: prima di ogni articolo
+        // pubblicato di recente. Evita il giro copia-incolla dall'articolo su WP.
+        try {
+            require_once __DIR__ . '/ardy-db.php';
+            $rows = ardyDB()->query(
+                "SELECT id, titolo, wp_immagini FROM progetti
+                  WHERE wp_immagini IS NOT NULL AND wp_immagini <> '' AND deleted_at IS NULL
+                  ORDER BY updated_at DESC LIMIT 5"
+            )->fetchAll();
+            $voci = [];
+            foreach ($rows as $r) {
+                $u = json_decode((string)$r['wp_immagini'], true);
+                if (!is_array($u) || empty($u[0])) continue;
+                $voci[] = "<li><a href='?img=" . h(urlencode((string)$u[0])) . "'>"
+                        . h((string)$r['titolo']) . "</a> <span class='muted'>— "
+                        . count($u) . " immagini nell'articolo</span></li>";
+            }
+            echo $voci
+                ? "<ul>" . implode('', $voci) . "</ul>"
+                : "<p class='muted'>(nessun progetto con immagini pubbliche salvate)</p>";
+        } catch (Throwable $e) {
+            echo "<p class='muted'>(elenco progetti non disponibile: " . h($e->getMessage()) . ")</p>";
+        }
     } else {
         $ci = curl_init($imgTest);
         curl_setopt($ci, CURLOPT_RETURNTRANSFER, true);
