@@ -8,21 +8,29 @@
 
 ---
 
-## 📣 DA DEPLOYARE — Social anche dalla dash design (26/07/2026)
+## 📣 DA DEPLOYARE — Social anche dalla dash design, gemello esatto delle fasi cliente (26/07/2026)
 
 Mancava il gemello WordPress→social del binario clienti: ora l'**articolo** del progetto e ogni
-**fase-racconto** si pubblicano su Facebook/Instagram con lo stesso motore
-(`ardy-pubblica-social.php` → n8n → Graph API), caption generata a parte
-(`ardy-progetti-ai.php` mode `genera_social`: corta, con hashtag — diversa dal testo del sito).
+**fase-racconto** si pubblicano su Facebook/Instagram/**Google** con lo stesso motore E la stessa
+UI a pillole del pannello "Pubblica sui social" delle fasi pubblicate in `ardy-michela-app.html`
+(`ardy-pubblica-social.php` → n8n → Graph API per Meta, `ardy-gbp-post.php` per Google, in
+parallelo). Caption generata a parte (`ardy-progetti-ai.php` mode `genera_social`: corta, con
+hashtag — diversa dal testo del sito; su Google gli hashtag si tolgono in automatico, `stripHashtags`,
+stessa regola del client).
 
-- **Regola**: il bottone 📣 compare solo su ciò che è **già pubblicato su WordPress**. Non è
-  burocrazia: FB/IG devono *scaricare* l'immagine da un URL pubblico e le nostre foto stanno
-  dietro Basic Auth. Gli URL buoni nascono al sideload su WP e ora vengono **salvati**
+- **Toggle per canale, indipendenti**: Facebook/Instagram/Google si scelgono uno per uno (pillole
+  `.social-toggle`, portate di peso dalla dash clienti insieme alle icone SVG); non si può
+  scendere a zero canali selezionati.
+- **Esito per-canale**: l'invio va in parallelo a Meta e Google; se uno fallisce e l'altro no, il
+  messaggio lo dice invece di un generico errore che farebbe ripetere anche l'invio riuscito.
+- **Regola invariata**: il bottone 📣 compare solo su ciò che è **già pubblicato su WordPress**.
+  Non è burocrazia: FB/IG/Google devono *scaricare* l'immagine da un URL pubblico e le nostre foto
+  stanno dietro Basic Auth. Gli URL buoni nascono al sideload su WP e vengono **salvati**
   (`fasi.foto_wp_urls`, `progetti.wp_immagini`) invece di essere buttati via.
 - Nuove colonne: `fasi.foto_wp_urls`, `fasi.social_pubblicata_at`, `progetti.wp_immagini`,
   `progetti.social_pubblicato_at`, `progetti.testo_social` → **serve `ardy-migrate.php`**.
-- ⏳ Da provare a video: pubblica una fase su WP, poi 📣 su un solo social; controlla che la foto
-  arrivi davvero e non solo il testo.
+- ⏳ Da provare a video: pubblica una fase su WP, poi 📣 su un solo social (e poi su più di uno
+  insieme, incluso Google); controlla che la foto arrivi davvero e non solo il testo.
 
 ---
 

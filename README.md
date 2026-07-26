@@ -585,7 +585,7 @@ cui esce il racconto), si annuncia subito e progettazione/prototipo si raccontan
 | **Galleria** (IDEA) | Immagini del progetto (Modulo 1, → `ardy-lab.it`): `prima` (com'era / riferimento) · `render` · `foto` finite | `ardy-progetti-galleria-api.php` |
 | **Documenti** (IDEA) | Materiale di riferimento (PDF/DOCX/ODT/RTF/TXT/MD) da cui l'AI scrive: testo estratto **una volta** e salvato | `ardy-progetti-file-api.php` (cat. `doc`) + `ardy-progetti-ai.php` (`leggi_doc`) |
 | **Articolo** (IDEA) | Testo di brand riscritto con **✨ AI** (Claude), da rivedere prima di pubblicare | `ardy-progetti-ai.php` |
-| **Social** (IDEA) | Articolo e singole fasi → **FB/IG** con lo stesso motore della dash clienti; caption AI a parte. Solo su ciò che è già su WP (i social scaricano le immagini da URL pubblici) | `ardy-pubblica-social.php` |
+| **Social** (IDEA) | Articolo e singole fasi → **FB/IG/Google**, toggle per canale come nella dash clienti; caption AI a parte. Solo su ciò che è già su WP (i social scaricano le immagini da URL pubblici) | `ardy-pubblica-social.php` + `ardy-gbp-post.php` |
 | **Fasi-racconto** (IDEA) | Binario **pubblico**: le stesse `fasi` della dash Michela → reel/social/WP | `ardy-progetti-fasi-api.php` |
 | **File CAD/STL** (PROGETTAZIONE) | Archivio file tecnici dietro Basic Auth | `ardy-progetti-file-api.php` |
 | **Iterazioni** (PROTOTIPO) | Binario **R&D interno**: v1/v2/v3 con note "qui non torna" | `ardy-progetti-api.php` (`iter_*`) |
