@@ -18,6 +18,12 @@
  *   php ardy-b2-rimpatrio.php                 # PROVA: dice cosa farebbe, non tocca nulla
  *   php ardy-b2-rimpatrio.php --applica       # scarica davvero e aggiorna il DB
  *   php ardy-b2-rimpatrio.php --applica --limite=50
+ *   php ardy-b2-rimpatrio.php --solo=galleria --applica   # un gruppo alla volta
+ *
+ * --solo= vale galleria | file | vendita. Serve a scaglionare: le immagini di galleria
+ * sono piccole e stanno nel percorso di pubblicazione (il server le rilegge per mettere
+ * le foto nell'articolo), i file di stampa sono grossi e si scaricano con un redirect
+ * firmato che non passa dal server — quindi hanno urgenze diverse e pesi diversi.
  *
  * È ripetibile: le righe già rimpatriate non vengono più selezionate. Su un file che
  * non si riesce a scaricare NON tocca il DB (la riga resta 'b2' e si può riprovare),
@@ -37,7 +43,11 @@ if (PHP_SAPI !== 'cli') {
 
 $applica = in_array('--applica', $argv, true);
 $limite  = 0;
-foreach ($argv as $a) { if (preg_match('/^--limite=(\d+)$/', $a, $m)) $limite = (int) $m[1]; }
+$solo    = '';   // galleria | file | vendita — per rimpatriare un gruppo alla volta
+foreach ($argv as $a) {
+    if (preg_match('/^--limite=(\d+)$/', $a, $m))          $limite = (int) $m[1];
+    if (preg_match('/^--solo=(galleria|file|vendita)$/', $a, $m)) $solo = $m[1];
+}
 
 echo "=== Rimpatrio B2 → disco " . ($applica ? "(APPLICA)" : "(PROVA: non scrivo nulla)") . " ===\n";
 
@@ -58,14 +68,17 @@ if (!ardyB2ScritturaAttiva()) {
  */
 $tabelle = [
     'progetto_galleria' => [
+        'gruppo' => 'galleria',
         'etichetta' => 'immagini galleria (articoli WordPress)',
         'dir' => fn(array $r) => rtrim(ARDY_UPLOAD_DIR, '/') . '/progetti/' . (int) $r['progetto_id'] . '/galleria/',
     ],
     'progetto_file' => [
+        'gruppo' => 'file',
         'etichetta' => 'file di stampa e documenti',
         'dir' => fn(array $r) => rtrim(ARDY_UPLOAD_DIR, '/') . '/progetti/' . (int) $r['progetto_id'] . '/file/',
     ],
     'progetto_foto_vendita' => [
+        'gruppo' => 'vendita',
         'etichetta' => 'foto vendita (WooCommerce)',
         'dir' => fn(array $r) => rtrim(ARDY_UPLOAD_DIR, '/') . '/progetti/' . (int) $r['progetto_id'] . '/vendita/',
     ],
@@ -75,7 +88,9 @@ $db = ardyDB();
 $totOk = $totKo = $totGia = 0;
 
 foreach ($tabelle as $tabella => $conf) {
-    $sql = "SELECT id, progetto_id, nome_file, storage_key FROM `$tabella`
+    if ($solo !== '' && $conf['gruppo'] !== $solo) { echo "\n-- $tabella: saltata (--solo=$solo)\n"; continue; }
+
+    $sql = "SELECT id, progetto_id, nome_file, storage_key, dimensione FROM `$tabella`
             WHERE storage = 'b2' AND storage_key IS NOT NULL AND storage_key <> ''
             ORDER BY id ASC";
     if ($limite > 0) $sql .= " LIMIT " . $limite;
@@ -87,7 +102,10 @@ foreach ($tabelle as $tabella => $conf) {
         continue;
     }
 
-    echo "\n-- $tabella ({$conf['etichetta']}): " . count($righe) . " da rimpatriare\n";
+    // Il peso conta: B2 era nato per NON tenere questa roba sul disco del server.
+    $peso = array_sum(array_map(fn($r) => (int) ($r['dimensione'] ?? 0), $righe));
+    echo "\n-- $tabella ({$conf['etichetta']}): " . count($righe) . " da rimpatriare"
+       . ($peso > 0 ? ' · ' . round($peso / 1048576, 1) . " MB" : '') . "\n";
     if (!$righe) continue;
 
     foreach ($righe as $r) {
