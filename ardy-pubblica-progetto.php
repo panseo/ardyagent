@@ -5,7 +5,9 @@
 // dedicata. Le fasi-racconto poi vi si agganciano in append (ardy-pubblica-fase-progetto).
 // Gemello di ardy-pubblica-lavorazione.php (lato cliente), ma sul progetto.
 //
-//   POST {progetto_id, testo}  → crea l'articolo (se non esiste) e ritorna il link.
+//   POST {progetto_id, testo}                      → crea l'articolo (se non esiste)
+//   POST {mode:'aggiorna_immagini', progetto_id}   → rifà il blocco immagini di un
+//        articolo già pubblicato (intro e fasi-racconto accodate restano intatte).
 //
 // Protetto via .htaccess (Basic Auth) — elencato nel <FilesMatch>.
 // -----------------------------------------------------------
@@ -31,22 +33,33 @@ ardyRequireAuth();
 if ($_SERVER['REQUEST_METHOD'] !== 'POST')    { http_response_code(405); echo json_encode(['success' => false, 'error' => 'Metodo non valido']); exit(); }
 
 $in         = json_decode(file_get_contents('php://input'), true) ?: [];
+$mode       = ($in['mode'] ?? 'crea') === 'aggiorna_immagini' ? 'aggiorna_immagini' : 'crea';
 $progettoId = (int) ($in['progetto_id'] ?? 0);
 $testo      = trim((string) ($in['testo'] ?? ''));
 if ($progettoId <= 0) { echo json_encode(['success' => false, 'error' => 'progetto mancante']); exit(); }
-if ($testo === '')    { echo json_encode(['success' => false, 'error' => 'Testo dell\'articolo mancante']); exit(); }
+if ($mode === 'crea' && $testo === '') { echo json_encode(['success' => false, 'error' => 'Testo dell\'articolo mancante']); exit(); }
 
+// Blocco immagini delimitato: così «aggiorna immagini» lo sostituisce senza toccare
+// né l'introduzione né le fasi-racconto già accodate all'articolo.
+const GAL_START = '<!--ardy-galleria-->';
+const GAL_END   = '<!--/ardy-galleria-->';
+
+$wpPostIdEsistente = 0;
 try {
     $db = ardyDB();
     $st = $db->prepare("SELECT titolo, wp_post_id FROM progetti WHERE id = ? AND deleted_at IS NULL");
     $st->execute([$progettoId]);
     $p = $st->fetch();
     if (!$p) { echo json_encode(['success' => false, 'error' => 'Progetto non trovato']); exit(); }
-    if (!empty($p['wp_post_id'])) {
+    $wpPostIdEsistente = (int) ($p['wp_post_id'] ?? 0);
+    if ($mode === 'crea' && $wpPostIdEsistente > 0) {
         // Già pubblicato: non ricreare (le fasi si agganciano a quel post).
-        echo json_encode(['success' => true, 'already' => true, 'wp_post_id' => (int) $p['wp_post_id'],
+        echo json_encode(['success' => true, 'already' => true, 'wp_post_id' => $wpPostIdEsistente,
             'post_link' => (string) ($db->query("SELECT wp_post_link FROM progetti WHERE id = " . $progettoId)->fetchColumn() ?: '')]);
         exit();
+    }
+    if ($mode === 'aggiorna_immagini' && $wpPostIdEsistente <= 0) {
+        echo json_encode(['success' => false, 'error' => 'Questo progetto non ha ancora un articolo: pubblicalo prima']); exit();
     }
     $titolo = trim((string) $p['titolo']) ?: 'Progetto Ardy';
 
@@ -123,18 +136,39 @@ if (!is_dir($tmpDir) && !mkdir($tmpDir, 0755, true) && !is_dir($tmpDir)) {
 }
 ardyHardenUploadDir(rtrim(ARDY_UPLOAD_DIR, '/'));
 
+// Mappa gid-galleria → id allegato WordPress, tenuta sul post: «aggiorna immagini»
+// riusa ciò che è già su WP invece di ricaricare ogni volta le stesse foto (e le
+// immagini già allegate restano nell'articolo anche se oggi lo storage non risponde).
+$mappa = [];
+if ($wpPostIdEsistente > 0) {
+    $salvata = get_post_meta($wpPostIdEsistente, '_ardy_galleria_map', true);
+    if (is_array($salvata)) $mappa = $salvata;
+}
+$pronteByGid = [];
+foreach ($galPronte as $g) $pronteByGid[(int) $g['gid']] = $g;
+
 $immagini = [];   // [{url, id, tipo}]
-foreach ($galPronte as $g) {                  // byte già letti da storage prima di wp-load
-    $bytes = $g['bytes'];
-    $mime  = $g['mime'];
-    $fname = 'g_' . $g['gid'] . '_' . uniqid() . '.' . $g['ext'];
-    $fpath = $tmpDir . $fname;
-    if (file_put_contents($fpath, $bytes) === false) continue;
-    $attachId = media_handle_sideload([
-        'name' => $fname, 'type' => $mime, 'tmp_name' => $fpath, 'error' => 0, 'size' => strlen($bytes),
-    ], 0);
-    if (is_wp_error($attachId)) { @unlink($fpath); error_log('ARDY PUBBLICA PROGETTO SIDELOAD: ' . $attachId->get_error_message()); continue; }
-    $immagini[] = ['url' => wp_get_attachment_url($attachId), 'id' => (int) $attachId, 'tipo' => $g['tipo']];
+$nuove    = 0;
+foreach ($galleria as $riga) {                // ordine del racconto: prima → render → foto
+    $gid      = (int) $riga['id'];
+    $attachId = isset($mappa[$gid]) ? (int) $mappa[$gid] : 0;
+    if ($attachId > 0 && !get_post($attachId)) $attachId = 0;   // allegato cancellato a mano su WP
+
+    if ($attachId === 0) {
+        $g = $pronteByGid[$gid] ?? null;
+        if ($g === null) continue;            // byte non leggibili: già a log qui sopra
+        $fname = 'g_' . $gid . '_' . uniqid() . '.' . $g['ext'];
+        $fpath = $tmpDir . $fname;
+        if (file_put_contents($fpath, $g['bytes']) === false) continue;
+        $res = media_handle_sideload([
+            'name' => $fname, 'type' => $g['mime'], 'tmp_name' => $fpath, 'error' => 0, 'size' => strlen($g['bytes']),
+        ], 0);
+        if (is_wp_error($res)) { @unlink($fpath); error_log('ARDY PUBBLICA PROGETTO SIDELOAD: ' . $res->get_error_message()); continue; }
+        $attachId = (int) $res;
+        $nuove++;
+    }
+    $mappa[$gid] = $attachId;
+    $immagini[]  = ['url' => wp_get_attachment_url($attachId), 'id' => $attachId, 'tipo' => $riga['tipo']];
 }
 // Pulisci eventuali residui temporanei.
 foreach (glob($tmpDir . '*') as $f) { if (is_file($f)) @unlink($f); }
@@ -147,10 +181,8 @@ foreach ($immagini as $im) { if ($im['tipo'] === 'foto')   { $featuredId = $im['
 if ($featuredId === null) { foreach ($immagini as $im) { if ($im['tipo'] === 'render') { $featuredId = $im['id']; break; } } }
 if ($featuredId === null && !empty($immagini)) $featuredId = $immagini[0]['id'];
 
-// Contenuto: intro + punto di partenza + render + foto finite (la copertina non si
-// ripete nel corpo).
-$introHtml = '<div style="font-family:Georgia,serif;font-size:16px;line-height:1.7;color:#444;margin-bottom:24px;">'
-    . nl2br(esc_html($testo)) . '</div>';
+// Blocco immagini: punto di partenza + render + foto finite (la copertina non si
+// ripete nel corpo). Delimitato, così si può rigenerare da solo più avanti.
 $prima = ''; $render = ''; $foto = '';
 foreach ($immagini as $im) {
     if ($featuredId !== null && $im['id'] === $featuredId) continue;
@@ -159,18 +191,58 @@ foreach ($immagini as $im) {
     elseif  ($im['tipo'] === 'render') $render .= $tag;
     else                               $foto   .= $tag;
 }
-$content = $introHtml;
-if ($prima  !== '') $content .= '<h3 style="font-family:sans-serif;color:#8b6f3e;">Il punto di partenza</h3>' . "\n" . $prima;
-if ($render !== '') $content .= '<h3 style="font-family:sans-serif;color:#8b6f3e;">Render</h3>' . "\n" . $render;
-if ($foto   !== '') $content .= '<h3 style="font-family:sans-serif;color:#8b6f3e;">La creazione</h3>' . "\n" . $foto;
+$blocco = '';
+if ($prima  !== '') $blocco .= '<h3 style="font-family:sans-serif;color:#8b6f3e;">Il punto di partenza</h3>' . "\n" . $prima;
+if ($render !== '') $blocco .= '<h3 style="font-family:sans-serif;color:#8b6f3e;">Render</h3>' . "\n" . $render;
+if ($foto   !== '') $blocco .= '<h3 style="font-family:sans-serif;color:#8b6f3e;">La creazione</h3>' . "\n" . $foto;
+$blocco = GAL_START . "\n" . $blocco . GAL_END;
+
+kses_remove_filters(); // contenuto generato da noi: niente strip di style/img
+
+// ── Aggiornamento immagini di un articolo GIÀ pubblicato ─────────────────────
+// Sostituisce solo il blocco delimitato: intro e fasi-racconto accodate non si
+// toccano. Sui vecchi articoli (senza delimitatori) il blocco si accoda in fondo:
+// è l'unico punto sicuro, non sapendo dove finisca l'introduzione.
+if ($mode === 'aggiorna_immagini') {
+    $post = get_post($wpPostIdEsistente);
+    if (!$post) { echo json_encode(['success' => false, 'error' => 'Articolo non trovato su WordPress']); exit(); }
+
+    $vecchio  = (string) $post->post_content;
+    $haBlocco = strpos($vecchio, GAL_START) !== false && strpos($vecchio, GAL_END) !== false;
+    if ($haBlocco) {
+        $inizio  = strpos($vecchio, GAL_START);
+        $fine    = strpos($vecchio, GAL_END) + strlen(GAL_END);
+        $nuovo   = substr($vecchio, 0, $inizio) . $blocco . substr($vecchio, $fine);
+    } else {
+        $nuovo = rtrim($vecchio) . "\n" . $blocco;
+    }
+
+    $upd = wp_update_post(['ID' => $wpPostIdEsistente, 'post_content' => $nuovo], true);
+    if (is_wp_error($upd)) {
+        error_log('ARDY PUBBLICA PROGETTO WP UPDATE: ' . $upd->get_error_message());
+        echo json_encode(['success' => false, 'error' => 'Aggiornamento non riuscito']); exit();
+    }
+    update_post_meta($wpPostIdEsistente, '_ardy_galleria_map', $mappa);
+    if ($featuredId !== null) set_post_thumbnail($wpPostIdEsistente, $featuredId);
+
+    echo json_encode([
+        'success' => true, 'aggiornato' => true, 'wp_post_id' => $wpPostIdEsistente,
+        'post_link' => get_permalink($wpPostIdEsistente),
+        'immagini' => count($immagini), 'nuove' => $nuove, 'galleria_totale' => count($galleria),
+        'in_fondo' => !$haBlocco,
+    ]);
+    exit();
+}
+
+$introHtml = '<div style="font-family:Georgia,serif;font-size:16px;line-height:1.7;color:#444;margin-bottom:24px;">'
+    . nl2br(esc_html($testo)) . '</div>';
+$content = $introHtml . $blocco;
 
 // Categoria dedicata ai progetti design (override in ardy-config.php).
 $catName = defined('ARDY_DESIGN_WP_CAT') ? ARDY_DESIGN_WP_CAT : 'Creazioni';
 $catTerm = get_category_by_slug(sanitize_title($catName));
 if ($catTerm && !is_wp_error($catTerm)) { $catId = (int) $catTerm->term_id; }
 else { $t = wp_insert_term($catName, 'category'); $catId = (!is_wp_error($t)) ? (int) $t['term_id'] : (int) get_option('default_category'); }
-
-kses_remove_filters(); // contenuto generato da noi: niente strip di style/img
 
 $result = wp_insert_post([
     'post_title'    => 'Creazione — ' . $titolo,
@@ -185,6 +257,7 @@ if (is_wp_error($result)) {
 }
 $wpPostId = (int) $result;
 if ($featuredId !== null) set_post_thumbnail($wpPostId, $featuredId);
+update_post_meta($wpPostId, '_ardy_galleria_map', $mappa);   // per i futuri «aggiorna immagini»
 $postLink = get_permalink($wpPostId);
 
 try {

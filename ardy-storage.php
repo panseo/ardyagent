@@ -11,9 +11,14 @@
 // (https://<endpoint>/<bucket>/<key>) per evitare dipendenze dal DNS virtual-host.
 //
 //   ardyB2Configured()                         → bool: B2 attivo?
+//   ardyB2ScritturaAttiva()                    → bool: ci si può ancora SCRIVERE?
 //   ardyStoragePutFile(key, path, mime)        → carica un file (streaming) su B2
 //   ardyStorageDelete(key)                     → elimina un oggetto da B2
 //   ardyStoragePresignedGet(key, ttl, dlName)  → URL firmato per scaricare da B2
+//   ardyStorageGet(key)                        → byte di un oggetto (proxy lato server)
+//
+// Per staccare B2: ARDY_B2_SOLO_LETTURA nel config, poi ardy-b2-rimpatrio.php, e solo
+// alla fine via le costanti. Vedi TODO-PROSSIMI-TASK.md.
 // -----------------------------------------------------------
 
 require_once __DIR__ . '/ardy-config.php';
@@ -24,6 +29,19 @@ function ardyB2Configured(): bool {
         if (!defined($c) || constant($c) === '' || constant($c) === null) return false;
     }
     return true;
+}
+
+/**
+ * Interruttore di SOLA LETTURA: con `define('ARDY_B2_SOLO_LETTURA', true);` in
+ * ardy-config.php nessun file NUOVO finisce più su B2 (tutto resta su disco, che è
+ * il fallback di ogni chiamante), mentre ciò che è già lassù si continua a leggere.
+ *
+ * Serve a staccare B2 in sicurezza: prima si smette di scriverci, poi si rimpatriano
+ * gli oggetti esistenti su disco, e SOLO ALLA FINE si tolgono le costanti. Togliere
+ * subito le costanti renderebbe irraggiungibili i file che vivono solo su B2.
+ */
+function ardyB2ScritturaAttiva(): bool {
+    return ardyB2Configured() && !(defined('ARDY_B2_SOLO_LETTURA') && ARDY_B2_SOLO_LETTURA);
 }
 
 function ardyB2BaseUrl(): string { return 'https://' . ARDY_B2_ENDPOINT; }
@@ -73,7 +91,7 @@ function ardyB2SignPut(string $key, string $payloadHash, string $contentType, st
  * con hash_file e il corpo si invia via CURLOPT_INFILE). Ritorna true su HTTP 200.
  */
 function ardyStoragePutFile(string $key, string $localPath, string $contentType = 'application/octet-stream'): bool {
-    if (!ardyB2Configured() || !is_file($localPath)) return false;
+    if (!ardyB2ScritturaAttiva() || !is_file($localPath)) return false;
 
     $payloadHash = hash_file('sha256', $localPath);
     $size        = filesize($localPath);
@@ -104,7 +122,7 @@ function ardyStoragePutFile(string $key, string $localPath, string $contentType 
 
 /** Carica byte già in memoria su B2 (per file piccoli: foto compresse). HTTP 200 → true. */
 function ardyStoragePut(string $key, string $body, string $contentType = 'application/octet-stream'): bool {
-    if (!ardyB2Configured()) return false;
+    if (!ardyB2ScritturaAttiva()) return false;
 
     $payloadHash = hash('sha256', $body);
     [$url, $headers] = ardyB2SignPut($key, $payloadHash, $contentType, gmdate('Ymd\THis\Z'));

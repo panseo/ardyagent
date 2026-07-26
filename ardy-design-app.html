@@ -995,6 +995,12 @@ function articoloPanel(){
       <div class="frozen"><b>✅ Articolo pubblicato</b>
         <div style="margin-top:6px"><a href="${esc(p.wp_post_link)}" target="_blank" rel="noopener">↗ Vedi l'articolo</a></div>
         <div class="muted" style="margin-top:6px">Le fasi-racconto che pubblichi si agganceranno a questo articolo.</div>
+        <div style="margin-top:10px">
+          <button class="sm" id="imgBtn" onclick="aggiornaImmaginiArticolo()">🖼️ Aggiorna le immagini dell'articolo</button>
+          <span class="muted" style="margin-left:6px">Rimanda su WordPress le ${(stato.dettaglio.galleria||[]).length} immagini della Galleria.</span>
+        </div>
+        <div class="muted" style="font-size:.85em;margin-top:6px">Tocca <b>solo</b> il blocco immagini: testo e fasi-racconto restano come sono. Le foto già caricate su WP non si duplicano.</div>
+        <div id="imgOut" class="muted" style="margin-top:6px"></div>
       </div>
     </div>`;
   }
@@ -1023,6 +1029,28 @@ async function generaArticolo(){
     if (d.success && d.testo){ stato.articoloTesto = d.testo; renderDettaglio(); toast('Testo generato — rivedilo'); }
     else { toast(d.error||'Errore generazione'); if(btn){ btn.disabled=false; btn.textContent='✨ Genera con AI'; } }
   } catch(e){ toast('Errore di rete'); if(btn){ btn.disabled=false; btn.textContent='✨ Genera con AI'; } }
+}
+// Rimanda su WP le immagini della galleria di un articolo già pubblicato: serve quando
+// si pubblica prima di caricare le foto, o quando allo storage non rispondeva nessuno.
+async function aggiornaImmaginiArticolo(){
+  const btn = document.getElementById('imgBtn'), out = document.getElementById('imgOut');
+  if (btn){ btn.disabled = true; btn.textContent = '⏳ Aggiorno le immagini…'; }
+  try {
+    const d = await fetch('ardy-pubblica-progetto.php', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ mode:'aggiorna_immagini', progetto_id: stato.dettaglio.progetto.id }) }).then(r=>r.json());
+    if (d.success){
+      const parti = [`${d.immagini} immagini nell'articolo`];
+      if (d.nuove) parti.push(`${d.nuove} caricate ora`);
+      if (d.immagini < d.galleria_totale) parti.push(`⚠️ ${d.galleria_totale - d.immagini} non leggibili dallo storage`);
+      if (d.in_fondo) parti.push('aggiunte in fondo (articolo pubblicato prima di questa funzione)');
+      if (out) out.innerHTML = `✅ ${esc(parti.join(' · '))}`;
+      toast(`Immagini aggiornate — ${d.immagini}/${d.galleria_totale}`);
+    } else {
+      if (out) out.innerHTML = `<span class="neg">${esc(d.error||'Errore')}</span>`;
+      toast(d.error||'Errore aggiornamento');
+    }
+  } catch(e){ if (out) out.innerHTML = '<span class="neg">Errore di rete</span>'; }
+  if (btn){ btn.disabled = false; btn.textContent = "🖼️ Aggiorna le immagini dell'articolo"; }
 }
 async function pubblicaArticolo(){
   const testo = (document.getElementById('art_testo')?.value||'').trim();

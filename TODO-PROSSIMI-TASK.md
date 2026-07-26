@@ -8,6 +8,36 @@
 
 ---
 
+## ☁️ APERTO — Staccare Backblaze B2 (deciso 26/07/2026)
+
+**Sintomo:** gli ultimi ~10 articoli pubblicati dalla dash design sono usciti **senza foto**.
+Le immagini erano su B2 e la lettura lato server (`ardyStorageGet`, SigV4) non le restituisce —
+è la stessa nota "letture B2 rotte (Opzione A)" di sotto, che ora è arrivata al danno visibile.
+
+**Il vincolo da non dimenticare:** un file caricato va su B2 **oppure** su disco, mai su
+entrambi. Togliere le costanti `ARDY_B2_*` dal config **senza rimpatriare prima** renderebbe
+irraggiungibili tutti i file che vivono solo lassù. Sequenza obbligata:
+
+1. `define('ARDY_B2_SOLO_LETTURA', true);` in `ardy-config.php` → nessun file **nuovo** su B2
+   (ogni chiamante ha già il fallback su disco). Fatto lato codice: `ardyB2ScritturaAttiva()`.
+2. `php ardy-b2-rimpatrio.php` — prima in prova, poi `--applica`. Scarica gli oggetti e riporta
+   le righe a `storage='local'` (`progetto_galleria`, `progetto_file`, `progetto_foto_vendita`).
+   È anche la **diagnosi definitiva**: se falliscono tutti, il problema è la lettura in sé
+   (credenziali / endpoint / orologio del server / firewall in uscita) → cercare `ARDY B2 GET`
+   nel log PHP, c'è il codice HTTP.
+3. Solo a rimpatrio riuscito: via le costanti `ARDY_B2_*` e svuotare il bucket.
+
+- ⚠️ **Non coperte dal rimpatrio**: le foto delle fasi-racconto passate da «libera spazio disco»
+  (non hanno colonna `storage`, la chiave B2 è calcolata). Sono le meno critiche — quelle foto
+  stanno già sull'articolo WordPress — ma vanno considerate prima di svuotare il bucket.
+- ⏳ **Articoli già pubblicati senza foto**: si recuperano dal bottone **🖼️ Aggiorna le immagini
+  dell'articolo** (dash → Articolo WordPress), che rifà il blocco immagini su un post esistente.
+  Sui post pubblicati prima di questa funzione il blocco viene aggiunto **in fondo** (mancano i
+  delimitatori `<!--ardy-galleria-->`); da lì in poi viene sostituito al punto giusto.
+- Nota costi: il backup off-site di cPanel su B2 (§ più sotto) è **un'altra cosa** e non si tocca.
+
+---
+
 ## 🔁 DA DEPLOYARE — Ciclo di vita dash design snellito (26/07/2026)
 
 Il ciclo aveva due stati ridondanti. Ora è: **IDEA → PROGETTAZIONE → PROTOTIPO → VERSIONE FINALE →
