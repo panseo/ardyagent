@@ -161,9 +161,12 @@ Poi salva il lead nel CRM con `servizio` = "Consulenza Interior Design".
 > `ardy-chiusura-sessioni.php` avvisa Michela lo stesso con «💬 Chat conclusa — (non in CRM)»,
 > perché interroga i messaggi e non richiede una riga in `clienti`.
 
-**Sulla webchat dedicata** Sole fa un passo in più: con il tool `attiva_interior_design`
-**accende la sezione 🛋️ Interior Design** nella scheda del cliente in dashboard e ci scrive dentro
-le preferenze raccolte — così Michela arriva al primo incontro sapendo già i gusti del cliente.
+**Sulla webchat dedicata** la sezione **🛋️ Interior Design** si accende **da sola** appena Sole salva
+il lead: il widget dichiara la propria provenienza, quindi non dipende dal fatto che Sole si ricordi di
+chiamare un tool (chi scrive da quella pagina *è* un lead interior design, anche se salta l'intervista).
+Con `attiva_interior_design` Sole ci scrive poi **il riepilogo della conversazione** — un racconto in
+poche righe, non un elenco di campi — così Michela arriva al primo incontro sapendo già i gusti del
+cliente. Se l'intervista è rimasta a metà, Sole scrive quello che sa e dice cosa manca, senza inventare.
 La stessa sezione Andrea e Michela possono attivarla a mano dal bottone **🛋️ Attiva Interior
 Design** nella scheda (utile quando la richiesta arriva per telefono o su WhatsApp).
 Sole non dà mai prezzi precisi per la consulenza: li concorda Michela a voce.
@@ -202,7 +205,7 @@ Per i clienti che non pagano, Sole indossa un secondo cappello — più formale 
 | `fissa_appuntamento_calendario` | Crea davvero l'evento del sopralluogo |
 | `sposta_appuntamento` | Sposta un sopralluogo già fissato (su WhatsApp è legato al numero di chi scrive) |
 | `salva_lead_crm` | Salva/aggiorna il cliente nel CRM |
-| `attiva_interior_design` | Accende la sezione Interior Design nella scheda e ci salva stile/colori/luce/budget |
+| `attiva_interior_design` | Scrive il riepilogo della consulenza nella sezione Interior Design della scheda |
 
 Su **WhatsApp** (lato cliente) Sole usa lo stesso set di strumenti del sito, più la **ricezione e valutazione delle foto** del mobile. Il **codice di accesso**, lo strumento **`cerca_cliente`** e **`attiva_interior_design`** restano invece **solo sul sito** (su WhatsApp il riconoscimento è il numero, vedi sopra; per una richiesta di interior design arrivata su WhatsApp la sezione si attiva col bottone in dashboard).
 

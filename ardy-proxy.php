@@ -221,13 +221,12 @@ $system .= "\n\n## CODICE DI ACCESSO E STATO DEL LAVORO (tool cerca_cliente)\n\n
 
 // Istruzioni SOLO-WEB sul tool attiva_interior_design (vedi sopra: il documento
 // condiviso ardy-system.txt non può nominarlo, su WhatsApp il tool non esiste).
-$system .= "\n\n## CONSULENZA INTERIOR DESIGN — ACCENDERE LA SEZIONE (tool attiva_interior_design)\n\n"
-    . "Qui sulla webchat, oltre a salvare il lead, puoi **accendere la sezione Interior Design** nella scheda del cliente in dashboard: è lì che Michela trova stile, colori, luce e budget in chiaro.\n"
+$system .= "\n\n## CONSULENZA INTERIOR DESIGN — IL RIEPILOGO PER MICHELA (tool attiva_interior_design)\n\n"
+    . "Qui sulla webchat, oltre a salvare il lead, scrivi nella scheda del cliente **il riepilogo della consulenza**: in dashboard Michela legge quello, non un elenco di campi. È il tuo referto della conversazione.\n"
     . "- Chiama `attiva_interior_design` SOLO se il cliente ha chiesto esplicitamente la consulenza di interior design (non per un restauro).\n"
-    . "- Va al **Passo 7** dell'intervista, subito DOPO `salva_lead_crm` e solo se quel salvataggio è riuscito (la scheda deve già esistere). Durante l'intervista non chiamare nulla: prima le domande, poi i dati, poi i due salvataggi in quest'ordine.\n"
-    . "- Puoi richiamarlo più volte se il cliente aggiunge dettagli dopo: ogni chiamata aggiunge quello che passi, senza cancellare il resto.\n"
-    . "- Passa solo i campi che hai davvero raccolto: non inventare stile, colori, luce o budget che il cliente non ti ha detto.\n"
-    . "- Nel campo `note` scrivi SEMPRE un **riepilogo discorsivo della conversazione**: è quello che Michela legge per prima. Poche righe, come le racconteresti a voce — cosa vuole fare, che sensazioni ha espresso, cosa hai capito dei suoi gusti, cosa ha mandato in foto, eventuali vincoli. Serve soprattutto quando l'intervista resta a metà: i campi singoli saranno vuoti, il riepilogo no.\n"
+    . "- Va al **Passo 7**, subito DOPO `salva_lead_crm` e solo se quel salvataggio è riuscito (la scheda deve già esistere). Durante l'intervista non chiamare nulla: prima le domande, poi i dati, poi i due salvataggi in quest'ordine.\n"
+    . "- **Una sola chiamata, a fine intervista**: ogni chiamata SOSTITUISCE il riepilogo precedente. Se più tardi il cliente aggiunge qualcosa, richiamalo riscrivendo il riepilogo INTERO e aggiornato — non un frammento, o cancelleresti il resto.\n"
+    . "- Scrivilo come lo racconteresti a voce a Michela, in poche righe discorsive: quali ambienti, che stile e colori, com'è la luce, che budget, cosa ha mandato in foto, vincoli, e le sensazioni che ha espresso. **Non inventare le parti che non hai raccolto**: se l'intervista è rimasta a metà, dillo (\"non siamo arrivati al budget\") — a Michela serve sapere anche cosa manca.\n"
     . "- Non annunciare il tool al cliente: parlagli di Michela e del prossimo passo, non del CRM.\n";
 
 // Contesto di pagina: la conversazione arriva dalla webchat dedicata all'interior
@@ -350,17 +349,13 @@ $tools = [
     ],
     [
         'name'        => 'attiva_interior_design',
-        'description' => 'Attiva la sezione Interior Design nella scheda del cliente e salva le sue preferenze di arredamento. Usalo SOLO quando il cliente chiede ESPLICITAMENTE una consulenza di interior design (non per un restauro). Chiamalo DOPO aver già chiamato salva_lead_crm con servizio = "Consulenza Interior Design", così la scheda del cliente esiste già. Puoi chiamarlo anche più volte nella stessa conversazione per aggiungere via via le informazioni raccolte.',
+        'description' => 'Scrive nella scheda del cliente il RIEPILOGO della consulenza di interior design, che Michela legge in dashboard. Usalo SOLO quando il cliente chiede ESPLICITAMENTE una consulenza di interior design (non per un restauro). Chiamalo DOPO salva_lead_crm, così la scheda esiste già. Chiamalo UNA VOLTA a fine intervista: ogni chiamata SOSTITUISCE il riepilogo precedente, quindi scrivilo completo.',
         'input_schema' => [
             'type'       => 'object',
             'properties' => [
-                'stile'  => ['type' => 'string', 'description' => 'Stile di arredamento preferito (es. minimal, boho, industriale, classico, scandinavo...)'],
-                'colori' => ['type' => 'string', 'description' => 'Colori o palette preferiti'],
-                'luce'   => ['type' => 'string', 'description' => 'Luce naturale ed esposizione degli ambienti da arredare'],
-                'budget' => ['type' => 'string', 'description' => 'Forbice di budget indicativa per la consulenza/arredamento'],
-                'note'   => ['type' => 'string', 'description' => 'RIEPILOGO DISCORSIVO della conversazione, in poche righe: cosa vuole fare il cliente, che gusti ha espresso, ambienti coinvolti, cosa ha mandato in foto, vincoli o esigenze particolari. È il campo che Michela legge per primo — compilalo sempre, anche se l\'intervista è rimasta a metà.']
+                'riepilogo' => ['type' => 'string', 'description' => 'Il racconto della conversazione, in poche righe discorsive, come lo diresti a voce a Michela: quali ambienti vuole sistemare, che stile e che colori gli piacciono, com\'è la luce, che budget ha in mente, cosa ha mandato in foto, vincoli o esigenze particolari, e le sensazioni che ha espresso. Scrivi quello che sai davvero: se l\'intervista è rimasta a metà dillo, senza inventare le parti mancanti.']
             ],
-            'required' => []
+            'required' => ['riepilogo']
         ]
     ],
     [
@@ -854,31 +849,25 @@ while ($iteration < $maxIterations) {
                     if (!$riga) {
                         $toolResult = 'Errore: nessuna scheda cliente trovata per questa sessione. Chiama prima salva_lead_crm, poi riprova.';
                     } else {
-                        $giaAttivo = !empty($riga['interior_design_attivo']);
-                        $upd = $db->prepare(
-                            "UPDATE clienti SET
-                                interior_design_attivo = 1,
-                                interior_design_attivato_da = COALESCE(interior_design_attivato_da, 'sole'),
-                                interior_design_attivato_at = COALESCE(interior_design_attivato_at, NOW()),
-                                interior_design_stile  = COALESCE(:stile,  interior_design_stile),
-                                interior_design_colori = COALESCE(:colori, interior_design_colori),
-                                interior_design_luce   = COALESCE(:luce,   interior_design_luce),
-                                interior_design_budget = COALESCE(:budget, interior_design_budget),
-                                interior_design_note   = COALESCE(:note,   interior_design_note),
-                                updated_at = NOW()
-                             WHERE session_id = :sid"
-                        );
-                        $upd->execute([
-                            ':stile'  => $toolInput['stile']  ?? null,
-                            ':colori' => $toolInput['colori'] ?? null,
-                            ':luce'   => $toolInput['luce']   ?? null,
-                            ':budget' => $toolInput['budget'] ?? null,
-                            ':note'   => $toolInput['note']   ?? null,
-                            ':sid'    => $cleanSession,
-                        ]);
-                        $toolResult = $giaAttivo
-                            ? 'Preferenze Interior Design aggiornate nella scheda del cliente.'
-                            : 'Sezione Interior Design attivata: Michela la vedrà nella scheda del cliente in dashboard.';
+                        $giaAttivo  = !empty($riga['interior_design_attivo']);
+                        $riepilogo  = trim((string) ($toolInput['riepilogo'] ?? ''));
+                        if ($riepilogo === '') {
+                            $toolResult = 'Errore: il riepilogo è vuoto. Riscrivilo con quello che hai capito dalla conversazione.';
+                        } else {
+                            $upd = $db->prepare(
+                                "UPDATE clienti SET
+                                    interior_design_attivo = 1,
+                                    interior_design_attivato_da = COALESCE(interior_design_attivato_da, 'sole'),
+                                    interior_design_attivato_at = COALESCE(interior_design_attivato_at, NOW()),
+                                    interior_design_note = :riepilogo,
+                                    updated_at = NOW()
+                                 WHERE session_id = :sid"
+                            );
+                            $upd->execute([':riepilogo' => $riepilogo, ':sid' => $cleanSession]);
+                            $toolResult = $giaAttivo
+                                ? 'Riepilogo Interior Design aggiornato nella scheda del cliente.'
+                                : 'Sezione Interior Design attivata con il riepilogo: Michela lo vedrà nella scheda in dashboard.';
+                        }
                     }
                 } catch (PDOException $e) {
                     error_log('ARDY ATTIVA INTERIOR DESIGN ERROR: ' . $e->getMessage());

@@ -491,11 +491,15 @@ $clientiCols = [
     'interior_design_attivo'       => "ALTER TABLE clienti ADD COLUMN interior_design_attivo TINYINT(1) NOT NULL DEFAULT 0",
     'interior_design_attivato_da'  => "ALTER TABLE clienti ADD COLUMN interior_design_attivato_da VARCHAR(20) NULL", // 'sole' | 'manuale'
     'interior_design_attivato_at'  => "ALTER TABLE clienti ADD COLUMN interior_design_attivato_at DATETIME NULL",
+    'interior_design_note'         => "ALTER TABLE clienti ADD COLUMN interior_design_note TEXT NULL", // il riepilogo di Sole
+    // STORICHE: fino a lug 2026 la sezione aveva quattro campi separati, poi sostituiti
+    // dal riepilogo unico (più utile e sempre compilabile anche a intervista incompleta).
+    // Restano create e NON si droppano: le schede già raccolte le usano ancora e il
+    // dossier le mostra se valorizzate. Nulla le scrive più.
     'interior_design_stile'        => "ALTER TABLE clienti ADD COLUMN interior_design_stile VARCHAR(255) NULL",
     'interior_design_colori'       => "ALTER TABLE clienti ADD COLUMN interior_design_colori VARCHAR(255) NULL",
     'interior_design_luce'         => "ALTER TABLE clienti ADD COLUMN interior_design_luce VARCHAR(255) NULL",
     'interior_design_budget'       => "ALTER TABLE clienti ADD COLUMN interior_design_budget VARCHAR(100) NULL",
-    'interior_design_note'         => "ALTER TABLE clienti ADD COLUMN interior_design_note TEXT NULL",
 ];
 foreach ($clientiCols as $col => $sql) {
     if (!colExists($pdo, 'clienti', $col)) {
