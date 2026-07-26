@@ -1,134 +1,77 @@
 # Ardy Lab — Task aperti & note utili
 
 > Solo task **aperti** + note operative + verifiche residue. Tutto ciò che è fatto **e deployato**
-> è rimosso (lo storico resta nei commit git). Ultima pulizia: 19/07/2026 · ultimo aggiornamento: 26/07/2026.
+> è rimosso (lo storico resta nei commit git). Ultima pulizia: 26/07/2026 · ultimo aggiornamento: 26/07/2026.
 
 > ⚠️ Promemoria sempre valido: se Sole tace su **tutti** i canali insieme (WhatsApp + webchat),
 > sospetta **credito Anthropic esaurito** (capitato il 21/06; si ricarica da Plans & Billing).
 
 ---
 
-## 📣 DA DEPLOYARE — Social anche dalla dash design, gemello esatto delle fasi cliente (26/07/2026)
+## 🚀 APERTURA SESSIONE — riprendi da qui (fine sessione 26/07/2026)
 
-Mancava il gemello WordPress→social del binario clienti: ora l'**articolo** del progetto e ogni
-**fase-racconto** si pubblicano su Facebook/Instagram/**Google** con lo stesso motore E la stessa
-UI a pillole del pannello "Pubblica sui social" delle fasi pubblicate in `ardy-michela-app.html`
-(`ardy-pubblica-social.php` → n8n → Graph API per Meta, `ardy-gbp-post.php` per Google, in
-parallelo). Caption generata a parte (`ardy-progetti-ai.php` mode `genera_social`: corta, con
-hashtag — diversa dal testo del sito; su Google gli hashtag si tolgono in automatico, `stripHashtags`,
-stessa regola del client).
+Sessione lunga sulla dash design (ciclo di vita, materiale idea, articolo, archivio B2, social),
+chiusa qui per ripartire pulita. Fatto e **verificato dal vivo** in questa sessione, quindi non
+ripetere: ciclo di vita snellito, galleria "prima" + documenti letti dall'AI, fix delle immagini
+mancanti negli articoli, offload B2 spento + rimpatrio (42/42 file, zero errori).
+
+**Da fare per prime, in ordine, alla riapertura:**
+
+1. **Deploy** (`git pull origin main && ./deploy.sh`, poi migrate — lo fa da sé): porta su
+   Facebook/Instagram/Google la pubblicazione da articolo/fasi del progetto (commit `431f711`,
+   `b246f42`). Nuove colonne `fasi.foto_wp_urls`, `fasi.social_pubblicata_at`,
+   `progetti.wp_immagini`, `progetti.social_pubblicato_at`, `progetti.testo_social`.
+2. **Collaudo social**: pubblica una fase su WP, poi 📣 su un solo canale, poi su più insieme
+   (Facebook+Instagram+Google); controlla che la **foto** arrivi (non solo il testo) e che un
+   fallimento parziale (es. Google giù) si legga come tale, non come errore generico.
+3. **Collaudo archivio 📦**: su un progetto **fake** (non su Ardy Tower — è un prototipo reale in
+   corso, non va portato a CATALOGATO solo per provare), verifica che l'archiviazione su B2
+   finisca con «rilettura di verifica riuscita ✅». Poi cestina il progetto fake.
+
+Dettagli tecnici di entrambe le feature nelle due sezioni qui sotto.
+
+---
+
+## 📣 APERTO — Social dash design: da deployare + collaudare (26/07/2026)
+
+Gemello del binario clienti: l'**articolo** del progetto e ogni **fase-racconto** si pubblicano
+su Facebook/Instagram/**Google**, stesso motore e stessa UI a pillole del pannello "Pubblica sui
+social" delle fasi pubblicate in `ardy-michela-app.html` (`ardy-pubblica-social.php` → n8n → Graph
+API per Meta, `ardy-gbp-post.php` per Google, in parallelo). Caption a parte
+(`ardy-progetti-ai.php` mode `genera_social`: corta, con hashtag — tolti in automatico su Google).
 
 - **Toggle per canale, indipendenti**: Facebook/Instagram/Google si scelgono uno per uno (pillole
-  `.social-toggle`, portate di peso dalla dash clienti insieme alle icone SVG); non si può
-  scendere a zero canali selezionati.
+  `.social-toggle`); non si può scendere a zero canali selezionati.
 - **Esito per-canale**: l'invio va in parallelo a Meta e Google; se uno fallisce e l'altro no, il
   messaggio lo dice invece di un generico errore che farebbe ripetere anche l'invio riuscito.
-- **Regola invariata**: il bottone 📣 compare solo su ciò che è **già pubblicato su WordPress**.
-  Non è burocrazia: FB/IG/Google devono *scaricare* l'immagine da un URL pubblico e le nostre foto
-  stanno dietro Basic Auth. Gli URL buoni nascono al sideload su WP e vengono **salvati**
-  (`fasi.foto_wp_urls`, `progetti.wp_immagini`) invece di essere buttati via.
-- Nuove colonne: `fasi.foto_wp_urls`, `fasi.social_pubblicata_at`, `progetti.wp_immagini`,
-  `progetti.social_pubblicato_at`, `progetti.testo_social` → **serve `ardy-migrate.php`**.
-- ⏳ Da provare a video: pubblica una fase su WP, poi 📣 su un solo social (e poi su più di uno
-  insieme, incluso Google); controlla che la foto arrivi davvero e non solo il testo.
+- **Regola**: il bottone 📣 compare solo su ciò che è **già pubblicato su WordPress** — FB/IG/Google
+  devono *scaricare* l'immagine da un URL pubblico, e le nostre foto stanno dietro Basic Auth. Gli
+  URL buoni nascono al sideload su WP e ora si **salvano** (`fasi.foto_wp_urls`,
+  `progetti.wp_immagini`) invece di essere buttati via.
+- ⚠️ **Non ancora deployato** — vedi checklist di apertura sessione qui sopra.
 
 ---
 
-## ☁️ APERTO — B2 esce dal lavoro e diventa ARCHIVIO di fine ciclo (deciso 26/07/2026)
+## ☁️ APERTO — Archivio B2 di fine ciclo: collaudo dal vivo mancante (26/07/2026)
 
-**La decisione**: B2 non sta più *dentro* il lavoro, sta *dopo*. Finché progetto e cliente sono
-in corso tutto vive su disco e si serve da lì; quando il ciclo si chiude — progetto **CATALOGATO**,
-cliente **CONSEGNATO** — e tutto è già al suo posto (articolo pubblicato, prodotto in vetrina,
-documenti letti, dossier pronto), **un bottone deposita l'intera documentazione su B2**.
-Copia, non sposta: sul disco non si cancella niente.
+**Decisione (26/07)**: B2 non sta più *dentro* il lavoro (offload spento, rimpatriato tutto su
+disco — 42/42 file, zero errori), sta *dopo*: a ciclo chiuso — progetto **CATALOGATO**, cliente
+**CONSEGNATO** — un bottone 📦 deposita copia della documentazione su B2 (mai sposta: sul disco
+non si cancella niente), poi **rilegge il manifest appena scritto** per verificare che l'archivio
+sia davvero recuperabile.
 
-Perché risolve il problema alla radice: prima B2 stava nel **percorso di servizio** (l'articolo
-doveva rileggere le foto dal bucket per pubblicarle → lettura rotta = articolo spoglio). Ora
-quando si archivia il pubblico è già su WordPress e su Woo, e l'archivio non serve a nessuno per
-lavorare. Un guasto in lettura smette di essere un danno quotidiano — resta però una cosa da
-verificare, ed è per questo che l'archiviazione **rilegge il manifest appena scritto**: un
-archivio che non si rilegge non è un archivio, e la dash lo dice a chiare lettere.
-
-- **Fatto**: `ardy-archivia-b2.php` (progetti + clienti, a lotti), bottone 📦 in entrambe le dash,
-  colonne `archiviato_at / archivio_prefisso / archivio_file / archivio_verificato` su `progetti`
-  e `clienti`, `ardyStorageArchivia*()` distinto dall'offload automatico.
-- ⏳ **Da decidere dopo**: se e quando liberare il disco su ciò che è archiviato **e verificato**
-  (oggi «libera spazio cliente» esiste già ed è indipendente; per i progetti non c'è).
-
-**Sul sintomo che ha portato qui — gli articoli usciti senza foto — la colpa NON era di B2**
-(diagnosi 26/07): la lettura dal bucket funziona. `Creazione — Servomuto` ha regolarmente in
-pagina tutte e 5 le sue immagini, con URL su `wp-content/uploads`, e nel log non c'è una riga di
-`ARDY B2 GET ... fallito`. Erano spogli **solo** i progetti con **UNA sola immagine** in galleria:
-quella diventava la copertina, e il corpo dell'articolo la saltava per non ripeterla — ma il tema
-l'immagine in evidenza non la stampa nella pagina (niente `og:image`, niente `<img>`), quindi
-restava zero. Corretto: nel corpo ora ci vanno tutte, copertina compresa.
-
-Resta comunque vero che B2 **è nel percorso di servizio** e che un suo guasto in lettura
-romperebbe la pubblicazione: la ragione per spostarlo ad archivio di fine ciclo non cambia.
-
-**Il vincolo da non dimenticare:** un file caricato dal vecchio offload va su B2 **oppure** su
-disco, mai su entrambi. Togliere le costanti `ARDY_B2_*` dal config **senza rimpatriare prima**
-renderebbe irraggiungibili tutti i file che vivono solo lassù (le foto dei 10 articoli comprese).
-Sequenza per togliere B2 dal percorso di lavoro:
-
-1. **Fatto (26/07)**: offload automatico **spento nel codice** — `ardyB2ScritturaAttiva()` ora
-   richiede `ARDY_B2_OFFLOAD` nel config, che non c'è. I file nuovi restano tutti su disco.
-   I due gesti *espliciti* di backup delle foto fasi («Invia foto a B2», «Libera spazio disco»)
-   passano invece da `ardyStorageArchivia()` e continuano a funzionare: sono archiviazione,
-   non offload.
-2. **Fatto (26/07)**: rimpatrio eseguito — **42 file su 42**, zero errori (11 immagini di
-   galleria · 5,1 MB + 31 file di stampa · 42,7 MB). `storage='b2'` ora è a **zero** in tutte e
-   tre le tabelle: nessuna operazione quotidiana (pubblicare, sfogliare la galleria, scaricare
-   un STL) tocca più il bucket. Nota di merito all'idea originale: l'offload risparmiava ~48 MB
-   su un disco da 199 GB usato al 12% — non c'era un problema di spazio da risolvere, e in
-   cambio ci si era portati una dipendenza di rete dentro la pubblicazione degli articoli.
-3. Le costanti `ARDY_B2_*` vanno **TENUTE**: servono all'archiviazione di fine ciclo. Il bucket
-   non si svuota — cambia solo cosa ci finisce dentro e quando.
-
-- ⚠️ **Non coperte dal rimpatrio**: le foto delle fasi-racconto passate da «libera spazio disco»
-  (non hanno colonna `storage`, la chiave B2 è calcolata). Sono le meno critiche — quelle foto
-  stanno già sull'articolo WordPress — ma vanno considerate prima di svuotare il bucket.
-- ⏳ **Articoli già pubblicati senza foto**: si recuperano dal bottone **🖼️ Aggiorna le immagini
-  dell'articolo** (dash → Articolo WordPress), che rifà il blocco immagini su un post esistente.
-  Sui post pubblicati prima di questa funzione il blocco viene aggiunto **in fondo** (mancano i
-  delimitatori `<!--ardy-galleria-->`); da lì in poi viene sostituito al punto giusto.
-- Nota costi: il backup off-site di cPanel su B2 (§ più sotto) è **un'altra cosa** e non si tocca.
-
----
-
-## 🔁 DA DEPLOYARE — Ciclo di vita dash design snellito (26/07/2026)
-
-Il ciclo aveva due stati ridondanti. Ora è: **IDEA → PROGETTAZIONE → PROTOTIPO → VERSIONE FINALE →
-SCHEDA PRODOTTO → CATALOGATO**. `REALIZZAZIONE` è **tolto** (duplicava PROTOTIPO/VERSIONE FINALE),
-`FOTO` è diventato **SCHEDA PRODOTTO** (generazione della scheda di vendita: foto + testi pubblici),
-`A CATALOGO` è diventato **CATALOGATO** (pezzo esposto in vetrina). **Articolo WP e fasi-racconto
-sono ora sbloccati da IDEA**: ogni fase, idea compresa, si può raccontare e pubblicare.
-
-- ⚠️ **Dopo il deploy lanciare `ardy-migrate.php`**: rinomina gli stati sulle righe esistenti
-  (`PRODUZIONE|REALIZZAZIONE → VERSIONE_FINALE`, `FOTOGRAFIA|FOTO → SCHEDA_PRODOTTO`,
-  `A_CATALOGO → CATALOGATO`). Idempotente. Finché non gira, la dash normalizza i vecchi codici
-  lato JS (`STATI_LEGACY`), quindi niente progetti "fuori barra", ma il DB resta col codice vecchio.
-- File toccati: `ardy-design-app.html`, `ardy-progetti-api.php`, `ardy-migrate.php`,
-  `ardy-guida-design.html` + doc (`README.md`, `PIANO-DASH-DESIGN.md` §3).
-
-**Materiale dell'idea (stessa infornata):** galleria e documenti sbloccati da IDEA.
-
-- Galleria: nuovo tipo **`prima`** (il pezzo com'era prima del restyling / riferimento dell'idea),
-  accanto a `render` e `foto`. Nell'articolo WP esce come sezione «Il punto di partenza» ed è
-  **esclusa dalla copertina** (copertina = foto finita, poi render).
-- Nuovo modulo **📚 Documenti di riferimento**: PDF/DOCX/ODT/RTF/TXT/MD (max 20 MB) in
-  `progetto_file` con categoria `doc`, mostrati a parte dai binari di stampa. Il testo si estrae
-  **una volta sola** (`ardy-progetti-ai.php` mode `leggi_doc`) e si salva in
-  `progetto_file.testo_estratto`; `genera_articolo` lo rilegge dal DB (max 8.000 caratteri di
-  contesto). TXT/MD/DOCX/ODT/RTF si leggono in locale a costo zero, **solo il PDF** costa una
-  chiamata al modello, una per documento.
-- ⚠️ Anche questo vuole `ardy-migrate.php` (colonne `testo_estratto`, `testo_estratto_at`): finché
-  non gira, la dash design va in errore 500 sul dettaglio progetto. Deploy → migrate, in quest'ordine
-  (è quello che fa `deploy.sh`).
-- ⏳ Da provare a video: PDF con testo vero (ok) vs PDF scansionato (deve dire che serve un OCR);
-  articolo generato con e senza documenti allegati.
-- Materiale **interno**: i documenti non escono da `ardy-object-scheda.php` (whitelist) e non
-  vanno alla chat di Sole.
+- ⏳ **Non ancora collaudato dal vivo**: nessun 📦 è mai stato premuto su un progetto vero. Farlo
+  su un progetto **fake** (creane uno, portalo a CATALOGATO, archivia, controlla «rilettura di
+  verifica riuscita ✅», poi cestinalo) — non su Ardy Tower, che è un prototipo reale in corso.
+- ⏳ **Da decidere dopo il collaudo**: se e quando liberare il disco su ciò che è archiviato **e
+  verificato** (oggi «libera spazio cliente» esiste già lato clienti ed è indipendente; per i
+  progetti non c'è ancora).
+- ⚠️ **Non coperte dal rimpatrio B2**: le foto delle fasi-racconto passate da «libera spazio disco»
+  (non hanno colonna `storage`). Sono le meno critiche — quelle foto stanno già sull'articolo
+  WordPress — ma vanno considerate prima di svuotare il bucket.
+- Le costanti `ARDY_B2_*` restano nel config: servono all'archiviazione. Il bucket non si svuota,
+  cambia solo cosa ci finisce e quando. Nota costi: il backup off-site di cPanel su B2 (§ più
+  sotto) è un'altra cosa e non si tocca.
 
 ---
 
