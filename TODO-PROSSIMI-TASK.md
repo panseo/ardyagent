@@ -8,54 +8,44 @@
 
 ---
 
-## 🚀 APERTURA SESSIONE — riprendi da qui (fine sessione 26/07/2026)
+## 🚀 APERTURA SESSIONE — riprendi da qui (fine sessione 26/07/2026, seconda parte)
 
-Sessione lunga sulla dash design (ciclo di vita, materiale idea, articolo, archivio B2, social),
-chiusa qui per ripartire pulita. Fatto e **verificato dal vivo** in questa sessione, quindi non
-ripetere: ciclo di vita snellito, galleria "prima" + documenti letti dall'AI, fix delle immagini
-mancanti negli articoli, offload B2 spento + rimpatrio (42/42 file, zero errori).
+Sessione dedicata alla pubblicazione sui social dalla dash design. **Deployata e verificata dal
+vivo**: il pannello social del progetto è ora il gemello esatto di quello delle fasi cliente, e i
+post escono davvero su **Facebook, Instagram e Google** — quest'ultimo dopo aver scoperto che a
+farlo fallire era il **WEBP** (dettagli nella sezione Google, § più sotto).
 
-**Da fare per prime, in ordine, alla riapertura:**
+**Da fare per prime, alla riapertura:**
 
-1. **Deploy** (`git pull origin main && ./deploy.sh`, poi migrate — lo fa da sé): porta su
-   Facebook/Instagram/Google la pubblicazione da articolo/fasi del progetto (commit `431f711`,
-   `b246f42`). Nuove colonne `fasi.foto_wp_urls`, `fasi.social_pubblicata_at`,
-   `progetti.wp_immagini`, `progetti.social_pubblicato_at`, `progetti.testo_social`.
-2. **Collaudo social**: pubblica una fase su WP, poi 📲 su un solo canale, poi su più insieme
-   (Facebook+Instagram+Google); controlla che la **foto** arrivi (non solo il testo) e che un
-   fallimento parziale (es. Google giù) si legga come tale, non come errore generico.
-3. **Collaudo archivio 📦**: su un progetto **fake** (non su Ardy Tower — è un prototipo reale in
-   corso, non va portato a CATALOGATO solo per provare), verifica che l'archiviazione su B2
-   finisca con «rilettura di verifica riuscita ✅». Poi cestina il progetto fake.
-
-Dettagli tecnici di entrambe le feature nelle due sezioni qui sotto.
+1. **Collaudo archivio 📦** — l'unica cosa rimasta in sospeso da stamattina: su un progetto **fake**
+   (non su Ardy Tower, che è un prototipo reale in corso) portalo a CATALOGATO, archivia, controlla
+   che finisca con «rilettura di verifica riuscita ✅», poi cestinalo.
+2. **Occhio ai vecchi articoli con immagini WEBP**: si riparano premendo 🖼️ *Aggiorna le immagini
+   dell'articolo*, che ora ricarica l'allegato convertito in JPEG. Da fare quando un articolo
+   pubblicato prima del 26/07 deve andare sui social.
 
 ---
 
-## 📣 APERTO — Social dash design: da deployare + collaudare (26/07/2026)
+## 📣 NOTA — Social dalla dash design: com'è fatto (deployato e verificato 26/07/2026)
 
-Gemello del binario clienti: l'**articolo** del progetto e ogni **fase-racconto** si pubblicano
-su Facebook/Instagram/**Google**, stesso motore e stessa UI a pillole del pannello "Pubblica sui
-social" delle fasi pubblicate in `ardy-michela-app.html` (`ardy-pubblica-social.php` → n8n → Graph
-API per Meta, `ardy-gbp-post.php` per Google, in parallelo). Caption a parte
-(`ardy-progetti-ai.php` mode `genera_social`: corta, con hashtag — tolti in automatico su Google).
+L'**articolo** del progetto e ogni **fase-racconto** si pubblicano su Facebook/Instagram/**Google**
+con lo stesso motore del binario clienti (`ardy-pubblica-social.php` → n8n → Graph API per Meta,
+`ardy-gbp-post.php` per Google, in parallelo). La caption è a parte (`ardy-progetti-ai.php` mode
+`genera_social`: corta, con hashtag — tolti in automatico su Google).
 
-- **Stesso blocco, non «simile»**: il pannello è ora il gemello esatto di quello delle fasi
-  cliente — sempre in vista (niente bottone che apre un form), toggle + caption + i tre bottoni
-  **✨ Rigenera / 👁 Anteprima / 📲 Pubblica**, con la stessa anteprima Instagram
-  (`renderIgPreview`) e la caption che si scrive da sola all'apertura del modulo Articolo, come
-  fa `ensureFaseSocial()` sulle fasi cliente.
-- **Toggle per canale, indipendenti**: Facebook/Instagram/Google si scelgono uno per uno (pillole
-  `.social-toggle`, `socialDestHtml`/`toggleSocialDest` copiati tali e quali); **nessun canale è
-  preselezionato** e le piattaforme si leggono dal DOM senza default FB/IG di riserva, così non si
-  pubblica per sbaglio dove non si voleva. Non si può scendere a zero canali selezionati.
-- **Esito per-canale**: l'invio va in parallelo a Meta e Google; se uno fallisce e l'altro no, il
-  messaggio lo dice invece di un generico errore che farebbe ripetere anche l'invio riuscito.
-- **Regola**: il blocco 📲 compare solo su ciò che è **già pubblicato su WordPress** — FB/IG/Google
-  devono *scaricare* l'immagine da un URL pubblico, e le nostre foto stanno dietro Basic Auth. Gli
-  URL buoni nascono al sideload su WP e ora si **salvano** (`fasi.foto_wp_urls`,
-  `progetti.wp_immagini`) invece di essere buttati via.
-- ⚠️ **Non ancora deployato** — vedi checklist di apertura sessione qui sopra.
+- **Stesso blocco, non «simile»**: sempre in vista (niente bottone che apre un form), toggle +
+  caption + i tre bottoni **✨ Rigenera / 👁 Anteprima / 📲 Pubblica**, stessa anteprima Instagram,
+  e la caption dell'articolo che si scrive da sola all'apertura del modulo — come `ensureFaseSocial()`
+  sulle fasi cliente. `socialDestHtml`/`toggleSocialDest` sono copiati tali e quali da
+  `ardy-michela-app.html`: se si tocca uno, si tocchi anche l'altro.
+- **Nessun canale preselezionato** e piattaforme lette dal DOM senza default FB/IG di riserva: non si
+  pubblica per sbaglio dove non si voleva. Non si può scendere a zero canali.
+- **Esito per-canale**: se Google fallisce e Meta no, il messaggio lo dice invece di un errore
+  generico che farebbe ripetere anche l'invio riuscito.
+- **Regola**: il blocco 📲 compare solo su ciò che è **già su WordPress** — FB/IG/Google devono
+  *scaricare* l'immagine da un URL pubblico, e le nostre foto stanno dietro Basic Auth. Quegli URL
+  si salvano in `fasi.foto_wp_urls` / `progetti.wp_immagini`. Se mancano (articoli vecchi), il
+  pannello lo dice e indica 🖼️ *Aggiorna le immagini dell'articolo*.
 
 ---
 
@@ -799,48 +789,25 @@ Google finché Michela non lo sceglie. `inviaSocial()` è già cablato per spedi
 `ardy-pubblica-social.php` (Facebook/Instagram, via n8n) e `ardy-gbp-post.php` (Google, diretto — nessuna
 modifica al nodo n8n). Fix di sicurezza già applicato: `ardy-gbp-post.php`/`ardy-gbp-check.php` protetti da
 Basic Auth in `.htaccess`, `ardy-gbp.php` (lib) nel deny.
-**⏭️ Ultima verifica dal vivo:** deployare `ardy-michela-app.html` → in una lavorazione, selezionare anche
-**Google** tra le destinazioni → pubblicare una **fase di test** → verificare che il post compaia davvero sulla
-scheda Google "Ardy di Michela Panella" (non solo `success:true`).
+**✅ CHIUSA — Google pubblica davvero, da entrambe le dash (26/07/2026).** Post verificati sulla scheda
+"Ardy di Michela Panella", non solo `success:true`. Due cose imparate a caro prezzo, da non riscoprire:
 
-**✅ GOOGLE PUBBLICA (dash clienti) — ⚠️ 500 dalla dash design, causa da isolare (26/07/2026).**
+1. **Il WEBP è ciò che faceva fallire Google**, con un 500 «Internal error encountered.» che non spiega nulla.
+   Google Business accetta solo **JPG e PNG** (min 250×250, < 5 MB). Le foto della dash clienti sono JPG da
+   telefono e passavano; il render di un progetto era WEBP e non passava. Risolto convertendo **prima** del
+   caricamento su WordPress (`ardy-img.php` → `ardyImgNormalizza()`), perché è il file di WP quello che poi
+   mandiamo ai social. Vale anche per **Instagram**, che vuole JPEG. `aggiorna_immagini` ricarica convertiti
+   anche gli allegati vecchi in formato sbagliato, quindi gli articoli già pubblicati si riparano da soli.
+2. ⚠️ **Falsa pista, non riaprirla:** la scheda espone `metadata.canOperateLocalPost = false`
+   (`accounts/102932459424802940851`, `type: PERSONAL`, `verificationState: UNVERIFIED`) e sembra *la* causa.
+   **Non lo è**: con quel flag a false i post escono lo stesso. `ardy-gbp-check.php` ora lo dice a chiare
+   lettere invece di mandare a verificare una scheda che non ne ha bisogno.
 
-**Quello che è verificato:** dalla dash clienti una fase è stata pubblicata su Google e il post **compare
-davvero** sulla scheda ("Ardy di Michela Panella"). Quindi accesso all'API, token, parent, IPv4 e la scheda
-**funzionano**. Dalla dash design, invece, l'articolo di progetto risponde **500 «Internal error encountered.»**.
-
-⚠️ **Falsa pista già smentita — non riaprirla:** la scheda espone `metadata.canOperateLocalPost = false`
-(account `accounts/102932459424802940851`, `type: PERSONAL`, `verificationState: UNVERIFIED`) e sembrava LA
-causa. **Non lo è**: con quel flag a false i post escono lo stesso, provato dal vivo. Il check ora lo dice.
-
-**Dov'è la differenza fra i due percorsi** — stesso endpoint (`ardy-gbp-post.php` → `gbp_create_local_post`),
-stesso motore, cambia solo il *contenuto*:
-1. **L'immagine.** La dash clienti manda le foto della fase (JPG da telefono passate da WP). La dash design
-   manda `progetti.wp_immagini`, che per Ardy Tower è **un render**. Sospetto principale: Google accetta solo
-   **JPG e PNG** (min 250×250, < 5 MB), mentre il nostro upload di galleria ammette anche **WEBP e GIF**
-   (`ardy-progetti-galleria-api.php`) — un render WEBP arriverebbe su WP e Google lo rifiuterebbe.
-2. Il testo (lunghezza/caratteri) e il link della call-to-action, meno probabili.
-
-**✅ CAUSA CONFERMATA E CORRETTA (26/07/2026).** Il check su quell'immagine ha risposto: **784×1359, 169 KB,
-`image/webp`**. Google accetta solo **JPG e PNG** → 500. Era l'ipotesi 1, ed è il motivo esatto per cui la dash
-clienti passa (foto da telefono, JPG) e quella design no (render WEBP).
-
-**Fix applicato** — la conversione avviene *prima* del caricamento su WordPress, perché è il file di WP quello
-che poi mandiamo ai social:
-- **`ardy-img.php`** (nuovo, in deny nel `.htaccess`): `ardyImgNormalizza()` converte WEBP/GIF → JPEG (qualità
-  88, fondo bianco sotto la trasparenza, altrimenti diventa nera); JPG e PNG passano **intatti**, senza
-  ricompressione. Se GD manca o l'immagine è illeggibile ritorna l'originale — meglio un'immagine che i social
-  forse rifiutano che nessuna immagine, l'articolo la vuole comunque. `ardyImgOkPerSocial()` dice se un mime va
-  bene così com'è.
-- Usato in tutti e tre i punti in cui carichiamo su WP: `ardy-pubblica-progetto.php` (galleria dell'articolo),
-  `ardy-pubblica-fase-progetto.php` (foto delle fasi-racconto), `ardy-pubblica-lavorazione.php` (fasi cliente).
-- **Gli articoli già pubblicati si riparano da soli**: `aggiorna_immagini` ora controlla il *formato*
-  dell'allegato già su WP e, se non è social-safe, lo ricarica convertito invece di riusarlo per sempre. Basta
-  premere 🖼️ **Aggiorna le immagini dell'articolo** su Ardy Tower.
-
-⏭️ **Da verificare al prossimo deploy:** su Ardy Tower premere 🖼️ Aggiorna le immagini → ricontrollare l'URL
-col check (deve dire `image/jpeg` ✅) → pubblicare su Google. Nota: il WEBP non lo rifiuta solo Google —
-**Instagram vuole JPEG**, quindi la conversione sistema anche pubblicazioni IG che sarebbero fallite più avanti.
+**Diagnostica, se un giorno Google torna a dare 500:** `ardy-gbp-check.php` → sezione «Post locali». Elenca le
+immagini degli ultimi articoli (un click e dice formato/dimensioni/esito) e, in fondo, pubblica due post di
+prova — uno di solo testo e uno con quell'immagine: se passa senza e fallisce con, è la foto. I post di prova
+compaiono davvero sulla scheda e vanno cancellati a mano. La pagina esce su **IPv4** come la libreria, quindi
+misura quello che fa la dash e non il vecchio 403 dell'egress IPv6.
 
 **✅ Elenco "Fasi pubblicate" ora è a fisarmonica (20/07):** ogni fase pubblicata è **cliccabile e si espande**
 (`caricaFasiPubblicate` in `ardy-michela-app.html`) mostrando: il **testo** pubblicato, le **foto**, e il box
