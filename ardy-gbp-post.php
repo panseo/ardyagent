@@ -60,6 +60,13 @@ if ($res['success']) {
     if (in_array($res['http'], [401, 403, 429], true)) {
         $err = 'Accesso alla Google Business Profile API non ancora attivo '
              . '(in attesa di approvazione Google). Riprova dopo lo sblocco.';
+    } elseif ($res['http'] >= 500) {
+        // "Internal error encountered." è tutto ciò che Google dice su un 500, e non è
+        // colpa del testo: di solito è la scheda che non può ospitare post, o la foto
+        // che l'API non riesce a prendere. Mandiamo l'utente dove si scopre quale dei due.
+        $err = 'Google ha risposto «' . $err . '» (HTTP ' . $res['http'] . '). Il post non è partito. '
+             . 'Apri ardy-gbp-check.php → sezione «Post locali» per vedere se la scheda accetta i post '
+             . 'e se l\'immagine è raggiungibile.';
     }
-    echo json_encode(['success' => false, 'error' => $err]);
+    echo json_encode(['success' => false, 'error' => $err, 'http' => $res['http'] ?? 0]);
 }

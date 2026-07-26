@@ -246,7 +246,16 @@ function gbp_create_local_post(string $summary, string $imageUrl = '', string $c
         return ['success' => true, 'http' => 200, 'name' => $data['name']];
     }
 
-    $msg = $data['error']['message'] ?? substr((string)$resp, 0, 300);
-    error_log('ARDY GBP POST fail: http=' . $code . ' msg=' . $msg);
-    return ['success' => false, 'http' => $code, 'error' => $msg];
+    // Su un 500 Google dice solo "Internal error encountered.": da solo non fa capire
+    // niente, quindi a log va tutto il contesto (parent, media, corpo della risposta).
+    // È la differenza fra "so cosa guardare" e "riprova e speriamo".
+    $msg    = $data['error']['message'] ?? substr((string)$resp, 0, 300);
+    $status = (string)($data['error']['status'] ?? '');
+    error_log('ARDY GBP POST fail: http=' . $code . ($status !== '' ? ' status=' . $status : '')
+            . ' parent=' . $parent
+            . ' media=' . ($imageUrl !== '' ? $imageUrl : '(nessuna)')
+            . ' cta='   . ($ctaUrl   !== '' ? $ctaUrl   : '(nessuna)')
+            . ' msg=' . $msg
+            . ' body=' . substr((string)$resp, 0, 600));
+    return ['success' => false, 'http' => $code, 'status' => $status, 'error' => $msg];
 }

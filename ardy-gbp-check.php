@@ -381,6 +381,110 @@ if ($httpCode !== 200 && defined('CURL_IPRESOLVE_V4')) {
     }
 }
 
+// --- Post locali: perché la POST fallisce anche se la GET va -----------------
+// Serve quando gli account si leggono (200) ma pubblicare risponde 500 "Internal
+// error encountered.", che è tutto quello che Google dice. Le due cause vere sono
+// quasi sempre: la scheda non può ospitare post (metadata.canOperateLocalPost), o
+// l'immagine non è prendibile/è troppo piccola. Qui si guardano entrambe, in sola
+// lettura: niente viene pubblicato se non lo si chiede col bottone in fondo.
+if ($httpCode === 200) {
+    echo "<h2 style='font-size:15px'>Post locali (<code>localPosts</code>)</h2>";
+
+    $parent = gbp_get_parent($token);
+    echo "<p class='muted'>Destinazione dei post: <code>" . h($parent ?: '(non risolta)') . "</code></p>";
+
+    // Tutte le schede di tutti gli account, con il flag che conta. Se le schede sono
+    // più di una, quella scelta (la prima) potrebbe non essere quella giusta.
+    $accountList = $data['accounts'] ?? [];
+    foreach ($accountList as $acc) {
+        $accName = (string)($acc['name'] ?? '');
+        if ($accName === '') continue;
+        [$lc, $locs] = gbp_api_get(
+            'https://mybusinessbusinessinformation.googleapis.com/v1/' . $accName
+            . '/locations?readMask=name,title,metadata&pageSize=20', $token
+        );
+        echo "<p class='muted'><b>" . h($accName) . "</b> — " . h((string)($acc['accountName'] ?? '')) . "</p>";
+        if ($lc !== 200) { echo "<div class='box warn'>Schede non leggibili (HTTP $lc).</div>"; continue; }
+        foreach (($locs['locations'] ?? []) as $loc) {
+            $ln   = (string)($loc['name'] ?? '');
+            $puo  = !empty($loc['metadata']['canOperateLocalPost']);
+            $qui  = $parent && substr($parent, -strlen('/' . $ln)) === '/' . $ln;
+            echo "<div class='box " . ($puo ? 'ok' : 'err') . "'>"
+               . ($qui ? '➡️ ' : '') . "<b>" . h((string)($loc['title'] ?? '(senza nome)')) . "</b> "
+               . "<code>" . h($ln) . "</code><br>"
+               . ($puo
+                    ? "Può ospitare post locali ✅"
+                    : "<b>NON può ospitare post locali ❌</b> — è questa la causa del 500. "
+                    . "Di solito la scheda non è verificata, è sospesa, oppure il tipo di attività non "
+                    . "prevede i post. Si sistema su business.google.com, non nel codice.")
+               . ($qui ? "<br><span class='muted'>È la scheda che la dash sta usando.</span>" : "")
+               . "</div>";
+        }
+    }
+
+    // L'immagine: Google deve poterla SCARICARE (min 250×250, JPG/PNG, < 5 MB).
+    // Si passa con ?img=<url> — lo si copia dall'articolo o dal log della pubblicazione.
+    $imgTest = trim((string)($_GET['img'] ?? ''));
+    echo "<h3 style='font-size:14px'>L'immagine del post</h3>";
+    if ($imgTest === '' || !filter_var($imgTest, FILTER_VALIDATE_URL)) {
+        echo "<p class='muted'>Aggiungi <code>?img=&lt;url della foto&gt;</code> a questa pagina per "
+           . "controllare che Google possa scaricarla (serve pubblica, JPG/PNG, almeno 250×250, sotto i 5 MB). "
+           . "L'URL è quello che compare nel log della pubblicazione fallita, campo <code>media=</code>.</p>";
+    } else {
+        $ci = curl_init($imgTest);
+        curl_setopt($ci, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ci, CURLOPT_TIMEOUT,        20);
+        curl_setopt($ci, CURLOPT_FOLLOWLOCATION, true);
+        $imgBytes = (string)curl_exec($ci);
+        $imgCode  = (int)curl_getinfo($ci, CURLINFO_HTTP_CODE);
+        $imgType  = (string)curl_getinfo($ci, CURLINFO_CONTENT_TYPE);
+        curl_close($ci);
+        $dim = $imgBytes !== '' ? @getimagesizefromstring($imgBytes) : false;
+        $kb  = round(strlen($imgBytes) / 1024);
+        if ($imgCode !== 200) {
+            echo "<div class='box err'><b>❌ Google non può scaricarla: HTTP $imgCode.</b><br>"
+               . "Se è 401 sta dietro Basic Auth (è il nostro server, non WordPress): al post va l'URL "
+               . "pubblico di WP, non quello della dash.</div>";
+        } elseif (!$dim) {
+            echo "<div class='box err'><b>❌ Scaricata ($kb KB, <code>" . h($imgType) . "</code>) ma non è "
+               . "un'immagine leggibile.</b></div>";
+        } else {
+            $ok = $dim[0] >= 250 && $dim[1] >= 250 && $kb < 5120
+               && in_array($dim['mime'] ?? '', ['image/jpeg', 'image/png'], true);
+            echo "<div class='box " . ($ok ? 'ok' : 'err') . "'>"
+               . ($ok ? '✅ Va bene per Google' : '❌ Google la rifiuta')
+               . ": <b>{$dim[0]}×{$dim[1]}</b>, $kb KB, <code>" . h((string)($dim['mime'] ?? '?')) . "</code>."
+               . ($ok ? '' : "<br>Servono almeno <b>250×250</b>, formato <b>JPG o PNG</b>, sotto i <b>5 MB</b>.")
+               . "</div>";
+        }
+    }
+
+    // Prova reale, solo su richiesta esplicita: pubblica DAVVERO un post di testo.
+    // Se questo passa e con la foto no, il colpevole è la foto; se fallisce anche
+    // così, è la scheda. Sta dietro un link apposta: non deve partire per sbaglio.
+    echo "<h3 style='font-size:14px'>Prova di pubblicazione (solo testo)</h3>";
+    if (($_GET['post_test'] ?? '') === '1') {
+        $prova = gbp_create_local_post(
+            'Prova tecnica di pubblicazione dalla dashboard Ardy — ' . date('d/m/Y H:i') . '.', '', ''
+        );
+        if (!empty($prova['success'])) {
+            echo "<div class='box ok'><b>✅ Il post di solo testo è passato</b> (<code>"
+               . h((string)($prova['name'] ?? '')) . "</code>).<br>Quindi la scheda va bene e il 500 "
+               . "arriva dall'<b>immagine</b>: controllala qui sopra con <code>?img=</code>. "
+               . "<b>Ricordati di cancellare questo post di prova</b> dalla scheda Google.</div>";
+        } else {
+            echo "<div class='box err'><b>❌ Fallisce anche di solo testo</b> — HTTP "
+               . h((string)($prova['http'] ?? '?')) . " " . h((string)($prova['status'] ?? '')) . ": "
+               . h((string)($prova['error'] ?? '')) . "<br>Allora non è l'immagine: è la <b>scheda</b> "
+               . "(vedi i riquadri qui sopra) o l'accesso all'API.</div>";
+        }
+    } else {
+        echo "<p class='muted'><a href='?post_test=1'>Pubblica un post di prova di solo testo</a> — "
+           . "attenzione: <b>compare davvero</b> sulla scheda Google e va cancellato a mano. "
+           . "Serve a separare «è la foto» da «è la scheda».</p>";
+    }
+}
+
 // --- Dettaglio tecnico -------------------------------------------------
 echo "<h2 style='font-size:15px'>Dettaglio risposta</h2>";
 echo "<p class='muted'>HTTP <b>$httpCode</b>" . ($status ? " · status <b>" . h($status) . "</b>" : "")
