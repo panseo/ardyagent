@@ -25,7 +25,7 @@ const ARDY_CLIENTI_COLS =
     "session_id, nome, cognome, telefono, email, servizio, mobile, zona, budget, "
   . "indirizzo, stato, note, note_consegna, data_followup, inizio_lavoro, "
   . "fine_lavoro_prevista, sopralluogo_at, trasporto_data, wp_post_id, wp_post_link, foto_archiviate_at, "
-  . "faq_pubblicata_at, created_at, updated_at, deleted_at, conversazione_letta_at, "
+  . "faq_pubblicata_at, archiviato_at, archivio_verificato, created_at, updated_at, deleted_at, conversazione_letta_at, "
   . "interior_design_attivo, interior_design_attivato_da, interior_design_attivato_at, interior_design_note";
 
 function ardy_map_cliente(array $r, bool $withDeletedAt = false, bool $haRisposto = false, string $ultimoMsgAt = ''): array {
@@ -52,6 +52,10 @@ function ardy_map_cliente(array $r, bool $withDeletedAt = false, bool $haRispost
         'wp_post_link'  => $r['wp_post_link']   ?? '',
         'foto_archiviate_at' => $r['foto_archiviate_at'] ?? '',
         'faq_pubblicata_at'  => $r['faq_pubblicata_at']  ?? '',
+        // Archivio di fine ciclo su B2 (ardy-archivia-b2.php): serve alla scheda per
+        // sapere se il gesto è già stato fatto e se la verifica di rilettura è passata.
+        'archiviato_at'        => $r['archiviato_at']        ?? '',
+        'archivio_verificato'  => !empty($r['archivio_verificato']),
         'created_at'    => $r['created_at']     ?? '',
         'updated_at'    => $r['updated_at']     ?? '',
         // Vero se il CLIENTE ha scritto (WA o sito) nelle ultime 48h DOPO l'ultima

@@ -152,6 +152,8 @@
             style="display:none;">🛋️ Attiva Interior Design</button>
           <button id="btnReinviaGrazie" class="btn" onclick="reinviaGrazie()" title="Reinvia al cliente l'email (e WhatsApp se configurato) di ringraziamento alla consegna: recensione Google, social, newsletter."
             style="display:none;">📧 Reinvia ringraziamento</button>
+          <button id="btnArchiviaB2" class="btn" onclick="archiviaClienteB2()" title="Lavoro consegnato: deposita su Backblaze il dossier completo, i PDF dei preventivi e le foto del lead. È una copia: sul server non cancella nulla."
+            style="display:none;">📦 Archivia documentazione</button>
           <button id="btnLiberaSpazio" class="btn" onclick="liberaSpazioCliente()" title="Lavoro concluso: cancella foto e reel dal server per liberare spazio. Tiene scheda, preventivi (con PDF), fasi e pagina sito."
             style="display:none;">🧹 Libera spazio cliente</button>
           <button id="btnEliminaCliente" class="btn btn--danger" onclick="cestinaCliente()" title="Sposta questo cliente nel cestino (recuperabile per 30 giorni)">🗑 Cestina cliente</button>
@@ -613,6 +615,7 @@ const UPDATE_URL      = BASE_URL + '/ardy-update-lead.php';
 const ELIMINA_URL     = BASE_URL + '/ardy-elimina-cliente.php';
 const GRAZIE_URL      = BASE_URL + '/ardy-grazie-consegna.php';
 const DOSSIER_URL     = BASE_URL + '/ardy-dossier.php';
+const ARCHIVIO_B2_URL = BASE_URL + '/ardy-archivia-b2.php';
 const AI_URL          = BASE_URL + '/ardy-proxy.php';
 const LAVORAZIONE_URL = BASE_URL + '/ardy-pubblica-lavorazione.php';
 const FASI_BOZZA_URL  = BASE_URL + '/ardy-fasi-bozza-api.php';
@@ -1037,6 +1040,17 @@ function renderDetail() {
   // "Reinvia ringraziamento" solo per i clienti CONSEGNATO
   const btnGr = document.getElementById('btnReinviaGrazie');
   if (btnGr) btnGr.style.display = (l.Stato ?? '').toUpperCase() === 'CONSEGNATO' ? 'inline-block' : 'none';
+
+  // "Archivia documentazione" a lavoro consegnato: il deposito a freddo su Backblaze.
+  // Va PRIMA di "Libera spazio": si archivia, poi semmai si libera — non il contrario.
+  const btnArc = document.getElementById('btnArchiviaB2');
+  if (btnArc) {
+    const concluso   = ARCHIVE_STATES.includes((l.Stato ?? '').toUpperCase());
+    const giaFatto   = !!(l.archiviato_at && String(l.archiviato_at).trim());
+    btnArc.style.display = concluso ? 'inline-block' : 'none';
+    btnArc.textContent   = giaFatto ? '📦 Archiviata ✓' : '📦 Archivia documentazione';
+    btnArc.style.opacity = giaFatto ? '0.7' : '1';
+  }
 
   // "Libera spazio" solo per lavori conclusi (archivio: CONSEGNATO, + legacy PAGATO)
   const btnLib = document.getElementById('btnLiberaSpazio');
@@ -1681,6 +1695,48 @@ async function eliminaDefCestino(sid, nome) {
 }
 
 // Libera spazio: cancella SOLO foto + reel del cliente concluso, tiene tutto il resto.
+// Archivio di fine ciclo su Backblaze: si fa a lavoro CONSEGNATO, quando tutto è già
+// al suo posto (fasi pubblicate, preventivi agli atti). Deposita dossier, PDF e foto
+// del lead; è una COPIA, sul server non cancella niente. A lotti, così una scheda con
+// tante foto non muore in un timeout.
+async function archiviaClienteB2() {
+  if (!currentLead) return;
+  const sid = currentLead.Session_ID;
+  if (!sid) { showToast('⚠ Scheda senza sessione', 'error'); return; }
+  const nome = `${currentLead.Nome ?? ''} ${currentLead.Cognome ?? ''}`.trim() || 'questo cliente';
+  if (!confirm(`Archiviare la documentazione di «${nome}» su Backblaze?\n\nDeposita dossier completo, PDF dei preventivi e foto del lead.\nÈ una copia: sul server non viene cancellato nulla.`)) return;
+
+  const btn = document.getElementById('btnArchiviaB2');
+  const testo = btn ? btn.textContent : '';
+  let offset = 0, caricati = 0, falliti = 0;
+  try {
+    while (true) {
+      if (btn) { btn.disabled = true; btn.textContent = `📦 Archivio… ${caricati}`; }
+      const res = await fetch(ARCHIVIO_B2_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'archivia', tipo: 'cliente', id: sid, offset })
+      });
+      const d = await res.json();
+      if (!d || !d.success) { showToast('⚠ ' + ((d && d.error) || 'Archiviazione non riuscita'), 'error'); break; }
+      caricati += d.caricati || 0; falliti += d.falliti || 0;
+      if (d.finito) {
+        const idx = allLeads.findIndex(l => l.Session_ID === sid);
+        if (idx >= 0) allLeads[idx].archiviato_at = new Date().toISOString();
+        currentLead.archiviato_at = new Date().toISOString();
+        showToast(d.verificato
+          ? `📦 Archiviati ${caricati} file${falliti ? ` · ${falliti} falliti` : ''}`
+          : `⚠ Archiviati ${caricati} file ma la rilettura di verifica è fallita`,
+          d.verificato && !falliti ? 'success' : 'error');
+        break;
+      }
+      offset = d.offset;
+    }
+  } catch (e) {
+    showToast('⚠ Errore di rete', 'error');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = testo || '📦 Archivia documentazione'; }
+}
+
 async function liberaSpazioCliente() {
   if (!currentLead) return;
   const sid = currentLead.Session_ID;

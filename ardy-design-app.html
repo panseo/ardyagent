@@ -435,6 +435,7 @@ function renderDettaglio(nuovo=false){
       (stato.congelaForm ? congelaFormHtml() : ''),
       modSection('fotovendita','SCHEDA_PRODOTTO',false, fotoVenditaPanel()),
       modSection('push','CATALOGATO',false, pushPanel()),
+      modSection('archivio','CATALOGATO',false, archivioPanel()),
     ].join('') : '<div class="muted">Salva il progetto per gestire i suoi moduli (foto, file, costi, contenuti, negozio).</div>'}
     ${p.id ? saveBar() : ''}
   `;
@@ -983,6 +984,69 @@ function pushPanel(){
     </div>
     <div class="muted" style="font-size:.85em;margin-top:6px">«Invia (bozza)» crea/aggiorna il prodotto ma lo lascia da rivedere su Woo. «Pubblica» lo rende visibile ai clienti.</div>
   </div>`;
+}
+
+// ── Archivio di fine ciclo su B2 ────────────────────────────────────────────
+// Compare a CATALOGATO, cioè quando non c'è più niente da fare: l'articolo è online,
+// il prodotto è in vetrina, i documenti sono letti. Da lì l'archiviazione è un gesto
+// solo: deposita tutto su Backblaze. Copia, non sposta — il disco resta com'è.
+const ARCHIVIA_API = 'ardy-archivia-b2.php';
+function archivioPanel(){
+  const p = stato.dettaglio.progetto;
+  const fatto = p.archiviato_at;
+  return `
+  <div class="panel">
+    <h2>📦 Archivio documentazione <small>deposito a freddo su Backblaze — a ciclo chiuso</small></h2>
+    ${fatto ? `<div class="frozen"><b>✅ Archiviato il ${esc(fatto)}</b>
+        <div class="muted" style="margin-top:6px">${p.archivio_file||0} file · <code>${esc(p.archivio_prefisso||'')}</code>
+          · ${p.archivio_verificato ? 'rilettura di verifica riuscita ✅' : '<span class="neg">verifica NON riuscita</span>'}</div>
+       </div>` : ''}
+    <div class="muted" style="margin-bottom:8px">Deposita su Backblaze galleria, file di stampa, documenti, foto vendita e foto delle fasi, più la <b>scheda del progetto in Markdown</b> (concept, storia, distinta, iterazioni, fasi, testo dei documenti letti). <b>Non cancella nulla dal disco.</b></div>
+    <div class="row" style="align-items:center">
+      <button class="ghost" onclick="archivioStato()">🔍 Cosa verrebbe archiviato</button>
+      <button class="primary" onclick="archiviaOra()">📦 ${fatto?'Archivia di nuovo':'Archivia la documentazione'}</button>
+    </div>
+    <div id="archOut" class="muted" style="margin-top:8px"></div>
+  </div>`;
+}
+async function archivioStato(){
+  const out = document.getElementById('archOut');
+  if (out) out.textContent = '⏳ Controllo…';
+  try {
+    const d = await fetch(ARCHIVIA_API, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ mode:'stato', tipo:'progetto', id: stato.dettaglio.progetto.id }) }).then(r=>r.json());
+    if (!d.success){ if (out) out.innerHTML = `<span class="neg">${esc(d.error||'Errore')}</span>`; return; }
+    const lista = (d.checklist||[]).map(c => `<div>${c.ok?'✅':'⚠️'} ${esc(c.voce)}${c.nota?` <span class="muted">— ${esc(c.nota)}</span>`:''}</div>`).join('');
+    const esclusi = (d.saltati||[]).length
+      ? `<div style="margin-top:6px" class="muted">Non inclusi (${d.saltati.length}): ${(d.saltati.slice(0,4).map(s=>esc(s.rel+' — '+s.motivo)).join(' · '))}${d.saltati.length>4?' …':''}</div>` : '';
+    if (out) out.innerHTML = `${lista}<div style="margin-top:6px"><b>${d.file}</b> file · ${fmtBytes(d.byte)}${d.b2?'':' · <span class="neg">B2 non configurato</span>'}</div>${esclusi}`;
+  } catch(e){ if (out) out.innerHTML = '<span class="neg">Errore di rete</span>'; }
+}
+async function archiviaOra(){
+  if (!confirm('Depositare tutta la documentazione di questo progetto su Backblaze?\nÈ una copia: sul server non viene cancellato nulla.')) return;
+  const out = document.getElementById('archOut');
+  let offset = 0, caricati = 0, falliti = 0;
+  try {
+    while (true){
+      if (out) out.textContent = `⏳ Archivio… ${caricati} file`;
+      const d = await fetch(ARCHIVIA_API, { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ mode:'archivia', tipo:'progetto', id: stato.dettaglio.progetto.id, offset }) }).then(r=>r.json());
+      if (!d.success){ if (out) out.innerHTML = `<span class="neg">${esc(d.error||'Errore')}</span>`; toast(d.error||'Errore'); return; }
+      caricati += d.caricati||0; falliti += d.falliti||0;
+      if (d.finito){
+        const parti = [`${caricati} file archiviati`];
+        if (falliti) parti.push(`<span class="neg">${falliti} falliti</span>`);
+        if (d.non_inclusi) parti.push(`${d.non_inclusi} non inclusi`);
+        parti.push(d.verificato ? 'rilettura di verifica riuscita ✅'
+                                : '<span class="neg">⚠️ verifica fallita: l\'archivio non si rilegge</span>');
+        if (out) out.innerHTML = parti.join(' · ');
+        toast(falliti ? `Archiviato con ${falliti} errori` : 'Documentazione archiviata');
+        apri(stato.dettaglio.progetto.id);
+        return;
+      }
+      offset = d.offset;
+    }
+  } catch(e){ if (out) out.innerHTML = '<span class="neg">Errore di rete</span>'; }
 }
 
 // ── Articolo WordPress del progetto (madre delle fasi-racconto) ──

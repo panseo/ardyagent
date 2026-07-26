@@ -8,15 +8,35 @@
 
 ---
 
-## ☁️ APERTO — Staccare Backblaze B2 (deciso 26/07/2026)
+## ☁️ APERTO — B2 esce dal lavoro e diventa ARCHIVIO di fine ciclo (deciso 26/07/2026)
 
-**Sintomo:** gli ultimi ~10 articoli pubblicati dalla dash design sono usciti **senza foto**.
-Le immagini erano su B2 e la lettura lato server (`ardyStorageGet`, SigV4) non le restituisce —
-è la stessa nota "letture B2 rotte (Opzione A)" di sotto, che ora è arrivata al danno visibile.
+**La decisione**: B2 non sta più *dentro* il lavoro, sta *dopo*. Finché progetto e cliente sono
+in corso tutto vive su disco e si serve da lì; quando il ciclo si chiude — progetto **CATALOGATO**,
+cliente **CONSEGNATO** — e tutto è già al suo posto (articolo pubblicato, prodotto in vetrina,
+documenti letti, dossier pronto), **un bottone deposita l'intera documentazione su B2**.
+Copia, non sposta: sul disco non si cancella niente.
 
-**Il vincolo da non dimenticare:** un file caricato va su B2 **oppure** su disco, mai su
-entrambi. Togliere le costanti `ARDY_B2_*` dal config **senza rimpatriare prima** renderebbe
-irraggiungibili tutti i file che vivono solo lassù. Sequenza obbligata:
+Perché risolve il problema alla radice: prima B2 stava nel **percorso di servizio** (l'articolo
+doveva rileggere le foto dal bucket per pubblicarle → lettura rotta = articolo spoglio). Ora
+quando si archivia il pubblico è già su WordPress e su Woo, e l'archivio non serve a nessuno per
+lavorare. Un guasto in lettura smette di essere un danno quotidiano — resta però una cosa da
+verificare, ed è per questo che l'archiviazione **rilegge il manifest appena scritto**: un
+archivio che non si rilegge non è un archivio, e la dash lo dice a chiare lettere.
+
+- **Fatto**: `ardy-archivia-b2.php` (progetti + clienti, a lotti), bottone 📦 in entrambe le dash,
+  colonne `archiviato_at / archivio_prefisso / archivio_file / archivio_verificato` su `progetti`
+  e `clienti`, `ardyStorageArchivia*()` distinto dall'offload automatico.
+- ⏳ **Da decidere dopo**: se e quando liberare il disco su ciò che è archiviato **e verificato**
+  (oggi «libera spazio cliente» esiste già ed è indipendente; per i progetti non c'è).
+
+**Sintomo che ha portato qui:** gli ultimi ~10 articoli pubblicati dalla dash design sono usciti
+**senza foto**. Le immagini erano su B2 e la lettura lato server (`ardyStorageGet`, SigV4) non le
+restituisce — la nota "letture B2 rotte (Opzione A)" arrivata al danno visibile.
+
+**Il vincolo da non dimenticare:** un file caricato dal vecchio offload va su B2 **oppure** su
+disco, mai su entrambi. Togliere le costanti `ARDY_B2_*` dal config **senza rimpatriare prima**
+renderebbe irraggiungibili tutti i file che vivono solo lassù (le foto dei 10 articoli comprese).
+Sequenza per spegnere l'offload e passare al solo archivio:
 
 1. `define('ARDY_B2_SOLO_LETTURA', true);` in `ardy-config.php` → nessun file **nuovo** su B2
    (ogni chiamante ha già il fallback su disco). Fatto lato codice: `ardyB2ScritturaAttiva()`.

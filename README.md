@@ -593,6 +593,7 @@ cui esce il racconto), si annuncia subito e progettazione/prototipo si raccontan
 | **Scheda prodotto / Sole** (SCHEDA_PRODOTTO) | Contenuti pubblici del pezzo in vendita (teaser, storia, FAQ, slug) | `ardy-progetti-api.php` (`save`) |
 | **Foto vendita** (SCHEDA_PRODOTTO) | Foto professionali del pezzo finito (Modulo 2, → Woo) | `ardy-object-foto-api.php` / `ardy-object-img.php` |
 | **Push catalogo** (CATALOGATO) | Crea/aggiorna il prodotto **WooCommerce** in bozza | `ardy-object-push.php` |
+| **Archivio** (CATALOGATO) | A ciclo chiuso deposita la documentazione su **B2** (copia, non sposta) + scheda Markdown | `ardy-archivia-b2.php` |
 
 ### Costi e margine (uso interno)
 - **Distinta (BOM)** in `progetto_materiali`: categorie `filamento | stampa | legno | elettrico |

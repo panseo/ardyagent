@@ -89,9 +89,13 @@ function ardyB2SignPut(string $key, string $payloadHash, string $contentType, st
 /**
  * Carica un file su B2 in streaming (niente file intero in RAM: l'hash si calcola
  * con hash_file e il corpo si invia via CURLOPT_INFILE). Ritorna true su HTTP 200.
+ *
+ * Le due funzioni pubbliche che ci passano sopra hanno regole diverse:
+ *   ardyStoragePutFile()      — offload automatico: rispetta ARDY_B2_SOLO_LETTURA
+ *   ardyStorageArchiviaFile() — archiviazione a fine ciclo: gesto esplicito, passa sempre
  */
-function ardyStoragePutFile(string $key, string $localPath, string $contentType = 'application/octet-stream'): bool {
-    if (!ardyB2ScritturaAttiva() || !is_file($localPath)) return false;
+function ardyB2PutFileRaw(string $key, string $localPath, string $contentType): bool {
+    if (!ardyB2Configured() || !is_file($localPath)) return false;
 
     $payloadHash = hash_file('sha256', $localPath);
     $size        = filesize($localPath);
@@ -121,8 +125,8 @@ function ardyStoragePutFile(string $key, string $localPath, string $contentType 
 }
 
 /** Carica byte già in memoria su B2 (per file piccoli: foto compresse). HTTP 200 → true. */
-function ardyStoragePut(string $key, string $body, string $contentType = 'application/octet-stream'): bool {
-    if (!ardyB2ScritturaAttiva()) return false;
+function ardyB2PutRaw(string $key, string $body, string $contentType): bool {
+    if (!ardyB2Configured()) return false;
 
     $payloadHash = hash('sha256', $body);
     [$url, $headers] = ardyB2SignPut($key, $payloadHash, $contentType, gmdate('Ymd\THis\Z'));
@@ -144,6 +148,34 @@ function ardyStoragePut(string $key, string $body, string $contentType = 'applic
     if ($code === 200) return true;
     error_log("ARDY B2 PUT(mem) $key fallito: HTTP $code $err " . substr((string) $resp, 0, 500));
     return false;
+}
+
+// ── Le due porte d'ingresso a B2 ────────────────────────────────────────────
+// OFFLOAD AUTOMATICO (ardyStoragePut*): l'upload che avviene da solo quando carichi
+// un file dalla dash. È quello che ARDY_B2_SOLO_LETTURA spegne — B2 esce dal percorso
+// di servizio e nessun file "vivo" dipende più da una rilettura dal bucket.
+//
+// ARCHIVIAZIONE (ardyStorageArchivia*): il gesto esplicito di fine ciclo — progetto a
+// CATALOGATO, cliente CONSEGNATO — che deposita su B2 la documentazione di qualcosa che
+// è già tutto al suo posto altrove (WordPress, Woo, disco). Non è offload: è un
+// deposito di sicurezza, quindi passa anche a offload spento.
+
+function ardyStoragePut(string $key, string $body, string $contentType = 'application/octet-stream'): bool {
+    if (!ardyB2ScritturaAttiva()) return false;
+    return ardyB2PutRaw($key, $body, $contentType);
+}
+
+function ardyStoragePutFile(string $key, string $localPath, string $contentType = 'application/octet-stream'): bool {
+    if (!ardyB2ScritturaAttiva()) return false;
+    return ardyB2PutFileRaw($key, $localPath, $contentType);
+}
+
+function ardyStorageArchivia(string $key, string $body, string $contentType = 'application/octet-stream'): bool {
+    return ardyB2PutRaw($key, $body, $contentType);
+}
+
+function ardyStorageArchiviaFile(string $key, string $localPath, string $contentType = 'application/octet-stream'): bool {
+    return ardyB2PutFileRaw($key, $localPath, $contentType);
 }
 
 /** Elimina un oggetto da B2. Ritorna true su 200/204 (o 404: già assente). */

@@ -452,6 +452,24 @@ foreach ($progettiModuloCols as $col => $sql) {
     else { echo "  skip progetti.$col\n"; $skip++; }
 }
 
+// Archiviazione di fine ciclo su B2 (lug 2026): quando il ciclo si chiude — progetto a
+// CATALOGATO, cliente CONSEGNATO — la documentazione si deposita su Backblaze come
+// archivio a freddo (ardy-archivia-b2.php). Qui resta la ricevuta: quando, sotto quale
+// prefisso, quanti file, e se la rilettura di verifica è andata a buon fine. Le stesse
+// quattro colonne su progetti e clienti: è lo stesso gesto su due soggetti diversi.
+$colonneArchivio = [
+    'archiviato_at'       => "ADD COLUMN archiviato_at DATETIME NULL",
+    'archivio_prefisso'   => "ADD COLUMN archivio_prefisso VARCHAR(300) NULL",  // percorso sul bucket
+    'archivio_file'       => "ADD COLUMN archivio_file INT NOT NULL DEFAULT 0", // quanti file depositati
+    'archivio_verificato' => "ADD COLUMN archivio_verificato TINYINT(1) NOT NULL DEFAULT 0", // manifest riletto da B2
+];
+foreach (['progetti', 'clienti'] as $tab) {
+    foreach ($colonneArchivio as $col => $sql) {
+        if (!colExists($pdo, $tab, $col)) { ddl($pdo, "ALTER TABLE `$tab` $sql", "$tab.$col"); }
+        else { echo "  skip $tab.$col\n"; $skip++; }
+    }
+}
+
 // Versione Premium come progetto-copia agganciato (branch): un oggetto può avere una
 // variante 'premium' — nuovo progetto con scheda+distinta copiate, prodotto Woo separato,
 // collegato all'originale via parent_id. 'variante' distingue standard|premium.
