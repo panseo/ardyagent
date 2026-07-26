@@ -26,8 +26,7 @@ const ARDY_CLIENTI_COLS =
   . "indirizzo, stato, note, note_consegna, data_followup, inizio_lavoro, "
   . "fine_lavoro_prevista, sopralluogo_at, trasporto_data, wp_post_id, wp_post_link, foto_archiviate_at, "
   . "faq_pubblicata_at, created_at, updated_at, deleted_at, conversazione_letta_at, "
-  . "interior_design_attivo, interior_design_attivato_da, interior_design_attivato_at, "
-  . "interior_design_stile, interior_design_colori, interior_design_luce, interior_design_budget, interior_design_note";
+  . "interior_design_attivo, interior_design_attivato_da, interior_design_attivato_at, interior_design_note";
 
 function ardy_map_cliente(array $r, bool $withDeletedAt = false, bool $haRisposto = false, string $ultimoMsgAt = ''): array {
     $out = [
@@ -64,10 +63,6 @@ function ardy_map_cliente(array $r, bool $withDeletedAt = false, bool $haRispost
         'InteriorDesignAttivo'      => !empty($r['interior_design_attivo']),
         'InteriorDesignAttivatoDa'  => $r['interior_design_attivato_da'] ?? '',
         'InteriorDesignAttivatoAt'  => $r['interior_design_attivato_at'] ?? '',
-        'InteriorDesignStile'       => $r['interior_design_stile']  ?? '',
-        'InteriorDesignColori'      => $r['interior_design_colori'] ?? '',
-        'InteriorDesignLuce'        => $r['interior_design_luce']   ?? '',
-        'InteriorDesignBudget'      => $r['interior_design_budget'] ?? '',
         'InteriorDesignNote'        => $r['interior_design_note']   ?? '',
     ];
     if ($withDeletedAt) {

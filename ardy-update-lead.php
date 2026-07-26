@@ -36,8 +36,7 @@ try {
         'data_followup', 'inizio_lavoro', 'fine_lavoro_prevista',
         'trasporto_data',
         'wp_post_id', 'wp_post_link',
-        'interior_design_attivo', 'interior_design_stile', 'interior_design_colori',
-        'interior_design_luce', 'interior_design_budget', 'interior_design_note',
+        'interior_design_attivo', 'interior_design_note',
     ];
 
     $set    = ['`updated_at` = NOW()']; // aggiorna sempre il timestamp

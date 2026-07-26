@@ -300,22 +300,6 @@
               <textarea class="info-value editable" id="dInteriorNote" rows="5" oninput="markDirty()"
                         placeholder="Lo compila Sole al termine della chat: cosa vuole fare il cliente, gusti, ambienti, foto inviate."></textarea>
             </div>
-            <div class="info-cell">
-              <div class="info-label">Stile preferito</div>
-              <input class="info-value editable" id="dInteriorStile" oninput="markDirty()" placeholder="Es. minimal, boho, industriale…">
-            </div>
-            <div class="info-cell">
-              <div class="info-label">Colori preferiti</div>
-              <input class="info-value editable" id="dInteriorColori" oninput="markDirty()" placeholder="Es. toni caldi, verde salvia…">
-            </div>
-            <div class="info-cell">
-              <div class="info-label">Luce degli ambienti</div>
-              <input class="info-value editable" id="dInteriorLuce" oninput="markDirty()" placeholder="Es. sud, molto luminoso…">
-            </div>
-            <div class="info-cell">
-              <div class="info-label">Budget consulenza</div>
-              <input class="info-value editable" id="dInteriorBudget" oninput="markDirty()">
-            </div>
           </div>
 
           <!-- Foto di riferimento mandate in chat. Stessa sorgente delle foto della
@@ -1041,10 +1025,6 @@ function renderDetail() {
   document.getElementById('dSessionId').textContent = l.Session_ID ?? '—';
 
   // Interior Design: sezione e bottone di attivazione (vedi aggiornaSezioneInterior)
-  document.getElementById('dInteriorStile').value  = l.InteriorDesignStile  ?? '';
-  document.getElementById('dInteriorColori').value = l.InteriorDesignColori ?? '';
-  document.getElementById('dInteriorLuce').value   = l.InteriorDesignLuce   ?? '';
-  document.getElementById('dInteriorBudget').value = l.InteriorDesignBudget ?? '';
   document.getElementById('dInteriorNote').value   = l.InteriorDesignNote   ?? '';
   aggiornaSezioneInterior();
 
@@ -1540,10 +1520,6 @@ async function saveLead() {
     budget:         document.getElementById('dBudget').value.trim(),
     indirizzo:      document.getElementById('dIndirizzo').value.trim(),
     interior_design_attivo: currentLead.InteriorDesignAttivo ? 1 : 0,
-    interior_design_stile:  document.getElementById('dInteriorStile').value.trim(),
-    interior_design_colori: document.getElementById('dInteriorColori').value.trim(),
-    interior_design_luce:   document.getElementById('dInteriorLuce').value.trim(),
-    interior_design_budget: document.getElementById('dInteriorBudget').value.trim(),
     interior_design_note:   document.getElementById('dInteriorNote').value,
   };
 
@@ -1589,10 +1565,6 @@ async function saveLead() {
           Budget: payload.budget,
           Indirizzo: payload.indirizzo,
           InteriorDesignAttivo:  !!payload.interior_design_attivo,
-          InteriorDesignStile:   payload.interior_design_stile,
-          InteriorDesignColori:  payload.interior_design_colori,
-          InteriorDesignLuce:    payload.interior_design_luce,
-          InteriorDesignBudget:  payload.interior_design_budget,
           InteriorDesignNote:    payload.interior_design_note,
           // Aggiorna in memoria solo le date effettivamente inviate (vedi anti-clobber)
           ...('inizio_lavoro'        in payload ? { Inizio_lavoro: payload.inizio_lavoro } : {}),
