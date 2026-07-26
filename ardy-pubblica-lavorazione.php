@@ -16,6 +16,7 @@ require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-net.php';
 require_once __DIR__ . '/ardy-email.php';
 require_once __DIR__ . '/ardy-storage.php';   // pulizia copie bozza su B2 dopo il publish
+require_once __DIR__ . '/ardy-img.php';       // WEBP → JPEG: i social non prendono il WEBP
 
 // -----------------------------------------------------------
 // 2. CORS E PREFLIGHT (deve rispondere PRIMA di caricare WP)
@@ -124,7 +125,12 @@ foreach ($immagini as $idx => $imgData) {
     $finfo   = new finfo(FILEINFO_MIME_TYPE);
     $mime    = $finfo->buffer($decoded);
     if (!in_array($mime, $allowedMimes)) continue;
-    $ext      = $mime === 'image/png' ? 'png' : ($mime === 'image/webp' ? 'webp' : 'jpg');
+    // WEBP → JPEG: queste foto vanno anche sui social, e Google/Instagram il WEBP
+    // non lo accettano (Google risponde 500 senza spiegare). Vedi ardy-img.php.
+    $norm    = ardyImgNormalizza($decoded, $mime);
+    $decoded = $norm['bytes'];
+    $mime    = $norm['mime'];
+    $ext     = $norm['ext'];
     $filename = date('Ymd_His') . '_' . uniqid() . '_' . $idx . '.' . $ext;
     $filepath = $sessionDir . $filename;
     if (file_put_contents($filepath, $decoded) === false) continue;

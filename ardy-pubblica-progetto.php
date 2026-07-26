@@ -19,6 +19,7 @@ require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-net.php';
 require_once __DIR__ . '/ardy-storage.php';
+require_once __DIR__ . '/ardy-img.php';     // WEBP/GIF → JPEG: i social non li prendono
 
 header('Access-Control-Allow-Origin: https://ardyagent.ardy-lab.it');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -133,7 +134,11 @@ foreach (array_slice($galleria, 0, 20) as $g) {
         error_log('ARDY PUBBLICA PROGETTO: immagine ' . $g['id'] . ' scartata — tipo non ammesso (' . $mime . ')');
         continue;
     }
-    $galPronte[] = ['mime' => $mime, 'ext' => $extMap[$mime], 'bytes' => $bytes, 'tipo' => $g['tipo'], 'gid' => $g['id']];
+    // WEBP/GIF → JPEG prima di salire su WP: è il file di WordPress quello che poi
+    // mandiamo ai social, e Google/Instagram il WEBP non lo prendono.
+    $norm = ardyImgNormalizza($bytes, $mime);
+    $galPronte[] = ['mime' => $norm['mime'], 'ext' => $norm['ext'], 'bytes' => $norm['bytes'],
+                    'tipo' => $g['tipo'], 'gid' => $g['id']];
 }
 if ($galleria && !$galPronte) {
     error_log('ARDY PUBBLICA PROGETTO: progetto ' . $progettoId . ' ha ' . count($galleria) . ' immagini in galleria ma nessuna leggibile');
@@ -173,6 +178,14 @@ foreach ($galleria as $riga) {                // ordine del racconto: prima → 
     $gid      = (int) $riga['id'];
     $attachId = isset($mappa[$gid]) ? (int) $mappa[$gid] : 0;
     if ($attachId > 0 && !get_post($attachId)) $attachId = 0;   // allegato cancellato a mano su WP
+    // Allegato in un formato che i social non prendono (i WEBP caricati prima della
+    // conversione): lo si rifà. Senza questo, «Aggiorna le immagini» riuserebbe per
+    // sempre il file sbagliato e Google continuerebbe a rispondere 500.
+    if ($attachId > 0 && !ardyImgOkPerSocial((string) get_post_mime_type($attachId))) {
+        error_log('ARDY PUBBLICA PROGETTO: allegato ' . $attachId . ' in formato non social ('
+                . get_post_mime_type($attachId) . ') — ricaricato convertito');
+        $attachId = 0;
+    }
 
     if ($attachId === 0) {
         $g = $pronteByGid[$gid] ?? null;

@@ -21,6 +21,7 @@ require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-net.php';
 require_once __DIR__ . '/ardy-storage.php';
+require_once __DIR__ . '/ardy-img.php';     // WEBP/GIF → JPEG: i social non li prendono
 
 header('Access-Control-Allow-Origin: https://ardyagent.ardy-lab.it');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -96,7 +97,9 @@ foreach ($fotoNomi as $fn) {
     }
     $mime = (new finfo(FILEINFO_MIME_TYPE))->buffer($bytes);
     if (!isset($extMap[$mime])) { error_log('ARDY PUBBLICA FASE PROG: mime foto non valido fase=' . $faseId . ' file=' . $fn . ' mime=' . $mime); continue; }
-    $fotoPronte[] = ['mime' => $mime, 'ext' => $extMap[$mime], 'bytes' => $bytes];
+    // WEBP/GIF → JPEG: da WP queste foto vanno anche ai social, che li rifiutano.
+    $norm = ardyImgNormalizza($bytes, $mime);
+    $fotoPronte[] = ['mime' => $norm['mime'], 'ext' => $norm['ext'], 'bytes' => $norm['bytes']];
 }
 
 if (!file_exists(ARDY_WP_LOAD)) { echo json_encode(['success' => false, 'error' => 'wp-load.php non trovato']); exit(); }

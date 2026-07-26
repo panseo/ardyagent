@@ -821,13 +821,26 @@ stesso motore, cambia solo il *contenuto*:
    (`ardy-progetti-galleria-api.php`) — un render WEBP arriverebbe su WP e Google lo rifiuterebbe.
 2. Il testo (lunghezza/caratteri) e il link della call-to-action, meno probabili.
 
-**Come chiuderla, in due minuti:** `ardy-gbp-check.php?img=<url della foto dell'articolo>` → il riquadro
-«L'immagine del post» dà formato e dimensioni e dice se Google la prende. Se serve la controprova, in fondo
-alla pagina ci sono le due pubblicazioni di prova (solo testo / con quella foto): se passa senza e fallisce
-con, è l'immagine. **I post di prova compaiono sulla scheda e vanno cancellati a mano.**
+**✅ CAUSA CONFERMATA E CORRETTA (26/07/2026).** Il check su quell'immagine ha risposto: **784×1359, 169 KB,
+`image/webp`**. Google accetta solo **JPG e PNG** → 500. Era l'ipotesi 1, ed è il motivo esatto per cui la dash
+clienti passa (foto da telefono, JPG) e quella design no (render WEBP).
 
-Se è il formato, il fix è nostro: convertire in JPG/PNG al sideload su WP, o scartare i formati che Google non
-prende scegliendo la prima immagine buona invece della prima e basta.
+**Fix applicato** — la conversione avviene *prima* del caricamento su WordPress, perché è il file di WP quello
+che poi mandiamo ai social:
+- **`ardy-img.php`** (nuovo, in deny nel `.htaccess`): `ardyImgNormalizza()` converte WEBP/GIF → JPEG (qualità
+  88, fondo bianco sotto la trasparenza, altrimenti diventa nera); JPG e PNG passano **intatti**, senza
+  ricompressione. Se GD manca o l'immagine è illeggibile ritorna l'originale — meglio un'immagine che i social
+  forse rifiutano che nessuna immagine, l'articolo la vuole comunque. `ardyImgOkPerSocial()` dice se un mime va
+  bene così com'è.
+- Usato in tutti e tre i punti in cui carichiamo su WP: `ardy-pubblica-progetto.php` (galleria dell'articolo),
+  `ardy-pubblica-fase-progetto.php` (foto delle fasi-racconto), `ardy-pubblica-lavorazione.php` (fasi cliente).
+- **Gli articoli già pubblicati si riparano da soli**: `aggiorna_immagini` ora controlla il *formato*
+  dell'allegato già su WP e, se non è social-safe, lo ricarica convertito invece di riusarlo per sempre. Basta
+  premere 🖼️ **Aggiorna le immagini dell'articolo** su Ardy Tower.
+
+⏭️ **Da verificare al prossimo deploy:** su Ardy Tower premere 🖼️ Aggiorna le immagini → ricontrollare l'URL
+col check (deve dire `image/jpeg` ✅) → pubblicare su Google. Nota: il WEBP non lo rifiuta solo Google —
+**Instagram vuole JPEG**, quindi la conversione sistema anche pubblicazioni IG che sarebbero fallite più avanti.
 
 **✅ Elenco "Fasi pubblicate" ora è a fisarmonica (20/07):** ogni fase pubblicata è **cliccabile e si espande**
 (`caricaFasiPubblicate` in `ardy-michela-app.html`) mostrando: il **testo** pubblicato, le **foto**, e il box
