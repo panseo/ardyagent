@@ -7,10 +7,12 @@
  * prima riportarli giù li renderebbe irraggiungibili per sempre. Questo script fa il
  * passo che manca — scarica ogni oggetto e riporta la riga a storage='local'.
  *
- * Ordine consigliato per il distacco:
- *   1. `define('ARDY_B2_SOLO_LETTURA', true);` in ardy-config.php  → niente file NUOVI su B2
- *   2. questo script (prima in prova, poi con --applica)           → i vecchi tornano su disco
- *   3. solo a rimpatrio finito: via le costanti ARDY_B2_* dal config
+ * Stato attuale: l'offload automatico è già SPENTO nel codice (ardyB2ScritturaAttiva),
+ * quindi i file nuovi restano su disco. Questo script chiude il cerchio sui vecchi:
+ *   1. `php ardy-b2-rimpatrio.php`            → prova: dice cosa farebbe
+ *   2. `php ardy-b2-rimpatrio.php --applica`  → i vecchi tornano su disco
+ * Da lì in poi B2 serve solo all'archiviazione di fine ciclo (ardy-archivia-b2.php),
+ * e le costanti ARDY_B2_* vanno TENUTE: senza, non si archivia più.
  *
  * Uso (da CLI, sul server):
  *   php ardy-b2-rimpatrio.php                 # PROVA: dice cosa farebbe, non tocca nulla
@@ -44,10 +46,10 @@ if (!ardyB2Configured()) {
     exit(1);
 }
 if (!ardyB2ScritturaAttiva()) {
-    echo "Scrittura su B2 già disattivata (ARDY_B2_SOLO_LETTURA): bene, i file nuovi restano su disco.\n";
+    echo "Offload automatico spento: bene, i file nuovi restano già su disco.\n";
 } else {
-    echo "NOTA: si sta ancora scrivendo su B2. Metti prima ARDY_B2_SOLO_LETTURA nel config,\n";
-    echo "      altrimenti mentre rimpatri continuano ad arrivare file nuovi lassù.\n";
+    echo "NOTA: ARDY_B2_OFFLOAD è acceso nel config, quindi si sta ancora scrivendo su B2.\n";
+    echo "      Spegnilo prima, o mentre rimpatri continuano ad arrivare file nuovi lassù.\n";
 }
 
 /**

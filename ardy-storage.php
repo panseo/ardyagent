@@ -17,8 +17,9 @@
 //   ardyStoragePresignedGet(key, ttl, dlName)  → URL firmato per scaricare da B2
 //   ardyStorageGet(key)                        → byte di un oggetto (proxy lato server)
 //
-// Per staccare B2: ARDY_B2_SOLO_LETTURA nel config, poi ardy-b2-rimpatrio.php, e solo
-// alla fine via le costanti. Vedi TODO-PROSSIMI-TASK.md.
+// L'offload automatico su B2 è SPENTO (26/07/2026): i file nuovi restano su disco e B2
+// serve solo all'archiviazione di fine ciclo (ardy-archivia-b2.php). I file già lassù si
+// riportano giù con ardy-b2-rimpatrio.php. Vedi TODO-PROSSIMI-TASK.md.
 // -----------------------------------------------------------
 
 require_once __DIR__ . '/ardy-config.php';
@@ -32,16 +33,20 @@ function ardyB2Configured(): bool {
 }
 
 /**
- * Interruttore di SOLA LETTURA: con `define('ARDY_B2_SOLO_LETTURA', true);` in
- * ardy-config.php nessun file NUOVO finisce più su B2 (tutto resta su disco, che è
- * il fallback di ogni chiamante), mentre ciò che è già lassù si continua a leggere.
+ * Offload automatico: SPENTO (deciso 26/07/2026). I file che carichi dalla dash
+ * restano sul disco del server, dove la dash e WordPress li leggono senza passare da
+ * una richiesta HTTPS verso Backblaze. B2 esce così dal percorso di lavoro: un suo
+ * guasto non può più rovinare una pubblicazione.
  *
- * Serve a staccare B2 in sicurezza: prima si smette di scriverci, poi si rimpatriano
- * gli oggetti esistenti su disco, e SOLO ALLA FINE si tolgono le costanti. Togliere
- * subito le costanti renderebbe irraggiungibili i file che vivono solo su B2.
+ * Non è un interruttore da usare tutti i giorni: sta qui perché la scelta sia esplicita
+ * e reversibile. Per riaccenderlo: `define('ARDY_B2_OFFLOAD', true);` in ardy-config.php.
+ *
+ * NB: questo non tocca l'ARCHIVIAZIONE di fine ciclo (ardyStorageArchivia*), che è il
+ * ruolo che B2 mantiene — né i file GIÀ su B2, che si continuano a leggere finché non
+ * si rimpatriano su disco con ardy-b2-rimpatrio.php.
  */
 function ardyB2ScritturaAttiva(): bool {
-    return ardyB2Configured() && !(defined('ARDY_B2_SOLO_LETTURA') && ARDY_B2_SOLO_LETTURA);
+    return ardyB2Configured() && defined('ARDY_B2_OFFLOAD') && ARDY_B2_OFFLOAD;
 }
 
 function ardyB2BaseUrl(): string { return 'https://' . ARDY_B2_ENDPOINT; }
@@ -91,7 +96,7 @@ function ardyB2SignPut(string $key, string $payloadHash, string $contentType, st
  * con hash_file e il corpo si invia via CURLOPT_INFILE). Ritorna true su HTTP 200.
  *
  * Le due funzioni pubbliche che ci passano sopra hanno regole diverse:
- *   ardyStoragePutFile()      — offload automatico: rispetta ARDY_B2_SOLO_LETTURA
+ *   ardyStoragePutFile()      — offload automatico: oggi spento (vedi ardyB2ScritturaAttiva)
  *   ardyStorageArchiviaFile() — archiviazione a fine ciclo: gesto esplicito, passa sempre
  */
 function ardyB2PutFileRaw(string $key, string $localPath, string $contentType): bool {
@@ -152,8 +157,8 @@ function ardyB2PutRaw(string $key, string $body, string $contentType): bool {
 
 // ── Le due porte d'ingresso a B2 ────────────────────────────────────────────
 // OFFLOAD AUTOMATICO (ardyStoragePut*): l'upload che avviene da solo quando carichi
-// un file dalla dash. È quello che ARDY_B2_SOLO_LETTURA spegne — B2 esce dal percorso
-// di servizio e nessun file "vivo" dipende più da una rilettura dal bucket.
+// un file dalla dash. Oggi è SPENTO — B2 è fuori dal percorso di servizio e nessun file
+// "vivo" dipende più da una rilettura dal bucket.
 //
 // ARCHIVIAZIONE (ardyStorageArchivia*): il gesto esplicito di fine ciclo — progetto a
 // CATALOGATO, cliente CONSEGNATO — che deposita su B2 la documentazione di qualcosa che

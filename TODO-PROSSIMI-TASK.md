@@ -43,16 +43,19 @@ romperebbe la pubblicazione: la ragione per spostarlo ad archivio di fine ciclo 
 **Il vincolo da non dimenticare:** un file caricato dal vecchio offload va su B2 **oppure** su
 disco, mai su entrambi. Togliere le costanti `ARDY_B2_*` dal config **senza rimpatriare prima**
 renderebbe irraggiungibili tutti i file che vivono solo lassù (le foto dei 10 articoli comprese).
-Sequenza per spegnere l'offload e passare al solo archivio:
+Sequenza per togliere B2 dal percorso di lavoro:
 
-1. `define('ARDY_B2_SOLO_LETTURA', true);` in `ardy-config.php` → nessun file **nuovo** su B2
-   (ogni chiamante ha già il fallback su disco). Fatto lato codice: `ardyB2ScritturaAttiva()`.
-2. `php ardy-b2-rimpatrio.php` — prima in prova, poi `--applica`. Scarica gli oggetti e riporta
-   le righe a `storage='local'` (`progetto_galleria`, `progetto_file`, `progetto_foto_vendita`).
-   È anche la **diagnosi definitiva**: se falliscono tutti, il problema è la lettura in sé
-   (credenziali / endpoint / orologio del server / firewall in uscita) → cercare `ARDY B2 GET`
-   nel log PHP, c'è il codice HTTP.
-3. Solo a rimpatrio riuscito: via le costanti `ARDY_B2_*` e svuotare il bucket.
+1. **Fatto (26/07)**: offload automatico **spento nel codice** — `ardyB2ScritturaAttiva()` ora
+   richiede `ARDY_B2_OFFLOAD` nel config, che non c'è. I file nuovi restano tutti su disco.
+   I due gesti *espliciti* di backup delle foto fasi («Invia foto a B2», «Libera spazio disco»)
+   passano invece da `ardyStorageArchivia()` e continuano a funzionare: sono archiviazione,
+   non offload.
+2. ⏳ `php ardy-b2-rimpatrio.php` — prima in prova, poi `--applica`. Riporta su disco i file
+   già lassù e rimette le righe a `storage='local'` (`progetto_galleria`, `progetto_file`,
+   `progetto_foto_vendita`). Finché non gira, quei file si leggono ancora da B2: la lettura
+   funziona (verificato), ma è l'ultima dipendenza da togliere.
+3. Le costanti `ARDY_B2_*` vanno **TENUTE**: servono all'archiviazione di fine ciclo. Il bucket
+   non si svuota — cambia solo cosa ci finisce dentro e quando.
 
 - ⚠️ **Non coperte dal rimpatrio**: le foto delle fasi-racconto passate da «libera spazio disco»
   (non hanno colonna `storage`, la chiave B2 è calcolata). Sono le meno critiche — quelle foto

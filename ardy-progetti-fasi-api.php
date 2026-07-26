@@ -280,7 +280,9 @@ try {
                 $raw = @file_get_contents($path);
                 if ($raw === false) { $errori++; continue; }
                 $mime = (new finfo(FILEINFO_MIME_TYPE))->buffer($raw) ?: 'application/octet-stream';
-                if (ardyStoragePut(progettoFaseB2Key($progettoId, $fid, $fn), $raw, $mime)) $inviate++;
+                // Gesto esplicito di backup (non offload automatico): passa anche a
+                // offload spento — è lo stesso ruolo dell'archiviazione di fine ciclo.
+                if (ardyStorageArchivia(progettoFaseB2Key($progettoId, $fid, $fn), $raw, $mime)) $inviate++;
                 else $errori++;
             }
         }
@@ -311,7 +313,8 @@ try {
                 if ($raw === false) { $errori++; continue; }
                 $mime = (new finfo(FILEINFO_MIME_TYPE))->buffer($raw) ?: 'application/octet-stream';
                 // Backup su B2 PRIMA di cancellare: se fallisce, il disco NON si tocca.
-                if (!ardyStoragePut(progettoFaseB2Key($progettoId, $fid, $fn), $raw, $mime)) { $errori++; continue; }
+                // Archiviazione, non offload: è una richiesta esplicita dell'autore.
+                if (!ardyStorageArchivia(progettoFaseB2Key($progettoId, $fid, $fn), $raw, $mime)) { $errori++; continue; }
                 $sz = strlen($raw);
                 if (@unlink($path)) { $liberate++; $byte += $sz; } else { $errori++; }
             }
