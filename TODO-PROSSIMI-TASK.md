@@ -21,7 +21,7 @@ mancanti negli articoli, offload B2 spento + rimpatrio (42/42 file, zero errori)
    Facebook/Instagram/Google la pubblicazione da articolo/fasi del progetto (commit `431f711`,
    `b246f42`). Nuove colonne `fasi.foto_wp_urls`, `fasi.social_pubblicata_at`,
    `progetti.wp_immagini`, `progetti.social_pubblicato_at`, `progetti.testo_social`.
-2. **Collaudo social**: pubblica una fase su WP, poi 📣 su un solo canale, poi su più insieme
+2. **Collaudo social**: pubblica una fase su WP, poi 📲 su un solo canale, poi su più insieme
    (Facebook+Instagram+Google); controlla che la **foto** arrivi (non solo il testo) e che un
    fallimento parziale (es. Google giù) si legga come tale, non come errore generico.
 3. **Collaudo archivio 📦**: su un progetto **fake** (non su Ardy Tower — è un prototipo reale in
@@ -40,11 +40,18 @@ social" delle fasi pubblicate in `ardy-michela-app.html` (`ardy-pubblica-social.
 API per Meta, `ardy-gbp-post.php` per Google, in parallelo). Caption a parte
 (`ardy-progetti-ai.php` mode `genera_social`: corta, con hashtag — tolti in automatico su Google).
 
+- **Stesso blocco, non «simile»**: il pannello è ora il gemello esatto di quello delle fasi
+  cliente — sempre in vista (niente bottone che apre un form), toggle + caption + i tre bottoni
+  **✨ Rigenera / 👁 Anteprima / 📲 Pubblica**, con la stessa anteprima Instagram
+  (`renderIgPreview`) e la caption che si scrive da sola all'apertura del modulo Articolo, come
+  fa `ensureFaseSocial()` sulle fasi cliente.
 - **Toggle per canale, indipendenti**: Facebook/Instagram/Google si scelgono uno per uno (pillole
-  `.social-toggle`); non si può scendere a zero canali selezionati.
+  `.social-toggle`, `socialDestHtml`/`toggleSocialDest` copiati tali e quali); **nessun canale è
+  preselezionato** e le piattaforme si leggono dal DOM senza default FB/IG di riserva, così non si
+  pubblica per sbaglio dove non si voleva. Non si può scendere a zero canali selezionati.
 - **Esito per-canale**: l'invio va in parallelo a Meta e Google; se uno fallisce e l'altro no, il
   messaggio lo dice invece di un generico errore che farebbe ripetere anche l'invio riuscito.
-- **Regola**: il bottone 📣 compare solo su ciò che è **già pubblicato su WordPress** — FB/IG/Google
+- **Regola**: il blocco 📲 compare solo su ciò che è **già pubblicato su WordPress** — FB/IG/Google
   devono *scaricare* l'immagine da un URL pubblico, e le nostre foto stanno dietro Basic Auth. Gli
   URL buoni nascono al sideload su WP e ora si **salvano** (`fasi.foto_wp_urls`,
   `progetti.wp_immagini`) invece di essere buttati via.

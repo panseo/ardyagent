@@ -95,6 +95,11 @@
   .social-toggle.sel { opacity: 1; filter: none; border-color: var(--accent); color: var(--text); }
   .social-toggle svg { display: block; }
 
+  /* Anteprima Instagram del post — stessa finestra della dash clienti. */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 300;
+    display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+  .modal-overlay.open { display: flex; }
+
   .panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-bottom:18px; box-shadow:var(--shadow); }
   .panel h2 { font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:2px; color:var(--accent); margin-bottom:14px; font-weight:400; }
   .panel h2 small { color:var(--text-dim); font-family:'DM Sans'; font-size:11px; letter-spacing:.5px; }
@@ -231,6 +236,34 @@
   </main>
 </div>
 
+<!-- Anteprima Instagram del post — stessa finestra della dash clienti: si guarda
+     come verrà prima di mandarlo, foto comprese. -->
+<div class="modal-overlay" id="igPreviewOverlay" onclick="if(event.target===this)chiudiAnteprimaIg()">
+  <div onclick="event.stopPropagation()" style="width:min(420px,94vw);background:#fff;color:#262626;border-radius:12px;overflow:hidden;font-family:system-ui,-apple-system,'Segoe UI',sans-serif">
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 14px">
+      <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(45deg,#f09433,#dc2743,#bc1888);flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px">A</div>
+      <div style="font-weight:600;font-size:14px">ardy_lab</div>
+      <div style="margin-left:auto;color:#262626;font-size:18px;line-height:1">⋯</div>
+    </div>
+    <div id="igImgWrap" style="position:relative;width:100%;aspect-ratio:1/1;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden">
+      <img id="igImg" style="width:100%;height:100%;object-fit:cover;display:none" alt="">
+      <div id="igNoImg" style="color:#aaa;font-size:13px;padding:20px;text-align:center">Nessuna foto nel post</div>
+      <button id="igPrev" onclick="igNav(-1)" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);border:none;background:rgba(0,0,0,.45);color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;display:none">‹</button>
+      <button id="igNext" onclick="igNav(1)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);border:none;background:rgba(0,0,0,.45);color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;display:none">›</button>
+      <div id="igDots" style="position:absolute;bottom:8px;left:0;right:0;display:flex;gap:5px;justify-content:center"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;padding:10px 14px 4px;font-size:22px;line-height:1">
+      <span>♡</span><span>💬</span><span>➤</span><span style="margin-left:auto">🔖</span>
+    </div>
+    <div style="padding:4px 14px 16px;font-size:14px;line-height:1.5;max-height:240px;overflow:auto">
+      <span style="font-weight:600">ardy_lab</span> <span id="igCaption" style="white-space:pre-wrap"></span>
+    </div>
+    <div style="padding:0 14px 14px;text-align:right">
+      <button onclick="chiudiAnteprimaIg()">Chiudi</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -251,7 +284,12 @@ const DISPONIBILITA = [['pronto','Pronto'],['su_ordinazione','Su ordinazione'],[
 // Toggle delle card collassabili (delega: click sull'<h2> di una .panel.mod).
 document.addEventListener('click', function(e){
   const h2 = e.target.closest('h2');
-  if (h2 && h2.parentElement && h2.parentElement.classList.contains('mod')) h2.parentElement.classList.toggle('open');
+  if (!h2 || !h2.parentElement || !h2.parentElement.classList.contains('mod')) return;
+  h2.parentElement.classList.toggle('open');
+  // Aprire l'Articolo scrive da sola la caption social se manca — un soggetto solo,
+  // quindi una chiamata sola (le fasi-racconto hanno il loro ✨ Rigenera: aprire il
+  // modulo genererebbe N caption in un colpo).
+  if (h2.parentElement.id === 'mod-articolo') socialEnsureArticolo();
 });
 
 // ── Lightbox immagini (delega su .thumb) ────────────────────
@@ -455,6 +493,7 @@ function renderDettaglio(nuovo=false){
   // Ogni render riflette lo stato salvato sul server ⇒ riparte "pulito".
   stato.dirty = false;
   updateSaveBar();
+  socialEnsureArticolo();
 }
 
 // ── Barra "Salva tutto" (campi progetto + scheda prodotto + distinta) ──
@@ -1017,6 +1056,8 @@ function platLabel(arr){
   if (names.length <= 1) return names[0] || 'social';
   return names.slice(0,-1).join(', ') + ' e ' + names[names.length-1];
 }
+// Un URL che non è http(s) non finisce mai in un src/href (stessa guardia della dash clienti).
+function safeUrl(u){ return /^https?:\/\//i.test(String(u ?? '')) ? String(u) : '#'; }
 // Google Business riusa la caption ma SENZA hashtag (stonano sulla scheda);
 // FB/IG li tengono. Stessa regola di ardy-michela-app.html.
 function stripHashtags(t){
@@ -1024,8 +1065,31 @@ function stripHashtags(t){
   return String(t).replace(/#[\p{L}\p{N}_]+/gu, '').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
-// { chiave: {testo, piattaforme:[]} } — una bozza aperta per soggetto.
-let socialForm = {};
+// Selettore destinazioni: un toggle per canale, si pubblica anche su uno solo.
+// Copiato tale e quale da ardy-michela-app.html (stesse classi, stessi data-*,
+// stessa lettura dal DOM) così i due pannelli restano allineati.
+function socialDestHtml(prefix, sel){
+  const selArr = (Array.isArray(sel) && sel.length) ? sel : ['facebook','instagram'];
+  const tog = (plat, label, svg) => {
+    const on = selArr.includes(plat);
+    return `<button type="button" class="social-toggle${on ? ' sel' : ''}" data-prefix="${prefix}" data-plat="${plat}"`
+      + ` title="Pubblica su ${label}" onclick="toggleSocialDest(this)">${svg}<span>${label}</span></button>`;
+  };
+  return `<div class="social-dest" id="dest_${prefix}" style="margin-top:8px">`
+    + tog('facebook','Facebook',FB_SVG)
+    + tog('instagram','Instagram',IG_SVG)
+    + tog('google','Google',GOOGLE_SVG)
+    + `</div>`;
+}
+// Click su un toggle: solo una classe sul DOM — niente re-render, così quello che
+// si sta scrivendo nella caption non sparisce sotto le dita.
+function toggleSocialDest(btn){
+  const wrap = btn.parentElement;
+  const wouldDeselect = btn.classList.contains('sel');
+  const restanti = wrap.querySelectorAll('.social-toggle.sel').length - (wouldDeselect ? 1 : 0);
+  if (wouldDeselect && restanti < 1){ toast('Scegli almeno un social'); return; }
+  btn.classList.toggle('sel');
+}
 
 function socialChiave(tipo, id){ return tipo + '_' + id; }
 function socialImmagini(tipo, id){
@@ -1033,77 +1097,126 @@ function socialImmagini(tipo, id){
   const f = (stato.dettaglio.fasi || []).find(x => x.id == id);
   return (f && f.foto_wp_urls) || [];
 }
-function socialApri(tipo, id){
-  // La caption già usata si rilegge dallo stato: passarla nell'onclick significherebbe
-  // infilare virgolette e a capo dentro un attributo HTML, che è un modo sicuro di romperlo.
-  let testo = '';
-  if (tipo === 'progetto') testo = stato.dettaglio.progetto.testo_social || '';
-  else {
-    const f = (stato.dettaglio.fasi || []).find(x => x.id == id);
-    testo = (f && f.testo_social) || '';
-  }
-  // Default facebook+instagram, come nella dash clienti: Google resta un opt-in
-  // esplicito (non è mai selezionato "per sbaglio" solo perché è visibile).
-  socialForm[socialChiave(tipo, id)] = { testo, piattaforme: ['facebook','instagram'] };
-  renderDettaglio();
+// La caption già salvata si rilegge dallo stato: passarla in un attributo onclick
+// vorrebbe dire infilarci virgolette e a capo, che è un modo sicuro di romperlo.
+function socialTestoSalvato(tipo, id){
+  if (tipo === 'progetto') return stato.dettaglio.progetto.testo_social || '';
+  const f = (stato.dettaglio.fasi || []).find(x => x.id == id);
+  return (f && f.testo_social) || '';
 }
-function socialChiudi(tipo, id){ delete socialForm[socialChiave(tipo, id)]; renderDettaglio(); }
-function socialTogglePiattaforma(tipo, id, plat){
-  const k = socialChiave(tipo, id);
-  const f = socialForm[k]; if (!f) return;
-  f.testo = document.getElementById('soc_testo_' + k)?.value ?? f.testo;
-  const attiva = f.piattaforme.includes(plat);
-  // Non lasciare zero canali selezionati (stessa regola di toggleSocialDest).
-  if (attiva && f.piattaforme.length <= 1){ toast('Scegli almeno un social'); return; }
-  f.piattaforme = attiva ? f.piattaforme.filter(p => p !== plat) : f.piattaforme.concat(plat);
-  renderDettaglio();
-}
-// Box di composizione: caption rivedibile + scelta dei canali (pillole, come nella
-// dash clienti). Niente invio "al volo": il testo lo si guarda sempre prima.
-function socialBox(tipo, id){
-  const k = socialChiave(tipo, id);
-  const f = socialForm[k];
-  if (!f) return '';
+
+// Blocco "Pubblica sui social" — gemello esatto di quello delle fasi cliente:
+// tre toggle (nessuno preselezionato: si sceglie ogni volta dove va), caption
+// rivedibile, e i tre bottoni Rigenera / Anteprima / Pubblica.
+function socialBlocco(tipo, id, nota){
+  const k    = socialChiave(tipo, id);
   const imgs = socialImmagini(tipo, id);
-  const tog = (plat, svg) => `<button type="button" class="social-toggle${f.piattaforme.includes(plat)?' sel':''}" title="Pubblica su ${SOCIAL_LABEL[plat]}" onclick="socialTogglePiattaforma('${tipo}',${id},'${plat}')">${svg}<span>${SOCIAL_LABEL[plat]}</span></button>`;
   return `
-  <div class="panel" style="background:var(--surface2);margin-top:10px">
-    <div class="field"><label>Testo del post <small class="muted">— caption per i social</small></label>
-      <textarea id="soc_testo_${k}" style="min-height:110px" placeholder="Scrivi la caption, oppure generala con l'AI">${esc(f.testo)}</textarea>
-      <div style="margin-top:6px"><button class="sm" id="socAi_${k}" onclick="socialGenera('${tipo}',${id})">✨ Genera con AI</button>
-        <span class="muted" style="margin-left:6px">Rivedila sempre prima di pubblicare.</span></div>
+  <div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border)">
+    <div class="muted" style="text-transform:uppercase;letter-spacing:1px">📲 Pubblica sui social</div>
+    ${socialDestHtml(k, ['none'])}
+    <textarea id="soc_testo_${k}" style="min-height:100px;margin-top:8px" placeholder="Caption per i social…">${esc(socialTestoSalvato(tipo, id))}</textarea>
+    <div class="row" style="margin-top:8px">
+      <button class="sm" style="flex:1 1 100px" id="socAi_${k}" onclick="socialRigenera('${tipo}',${id},this)">✨ Rigenera</button>
+      <button class="sm" style="flex:1 1 100px" onclick="socialAnteprima('${tipo}',${id})">👁 Anteprima</button>
+      <button class="sm primary" style="flex:2 1 130px" onclick="socialInvia('${tipo}',${id})">📲 Pubblica</button>
     </div>
-    <div class="social-dest" style="margin-top:10px">${tog('facebook',FB_SVG)}${tog('instagram',IG_SVG)}${tog('google',GOOGLE_SVG)}</div>
-    <div class="muted" style="font-size:.85em;margin:6px 0">Testo uguale per FB/IG; su Google va lo stesso ma <b>senza hashtag</b> (stonano sulla scheda).</div>
-    <div class="muted" style="margin:6px 0">${imgs.length ? `${imgs.length} immagini dall'articolo` : '⚠️ nessuna immagine pubblica: il post uscirà solo testo'}</div>
-    <div class="row" style="align-items:center">
-      <button class="primary" onclick="socialInvia('${tipo}',${id})">📣 Pubblica sui social</button>
-      <button class="ghost" onclick="socialChiudi('${tipo}',${id})">Annulla</button>
-    </div>
+    <div class="muted" style="font-size:.85em;margin-top:6px">Testo brand per FB/IG. Su Google va lo stesso, senza hashtag. ${imgs.length ? `${imgs.length} immagini pubbliche + il link.` : '<b>Nessuna immagine pubblica</b>: il post uscirà solo testo.'}${nota ? ' ' + nota : ''}</div>
     <div id="soc_out_${k}" class="muted" style="margin-top:6px"></div>
   </div>`;
 }
-async function socialGenera(tipo, id){
-  const k = socialChiave(tipo, id);
-  const f = socialForm[k]; if (!f) return;
-  f.testo = document.getElementById('soc_testo_' + k)?.value ?? f.testo;
+
+// Genera la caption via AI e la scrive nella textarea (mai un re-render: il resto
+// del modulo, e quello che c'è scritto altrove, resta com'è).
+// `silenzioso` = riempimento automatico all'apertura: non tocca una caption già
+// scritta e non disturba con i toast.
+async function socialGeneraCaption(tipo, id, btn, silenzioso){
+  const k  = socialChiave(tipo, id);
+  const ta = document.getElementById('soc_testo_' + k);
+  if (!ta) return;
+  if (silenzioso && ta.value.trim()) return;
   const p = stato.dettaglio.progetto;
-  let bozza = f.testo, faseNome = '';
+  let bozza = ta.value.trim(), faseNome = '';
   if (tipo === 'fase'){
     const fa = (stato.dettaglio.fasi || []).find(x => x.id == id);
     if (fa){ faseNome = fa.fase_nome || ''; if (!bozza) bozza = fa.testo_breve || ''; }
   } else if (!bozza) {
     bozza = stato.articoloTesto || p.descrizione || '';
   }
-  const btn = document.getElementById('socAi_' + k);
+  const etichetta = btn ? btn.textContent : '';
   if (btn){ btn.disabled = true; btn.textContent = '✨ Scrivo…'; }
+  if (silenzioso) ta.placeholder = 'Genero la caption per i social…';
   try {
     const d = await fetch(AI_API, { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ mode:'genera_social', progetto_id: p.id, fase_nome: faseNome, bozza }) }).then(r=>r.json());
-    if (d.success && d.testo){ f.testo = d.testo; renderDettaglio(); toast('Caption generata — rivedila'); return; }
-    toast(d.error || 'Errore generazione');
-  } catch(e){ toast('Errore di rete'); }
-  if (btn){ btn.disabled = false; btn.textContent = '✨ Genera con AI'; }
+    if (d.success && d.testo){
+      // Nel riempimento automatico non si sovrascrive quello che intanto è stato scritto a mano.
+      if (!silenzioso || !ta.value.trim()) ta.value = d.testo;
+      if (!silenzioso) toast('✨ Caption rigenerata — rivedila');
+    } else if (!silenzioso) toast(d.error || 'Errore generazione');
+  } catch(e){ if (!silenzioso) toast('Errore di rete'); }
+  finally {
+    if (btn){ btn.disabled = false; btn.textContent = etichetta; }
+    ta.placeholder = 'Caption per i social…';
+  }
+}
+function socialRigenera(tipo, id, btn){ return socialGeneraCaption(tipo, id, btn, false); }
+// All'apertura del modulo Articolo la caption, se manca, si scrive da sola — come fa
+// ensureFaseSocial() nella dash clienti quando si apre una fase. Una volta per soggetto
+// e per sessione: il modulo si ridisegna a ogni salvataggio, e non deve rifare il giro
+// dall'AI ogni volta (né riscrivere sopra una caption cancellata di proposito).
+const socialCaptionTentata = new Set();
+function socialEnsure(tipo, id){
+  const k = socialChiave(tipo, id);
+  if (socialCaptionTentata.has(k)) return;
+  socialCaptionTentata.add(k);
+  return socialGeneraCaption(tipo, id, null, true);
+}
+// Il modulo Articolo è già aperto da sé quando il progetto è in IDEA: la caption va
+// preparata anche in quel caso, non solo quando si clicca sul titolo per aprirlo.
+function socialEnsureArticolo(){
+  const p = stato.dettaglio && stato.dettaglio.progetto;
+  if (!p || !p.id || !p.wp_post_link) return;
+  const mod = document.getElementById('mod-articolo');
+  if (mod && mod.classList.contains('open')) socialEnsure('progetto', p.id);
+}
+
+// Anteprima Instagram del post: le foto che partiranno davvero (quelle su WP) e
+// la caption com'è adesso nella textarea.
+function socialAnteprima(tipo, id){
+  const ta = document.getElementById('soc_testo_' + socialChiave(tipo, id));
+  igPreviewImgs = (socialImmagini(tipo, id) || []).slice();
+  igPreviewIdx  = 0;
+  document.getElementById('igCaption').textContent = (ta ? ta.value : socialTestoSalvato(tipo, id)) || '';
+  renderIgPreview();
+  document.getElementById('igPreviewOverlay').classList.add('open');
+}
+let igPreviewImgs = [];
+let igPreviewIdx  = 0;
+function chiudiAnteprimaIg(){ document.getElementById('igPreviewOverlay').classList.remove('open'); }
+function igNav(dir){
+  if (!igPreviewImgs.length) return;
+  igPreviewIdx = (igPreviewIdx + dir + igPreviewImgs.length) % igPreviewImgs.length;
+  renderIgPreview();
+}
+function renderIgPreview(){
+  const img = document.getElementById('igImg'), noImg = document.getElementById('igNoImg');
+  const prev = document.getElementById('igPrev'), next = document.getElementById('igNext');
+  const dots = document.getElementById('igDots');
+  const n = igPreviewImgs.length;
+  if (!n){
+    img.style.display = 'none'; noImg.style.display = 'block';
+    prev.style.display = next.style.display = 'none'; dots.innerHTML = '';
+    return;
+  }
+  noImg.style.display = 'none';
+  img.style.display = 'block';
+  img.src = safeUrl(igPreviewImgs[igPreviewIdx]);
+  const multi = n > 1;
+  prev.style.display = next.style.display = multi ? 'block' : 'none';
+  dots.innerHTML = multi
+    ? igPreviewImgs.map((_, i) => `<span style="width:6px;height:6px;border-radius:50%;background:${i===igPreviewIdx?'#fff':'rgba(255,255,255,.5)'}"></span>`).join('')
+    : '';
 }
 // Manda in PARALLELO ai due motori — Meta (FB/IG) via n8n, Google via
 // ardy-gbp-post.php — esattamente come inviaSocial() nella dash clienti. 'success'
@@ -1147,11 +1260,14 @@ async function socialInviaMotore(payload){
 }
 async function socialInvia(tipo, id){
   const k = socialChiave(tipo, id);
-  const f = socialForm[k]; if (!f) return;
   const testo = (document.getElementById('soc_testo_' + k)?.value || '').trim();
   const out = document.getElementById('soc_out_' + k);
   if (!testo){ toast('Scrivi o genera il testo del post'); return; }
-  if (!f.piattaforme.length){ toast('Scegli almeno un social'); return; }
+  // I canali si leggono DIRETTAMENTE dal DOM, senza default FB/IG di riserva:
+  // se non se n'è scelto nessuno non si pubblica per sbaglio (regola della dash clienti).
+  const wrap = document.getElementById('dest_' + k);
+  const piattaforme = wrap ? [...wrap.querySelectorAll('.social-toggle.sel')].map(b => b.dataset.plat) : [];
+  if (!piattaforme.length){ toast('Scegli almeno un social'); return; }
   const p = stato.dettaglio.progetto;
   const fa = tipo === 'fase' ? (stato.dettaglio.fasi || []).find(x => x.id == id) : null;
   if (out) out.textContent = '⏳ Pubblico sui social…';
@@ -1163,7 +1279,7 @@ async function socialInvia(tipo, id){
       fase:      fa ? (fa.fase_nome || '') : (p.titolo || ''),
       mobile:    p.titolo || '',
       cliente:   '',                       // progetto interno: non c'è un cliente
-      piattaforme: f.piattaforme,
+      piattaforme,
     });
     if (!d.success){
       // d.error include già "(pubblicato su X)" se un canale è passato e un altro no.
@@ -1173,7 +1289,6 @@ async function socialInvia(tipo, id){
     }
     await api('POST', { mode:'social_fatto', tipo, id, testo });
     toast(d.confermato === false ? 'Inviato ai social — verifica che sia pubblicato' : `Pubblicato su ${platLabel(d.piattaforme)} ✅`);
-    delete socialForm[k];
     apri(p.id);
   } catch(e){ if (out) out.innerHTML = '<span class="neg">Errore di rete</span>'; }
 }
@@ -1257,13 +1372,8 @@ function articoloPanel(){
         </div>
         <div class="muted" style="font-size:.85em;margin-top:6px">Tocca <b>solo</b> il blocco immagini: testo e fasi-racconto restano come sono. Le foto già caricate su WP non si duplicano.</div>
         <div id="imgOut" class="muted" style="margin-top:6px"></div>
-        <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
-          <button class="sm" onclick="socialApri('progetto',${p.id})">📣 Pubblica l'articolo sui social</button>
-          ${p.social_pubblicato_at ? `<span class="muted" style="margin-left:6px">già inviato il ${esc(p.social_pubblicato_at)}</span>` : ''}
-          <span class="muted" style="margin-left:6px">Userà le immagini dell'articolo e ci metterà il link.</span>
-        </div>
       </div>
-      ${socialBox('progetto', p.id)}
+      ${socialBlocco('progetto', p.id, p.social_pubblicato_at ? `Già inviato il ${esc(p.social_pubblicato_at)}.` : '')}
     </div>`;
   }
   return `
@@ -1460,13 +1570,12 @@ function fasiPanel(){
                   ? `<span class="badge" style="color:var(--green);border-color:var(--green)">✅ su WP</span>`
                   : (stato.dettaglio.progetto.wp_post_link ? `<button class="sm" onclick="pubblicaFaseWp(${f.id})">📝 Pubblica su WP</button>` : '')}
                 ${f.social_pubblicata_at
-                  ? `<span class="badge" style="color:var(--green);border-color:var(--green)">📣 sui social</span>`
-                  : (f.wp_pubblicata_at ? `<button class="sm" onclick="socialApri('fase',${f.id})">📣 Social</button>` : '')}
+                  ? `<span class="badge" style="color:var(--green);border-color:var(--green)">📣 sui social</span>` : ''}
                 <button class="sm" onclick="editFase(${f.id})">Modifica</button>
                 <button class="sm ghost danger" onclick="eliminaFase(${f.id})">✕</button></span></div>
         ${f.testo_breve?`<div class="muted">${esc(f.testo_breve)}</div>`:''}
         ${(f.foto_urls&&f.foto_urls.length)?`<div class="thumbs">${f.foto_urls.map(fn=>`<img class="thumb" src="${fotoUrlFase(f.id,fn)}" alt="">`).join('')}</div>`:''}
-        ${socialBox('fase', f.id)}
+        ${f.wp_pubblicata_at ? socialBlocco('fase', f.id) : ''}
       </div>`).join('') : '<div class="muted">Nessuna fase-contenuto ancora.</div>'}
 
     ${stato.faseForm ? fasiFormHtml() : `<button class="primary" style="margin-top:8px" onclick="nuovaFase()">+ Aggiungi fase</button>`}
