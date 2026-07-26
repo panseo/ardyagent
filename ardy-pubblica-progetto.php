@@ -92,6 +92,22 @@ function progettoGalleriaBytes(array $row, int $progettoId): ?string {
     return $b !== false ? $b : null;
 }
 
+/**
+ * Salva gli URL PUBBLICI (WordPress) delle immagini dell'articolo. Servono ai social:
+ * Facebook e Instagram devono poter scaricare l'immagine da un indirizzo raggiungibile,
+ * e quelle sul nostro server stanno dietro Basic Auth. È il motivo per cui si manda ai
+ * social solo ciò che è già passato da WordPress.
+ */
+function progettoSalvaImmaginiWp(PDO $db, int $progettoId, array $immagini): void {
+    $urls = array_values(array_filter(array_map(fn($i) => (string) ($i['url'] ?? ''), $immagini)));
+    try {
+        $db->prepare("UPDATE progetti SET wp_immagini = :u WHERE id = :id")
+           ->execute([':u' => $urls ? json_encode($urls, JSON_UNESCAPED_SLASHES) : null, ':id' => $progettoId]);
+    } catch (PDOException $e) {
+        error_log('ARDY PUBBLICA PROGETTO DB IMMAGINI: ' . $e->getMessage());
+    }
+}
+
 // Pre-carico i BYTE della galleria PRIMA di caricare WordPress. Le foto su Backblaze
 // B2 si leggono con una richiesta HTTPS in uscita (URL firmato → ardyStorageGet): se
 // quella lettura avviene DOPO require ARDY_WP_LOAD, dentro l'ambiente WordPress la
@@ -230,6 +246,7 @@ if ($mode === 'aggiorna_immagini') {
     }
     update_post_meta($wpPostIdEsistente, '_ardy_galleria_map', $mappa);
     if ($featuredId !== null) set_post_thumbnail($wpPostIdEsistente, $featuredId);
+    progettoSalvaImmaginiWp($db, $progettoId, $immagini);
 
     echo json_encode([
         'success' => true, 'aggiornato' => true, 'wp_post_id' => $wpPostIdEsistente,
@@ -264,6 +281,7 @@ if (is_wp_error($result)) {
 $wpPostId = (int) $result;
 if ($featuredId !== null) set_post_thumbnail($wpPostId, $featuredId);
 update_post_meta($wpPostId, '_ardy_galleria_map', $mappa);   // per i futuri «aggiorna immagini»
+progettoSalvaImmaginiWp($db, $progettoId, $immagini);
 $postLink = get_permalink($wpPostId);
 
 try {

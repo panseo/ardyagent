@@ -116,6 +116,7 @@ ardyHardenUploadDir(rtrim(ARDY_UPLOAD_DIR, '/'));
 
 $fotoHtml = '';
 $fotoPubblicate = 0;                          // quante foto sono DAVVERO entrate nell'articolo
+$fotoUrlPubbliche = [];                       // gli stessi URL, da riusare per i social
 foreach ($fotoPronte as $f) {                 // byte già letti da storage prima di wp-load
     $bytes = $f['bytes'];
     $mime  = $f['mime'];
@@ -124,7 +125,9 @@ foreach ($fotoPronte as $f) {                 // byte già letti da storage prim
     if (file_put_contents($tpath, $bytes) === false) continue;
     $attachId = media_handle_sideload(['name' => $tname, 'type' => $mime, 'tmp_name' => $tpath, 'error' => 0, 'size' => strlen($bytes)], 0);
     if (is_wp_error($attachId)) { @unlink($tpath); error_log('ARDY PUBBLICA FASE PROG SIDELOAD: ' . $attachId->get_error_message()); continue; }
-    $fotoHtml .= '<img src="' . esc_url(wp_get_attachment_url($attachId)) . '" style="max-width:100%;margin:10px 0;border-radius:6px;" />' . "\n";
+    $url = (string) wp_get_attachment_url($attachId);
+    $fotoHtml .= '<img src="' . esc_url($url) . '" style="max-width:100%;margin:10px 0;border-radius:6px;" />' . "\n";
+    if ($url !== '') $fotoUrlPubbliche[] = $url;
     $fotoPubblicate++;
 }
 foreach (glob($tmpDir . '*') as $tmpf) { if (is_file($tmpf)) @unlink($tmpf); }
@@ -175,6 +178,18 @@ if ($fotoComplete) {
         $db->prepare("UPDATE fasi SET wp_pubblicata_at = NOW() WHERE id = ? AND progetto_id = ?")->execute([$faseId, $progettoId]);
     } catch (PDOException $e) { error_log('ARDY PUBBLICA FASE PROG DB UPD: ' . $e->getMessage()); }
 }
+
+// Gli URL pubblici si salvano SEMPRE (anche a pubblicazione parziale): sono ciò che
+// permette di mandare poi la fase sui social, dove l'immagine dev'essere scaricabile
+// da un indirizzo raggiungibile — le nostre stanno dietro Basic Auth.
+try {
+    $db->prepare("UPDATE fasi SET foto_wp_urls = :u WHERE id = :id AND progetto_id = :pid")
+       ->execute([
+           ':u'   => $fotoUrlPubbliche ? json_encode($fotoUrlPubbliche, JSON_UNESCAPED_SLASHES) : null,
+           ':id'  => $faseId,
+           ':pid' => $progettoId,
+       ]);
+} catch (PDOException $e) { error_log('ARDY PUBBLICA FASE PROG DB URL: ' . $e->getMessage()); }
 
 $resp = [
     'success'         => true,

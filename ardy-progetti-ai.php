@@ -9,6 +9,7 @@
 //
 //   POST {mode:'genera_post', progetto_id, fase_nome?, bozza} → {success, testo}
 //   POST {mode:'genera_articolo'|'genera_teaser', progetto_id} → {success, testo}
+//   POST {mode:'genera_social', progetto_id, fase_nome?, bozza?} → caption FB/IG
 //   POST {mode:'leggi_doc', file_id} → estrae e SALVA il testo di un documento allegato
 //
 // I documenti di riferimento del progetto (progetto_file categoria 'doc') si leggono
@@ -197,7 +198,7 @@ try {
     $in   = json_decode(file_get_contents('php://input'), true) ?: [];
     $mode = $in['mode'] ?? 'genera_post';
 
-    if (!in_array($mode, ['genera_post', 'genera_articolo', 'genera_teaser', 'leggi_doc'], true)) { echo json_encode(['success' => false, 'error' => 'mode non valido']); exit(); }
+    if (!in_array($mode, ['genera_post', 'genera_articolo', 'genera_teaser', 'genera_social', 'leggi_doc'], true)) { echo json_encode(['success' => false, 'error' => 'mode non valido']); exit(); }
 
     if ($mode === 'leggi_doc') {
         $fileId = (int) ($in['file_id'] ?? 0);
@@ -254,6 +255,9 @@ try {
     if ($mode === 'genera_articolo' && $descr === '' && $materiali === '' && $scheda === '' && $docs === '') {
         echo json_encode(['success' => false, 'error' => 'Compila prima la descrizione del progetto (o allega un documento e fallo leggere)']); exit();
     }
+    if ($mode === 'genera_social' && $bozza === '' && $descr === '' && $storia === '') {
+        echo json_encode(['success' => false, 'error' => 'Serve almeno il testo della fase o la descrizione del progetto']); exit();
+    }
     if ($mode === 'genera_teaser' && $descr === '' && $storia === '' && $materiali === '') {
         echo json_encode(['success' => false, 'error' => 'Compila prima descrizione o storia del pezzo']); exit();
     }
@@ -286,6 +290,20 @@ try {
           . "- Niente elenchi, niente hashtag, niente titolo, niente virgolette. Al massimo una emoji se calza.\n"
           . "- Resta fedele al progetto: non inventare fatti.\n"
           . "Rispondi SOLO con le 2-3 frasi.";
+    } elseif ($mode === 'genera_social') {
+        // Caption per Facebook/Instagram: parla al pubblico, non al cliente. Corta,
+        // concreta, con qualche hashtag — è l'unico posto del repo dove gli hashtag
+        // ci stanno (sul sito e nella scheda prodotto sono banditi).
+        $userMsg =
+            ($ctx !== '' ? "Dati del progetto:\n$ctx\n" : '')
+          . ($bozza !== '' ? "Testo di partenza (la fase o l'articolo già scritto):\n\"\"\"\n$bozza\n\"\"\"\n\n" : '')
+          . "Scrivi la caption per un post su Facebook e Instagram. Regole:\n"
+          . "- 3-6 righe, tono di brand: artigiano che progetta e autoproduce, mai markettaro.\n"
+          . "- Racconta questo passaggio del lavoro, non il catalogo: chi legge segue una storia che avanza.\n"
+          . "- Resta fedele ai dati: non inventare materiali, misure, prezzi o tempi.\n"
+          . "- Chiudi con 4-8 hashtag pertinenti in italiano/inglese, sulla stessa riga in fondo.\n"
+          . "- Niente titolo, niente virgolette, al massimo un paio di emoji se calzano.\n"
+          . "Rispondi SOLO con la caption.";
     } elseif ($mode === 'genera_articolo') {
         // Intro dell'articolo "madre" del progetto: presenta il pezzo finito.
         $userMsg =

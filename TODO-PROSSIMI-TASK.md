@@ -8,6 +8,24 @@
 
 ---
 
+## 📣 DA DEPLOYARE — Social anche dalla dash design (26/07/2026)
+
+Mancava il gemello WordPress→social del binario clienti: ora l'**articolo** del progetto e ogni
+**fase-racconto** si pubblicano su Facebook/Instagram con lo stesso motore
+(`ardy-pubblica-social.php` → n8n → Graph API), caption generata a parte
+(`ardy-progetti-ai.php` mode `genera_social`: corta, con hashtag — diversa dal testo del sito).
+
+- **Regola**: il bottone 📣 compare solo su ciò che è **già pubblicato su WordPress**. Non è
+  burocrazia: FB/IG devono *scaricare* l'immagine da un URL pubblico e le nostre foto stanno
+  dietro Basic Auth. Gli URL buoni nascono al sideload su WP e ora vengono **salvati**
+  (`fasi.foto_wp_urls`, `progetti.wp_immagini`) invece di essere buttati via.
+- Nuove colonne: `fasi.foto_wp_urls`, `fasi.social_pubblicata_at`, `progetti.wp_immagini`,
+  `progetti.social_pubblicato_at`, `progetti.testo_social` → **serve `ardy-migrate.php`**.
+- ⏳ Da provare a video: pubblica una fase su WP, poi 📣 su un solo social; controlla che la foto
+  arrivi davvero e non solo il testo.
+
+---
+
 ## ☁️ APERTO — B2 esce dal lavoro e diventa ARCHIVIO di fine ciclo (deciso 26/07/2026)
 
 **La decisione**: B2 non sta più *dentro* il lavoro, sta *dopo*. Finché progetto e cliente sono

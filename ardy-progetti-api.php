@@ -10,6 +10,7 @@
 //   POST {mode:'stato', id, stato}   → cambia stato del progetto
 //   POST {mode:'congela', id, snapshot} → segna file congelato + salva snapshot
 //   POST {mode:'delete', id}     → soft delete (deleted_at)
+//   POST {mode:'social_fatto', tipo:'progetto'|'fase', id, testo} → segna l'invio ai social
 //   POST {mode:'mat_save', progetto_id, ...riga} → upsert riga BOM (ricalcola costo)
 //   POST {mode:'mat_save_batch', progetto_id, righe:[...]} → upsert N righe in 1 transazione
 //   POST {mode:'mat_delete', id} → elimina riga BOM (ricalcola costo)
@@ -80,6 +81,9 @@ function progettoRicalcolaCosto(PDO $db, int $progettoId): float {
 
 /** Decodifica i campi JSON di una riga progetto e aggiunge il margine. */
 function progettoArricchisci(array $r): array {
+    if (array_key_exists('wp_immagini', $r)) {
+        $r['wp_immagini'] = json_decode($r['wp_immagini'] ?? '[]', true) ?? [];
+    }
     foreach (['render_urls', 'cad_urls', 'canali_vendita', 'file_snapshot'] as $k) {
         $r[$k] = json_decode($r[$k] ?? 'null', true);
         if ($r[$k] === null && $k !== 'file_snapshot') $r[$k] = [];
@@ -171,7 +175,13 @@ try {
         $fasi = $db->prepare("SELECT * FROM fasi WHERE progetto_id = ? ORDER BY ordine ASC, created_at ASC");
         $fasi->execute([$id]);
         $fasiRows = $fasi->fetchAll();
-        foreach ($fasiRows as &$f) { $f['foto_urls'] = json_decode($f['foto_urls'] ?? '[]', true) ?? []; }
+        // foto_urls = nomi dei file su disco (anteprime in dash); foto_wp_urls = gli stessi
+        // scatti dopo la pubblicazione su WordPress, con URL pubblici → sono quelli che
+        // vanno ai social, che devono poter scaricare l'immagine.
+        foreach ($fasiRows as &$f) {
+            $f['foto_urls']    = json_decode($f['foto_urls'] ?? '[]', true) ?? [];
+            $f['foto_wp_urls'] = json_decode($f['foto_wp_urls'] ?? '[]', true) ?? [];
+        }
         unset($f);
 
         // Archivio file di stampa/CAD (metadati; i binari si scaricano da ardy-progetti-file-api.php).
@@ -378,6 +388,25 @@ try {
     }
 
     // — soft delete —
+    // Segna l'avvenuto invio ai social e conserva la caption usata (per rileggerla e
+    // per non rigenerarla ogni volta). Vale sia per l'articolo del progetto sia per una
+    // singola fase-racconto: è lo stesso gesto su due soggetti.
+    if ($mode === 'social_fatto') {
+        $tipo  = ($in['tipo'] ?? 'fase') === 'progetto' ? 'progetto' : 'fase';
+        $id    = (int) ($in['id'] ?? 0);
+        $testo = trim((string) ($in['testo'] ?? ''));
+        if ($id <= 0) { echo json_encode(['success' => false, 'error' => 'id mancante']); exit(); }
+        if ($tipo === 'progetto') {
+            $db->prepare("UPDATE progetti SET social_pubblicato_at = NOW(), testo_social = :t WHERE id = :id")
+               ->execute([':t' => $testo !== '' ? $testo : null, ':id' => $id]);
+        } else {
+            $db->prepare("UPDATE fasi SET social_pubblicata_at = NOW(), testo_social = :t WHERE id = :id AND progetto_id IS NOT NULL")
+               ->execute([':t' => $testo !== '' ? $testo : null, ':id' => $id]);
+        }
+        echo json_encode(['success' => true]);
+        exit();
+    }
+
     if ($mode === 'delete') {
         $id = (int) ($in['id'] ?? 0);
         if ($id <= 0) { echo json_encode(['success' => false, 'error' => 'id mancante']); exit(); }

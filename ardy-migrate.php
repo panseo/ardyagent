@@ -457,6 +457,19 @@ foreach ($progettiModuloCols as $col => $sql) {
 // archivio a freddo (ardy-archivia-b2.php). Qui resta la ricevuta: quando, sotto quale
 // prefisso, quanti file, e se la rilettura di verifica è andata a buon fine. Le stesse
 // quattro colonne su progetti e clienti: è lo stesso gesto su due soggetti diversi.
+// URL pubblici (WordPress) delle immagini finite nell'articolo del progetto, e data
+// dell'invio ai social: come per le fasi, i social scaricano l'immagine da un indirizzo
+// raggiungibile, e le nostre stanno dietro Basic Auth.
+$colonneSocialProgetto = [
+    'wp_immagini'          => "ALTER TABLE progetti ADD COLUMN wp_immagini TEXT NULL",
+    'social_pubblicato_at' => "ALTER TABLE progetti ADD COLUMN social_pubblicato_at DATETIME NULL",
+    'testo_social'         => "ALTER TABLE progetti ADD COLUMN testo_social TEXT NULL",
+];
+foreach ($colonneSocialProgetto as $col => $sql) {
+    if (!colExists($pdo, 'progetti', $col)) { ddl($pdo, $sql, "progetti.$col"); }
+    else { echo "  skip progetti.$col\n"; $skip++; }
+}
+
 $colonneArchivio = [
     'archiviato_at'       => "ADD COLUMN archiviato_at DATETIME NULL",
     'archivio_prefisso'   => "ADD COLUMN archivio_prefisso VARCHAR(300) NULL",  // percorso sul bucket
@@ -568,6 +581,13 @@ $fasiCols = [
     'progetto_id' => "ALTER TABLE fasi ADD COLUMN progetto_id BIGINT NULL AFTER session_id",
     // Quando una fase-racconto di progetto è stata pubblicata (append) sull'articolo WP.
     'wp_pubblicata_at' => "ALTER TABLE fasi ADD COLUMN wp_pubblicata_at DATETIME NULL",
+    // URL PUBBLICI delle foto della fase dopo la pubblicazione su WordPress (JSON).
+    // Servono ai social: Facebook e Instagram devono poter scaricare l'immagine da un
+    // indirizzo raggiungibile, e le foto sul nostro server stanno dietro Basic Auth.
+    // È il motivo per cui una fase si manda ai social solo DOPO averla messa su WP.
+    'foto_wp_urls' => "ALTER TABLE fasi ADD COLUMN foto_wp_urls TEXT NULL",
+    // Quando la fase è stata mandata ai social (badge in dash, evita il doppio invio).
+    'social_pubblicata_at' => "ALTER TABLE fasi ADD COLUMN social_pubblicata_at DATETIME NULL",
 ];
 foreach ($fasiCols as $col => $sql) {
     if (!colExists($pdo, 'fasi', $col)) {

@@ -986,6 +986,117 @@ function pushPanel(){
   </div>`;
 }
 
+// ── Pubblicazione sui social (Facebook / Instagram) ─────────────────────────
+// Stesso motore della dash clienti: ardy-pubblica-social.php → n8n → Graph API.
+// Vale per l'ARTICOLO del progetto e per ogni FASE-racconto, con una regola sola:
+// si manda ai social solo ciò che è GIÀ su WordPress. Non è burocrazia — Facebook e
+// Instagram devono scaricare l'immagine da un indirizzo pubblico, e le nostre foto
+// stanno dietro Basic Auth: gli URL buoni nascono al momento della pubblicazione su WP.
+const SOCIAL_URL = 'ardy-pubblica-social.php';
+// { chiave: {testo, piattaforme:Set} } — una bozza aperta per soggetto.
+let socialForm = {};
+
+function socialChiave(tipo, id){ return tipo + '_' + id; }
+function socialImmagini(tipo, id){
+  if (tipo === 'progetto') return stato.dettaglio.progetto.wp_immagini || [];
+  const f = (stato.dettaglio.fasi || []).find(x => x.id == id);
+  return (f && f.foto_wp_urls) || [];
+}
+function socialApri(tipo, id){
+  // La caption già usata si rilegge dallo stato: passarla nell'onclick significherebbe
+  // infilare virgolette e a capo dentro un attributo HTML, che è un modo sicuro di romperlo.
+  let testo = '';
+  if (tipo === 'progetto') testo = stato.dettaglio.progetto.testo_social || '';
+  else {
+    const f = (stato.dettaglio.fasi || []).find(x => x.id == id);
+    testo = (f && f.testo_social) || '';
+  }
+  socialForm[socialChiave(tipo, id)] = { testo, piattaforme: ['facebook','instagram'] };
+  renderDettaglio();
+}
+function socialChiudi(tipo, id){ delete socialForm[socialChiave(tipo, id)]; renderDettaglio(); }
+function socialTogglePiattaforma(tipo, id, plat){
+  const f = socialForm[socialChiave(tipo, id)]; if (!f) return;
+  f.testo = document.getElementById('soc_testo_' + socialChiave(tipo, id))?.value ?? f.testo;
+  f.piattaforme = f.piattaforme.includes(plat) ? f.piattaforme.filter(p => p !== plat) : f.piattaforme.concat(plat);
+  renderDettaglio();
+}
+// Box di composizione: caption rivedibile + scelta dei social. Niente invio "al volo":
+// il testo lo si guarda sempre prima, come per l'articolo.
+function socialBox(tipo, id){
+  const k = socialChiave(tipo, id);
+  const f = socialForm[k];
+  if (!f) return '';
+  const imgs = socialImmagini(tipo, id);
+  const btn = p => `<button class="sm ${f.piattaforme.includes(p)?'primary':'ghost'}" onclick="socialTogglePiattaforma('${tipo}',${id},'${p}')">${p==='facebook'?'📘 Facebook':'📷 Instagram'}</button>`;
+  return `
+  <div class="panel" style="background:var(--surface2);margin-top:10px">
+    <div class="field"><label>Testo del post <small class="muted">— caption per Facebook e Instagram</small></label>
+      <textarea id="soc_testo_${k}" style="min-height:110px" placeholder="Scrivi la caption, oppure generala con l'AI">${esc(f.testo)}</textarea>
+      <div style="margin-top:6px"><button class="sm" id="socAi_${k}" onclick="socialGenera('${tipo}',${id})">✨ Genera con AI</button>
+        <span class="muted" style="margin-left:6px">Rivedila sempre prima di pubblicare.</span></div>
+    </div>
+    <div class="row" style="align-items:center">${btn('facebook')}${btn('instagram')}</div>
+    <div class="muted" style="margin:6px 0">${imgs.length ? `${imgs.length} immagini dall'articolo` : '⚠️ nessuna immagine pubblica: il post uscirà solo testo'}</div>
+    <div class="row" style="align-items:center">
+      <button class="primary" onclick="socialInvia('${tipo}',${id})">📣 Pubblica sui social</button>
+      <button class="ghost" onclick="socialChiudi('${tipo}',${id})">Annulla</button>
+    </div>
+    <div id="soc_out_${k}" class="muted" style="margin-top:6px"></div>
+  </div>`;
+}
+async function socialGenera(tipo, id){
+  const k = socialChiave(tipo, id);
+  const f = socialForm[k]; if (!f) return;
+  f.testo = document.getElementById('soc_testo_' + k)?.value ?? f.testo;
+  const p = stato.dettaglio.progetto;
+  let bozza = f.testo, faseNome = '';
+  if (tipo === 'fase'){
+    const fa = (stato.dettaglio.fasi || []).find(x => x.id == id);
+    if (fa){ faseNome = fa.fase_nome || ''; if (!bozza) bozza = fa.testo_breve || ''; }
+  } else if (!bozza) {
+    bozza = stato.articoloTesto || p.descrizione || '';
+  }
+  const btn = document.getElementById('socAi_' + k);
+  if (btn){ btn.disabled = true; btn.textContent = '✨ Scrivo…'; }
+  try {
+    const d = await fetch(AI_API, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ mode:'genera_social', progetto_id: p.id, fase_nome: faseNome, bozza }) }).then(r=>r.json());
+    if (d.success && d.testo){ f.testo = d.testo; renderDettaglio(); toast('Caption generata — rivedila'); return; }
+    toast(d.error || 'Errore generazione');
+  } catch(e){ toast('Errore di rete'); }
+  if (btn){ btn.disabled = false; btn.textContent = '✨ Genera con AI'; }
+}
+async function socialInvia(tipo, id){
+  const k = socialChiave(tipo, id);
+  const f = socialForm[k]; if (!f) return;
+  const testo = (document.getElementById('soc_testo_' + k)?.value || '').trim();
+  const out = document.getElementById('soc_out_' + k);
+  if (!testo){ toast('Scrivi o genera il testo del post'); return; }
+  if (!f.piattaforme.length){ toast('Scegli almeno un social'); return; }
+  const p = stato.dettaglio.progetto;
+  const fa = tipo === 'fase' ? (stato.dettaglio.fasi || []).find(x => x.id == id) : null;
+  if (out) out.textContent = '⏳ Pubblico sui social…';
+  try {
+    const d = await fetch(SOCIAL_URL, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        testo_social: testo, testo,
+        immagini:  socialImmagini(tipo, id),
+        post_link: p.wp_post_link || '',
+        fase:      fa ? (fa.fase_nome || '') : (p.titolo || ''),
+        mobile:    p.titolo || '',
+        cliente:   '',                       // progetto interno: non c'è un cliente
+        piattaforme: f.piattaforme,
+      }) }).then(r=>r.json());
+    if (!d.success){ if (out) out.innerHTML = `<span class="neg">${esc(d.error||'Errore')}</span>`; toast(d.error||'Errore'); return; }
+    await api('POST', { mode:'social_fatto', tipo, id, testo });
+    // 'confermato' false = il workflow ha risposto 200 senza confermare l'esito.
+    toast(d.confermato ? 'Pubblicato sui social ✅' : 'Inviato ai social — controlla le pagine');
+    delete socialForm[k];
+    apri(p.id);
+  } catch(e){ if (out) out.innerHTML = '<span class="neg">Errore di rete</span>'; }
+}
+
 // ── Archivio di fine ciclo su B2 ────────────────────────────────────────────
 // Compare a CATALOGATO, cioè quando non c'è più niente da fare: l'articolo è online,
 // il prodotto è in vetrina, i documenti sono letti. Da lì l'archiviazione è un gesto
@@ -1065,7 +1176,13 @@ function articoloPanel(){
         </div>
         <div class="muted" style="font-size:.85em;margin-top:6px">Tocca <b>solo</b> il blocco immagini: testo e fasi-racconto restano come sono. Le foto già caricate su WP non si duplicano.</div>
         <div id="imgOut" class="muted" style="margin-top:6px"></div>
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+          <button class="sm" onclick="socialApri('progetto',${p.id})">📣 Pubblica l'articolo sui social</button>
+          ${p.social_pubblicato_at ? `<span class="muted" style="margin-left:6px">già inviato il ${esc(p.social_pubblicato_at)}</span>` : ''}
+          <span class="muted" style="margin-left:6px">Userà le immagini dell'articolo e ci metterà il link.</span>
+        </div>
       </div>
+      ${socialBox('progetto', p.id)}
     </div>`;
   }
   return `
@@ -1261,10 +1378,14 @@ function fasiPanel(){
                 ${f.wp_pubblicata_at
                   ? `<span class="badge" style="color:var(--green);border-color:var(--green)">✅ su WP</span>`
                   : (stato.dettaglio.progetto.wp_post_link ? `<button class="sm" onclick="pubblicaFaseWp(${f.id})">📝 Pubblica su WP</button>` : '')}
+                ${f.social_pubblicata_at
+                  ? `<span class="badge" style="color:var(--green);border-color:var(--green)">📣 sui social</span>`
+                  : (f.wp_pubblicata_at ? `<button class="sm" onclick="socialApri('fase',${f.id})">📣 Social</button>` : '')}
                 <button class="sm" onclick="editFase(${f.id})">Modifica</button>
                 <button class="sm ghost danger" onclick="eliminaFase(${f.id})">✕</button></span></div>
         ${f.testo_breve?`<div class="muted">${esc(f.testo_breve)}</div>`:''}
         ${(f.foto_urls&&f.foto_urls.length)?`<div class="thumbs">${f.foto_urls.map(fn=>`<img class="thumb" src="${fotoUrlFase(f.id,fn)}" alt="">`).join('')}</div>`:''}
+        ${socialBox('fase', f.id)}
       </div>`).join('') : '<div class="muted">Nessuna fase-contenuto ancora.</div>'}
 
     ${stato.faseForm ? fasiFormHtml() : `<button class="primary" style="margin-top:8px" onclick="nuovaFase()">+ Aggiungi fase</button>`}
@@ -1281,7 +1402,7 @@ function fasiPanel(){
         <div id="b2Out" style="margin-top:8px"></div>
       </div>
     </div>` : ''}
-    <div class="muted" style="margin-top:10px">⏭️ Pubblicazione social/WordPress da queste fasi: slice successiva. Il reel è già attivo (legge le foto di progetto da disco).</div>
+    <div class="muted" style="margin-top:10px">Ogni fase si pubblica prima su <b>WordPress</b> (📝) e poi sui <b>social</b> (📣). L'ordine non è un capriccio: i social scaricano le immagini da un indirizzo pubblico, e quello nasce quando la fase va su WP.</div>
   </div>`;
 }
 async function creaReel(){
