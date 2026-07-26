@@ -181,11 +181,17 @@ foreach ($immagini as $im) { if ($im['tipo'] === 'foto')   { $featuredId = $im['
 if ($featuredId === null) { foreach ($immagini as $im) { if ($im['tipo'] === 'render') { $featuredId = $im['id']; break; } } }
 if ($featuredId === null && !empty($immagini)) $featuredId = $immagini[0]['id'];
 
-// Blocco immagini: punto di partenza + render + foto finite (la copertina non si
-// ripete nel corpo). Delimitato, così si può rigenerare da solo più avanti.
+// Blocco immagini: punto di partenza + render + foto finite. Delimitato, così si può
+// rigenerare da solo più avanti.
+//
+// Nel CORPO ci vanno TUTTE, copertina compresa. Prima la copertina veniva saltata per
+// non ripeterla — ma il tema del sito l'immagine in evidenza non la stampa nella pagina
+// dell'articolo (verificato: niente og:image, niente <img>), quindi su un progetto con
+// UNA SOLA immagine in galleria quella veniva esclusa dal corpo e l'articolo usciva
+// senza foto. La copertina resta impostata: serve all'elenco del blog e alle anteprime
+// sui social, dove il tema la usa davvero.
 $prima = ''; $render = ''; $foto = '';
 foreach ($immagini as $im) {
-    if ($featuredId !== null && $im['id'] === $featuredId) continue;
     $tag = '<img src="' . esc_url($im['url']) . '" style="max-width:100%;margin:10px 0;border-radius:6px;" />' . "\n";
     if      ($im['tipo'] === 'prima')  $prima  .= $tag;
     elseif  ($im['tipo'] === 'render') $render .= $tag;

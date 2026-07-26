@@ -29,9 +29,16 @@ archivio che non si rilegge non è un archivio, e la dash lo dice a chiare lette
 - ⏳ **Da decidere dopo**: se e quando liberare il disco su ciò che è archiviato **e verificato**
   (oggi «libera spazio cliente» esiste già ed è indipendente; per i progetti non c'è).
 
-**Sintomo che ha portato qui:** gli ultimi ~10 articoli pubblicati dalla dash design sono usciti
-**senza foto**. Le immagini erano su B2 e la lettura lato server (`ardyStorageGet`, SigV4) non le
-restituisce — la nota "letture B2 rotte (Opzione A)" arrivata al danno visibile.
+**Sul sintomo che ha portato qui — gli articoli usciti senza foto — la colpa NON era di B2**
+(diagnosi 26/07): la lettura dal bucket funziona. `Creazione — Servomuto` ha regolarmente in
+pagina tutte e 5 le sue immagini, con URL su `wp-content/uploads`, e nel log non c'è una riga di
+`ARDY B2 GET ... fallito`. Erano spogli **solo** i progetti con **UNA sola immagine** in galleria:
+quella diventava la copertina, e il corpo dell'articolo la saltava per non ripeterla — ma il tema
+l'immagine in evidenza non la stampa nella pagina (niente `og:image`, niente `<img>`), quindi
+restava zero. Corretto: nel corpo ora ci vanno tutte, copertina compresa.
+
+Resta comunque vero che B2 **è nel percorso di servizio** e che un suo guasto in lettura
+romperebbe la pubblicazione: la ragione per spostarlo ad archivio di fine ciclo non cambia.
 
 **Il vincolo da non dimenticare:** un file caricato dal vecchio offload va su B2 **oppure** su
 disco, mai su entrambi. Togliere le costanti `ARDY_B2_*` dal config **senza rimpatriare prima**
