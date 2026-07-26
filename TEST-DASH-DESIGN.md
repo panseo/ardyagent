@@ -22,7 +22,7 @@
 
 ## 3. Pipeline di stato
 - [ ] Clic sui passi della pipeline: lo stato cambia e il badge si aggiorna.
-- [ ] Lo stato terminale è **A CATALOGO** (nessun "VENDUTO").
+- [ ] Lo stato terminale è **CATALOGATO** (nessun "VENDUTO").
 
 ## 4. Costi / BOM (margine)
 - [ ] Aggiungo una riga **filamento** (g): unità si auto-imposta a `g`, "€ riga" si calcola live mentre digito.

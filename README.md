@@ -571,21 +571,26 @@ nella dash).
   dentro — niente campi cliente (telefono, indirizzo, solleciti).
 
 ### Ciclo di vita del progetto (≠ stati cliente)
-`IDEA → PROGETTAZIONE → PROTOTIPO → [⏟ FILE CONGELATO] → VERSIONE_FINALE/REALIZZAZIONE → FOTO →
-A_CATALOGO` (terminale). Pilotato dalla **maturazione del prodotto**, non dai pagamenti. Man mano che
-avanzi, **compaiono i moduli** di quella fase (barra pipeline cliccabile nel dettaglio):
+`IDEA → PROGETTAZIONE → PROTOTIPO → VERSIONE_FINALE [⏟ congela file] → SCHEDA_PRODOTTO →
+CATALOGATO` (terminale). Pilotato dalla **maturazione del prodotto**, non dai pagamenti. Man mano che
+avanzi, **compaiono i moduli** di quella fase (barra pipeline cliccabile nel dettaglio).
+**Ogni fase è pubblicabile**: articolo e fasi-racconto sono attivi già da `IDEA`, così l'idea si
+annuncia subito e progettazione/prototipo si raccontano mentre accadono (revisione lug 2026:
+`REALIZZAZIONE` duplicava `PROTOTIPO`/`VERSIONE_FINALE` ed è stato tolto; `FOTO` → `SCHEDA_PRODOTTO`,
+`A_CATALOGO` → `CATALOGATO` = pezzo correttamente esposto in vetrina).
 
 | Modulo (sblocco) | A cosa serve | Endpoint |
 |---|---|---|
+| **Articolo** (IDEA) | Testo di brand riscritto con **✨ AI** (Claude), da rivedere prima di pubblicare | `ardy-progetti-ai.php` |
+| **Fasi-racconto** (IDEA) | Binario **pubblico**: le stesse `fasi` della dash Michela → reel/social/WP | `ardy-progetti-fasi-api.php` |
 | **Galleria** (PROGETTAZIONE) | Immagini di lavoro del progetto (Modulo 1, → `ardy-lab.it`) | `ardy-progetti-galleria-api.php` |
 | **File CAD/STL** (PROGETTAZIONE) | Archivio file tecnici dietro Basic Auth | `ardy-progetti-file-api.php` |
 | **Iterazioni** (PROTOTIPO) | Binario **R&D interno**: v1/v2/v3 con note "qui non torna" | `ardy-progetti-api.php` (`iter_*`) |
 | **Distinta / costi** (PROTOTIPO) | **BOM** interna → `costo_produzione` = Σ righe × (1+scarto%); mostra il **margine** | `ardy-progetti-api.php` (`mat_*`) |
 | **Versione finale** (VERSIONE_FINALE) | **Congela file**: snapshot STL + profilo OrcaSlicer + scheda | `ardy-progetti-api.php` (`congela`) |
-| **Foto vendita** (VERSIONE_FINALE) | Foto professionali del pezzo finito (Modulo 2, → Woo) | `ardy-object-foto-api.php` / `ardy-object-img.php` |
-| **Fasi-racconto** (REALIZZAZIONE) | Binario **pubblico**: le stesse `fasi` della dash Michela → reel/social/WP | `ardy-progetti-fasi-api.php` |
-| **Articolo** (REALIZZAZIONE) | Testo di brand riscritto con **✨ AI** (Claude), da rivedere prima di pubblicare | `ardy-progetti-ai.php` |
-| **Push catalogo** (A_CATALOGO) | Crea/aggiorna il prodotto **WooCommerce** in bozza | `ardy-object-push.php` |
+| **Scheda prodotto / Sole** (SCHEDA_PRODOTTO) | Contenuti pubblici del pezzo in vendita (teaser, storia, FAQ, slug) | `ardy-progetti-api.php` (`save`) |
+| **Foto vendita** (SCHEDA_PRODOTTO) | Foto professionali del pezzo finito (Modulo 2, → Woo) | `ardy-object-foto-api.php` / `ardy-object-img.php` |
+| **Push catalogo** (CATALOGATO) | Crea/aggiorna il prodotto **WooCommerce** in bozza | `ardy-object-push.php` |
 
 ### Costi e margine (uso interno)
 - **Distinta (BOM)** in `progetto_materiali`: categorie `filamento | stampa | legno | elettrico |

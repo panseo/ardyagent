@@ -271,7 +271,7 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `todo_datati` (
 // ── DASH DESIGN (progetti interni) — vedi PIANO-DASH-DESIGN.md ────────────────
 // Progetto interno di design (lampade, mobili, complementi, restyling, prototipi):
 // soggetto della dash design, gemella della dash clienti. Non ha campi "cliente";
-// il ciclo di vita finisce a 'A_CATALOGO' (stock/vendita vivono su Woo/Etsy, fuori
+// il ciclo di vita finisce a 'CATALOGATO' (stock/vendita vivono su Woo/Etsy, fuori
 // dalla dash). 'costo_produzione' è CALCOLATO dalla BOM (progetto_materiali) × scarto.
 ddl($pdo, "CREATE TABLE IF NOT EXISTS `progetti` (
     `id`                BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -379,7 +379,7 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `progetto_galleria` (
 
 // Foto VENDITA del progetto: set SEPARATO dalla galleria (che alimenta l'articolo su
 // ardy-lab.it, Modulo 1). Queste sono le foto professionali del pezzo finito, fatte
-// quando il progetto è A CATALOGO, e sono le immagini che vanno sul prodotto Woo
+// quando il progetto è CATALOGATO, e sono le immagini che vanno sul prodotto Woo
 // (Modulo 2). Tenute distinte apposta: la galleria racconta il processo, queste
 // vendono il prodotto. Storage 'local' di default (Woo le scarica affidabile da disco;
 // B2 solo come backup a freddo opzionale — vedi PIANO §7 / Opzione A B2).
@@ -457,9 +457,21 @@ foreach ($progettiVarianteCols as $col => $sql) {
     else { echo "  skip progetti.$col\n"; $skip++; }
 }
 
-// Rinomina degli stati del ciclo di vita: via dal gergo stampa-3D (deciso 09/07).
+// Rinomina degli stati del ciclo di vita: via dal gergo stampa-3D (deciso 09/07) e
+// snellimento del ciclo (lug 2026): REALIZZAZIONE si limitava a duplicare PROTOTIPO/VERSIONE
+// FINALE — chi c'era resta sul pezzo definitivo, e i moduli che vi erano agganciati
+// (articolo, fasi-racconto) sono ora disponibili da IDEA, quindi non si perde nulla.
+// FOTO diventa SCHEDA_PRODOTTO (generazione della scheda di vendita) e A_CATALOGO
+// diventa CATALOGATO (il pezzo è esposto in vetrina).
 // Idempotente: dopo la prima volta nessuna riga corrisponde più ai vecchi codici.
-$rinominaStati = ['FILE_CONGELATO' => 'VERSIONE_FINALE', 'PRODUZIONE' => 'REALIZZAZIONE', 'FOTOGRAFIA' => 'FOTO'];
+$rinominaStati = [
+    'FILE_CONGELATO' => 'VERSIONE_FINALE',
+    'PRODUZIONE'     => 'VERSIONE_FINALE',
+    'REALIZZAZIONE'  => 'VERSIONE_FINALE',
+    'FOTOGRAFIA'     => 'SCHEDA_PRODOTTO',
+    'FOTO'           => 'SCHEDA_PRODOTTO',
+    'A_CATALOGO'     => 'CATALOGATO',
+];
 foreach ($rinominaStati as $old => $new) {
     $rs = $pdo->prepare("UPDATE progetti SET stato = ? WHERE stato = ?");
     $rs->execute([$new, $old]);

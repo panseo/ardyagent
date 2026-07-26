@@ -28,7 +28,7 @@
 - **Filiera reale (definita 25/06, vedi §3)**: la stampa 3D è **prototipo *e* produzione** (no
   print-on-demand per ora). Il prodotto è **replicabile a serie**, lo **stock vive su Woo/Etsy,
   non nella dash**. Il ciclo di vita finisce a *"prodotto pronto + file congelato + scheda + foto"*
-  → **A CATALOGO**, non "venduto". Due binari dentro al progetto: **R&D** (interno) e **racconto**
+  → **CATALOGATO**, non "venduto". Due binari dentro al progetto: **R&D** (interno) e **racconto**
   (pubblico).
 
 ---
@@ -41,7 +41,7 @@
 | Cuore | `fasi` (foto/video, stato, ordine, prezzo) | **le stesse `fasi`** |
 | Output contenuti | reel, bozze social, pubblicazione WordPress | **gli stessi** |
 | Fondo dell'imbuto | consegna + pagamento + solleciti | **a catalogo** (stock/vendita fuori dalla dash) |
-| Stato | `LEAD → ACCONTO → IN_LAVORAZIONE → COMPLETATO → CONSEGNATO` | `IDEA → … → A CATALOGO` (vedi §3) |
+| Stato | `LEAD → ACCONTO → IN_LAVORAZIONE → COMPLETATO → CONSEGNATO` | `IDEA → … → CATALOGATO` (vedi §3) |
 | Binari interni | uno solo (le fasi sono già "racconto") | **due**: R&D interno + racconto pubblico |
 
 Conseguenza pratica: il pezzo di software più prezioso e collaudato che hai — *fasi → reel/social*
@@ -170,7 +170,7 @@ doppia distinta nello stesso progetto, ma una **copia agganciata**.
 
 ---
 
-## 3. Il ciclo di vita del progetto (definito 25/06)
+## 3. Il ciclo di vita del progetto (definito 25/06 · **snellito lug 2026**)
 
 Il cliente fa `LEAD → ACCONTO → IN_LAVORAZIONE → COMPLETATO → CONSEGNATO` (lo pilotano i pagamenti).
 Il progetto è pilotato dalla **maturazione del prodotto**, non dai soldi, e **finisce a catalogo**
@@ -179,20 +179,32 @@ Il progetto è pilotato dalla **maturazione del prodotto**, non dai soldi, e **f
 ```
 IDEA → PROGETTAZIONE (CAD/render)
      → PROTOTIPO  ⟲ loop tracciato: v1, v2, v3… (foto + note iterazione)   [binario R&D]
-     → [⏟ FILE CONGELATO]  ← bottone manuale "a naso": scatta lo snapshot (STL + profilo + scheda)
-     → PRODUZIONE (stampi il lotto — la stampa 3D è anche metodo di produzione, no on-demand per ora)
-     → FOTOGRAFIA
-     → A CATALOGO / PUBBLICATO  ← stato terminale, con link all'annuncio
+     → VERSIONE FINALE  ← oggetto finito e definito in tutte le sue parti; bottone manuale
+                          "a naso" che scatta lo snapshot (STL + profilo + scheda)
+     → SCHEDA PRODOTTO (generazione della scheda di vendita: foto vendita + testi pubblici)
+     → CATALOGATO  ← stato terminale: il pezzo è correttamente esposto nella vetrina online
         └─ da qui: Woo/Etsy. La dash NON segue stock/ordini/venduto.
 ```
 
+**Il racconto corre in parallelo, non in fondo**: articolo WordPress e fasi-racconto sono attivi
+**già da IDEA**. Si pubblica l'annuncio dell'idea, poi ogni tappa (progettazione, iterazioni del
+prototipo, pezzo finito) diventa una fase-racconto agganciata all'articolo → WP/social.
+
 Transizioni che *fanno succedere qualcosa* (come oggi IN_LAVORAZIONE apre il popup date):
-- **FILE CONGELATO** → la transizione più importante: separa "sto progettando" da "sto producendo".
-  Non è un gate (il sistema non giudica se è pronto): è un **bottone manuale** che, al click,
-  **scatta lo snapshot** del file STL + profilo di stampa + scheda tecnica di quella versione
-  (`file_snapshot`), così sai con cosa hai prodotto quel lotto anche se il CAD poi va avanti.
-- **FOTOGRAFIA** → sblocca la creazione della scheda prodotto (foto pronte).
-- **A CATALOGO** → scheda pubblicata + (Tappa 3+) push verso Woo. Stato terminale lato dash.
+- **VERSIONE FINALE** → la transizione più importante: separa "sto progettando" da "il pezzo è
+  definito". Non è un gate (il sistema non giudica se è pronto): è un **bottone manuale** che, al
+  click, **scatta lo snapshot** del file STL + profilo di stampa + scheda tecnica di quella versione
+  (`file_snapshot`), così sai con cosa hai realizzato quel pezzo anche se il CAD poi va avanti.
+- **SCHEDA PRODOTTO** → sblocca scheda prodotto/Sole e foto vendita: è la fase in cui il pezzo
+  finito diventa un prodotto vendibile (testi pubblici, prezzo, disponibilità, slug).
+- **CATALOGATO** → scheda pubblicata + push verso Woo. Stato terminale lato dash.
+
+> **Revisione lug 2026** — il ciclo aveva due stati ridondanti. `REALIZZAZIONE` (ex `PRODUZIONE`)
+> ripeteva ciò che PROTOTIPO/VERSIONE FINALE già coprono, e teneva in ostaggio i moduli di
+> pubblicazione fino a fine ciclo: **tolto**. `FOTO` (ex `FOTOGRAFIA`) è diventata `SCHEDA_PRODOTTO`
+> (le foto sono un pezzo della scheda, non la fase) e `A_CATALOGO` è diventata `CATALOGATO`.
+> Migrazione dati in `ardy-migrate.php`: `PRODUZIONE|REALIZZAZIONE → VERSIONE_FINALE`,
+> `FOTOGRAFIA|FOTO → SCHEDA_PRODOTTO`, `A_CATALOGO → CATALOGATO`.
 
 > Decisioni che questa sequenza **chiude** (erano aperte in §6): è **serie replicabile + stock fuori
 > dalla dash** (non pezzo singolo); Catawiki/aste → **marginale** (il prodotto è da listino, non da
@@ -259,7 +271,7 @@ nessun pubblico, prezzo posizionato male**. L'energia di sviluppo va nella **mac
       di quelle della dash principale*). Estendere `ardy-pubblica-lavorazione.php` / `ardy-pubblica-social.php`
       ad accettare `progetto_id`, **senza il guscio cliente** (niente codici/email/WhatsApp): la pubblicazione
       è contenuto di brand (portfolio/social), non una pagina-lavorazione privata.
-- [ ] **Invio al catalogo**: a **fine ciclo** (stato A_CATALOGO → Tappa 2/3), separato dal flusso fasi.
+- [ ] **Invio al catalogo**: a **fine ciclo** (stato CATALOGATO → Tappa 2/3), separato dal flusso fasi.
 
 > **Storage foto → Backblaze B2 (alla migrazione)**: il DB salva solo i *nomi* file (`foto_urls`), le
 > foto si servono via endpoint `?file=`. Alla migrazione su B2 cambiano solo path di scrittura + ramo
@@ -289,7 +301,7 @@ nessun pubblico, prezzo posizionato male**. L'energia di sviluppo va nella **mac
 ### Chiuse (filiera mappata insieme il 25/06)
 - [x] **Stampa 3D** = prototipo **e** produzione (no print-on-demand per ora).
 - [x] **Prodotto replicabile a serie**; **stock fuori dalla dash** (vive su Woo/Etsy).
-- [x] **Ciclo di vita** lato dash finisce a **A CATALOGO** (no `VENDUTO`) — §3.
+- [x] **Ciclo di vita** lato dash finisce a **CATALOGATO** (no `VENDUTO`) — §3.
 - [x] **Prototipo tracciato** (loop v1/v2/v3 con note), con iterazioni **promuovibili a contenuto** — §2.4.
 - [x] **File congelato** = transizione di stato esplicita, manuale "a naso", con snapshot — §3.
 - [x] **Render/CAD/schede** = artefatti **a livello progetto** (opzione A), non dentro le fasi — §2.1/§2.4.

@@ -393,8 +393,8 @@ pagina. (`ardy-object-proxy.php` + `ardy-object-system.txt`.)
 La dash design ha due moduli e le immagini NON vanno mescolate:
 - **Modulo 1 — progetto/lavorazione** → articolo su `ardy-lab.it` con fasi/prototipazione. Usa la
   **galleria** (`progetto_galleria`). **Intoccato.**
-- **Modulo 2 — WooCommerce** → usa un set **separato** di **foto vendita professionali**, fatte quando
-  il pezzo è A CATALOGO. Nuova tabella **`progetto_foto_vendita`** (mai la galleria).
+- **Modulo 2 — WooCommerce** → usa un set **separato** di **foto vendita professionali**, fatte nella fase
+  **SCHEDA PRODOTTO**. Nuova tabella **`progetto_foto_vendita`** (mai la galleria).
 
 Motivo: la galleria racconta il *processo*, le foto vendita vendono il *prodotto finito*. Tenerle in
 tabelle distinte azzera il rischio di contaminazione tra i due moduli.

@@ -73,8 +73,8 @@
   .badge { display:inline-block; font-size:10px; letter-spacing:.5px; padding:2px 7px; border-radius:20px; border:1px solid var(--border); text-transform:uppercase; }
   .badge.IDEA{color:var(--text-mid)} .badge.PROGETTAZIONE{color:var(--blue);border-color:var(--blue)}
   .badge.PROTOTIPO{color:var(--orange);border-color:var(--orange)} .badge.VERSIONE_FINALE{color:var(--yellow);border-color:var(--yellow)}
-  .badge.REALIZZAZIONE{color:var(--accent);border-color:var(--accent)} .badge.FOTO{color:var(--text)}
-  .badge.A_CATALOGO{color:var(--green);border-color:var(--green)}
+  .badge.SCHEDA_PRODOTTO{color:var(--accent);border-color:var(--accent)}
+  .badge.CATALOGATO{color:var(--green);border-color:var(--green)}
   /* Moduli collassabili (rivelati per fase del ciclo di vita) */
   .panel.mod > h2{ cursor:pointer; position:relative; padding-right:24px; }
   .panel.mod > h2::after{ content:'▸'; position:absolute; right:2px; top:0; color:var(--text-dim); transition:transform .2s; }
@@ -223,7 +223,15 @@
 <script>
 const API = 'ardy-progetti-api.php';
 const TIPI = ['lampada','mobile','complemento','restyling','prototipo'];
-const STATI = ['IDEA','PROGETTAZIONE','PROTOTIPO','VERSIONE_FINALE','REALIZZAZIONE','FOTO','A_CATALOGO'];
+// Ciclo di vita: dall'idea al pezzo esposto in vetrina. Ogni fase è raccontabile e
+// pubblicabile (articolo + fasi-racconto sono attivi già da IDEA); SCHEDA_PRODOTTO è
+// la fase in cui si genera la scheda di vendita (foto + testi), CATALOGATO è terminale.
+const STATI = ['IDEA','PROGETTAZIONE','PROTOTIPO','VERSIONE_FINALE','SCHEDA_PRODOTTO','CATALOGATO'];
+// Stati storici (dash e DB precedenti) → equivalente attuale. Serve solo a non lasciare
+// un progetto "fuori barra" se il DB non è ancora migrato: la migrazione fa lo stesso.
+const STATI_LEGACY = { FILE_CONGELATO:'VERSIONE_FINALE', PRODUZIONE:'VERSIONE_FINALE', REALIZZAZIONE:'VERSIONE_FINALE',
+                       FOTOGRAFIA:'SCHEDA_PRODOTTO', FOTO:'SCHEDA_PRODOTTO', A_CATALOGO:'CATALOGATO' };
+const normStato = s => STATI_LEGACY[s] || (STATI.includes(s) ? s : 'IDEA');
 const METODI = [['stampa_3d','🖨️ Stampa 3D'],['restyling','♻️ Restyling'],['altro','🔧 Altro']];
 const DISPONIBILITA = [['pronto','Pronto'],['su_ordinazione','Su ordinazione'],['pezzo_unico','Pezzo unico']];
 
@@ -331,7 +339,7 @@ async function api(method, body){
 // ── Lista ───────────────────────────────────────────────
 async function caricaLista(){
   const d = await api('GET');
-  stato.lista = d.progetti || [];
+  stato.lista = (d.progetti || []).map(p => ({ ...p, stato: normStato(p.stato) }));
   renderLista();
 }
 function renderLista(){
@@ -355,6 +363,7 @@ async function apri(id){
   const d = await api('GET', { id });
   if (!d.success){ toast('Errore caricamento'); return; }
   stato.dettaglio = d;
+  d.progetto.stato = normStato(d.progetto.stato);
   if (d.config) stato.costoOrario = d.config.costo_orario;
   renderLista();
   renderDettaglio();
@@ -395,7 +404,7 @@ function renderDettaglio(nuovo=false){
       <div class="pipeline">
         ${STATI.map((s,i)=>`<div class="step ${i<stepi?'done':''} ${i===stepi?'current':''}" onclick="cambiaStato('${s}')">${s.replace('_',' ')}</div>`).join('')}
       </div>
-      <div class="muted" style="margin-bottom:8px">Man mano che avanzi nel ciclo di vita compaiono i moduli di quella fase. <b>A CATALOGO</b> è terminale: stock e vendita vivono su Woo.</div>
+      <div class="muted" style="margin-bottom:8px">Man mano che avanzi nel ciclo di vita compaiono i moduli di quella fase. Articolo e fasi-racconto sono attivi <b>fin da IDEA</b>: ogni fase si può raccontare e pubblicare. <b>CATALOGATO</b> è terminale: il pezzo è in vetrina, stock e vendita vivono su Woo.</div>
       ${p.id ? variantiRow(p) : ''}
       `:''}
 
@@ -412,16 +421,17 @@ function renderDettaglio(nuovo=false){
 
     ${p.id ? schedaProdottoCard() : ''}
     ${p.id ? [
+      // Binario pubblico: aperto da subito, perché ogni fase (idea compresa) è pubblicabile.
+      modSection('articolo','IDEA',false, articoloPanel()),
+      modSection('fasi','IDEA',false, fasiPanel()),
       modSection('galleria','PROGETTAZIONE',false, galleriaPanel()),
       modSection('file','PROGETTAZIONE',true, filePanel()),
       modSection('iter','PROTOTIPO',true, iterPanel()),
       modSection('bom','PROTOTIPO',false, bomPanel()),
       modSection('versione','VERSIONE_FINALE',true, versioneFinalePanel()),
       (stato.congelaForm ? congelaFormHtml() : ''),
-      modSection('fotovendita','VERSIONE_FINALE',false, fotoVenditaPanel()),
-      modSection('fasi','REALIZZAZIONE',false, fasiPanel()),
-      modSection('articolo','REALIZZAZIONE',false, articoloPanel()),
-      modSection('push','A_CATALOGO',false, pushPanel()),
+      modSection('fotovendita','SCHEDA_PRODOTTO',false, fotoVenditaPanel()),
+      modSection('push','CATALOGATO',false, pushPanel()),
     ].join('') : '<div class="muted">Salva il progetto per gestire i suoi moduli (foto, file, costi, contenuti, negozio).</div>'}
     ${p.id ? saveBar() : ''}
   `;
@@ -837,12 +847,12 @@ async function generaTeaser(){
   if (btn){ btn.disabled=false; btn.textContent='✨ Genera con AI'; }
 }
 
-// ── Scheda prodotto / Sole (card gated: compare da VERSIONE FINALE) ──
+// ── Scheda prodotto / Sole (card gated: compare da SCHEDA PRODOTTO) ──
 // Sempre nel DOM (anche 'locked' = nascosta) così il salvataggio legge i campi.
 function schedaProdottoCard(){
   const p = stato.dettaglio.progetto;
-  const locked = STATI.indexOf(p.stato) < STATI.indexOf('VERSIONE_FINALE');
-  const open = p.stato === 'VERSIONE_FINALE';
+  const locked = STATI.indexOf(p.stato) < STATI.indexOf('SCHEDA_PRODOTTO');
+  const open = p.stato === 'SCHEDA_PRODOTTO';
   return `
   <div class="panel mod ${open?'open':''} ${locked?'locked':''}" id="mod-prodotto">
     <h2>🟡 Scheda prodotto / Sole <small>contenuti pubblici del pezzo in vendita</small></h2>
@@ -876,7 +886,7 @@ function versioneFinalePanel(){
   </div>`;
 }
 
-// ── Negozio (WooCommerce): compare a A CATALOGO ──
+// ── Negozio (WooCommerce): compare a CATALOGATO (il pezzo va in vetrina) ──
 function pushPanel(){
   const p = stato.dettaglio.progetto;
   const disp = (DISPONIBILITA.find(d=>d[0]===(p.disponibilita||'pronto'))||['','?'])[1];
@@ -908,7 +918,7 @@ function articoloPanel(){
   }
   return `
   <div class="panel">
-    <h2>Articolo WordPress <small>crea la pagina pubblica del progetto</small></h2>
+    <h2>Articolo WordPress <small>crea la pagina pubblica del progetto — puoi pubblicarlo già dall'idea</small></h2>
     <div class="field"><label>Testo dell'articolo</label>
       <textarea id="art_testo" style="min-height:120px" oninput="stato.articoloTesto=this.value" placeholder="Scrivi qui, oppure premi ✨ Genera con AI per partire dalla descrizione del progetto">${esc(stato.articoloTesto||'')}</textarea>
       <div style="margin-top:6px"><button class="sm" id="artAiBtn" onclick="generaArticolo()">✨ Genera con AI</button>
@@ -916,7 +926,7 @@ function articoloPanel(){
     </div>
     <div class="row" style="align-items:center">
       <button class="primary" onclick="pubblicaArticolo()">📝 Pubblica articolo</button>
-      <span class="muted">Userà i render e le foto della Galleria qui sopra.</span>
+      <span class="muted">Userà i render e le foto della Galleria progetto (se già ce ne sono).</span>
     </div>
     <div id="artOut" class="muted" style="margin-top:6px"></div>
   </div>`;
@@ -1059,7 +1069,7 @@ function fasiPanel(){
   const pid = stato.dettaglio.progetto.id;
   return `
   <div class="panel">
-    <h2>Contenuti — fasi racconto <small>foto + testo per reel / social / WordPress</small></h2>
+    <h2>Contenuti — fasi racconto <small>una per ogni tappa del lavoro · foto + testo per reel / social / WordPress</small></h2>
     ${fasi.length ? fasi.map(f=>`
       <div class="iter">
         <div class="h"><b>${esc(f.fase_nome)||'(senza titolo)'}</b>

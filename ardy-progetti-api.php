@@ -32,9 +32,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit();
 require_once __DIR__ . '/ardy-auth.php';
 ardyRequireAuth();
 
-// Ciclo di vita del progetto (vedi PIANO-DASH-DESIGN.md §3). 'A_CATALOGO' è terminale
+// Ciclo di vita del progetto (vedi PIANO-DASH-DESIGN.md §3): idea → progetto → prototipo
+// → pezzo definitivo → scheda di vendita → esposto in vetrina. Ogni fase è raccontabile e
+// pubblicabile (articolo + fasi-racconto sono attivi già da IDEA). 'CATALOGATO' è terminale
 // lato dash: stock/ordini/venduto vivono su Woo/Etsy, non qui.
-const PROGETTO_STATI = ['IDEA', 'PROGETTAZIONE', 'PROTOTIPO', 'VERSIONE_FINALE', 'REALIZZAZIONE', 'FOTO', 'A_CATALOGO'];
+const PROGETTO_STATI = ['IDEA', 'PROGETTAZIONE', 'PROTOTIPO', 'VERSIONE_FINALE', 'SCHEDA_PRODOTTO', 'CATALOGATO'];
 const PROGETTO_TIPI  = ['lampada', 'mobile', 'complemento', 'restyling', 'prototipo'];
 // Come si realizza il pezzo → guida i moduli tecnici mostrati nella dash.
 const PROGETTO_METODI = ['stampa_3d', 'restyling', 'altro'];

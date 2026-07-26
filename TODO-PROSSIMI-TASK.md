@@ -8,6 +8,23 @@
 
 ---
 
+## 🔁 DA DEPLOYARE — Ciclo di vita dash design snellito (26/07/2026)
+
+Il ciclo aveva due stati ridondanti. Ora è: **IDEA → PROGETTAZIONE → PROTOTIPO → VERSIONE FINALE →
+SCHEDA PRODOTTO → CATALOGATO**. `REALIZZAZIONE` è **tolto** (duplicava PROTOTIPO/VERSIONE FINALE),
+`FOTO` è diventato **SCHEDA PRODOTTO** (generazione della scheda di vendita: foto + testi pubblici),
+`A CATALOGO` è diventato **CATALOGATO** (pezzo esposto in vetrina). **Articolo WP e fasi-racconto
+sono ora sbloccati da IDEA**: ogni fase, idea compresa, si può raccontare e pubblicare.
+
+- ⚠️ **Dopo il deploy lanciare `ardy-migrate.php`**: rinomina gli stati sulle righe esistenti
+  (`PRODUZIONE|REALIZZAZIONE → VERSIONE_FINALE`, `FOTOGRAFIA|FOTO → SCHEDA_PRODOTTO`,
+  `A_CATALOGO → CATALOGATO`). Idempotente. Finché non gira, la dash normalizza i vecchi codici
+  lato JS (`STATI_LEGACY`), quindi niente progetti "fuori barra", ma il DB resta col codice vecchio.
+- File toccati: `ardy-design-app.html`, `ardy-progetti-api.php`, `ardy-migrate.php`,
+  `ardy-guida-design.html` + doc (`README.md`, `PIANO-DASH-DESIGN.md` §3).
+
+---
+
 ## 🗑️ RIMOSSO — Monitor lead portali (22/07/2026)
 
 Il modulo **Monitor lead** (leggeva le email dei portali ProntoPro/Homedeal/Cronoshare/Instapro/
