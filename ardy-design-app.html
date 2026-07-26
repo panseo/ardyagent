@@ -1105,12 +1105,35 @@ function socialTestoSalvato(tipo, id){
   return (f && f.testo_social) || '';
 }
 
+// Quante foto ha il soggetto sul NOSTRO server (galleria del progetto / foto della
+// fase): servono a distinguere «non ci sono foto» da «ci sono ma non ancora su WP».
+function socialFotoLocali(tipo, id){
+  if (tipo === 'progetto') return (stato.dettaglio.galleria || []).length;
+  const f = (stato.dettaglio.fasi || []).find(x => x.id == id);
+  return ((f && f.foto_urls) || []).length;
+}
+// Cosa partirà davvero come immagini. Il caso "ci sono foto ma nessun URL pubblico"
+// non è teorico: gli articoli pubblicati PRIMA che si salvassero gli URL di WordPress
+// hanno la galleria piena e `wp_immagini` vuota. Senza dirlo, il post uscirebbe di
+// solo testo e sembrerebbe un guasto — invece basta rimandare le immagini su WP.
+function socialNotaImmagini(tipo, id){
+  const pubbliche = socialImmagini(tipo, id).length;
+  if (pubbliche) return `${pubbliche} ${pubbliche === 1 ? 'immagine pubblica' : 'immagini pubbliche'} + il link.`;
+  const locali = socialFotoLocali(tipo, id);
+  if (!locali) return '<b>Nessuna foto</b>: il post uscirà solo testo.';
+  const quante = locali === 1 ? '<b>La foto non è ancora su WordPress</b>' : `<b>Le ${locali} foto non sono ancora su WordPress</b>`;
+  return `${quante}, quindi i social non ${locali === 1 ? 'possono scaricarla' : 'possono scaricarle'}: `
+    + (tipo === 'progetto'
+        ? 'premi 🖼️ Aggiorna le immagini dell\'articolo qui sopra.'
+        : 'ripubblica la fase su WordPress.')
+    + ' Così com\'è, il post uscirebbe di solo testo.';
+}
+
 // Blocco "Pubblica sui social" — gemello esatto di quello delle fasi cliente:
 // tre toggle (nessuno preselezionato: si sceglie ogni volta dove va), caption
 // rivedibile, e i tre bottoni Rigenera / Anteprima / Pubblica.
 function socialBlocco(tipo, id, nota){
-  const k    = socialChiave(tipo, id);
-  const imgs = socialImmagini(tipo, id);
+  const k = socialChiave(tipo, id);
   return `
   <div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border)">
     <div class="muted" style="text-transform:uppercase;letter-spacing:1px">📲 Pubblica sui social</div>
@@ -1121,7 +1144,7 @@ function socialBlocco(tipo, id, nota){
       <button class="sm" style="flex:1 1 100px" onclick="socialAnteprima('${tipo}',${id})">👁 Anteprima</button>
       <button class="sm primary" style="flex:2 1 130px" onclick="socialInvia('${tipo}',${id})">📲 Pubblica</button>
     </div>
-    <div class="muted" style="font-size:.85em;margin-top:6px">Testo brand per FB/IG. Su Google va lo stesso, senza hashtag. ${imgs.length ? `${imgs.length} immagini pubbliche + il link.` : '<b>Nessuna immagine pubblica</b>: il post uscirà solo testo.'}${nota ? ' ' + nota : ''}</div>
+    <div class="muted" style="font-size:.85em;margin-top:6px">Testo brand per FB/IG. Su Google va lo stesso, senza hashtag. <span id="soc_img_${k}">${socialNotaImmagini(tipo, id)}</span>${nota ? ' ' + nota : ''}</div>
     <div id="soc_out_${k}" class="muted" style="margin-top:6px"></div>
   </div>`;
 }
@@ -1417,6 +1440,13 @@ async function aggiornaImmaginiArticolo(){
       if (d.in_fondo) parti.push('aggiunte in fondo (articolo pubblicato prima di questa funzione)');
       if (out) out.innerHTML = `✅ ${esc(parti.join(' · '))}`;
       toast(`Immagini aggiornate — ${d.immagini}/${d.galleria_totale}`);
+      // Gli URL pubblici appena salvati valgono anche per i social: aggiorno lo stato e
+      // la riga del pannello qui sotto, senza ridisegnare (la caption resta dov'è).
+      if (Array.isArray(d.wp_immagini)){
+        stato.dettaglio.progetto.wp_immagini = d.wp_immagini;
+        const nota = document.getElementById('soc_img_' + socialChiave('progetto', stato.dettaglio.progetto.id));
+        if (nota) nota.innerHTML = socialNotaImmagini('progetto', stato.dettaglio.progetto.id);
+      }
     } else {
       if (out) out.innerHTML = `<span class="neg">${esc(d.error||'Errore')}</span>`;
       toast(d.error||'Errore aggiornamento');

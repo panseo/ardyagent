@@ -97,8 +97,11 @@ function progettoGalleriaBytes(array $row, int $progettoId): ?string {
  * Facebook e Instagram devono poter scaricare l'immagine da un indirizzo raggiungibile,
  * e quelle sul nostro server stanno dietro Basic Auth. È il motivo per cui si manda ai
  * social solo ciò che è già passato da WordPress.
+ *
+ * Ritorna gli URL salvati: la dash li rimette subito nel pannello social, che altrimenti
+ * continuerebbe a dire "nessuna immagine pubblica" fino al ricaricamento della pagina.
  */
-function progettoSalvaImmaginiWp(PDO $db, int $progettoId, array $immagini): void {
+function progettoSalvaImmaginiWp(PDO $db, int $progettoId, array $immagini): array {
     $urls = array_values(array_filter(array_map(fn($i) => (string) ($i['url'] ?? ''), $immagini)));
     try {
         $db->prepare("UPDATE progetti SET wp_immagini = :u WHERE id = :id")
@@ -106,6 +109,7 @@ function progettoSalvaImmaginiWp(PDO $db, int $progettoId, array $immagini): voi
     } catch (PDOException $e) {
         error_log('ARDY PUBBLICA PROGETTO DB IMMAGINI: ' . $e->getMessage());
     }
+    return $urls;
 }
 
 // Pre-carico i BYTE della galleria PRIMA di caricare WordPress. Le foto su Backblaze
@@ -246,13 +250,14 @@ if ($mode === 'aggiorna_immagini') {
     }
     update_post_meta($wpPostIdEsistente, '_ardy_galleria_map', $mappa);
     if ($featuredId !== null) set_post_thumbnail($wpPostIdEsistente, $featuredId);
-    progettoSalvaImmaginiWp($db, $progettoId, $immagini);
+    $urlsPubblici = progettoSalvaImmaginiWp($db, $progettoId, $immagini);
 
     echo json_encode([
         'success' => true, 'aggiornato' => true, 'wp_post_id' => $wpPostIdEsistente,
         'post_link' => get_permalink($wpPostIdEsistente),
         'immagini' => count($immagini), 'nuove' => $nuove, 'galleria_totale' => count($galleria),
         'in_fondo' => !$haBlocco,
+        'wp_immagini' => $urlsPubblici,   // la dash aggiorna il pannello social senza ricaricare
     ]);
     exit();
 }
