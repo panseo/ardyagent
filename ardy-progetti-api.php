@@ -175,8 +175,12 @@ try {
         unset($f);
 
         // Archivio file di stampa/CAD (metadati; i binari si scaricano da ardy-progetti-file-api.php).
+        // Binari di stampa + documenti di riferimento (categoria 'doc'). Del testo
+        // estratto dai documenti serve solo sapere se c'è e quanto è lungo: il testo
+        // vero resta sul server, lo legge ardy-progetti-ai.php quando scrive l'articolo.
         $file = $db->prepare(
-            "SELECT id, categoria, nome_originale, dimensione, note, created_at
+            "SELECT id, categoria, nome_originale, dimensione, note, created_at, testo_estratto_at,
+                    CHAR_LENGTH(COALESCE(testo_estratto,'')) AS testo_caratteri
              FROM progetto_file WHERE progetto_id = ? ORDER BY created_at DESC, id DESC"
         );
         $file->execute([$id]);

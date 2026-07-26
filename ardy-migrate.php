@@ -339,7 +339,7 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `progetto_iterazioni` (
 ddl($pdo, "CREATE TABLE IF NOT EXISTS `progetto_file` (
     `id`             BIGINT AUTO_INCREMENT PRIMARY KEY,
     `progetto_id`    BIGINT NOT NULL,
-    `categoria`      VARCHAR(20)  NOT NULL DEFAULT 'stl',   -- stl|3mf|gcode|cad|altro
+    `categoria`      VARCHAR(20)  NOT NULL DEFAULT 'stl',   -- stl|3mf|gcode|cad|altro|doc
     `storage`        VARCHAR(10)  NOT NULL DEFAULT 'local', -- local|b2 (dove vive il binario)
     `nome_file`      VARCHAR(255) NOT NULL,                 -- nome su disco (univoco)
     `storage_key`    VARCHAR(300) NULL,                     -- object key su B2 (se storage=b2)
@@ -352,9 +352,16 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `progetto_file` (
 
 // Colonne aggiunte dopo l'intro della tabella (installazioni dove esiste già senza
 // lo strato storage): dove vive il binario (local|b2) e la sua object key su B2.
+// 'testo_estratto' (lug 2026): per i documenti di riferimento (categoria 'doc':
+// PDF/DOCX/ODT/TXT/MD) il testo leggibile viene estratto UNA VOLTA SOLA e salvato qui.
+// Così la generazione dell'articolo lo rilegge dal DB a costo zero, invece di rimandare
+// il documento al modello ad ogni click. È materiale INTERNO: non esce da ardy-object-scheda.php.
+// I binari dei 'doc' restano su disco (non su B2): il server deve poterli rileggere.
 $progettoFileCols = [
-    'storage'     => "ALTER TABLE progetto_file ADD COLUMN storage VARCHAR(10) NOT NULL DEFAULT 'local' AFTER categoria",
-    'storage_key' => "ALTER TABLE progetto_file ADD COLUMN storage_key VARCHAR(300) NULL AFTER nome_file",
+    'storage'           => "ALTER TABLE progetto_file ADD COLUMN storage VARCHAR(10) NOT NULL DEFAULT 'local' AFTER categoria",
+    'storage_key'       => "ALTER TABLE progetto_file ADD COLUMN storage_key VARCHAR(300) NULL AFTER nome_file",
+    'testo_estratto'    => "ALTER TABLE progetto_file ADD COLUMN testo_estratto MEDIUMTEXT NULL",
+    'testo_estratto_at' => "ALTER TABLE progetto_file ADD COLUMN testo_estratto_at DATETIME NULL",
 ];
 foreach ($progettoFileCols as $col => $sql) {
     if (!colExists($pdo, 'progetto_file', $col)) { ddl($pdo, $sql, "progetto_file.$col"); }
@@ -367,7 +374,7 @@ foreach ($progettoFileCols as $col => $sql) {
 ddl($pdo, "CREATE TABLE IF NOT EXISTS `progetto_galleria` (
     `id`          BIGINT AUTO_INCREMENT PRIMARY KEY,
     `progetto_id` BIGINT NOT NULL,
-    `tipo`        VARCHAR(10)  NOT NULL DEFAULT 'render', -- render | foto
+    `tipo`        VARCHAR(10)  NOT NULL DEFAULT 'render', -- prima | render | foto
     `storage`     VARCHAR(10)  NOT NULL DEFAULT 'local',  -- local | b2
     `nome_file`   VARCHAR(255) NOT NULL,
     `storage_key` VARCHAR(300) NULL,

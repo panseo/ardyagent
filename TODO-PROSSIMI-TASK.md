@@ -23,6 +23,25 @@ sono ora sbloccati da IDEA**: ogni fase, idea compresa, si può raccontare e pub
 - File toccati: `ardy-design-app.html`, `ardy-progetti-api.php`, `ardy-migrate.php`,
   `ardy-guida-design.html` + doc (`README.md`, `PIANO-DASH-DESIGN.md` §3).
 
+**Materiale dell'idea (stessa infornata):** galleria e documenti sbloccati da IDEA.
+
+- Galleria: nuovo tipo **`prima`** (il pezzo com'era prima del restyling / riferimento dell'idea),
+  accanto a `render` e `foto`. Nell'articolo WP esce come sezione «Il punto di partenza» ed è
+  **esclusa dalla copertina** (copertina = foto finita, poi render).
+- Nuovo modulo **📚 Documenti di riferimento**: PDF/DOCX/ODT/RTF/TXT/MD (max 20 MB) in
+  `progetto_file` con categoria `doc`, mostrati a parte dai binari di stampa. Il testo si estrae
+  **una volta sola** (`ardy-progetti-ai.php` mode `leggi_doc`) e si salva in
+  `progetto_file.testo_estratto`; `genera_articolo` lo rilegge dal DB (max 8.000 caratteri di
+  contesto). TXT/MD/DOCX/ODT/RTF si leggono in locale a costo zero, **solo il PDF** costa una
+  chiamata al modello, una per documento.
+- ⚠️ Anche questo vuole `ardy-migrate.php` (colonne `testo_estratto`, `testo_estratto_at`): finché
+  non gira, la dash design va in errore 500 sul dettaglio progetto. Deploy → migrate, in quest'ordine
+  (è quello che fa `deploy.sh`).
+- ⏳ Da provare a video: PDF con testo vero (ok) vs PDF scansionato (deve dire che serve un OCR);
+  articolo generato con e senza documenti allegati.
+- Materiale **interno**: i documenti non escono da `ardy-object-scheda.php` (whitelist) e non
+  vanno alla chat di Sole.
+
 ---
 
 ## 🗑️ RIMOSSO — Monitor lead portali (22/07/2026)

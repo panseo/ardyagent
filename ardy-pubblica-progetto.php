@@ -50,8 +50,8 @@ try {
     }
     $titolo = trim((string) $p['titolo']) ?: 'Progetto Ardy';
 
-    // Immagini della galleria (render prima, poi foto finite).
-    $gst = $db->prepare("SELECT id, tipo, storage, nome_file, storage_key FROM progetto_galleria WHERE progetto_id = ? ORDER BY FIELD(tipo,'render','foto'), ordine ASC, id ASC");
+    // Immagini della galleria, nell'ordine del racconto: com'era prima, i render, il pezzo finito.
+    $gst = $db->prepare("SELECT id, tipo, storage, nome_file, storage_key FROM progetto_galleria WHERE progetto_id = ? ORDER BY FIELD(tipo,'prima','render','foto'), ordine ASC, id ASC");
     $gst->execute([$progettoId]);
     $galleria = $gst->fetchAll();
 } catch (PDOException $e) {
@@ -120,21 +120,27 @@ foreach ($galPronte as $g) {                  // byte già letti da storage prim
 foreach (glob($tmpDir . '*') as $f) { if (is_file($f)) @unlink($f); }
 @rmdir($tmpDir);
 
-// Copertina = prima foto finita, altrimenti primo render.
+// Copertina = prima foto finita, poi primo render. Mai una foto 'prima': quella
+// racconta il punto di partenza, non il pezzo — in vetrina ci va il risultato.
 $featuredId = null;
-foreach ($immagini as $im) { if ($im['tipo'] === 'foto') { $featuredId = $im['id']; break; } }
+foreach ($immagini as $im) { if ($im['tipo'] === 'foto')   { $featuredId = $im['id']; break; } }
+if ($featuredId === null) { foreach ($immagini as $im) { if ($im['tipo'] === 'render') { $featuredId = $im['id']; break; } } }
 if ($featuredId === null && !empty($immagini)) $featuredId = $immagini[0]['id'];
 
-// Contenuto: intro + render + foto finite (la copertina non si ripete nel corpo).
+// Contenuto: intro + punto di partenza + render + foto finite (la copertina non si
+// ripete nel corpo).
 $introHtml = '<div style="font-family:Georgia,serif;font-size:16px;line-height:1.7;color:#444;margin-bottom:24px;">'
     . nl2br(esc_html($testo)) . '</div>';
-$render = ''; $foto = '';
+$prima = ''; $render = ''; $foto = '';
 foreach ($immagini as $im) {
     if ($featuredId !== null && $im['id'] === $featuredId) continue;
     $tag = '<img src="' . esc_url($im['url']) . '" style="max-width:100%;margin:10px 0;border-radius:6px;" />' . "\n";
-    if ($im['tipo'] === 'render') $render .= $tag; else $foto .= $tag;
+    if      ($im['tipo'] === 'prima')  $prima  .= $tag;
+    elseif  ($im['tipo'] === 'render') $render .= $tag;
+    else                               $foto   .= $tag;
 }
 $content = $introHtml;
+if ($prima  !== '') $content .= '<h3 style="font-family:sans-serif;color:#8b6f3e;">Il punto di partenza</h3>' . "\n" . $prima;
 if ($render !== '') $content .= '<h3 style="font-family:sans-serif;color:#8b6f3e;">Render</h3>' . "\n" . $render;
 if ($foto   !== '') $content .= '<h3 style="font-family:sans-serif;color:#8b6f3e;">La creazione</h3>' . "\n" . $foto;
 
