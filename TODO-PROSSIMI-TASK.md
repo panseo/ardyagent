@@ -1,7 +1,7 @@
 # Ardy Lab — Task aperti & note utili
 
 > Solo task **aperti** + note operative + verifiche residue. Tutto ciò che è fatto **e deployato**
-> è rimosso (lo storico resta nei commit git). Ultima pulizia: 19/07/2026.
+> è rimosso (lo storico resta nei commit git). Ultima pulizia: 19/07/2026 · ultimo aggiornamento: 26/07/2026.
 
 > ⚠️ Promemoria sempre valido: se Sole tace su **tutti** i canali insieme (WhatsApp + webchat),
 > sospetta **credito Anthropic esaurito** (capitato il 21/06; si ricarica da Plans & Billing).
@@ -286,6 +286,36 @@ INI-PEC non automatizzabile (captcha) → PEC via API a pagamento, eventuale tas
 ---
 
 ## ⏳ DA VERIFICARE DAL VIVO / AZIONI MANUALI
+- **🛋️ Consulenza Interior Design (25/07, DEPLOYATO, test sul campo NON ancora fatto).** Nuovo servizio:
+  webchat dedicata con Sole su `ardy-lab.it/interior-design` + sezione 🛋️ nella scheda cliente. Sole conduce
+  una **intervista guidata** (chiede il permesso → cinque domande una alla volta: ambiente, stile, colori,
+  luce, budget → invito alle foto → **dati anagrafici solo alla fine**), poi scrive in scheda il
+  **💬 Riepilogo di Sole**, unico campo della sezione insieme alle foto del cliente.
+  **Test da fare (due giri, meglio dal telefono):**
+  1. *Intervista completa*: rispondere a tutte le domande, mandare una foto col pulsante
+     **📷 Fai la foto al tuo ambiente**, arrivare fino ai contatti. Poi in dashboard verificare
+     (a) servizio = "Consulenza Interior Design", (b) sezione 🛋️ **già accesa** senza intervento manuale,
+     (c) riepilogo scritto e sensato, (d) foto visibili **dentro la sezione** (🖼️ Immagini di riferimento)
+     oltre che in Scheda operativa.
+  2. *Intervista saltata*: dettare subito nome/telefono/email senza rispondere alle domande. Deve arrivare
+     comunque tutto giusto: l'accensione **non** dipende dal tool ma dal campo `origine` mandato dal widget
+     (`ardy-proxy.php`, blocco dopo `salva_lead_crm`). Nel riepilogo Sole deve **dire cosa manca**, non inventarlo.
+  - ⚠️ **Continuare a chattare DOPO aver mandato foto**: era il punto che si rompeva ("Errore nella risposta AI",
+    foto originali in history oltre il limite 5MB/immagine dell'API). Risolto ridimensionando nel browser
+    (1600px, JPEG q82) — da riconfermare dal vivo.
+  - Se il **tono o il ritmo** delle domande non convince, si tara in `ardy-system.txt` (sezione
+    "CONSULENZA INTERIOR DESIGN") **senza toccare codice**: solo deploy.
+  - Nota: chi abbandona a metà intervista **non lascia scheda** (senza telefono non si crea) — voluto. Resta
+    comunque la notifica WhatsApp "💬 Chat conclusa — (non in CRM)" dal job orario.
+  - File: `ardy-chat-interior-design.js`, `ardy-proxy.php`, `ardy-system.txt`, `ardy-michela-app.html`,
+    `ardy-dossier.php`, `ardy-migrate.php`. PR #92-#100.
+  - **Azioni WordPress (NON coperte dal deploy — `wordpress-snippets/` è solo backup):**
+    - ✅ snippet WPCode **"Pulsante flottante ovunque"**: aggiunto `/interior-design` alle esclusioni
+      (il CTA verde copriva il toggle del widget e portava fuori pagina). Verificato dal vivo.
+    - [ ] **contenuto pagina** `/interior-design`: la card *"1 · Racconti a Sole"* è stata riscritta dopo
+      il primo incolla (ora dice "cinque domande", che si possono allegare foto e che i **contatti si
+      chiedono solo alla fine**). Se non è stata riportata a mano, la pagina promette un flusso diverso da
+      quello reale. Testo aggiornato in `wordpress-snippets/interior-design-page.html`. Solo cosmetico.
 - **📷 "Usa foto della scheda" nelle fasi (19/07, DEPLOYATO, da testare sul campo).** Nel form "Crea e pubblica
   nuova fase" il pulsante **USA FOTO DELLA SCHEDA** apre le foto della scheda come miniature selezionabili; le
   scelte vengono scaricate, normalizzate (`fotoNormalizza`) e aggiunte a `lavImmagini`. **Test:** creare una
