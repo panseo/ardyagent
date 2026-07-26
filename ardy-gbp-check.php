@@ -53,6 +53,12 @@ curl_setopt($ch, CURLOPT_TIMEOUT,        30);
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER,     ['Authorization: Bearer ' . $token]);
 curl_setopt($ch, CURLOPT_HEADER,         true); // includi header nella risposta
+// Esce su IPv4 come fa la libreria vera (gbp_api_get / POST dei localPost): l'egress
+// IPv6 del server OVH viene respinto dall'API Business con un 403 HTML. Finché questa
+// pagina usava il default, mostrava un 403 che l'applicazione non incontra più — e si
+// fermava lì, senza arrivare a diagnosticare i problemi veri (vedi "Post locali").
+// L'uscita IPv6 resta comunque provata più sotto, per non perdere quella conoscenza.
+if (defined('CURL_IPRESOLVE_V4')) { curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4); }
 $raw      = curl_exec($ch);
 $err      = curl_error($ch);
 $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -81,10 +87,11 @@ error_log("ARDY GBP CHECK: HTTP $httpCode status=$status reason=$reason");
 // --- Interpretazione ---------------------------------------------------
 if ($httpCode === 200) {
     $n = isset($data['accounts']) ? count($data['accounts']) : 0;
-    echo "<div class='box ok'><b>✅ QUOTA SBLOCCATA — l'API risponde!</b><br>"
-       . "La Business Profile API è accessibile con questo progetto. "
-       . "Account collegati trovati: <b>$n</b>.<br>"
-       . "Puoi procedere a costruire la pubblicazione dei post delle fasi.</div>";
+    echo "<div class='box ok'><b>✅ L'API risponde (uscendo su IPv4).</b><br>"
+       . "La Business Profile API è accessibile con questo progetto: accesso concesso, token buono, "
+       . "quota &gt; 0. Account collegati trovati: <b>$n</b>.<br>"
+       . "<span class='muted'>Vale per leggere account e schede. Se <i>pubblicare</i> fallisce lo stesso, "
+       . "la causa sta nella sezione «Post locali» qui sotto: non è né l'accesso né il token.</span></div>";
 } elseif ($httpCode === 401) {
     echo "<div class='box err'><b>❌ Token non valido / scaduto (401).</b><br>"
        . "Ri-autorizza da <code>ardy-gbp-auth.php</code>.</div>";
@@ -117,6 +124,27 @@ if ($httpCode === 200) {
        . "(e My Business Account Management / Business Information) sia <i>Enabled</i> e con quota &gt; 0.</div>";
 } else {
     echo "<div class='box warn'><b>Risposta inattesa (HTTP $httpCode).</b> Vedi il dettaglio sotto.</div>";
+}
+
+// --- Controprova IPv6: la ragione per cui tutto il codice GBP forza IPv4 ------
+// Con la chiamata principale a 200 (IPv4) i "tentativi" storici qui sotto non
+// partono più. Questa controprova conserva la conoscenza: rifà la stessa GET
+// sull'egress di default e mostra che l'IPv6 del server resta respinto.
+if ($httpCode === 200) {
+    $ch6 = curl_init($API_URL);
+    curl_setopt($ch6, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch6, CURLOPT_TIMEOUT,        20);
+    curl_setopt($ch6, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch6, CURLOPT_HTTPHEADER,     ['Authorization: Bearer ' . $token]);
+    curl_exec($ch6);
+    $code6  = (int)curl_getinfo($ch6, CURLINFO_HTTP_CODE);
+    $local6 = (string)curl_getinfo($ch6, CURLINFO_LOCAL_IP);
+    curl_close($ch6);
+    echo "<p class='muted'>Controprova sull'uscita di default (<code>" . h($local6 ?: '—') . "</code>): "
+       . "HTTP <b>$code6</b>. " . ($code6 === 200
+            ? "Ora passa anche da lì: il vincolo IPv4 non serve più (si può togliere da <code>ardy-gbp.php</code>)."
+            : "Respinta, come da luglio — per questo <code>ardy-gbp.php</code> forza IPv4 su tutte le chiamate.")
+       . "</p>";
 }
 
 // --- Diagnostica del TOKEN in uso -------------------------------------
