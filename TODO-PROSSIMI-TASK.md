@@ -49,6 +49,38 @@ con lo stesso motore del binario clienti (`ardy-pubblica-social.php` → n8n →
 
 ---
 
+## 🧩 APERTO — Tipi progetto dash design: aggiunto `sistema` (26/07/2026)
+
+Nato da Ardy Tower (serra idroponica modulare a torri, ricircolo + IoT + agente AI "ArdyBio-Agronomist"):
+un progetto che **non è arredo** e che nei tipi esistenti non aveva casa. Aggiunta la voce **`sistema`**
+= *apparato funzionale, più componenti che lavorano insieme (impianto, elettronica/IoT, automazione)*.
+Regge anche i prossimi progetti tecnici fuori perimetro, senza inventare un tipo ogni volta.
+
+- **Perché il nome conta**: `tipo` non è solo un'etichetta di dash — finisce nel contesto passato all'AI
+  (`ardy-progetti-ai.php` → `Tipo: $tipo`) quando genera **articolo** e **scheda prodotto**. Un contenitore
+  generico tipo "sperimentale" all'AI non direbbe nulla; `sistema` le dice che sta raccontando un impianto,
+  non un oggetto d'arredo.
+- **Toccati** (4 punti, la lista è hardcodata in più file — se si aggiunge un tipo, vanno tutti):
+  `ardy-progetti-api.php` (`PROGETTO_TIPI`, whitelist server) · `ardy-design-app.html` (`TIPI`, la tendina) ·
+  `ardy-guida-design.html` (elenco + tip che spiega a Michela quando usarlo) · `PIANO-DASH-DESIGN.md` (schema).
+- **Nessuna migrazione**: `progetti.tipo` è `VARCHAR(40)` senza vincolo enum → il valore nuovo passa da subito.
+- ⏳ **Da deployare** (merge in `main` fatto, deploy sul server no).
+
+**Considerazioni emerse, da decidere:**
+- [ ] **Il set dei tipi è misto e va ripulito.** `lampada · mobile · complemento · sistema` dicono *cosa è*
+      il pezzo; `restyling` e `prototipo` invece **duplicano campi che esistono già**: `restyling` è anche un
+      **Metodo** (`PROGETTO_METODI`), `prototipo` è anche una **fase** del ciclo di vita (`PROGETTO_STATI`).
+      Averli fra i tipi vuol dire che lo stesso fatto è scritto in due posti che possono contraddirsi (un
+      progetto tipo=`prototipo` ma stato=`CATALOGATO`), e confonde l'AI che legge entrambi nel contesto.
+      Toglierli però è una **migrazione dati** sui progetti esistenti (vanno riassegnati a un tipo vero) →
+      non fatto, serve decisione di Michela.
+- [ ] **Metodo di Ardy Tower.** Oggi è `Stampa 3D`, che accende i moduli 3D (archivio file, iterazioni,
+      versione finale). Corretto per le torri stampate, ma il progetto è **misto** (stampa + idraulica +
+      elettronica/IoT) e i moduli per la parte impiantistica non esistono. Da capire se servono davvero o se
+      basta documentare quella parte nei documenti di riferimento — è un lavoro a sé, non un problema di naming.
+
+---
+
 ## ☁️ APERTO — Archivio B2 di fine ciclo: collaudo dal vivo mancante (26/07/2026)
 
 **Decisione (26/07)**: B2 non sta più *dentro* il lavoro (offload spento, rimpatriato tutto su
