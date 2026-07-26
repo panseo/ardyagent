@@ -8,8 +8,12 @@
 #   git pull origin main
 #   ./deploy.sh
 #
-# Copia SOLO i file versionati nel document root. NON usa --delete, quindi i
+# Copia il contenuto del repo nel document root. NON usa --delete, quindi i
 # file/cartelle NON in repo (config, credenziali, upload, vendor) restano intatti.
+#
+# ATTENZIONE: rsync NON legge .gitignore — copia tutto ciò che non è escluso qui
+# sotto a mano. Per questo log e file di lavoro hanno le loro --exclude: senza,
+# l'error_log di PHP scritto nella cartella del repo finirebbe in public_html.
 
 set -euo pipefail
 
@@ -41,6 +45,10 @@ rsync -av \
   --exclude='ardy-rate-limit/' \
   --exclude='ardy-wa-log.json' \
   --exclude='wordpress-snippets/' \
+  --exclude='error_log' \
+  --exclude='*.log' \
+  --exclude='*.tmp' \
+  --exclude='.github/' \
   "$SRC" "$DEPLOYPATH"
 
 echo "Deploy completato."

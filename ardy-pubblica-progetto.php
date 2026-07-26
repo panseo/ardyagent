@@ -59,11 +59,20 @@ try {
     echo json_encode(['success' => false, 'error' => 'Errore database']); exit();
 }
 
-/** Byte di un'immagine di galleria (da disco o da B2). */
+/**
+ * Byte di un'immagine di galleria. Se sta su B2 e la lettura non riesce (vedi la nota
+ * "letture B2" in TODO-PROSSIMI-TASK), si ritenta su disco prima di rinunciare: una
+ * copia locale può esserci, e un'immagine in meno nell'articolo è un danno silenzioso.
+ */
 function progettoGalleriaBytes(array $row, int $progettoId): ?string {
+    $bytes = null;
     if (($row['storage'] ?? 'local') === 'b2' && $row['storage_key']) {
-        return ardyStorageGet($row['storage_key']);
+        $bytes = ardyStorageGet($row['storage_key']);
+        if ($bytes === null) {
+            error_log('ARDY PUBBLICA PROGETTO: lettura B2 fallita per ' . $row['storage_key'] . ' — provo su disco');
+        }
     }
+    if ($bytes !== null) return $bytes;
     $path = rtrim(ARDY_UPLOAD_DIR, '/') . '/progetti/' . $progettoId . '/galleria/' . basename($row['nome_file']);
     if (!is_file($path)) return null;
     $b = @file_get_contents($path);
@@ -80,10 +89,21 @@ $galPronte = [];   // [['mime'=>.., 'ext'=>.., 'bytes'=>.., 'tipo'=>.., 'gid'=>.
 $extMap = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif'];
 foreach (array_slice($galleria, 0, 20) as $g) {
     $bytes = progettoGalleriaBytes($g, $progettoId);
-    if (!is_string($bytes) || strlen($bytes) < 12) continue;
+    // Ogni scarto va a log col motivo: senza, un articolo esce senza foto e non si
+    // capisce perché (storage irraggiungibile? file sparito? formato strano?).
+    if (!is_string($bytes) || strlen($bytes) < 12) {
+        error_log('ARDY PUBBLICA PROGETTO: immagine ' . $g['id'] . ' scartata — byte non leggibili (storage=' . ($g['storage'] ?? '?') . ', file=' . $g['nome_file'] . ')');
+        continue;
+    }
     $mime = (new finfo(FILEINFO_MIME_TYPE))->buffer($bytes);
-    if (!isset($extMap[$mime])) continue;
+    if (!isset($extMap[$mime])) {
+        error_log('ARDY PUBBLICA PROGETTO: immagine ' . $g['id'] . ' scartata — tipo non ammesso (' . $mime . ')');
+        continue;
+    }
     $galPronte[] = ['mime' => $mime, 'ext' => $extMap[$mime], 'bytes' => $bytes, 'tipo' => $g['tipo'], 'gid' => $g['id']];
+}
+if ($galleria && !$galPronte) {
+    error_log('ARDY PUBBLICA PROGETTO: progetto ' . $progettoId . ' ha ' . count($galleria) . ' immagini in galleria ma nessuna leggibile');
 }
 
 if (!file_exists(ARDY_WP_LOAD)) { echo json_encode(['success' => false, 'error' => 'wp-load.php non trovato']); exit(); }
@@ -174,4 +194,7 @@ try {
     error_log('ARDY PUBBLICA PROGETTO DB UPDATE: ' . $e->getMessage());
 }
 
-echo json_encode(['success' => true, 'wp_post_id' => $wpPostId, 'post_link' => $postLink, 'immagini' => count($immagini)]);
+// 'galleria_totale' vs 'immagini': se non coincidono, qualcosa è rimasto fuori e la
+// dash lo dice invece di lasciare scoprire l'articolo spoglio sul sito.
+echo json_encode(['success' => true, 'wp_post_id' => $wpPostId, 'post_link' => $postLink,
+    'immagini' => count($immagini), 'galleria_totale' => count($galleria)]);

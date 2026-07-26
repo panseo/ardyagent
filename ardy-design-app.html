@@ -1008,9 +1008,10 @@ function articoloPanel(){
     </div>
     <div class="row" style="align-items:center">
       <button class="primary" onclick="pubblicaArticolo()">📝 Pubblica articolo</button>
-      <span class="muted">Userà i render e le foto della Galleria progetto (se già ce ne sono).</span>
+      <span class="muted">Userà le immagini che <b>in questo momento</b> stanno nella Galleria progetto (${(stato.dettaglio.galleria||[]).length}).</span>
     </div>
     <div id="artOut" class="muted" style="margin-top:6px"></div>
+    <div class="muted" style="font-size:.85em;margin-top:6px">⚠️ L'articolo si crea <b>una volta sola</b>: le immagini caricate in Galleria <b>dopo</b> la pubblicazione non ci entrano da sole. Carica prima le foto, poi pubblica; quello che viene dopo si racconta con le <b>fasi-racconto</b>, che si agganciano in coda all'articolo.</div>
   </div>`;
 }
 async function generaArticolo(){
@@ -1031,7 +1032,16 @@ async function pubblicaArticolo(){
   try {
     const d = await fetch('ardy-pubblica-progetto.php', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ progetto_id: stato.dettaglio.progetto.id, testo }) }).then(r=>r.json());
-    if (d.success){ toast(d.already?'Articolo già pubblicato':'Articolo pubblicato'); stato.articoloTesto=''; apri(stato.dettaglio.progetto.id); }
+    if (d.success){
+      // Quante immagini sono davvero entrate: un articolo che esce spoglio si deve
+      // vedere QUI, non scoprirlo sul sito.
+      const tot = d.galleria_totale ?? 0, ok = d.immagini ?? 0;
+      if (d.already) toast('Articolo già pubblicato');
+      else if (tot && !ok) toast(`Articolo pubblicato, ma NESSUNA delle ${tot} immagini è entrata`);
+      else if (ok < tot)   toast(`Articolo pubblicato con ${ok} immagini su ${tot}`);
+      else                 toast(ok ? `Articolo pubblicato con ${ok} immagini` : 'Articolo pubblicato (nessuna immagine in galleria)');
+      stato.articoloTesto=''; apri(stato.dettaglio.progetto.id);
+    }
     else { if(out) out.innerHTML = `<span class="neg">${esc(d.error||'Errore')}</span>`; toast(d.error||'Errore'); }
   } catch(e){ if(out) out.innerHTML = '<span class="neg">Errore di rete</span>'; }
 }
