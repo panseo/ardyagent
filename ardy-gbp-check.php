@@ -442,8 +442,11 @@ if ($httpCode === 200) {
                . "<code>" . h($ln) . "</code><br>"
                . ($puo
                     ? "Può ospitare post locali ✅"
-                    : "<b>NON può ospitare post locali ❌</b> — è questa la causa del 500. "
-                    . "Non è il codice: è lo stato della scheda su Google. Il perché esatto è qui sotto.")
+                    : "<b>Google dichiara <code>canOperateLocalPost: false</code></b> — ma attenzione: "
+                    . "<b>non è una condanna</b>. Dalla dash clienti i post su questa scheda <b>escono davvero</b> "
+                    . "(verificato il 26/07/2026), quindi con questo flag a false si pubblica lo stesso. "
+                    . "Se una pubblicazione fallisce con 500, la causa è nel <b>contenuto</b> del post — quasi "
+                    . "sempre l'immagine: controllala qui sotto.")
                . ($qui ? "<br><span class='muted'>È la scheda che la dash sta usando.</span>" : "")
                . "</div>";
 
@@ -451,7 +454,7 @@ if ($httpCode === 200) {
             // se una scheda può pubblicare. La sua risposta elenca il singolo ostacolo —
             // verifica da fare, proprietà contesa, linee guida, o solo attesa — e quindi
             // dice cosa fare invece di lasciare "non verificata, arrangiati".
-            if (!$puo) {
+            if (!$puo && ($_GET['vom'] ?? '') === '1') {
                 [$vc, $vom] = gbp_api_get(
                     'https://mybusinessverifications.googleapis.com/v1/' . $ln . ':getVoiceOfMerchantState', $token
                 );
@@ -487,6 +490,11 @@ if ($httpCode === 200) {
                        . h(json_encode($vom, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE))
                        . "</pre></details></div>";
                 }
+            } elseif (!$puo) {
+                echo "<p class='muted'>Se vuoi sapere perché Google mette quel flag a false (verifica della "
+                   . "scheda, proprietà contesa, linee guida, attesa), aggiungi <code>&amp;vom=1</code> "
+                   . "all'indirizzo: interroga lo stato «Voice of Merchant». Non serve per pubblicare — "
+                   . "i post escono lo stesso.</p>";
             }
         }
     }
@@ -528,29 +536,46 @@ if ($httpCode === 200) {
         }
     }
 
-    // Prova reale, solo su richiesta esplicita: pubblica DAVVERO un post di testo.
-    // Se questo passa e con la foto no, il colpevole è la foto; se fallisce anche
-    // così, è la scheda. Sta dietro un link apposta: non deve partire per sbaglio.
-    echo "<h3 style='font-size:14px'>Prova di pubblicazione (solo testo)</h3>";
+    // Prova reale, solo su richiesta esplicita. Due varianti: senza foto e con LA foto
+    // che ha fatto fallire il post vero. È il modo diretto per sapere se il 500 dipende
+    // dall'immagine, visto che dai post riusciti sappiamo che la scheda pubblica.
+    // Sta dietro un link apposta: non deve partire per sbaglio.
+    $imgValida = $imgTest !== '' && filter_var($imgTest, FILTER_VALIDATE_URL);
+    echo "<h3 style='font-size:14px'>Prova di pubblicazione</h3>";
     if (($_GET['post_test'] ?? '') === '1') {
+        $conFoto = ($_GET['con_img'] ?? '') === '1' && $imgValida;
         $prova = gbp_create_local_post(
-            'Prova tecnica di pubblicazione dalla dashboard Ardy — ' . date('d/m/Y H:i') . '.', '', ''
+            'Prova tecnica di pubblicazione dalla dashboard Ardy — ' . date('d/m/Y H:i') . '.',
+            $conFoto ? $imgTest : '', ''
         );
+        $come = $conFoto ? "con la foto di <code>?img=</code>" : "di solo testo";
         if (!empty($prova['success'])) {
-            echo "<div class='box ok'><b>✅ Il post di solo testo è passato</b> (<code>"
-               . h((string)($prova['name'] ?? '')) . "</code>).<br>Quindi la scheda va bene e il 500 "
-               . "arriva dall'<b>immagine</b>: controllala qui sopra con <code>?img=</code>. "
-               . "<b>Ricordati di cancellare questo post di prova</b> dalla scheda Google.</div>";
+            echo "<div class='box ok'><b>✅ Il post $come è passato</b> (<code>"
+               . h((string)($prova['name'] ?? '')) . "</code>).<br>"
+               . ($conFoto
+                    ? "Allora nemmeno quell'immagine è il problema: resta il <b>testo</b> del post vero "
+                    . "(lunghezza, caratteri) o il <b>link</b> della call-to-action."
+                    : "La scheda pubblica. Rilancia la prova <b>con la foto</b> per sapere se è lei.")
+               . " <b>Cancella i post di prova</b> dalla scheda Google.</div>";
         } else {
-            echo "<div class='box err'><b>❌ Fallisce anche di solo testo</b> — HTTP "
+            echo "<div class='box err'><b>❌ Fallisce $come</b> — HTTP "
                . h((string)($prova['http'] ?? '?')) . " " . h((string)($prova['status'] ?? '')) . ": "
-               . h((string)($prova['error'] ?? '')) . "<br>Allora non è l'immagine: è la <b>scheda</b> "
-               . "(vedi i riquadri qui sopra) o l'accesso all'API.</div>";
+               . h((string)($prova['error'] ?? '')) . "<br>"
+               . ($conFoto
+                    ? "Se la stessa prova <b>senza foto</b> passa, il colpevole è <b>l'immagine</b>."
+                    : "Fallisce anche il testo nudo: allora non è il contenuto del post, ma l'accesso "
+                    . "all'API o la scheda.")
+               . "</div>";
         }
     } else {
-        echo "<p class='muted'><a href='?post_test=1'>Pubblica un post di prova di solo testo</a> — "
-           . "attenzione: <b>compare davvero</b> sulla scheda Google e va cancellato a mano. "
-           . "Serve a separare «è la foto» da «è la scheda».</p>";
+        echo "<p class='muted'><a href='?post_test=1" . ($imgValida ? '&amp;img=' . h(urlencode($imgTest)) : '')
+           . "'>Pubblica un post di prova di solo testo</a>"
+           . ($imgValida
+                ? " · <a href='?post_test=1&amp;con_img=1&amp;img=" . h(urlencode($imgTest))
+                . "'>…e uno con la foto di <code>?img=</code></a>"
+                : " <span class='muted'>(aggiungi <code>?img=</code> per poter provare anche con la foto)</span>")
+           . "<br>Attenzione: <b>compaiono davvero</b> sulla scheda Google e vanno cancellati a mano. "
+           . "Fatte in coppia dicono se il 500 è dell'immagine o del resto.</p>";
     }
 }
 

@@ -803,19 +803,31 @@ Basic Auth in `.htaccess`, `ardy-gbp.php` (lib) nel deny.
 **Google** tra le destinazioni → pubblicare una **fase di test** → verificare che il post compaia davvero sulla
 scheda Google "Ardy di Michela Panella" (non solo `success:true`).
 
-**🔴 BLOCCATO LATO GOOGLE, non lato codice (26/07/2026).** Prima pubblicazione vera tentata dalla dash design:
-l'API risponde **500 «Internal error encountered.»**. La sezione «Post locali» di `ardy-gbp-check.php` dà la
-causa senza ambiguità: sulla scheda `locations/12362250276127196060` ("Ardy di Michela Panella")
-**`metadata.canOperateLocalPost = false`** — Google non accetta post su quella scheda. L'account è
-`accounts/102932459424802940851`, `type: PERSONAL`, `verificationState: UNVERIFIED`.
-- Il resto della catena è **sano**: accesso all'API concesso, token `business.manage` buono, account e schede
-  si leggono (200 su IPv4), il parent è risolto correttamente. Non c'è niente da correggere in `ardy-gbp.php`.
-- **Si sblocca su business.google.com**, non da qui: la scheda va verificata (e/o va risolto ciò che Google
-  segnala). Lo stato «Voice of Merchant» in fondo alla sezione dice quale dei casi è — verifica da fare,
-  proprietà contesa, linee guida, o solo attesa. Serve che `mybusinessverifications.googleapis.com` sia
-  abilitata nel progetto Cloud, altrimenti quel riquadro esce vuoto.
-- Nel frattempo il toggle Google resta cliccabile ma **fallirà sempre**: FB/IG funzionano e sono indipendenti
-  (l'invio è in parallelo, il fallimento di Google non li tocca). Da rifare quando la scheda è a posto.
+**✅ GOOGLE PUBBLICA (dash clienti) — ⚠️ 500 dalla dash design, causa da isolare (26/07/2026).**
+
+**Quello che è verificato:** dalla dash clienti una fase è stata pubblicata su Google e il post **compare
+davvero** sulla scheda ("Ardy di Michela Panella"). Quindi accesso all'API, token, parent, IPv4 e la scheda
+**funzionano**. Dalla dash design, invece, l'articolo di progetto risponde **500 «Internal error encountered.»**.
+
+⚠️ **Falsa pista già smentita — non riaprirla:** la scheda espone `metadata.canOperateLocalPost = false`
+(account `accounts/102932459424802940851`, `type: PERSONAL`, `verificationState: UNVERIFIED`) e sembrava LA
+causa. **Non lo è**: con quel flag a false i post escono lo stesso, provato dal vivo. Il check ora lo dice.
+
+**Dov'è la differenza fra i due percorsi** — stesso endpoint (`ardy-gbp-post.php` → `gbp_create_local_post`),
+stesso motore, cambia solo il *contenuto*:
+1. **L'immagine.** La dash clienti manda le foto della fase (JPG da telefono passate da WP). La dash design
+   manda `progetti.wp_immagini`, che per Ardy Tower è **un render**. Sospetto principale: Google accetta solo
+   **JPG e PNG** (min 250×250, < 5 MB), mentre il nostro upload di galleria ammette anche **WEBP e GIF**
+   (`ardy-progetti-galleria-api.php`) — un render WEBP arriverebbe su WP e Google lo rifiuterebbe.
+2. Il testo (lunghezza/caratteri) e il link della call-to-action, meno probabili.
+
+**Come chiuderla, in due minuti:** `ardy-gbp-check.php?img=<url della foto dell'articolo>` → il riquadro
+«L'immagine del post» dà formato e dimensioni e dice se Google la prende. Se serve la controprova, in fondo
+alla pagina ci sono le due pubblicazioni di prova (solo testo / con quella foto): se passa senza e fallisce
+con, è l'immagine. **I post di prova compaiono sulla scheda e vanno cancellati a mano.**
+
+Se è il formato, il fix è nostro: convertire in JPG/PNG al sideload su WP, o scartare i formati che Google non
+prende scegliendo la prima immagine buona invece della prima e basta.
 
 **✅ Elenco "Fasi pubblicate" ora è a fisarmonica (20/07):** ogni fase pubblicata è **cliccabile e si espande**
 (`caricaFasiPubblicate` in `ardy-michela-app.html`) mostrando: il **testo** pubblicato, le **foto**, e il box
