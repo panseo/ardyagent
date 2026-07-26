@@ -803,6 +803,20 @@ Basic Auth in `.htaccess`, `ardy-gbp.php` (lib) nel deny.
 **Google** tra le destinazioni → pubblicare una **fase di test** → verificare che il post compaia davvero sulla
 scheda Google "Ardy di Michela Panella" (non solo `success:true`).
 
+**🔴 BLOCCATO LATO GOOGLE, non lato codice (26/07/2026).** Prima pubblicazione vera tentata dalla dash design:
+l'API risponde **500 «Internal error encountered.»**. La sezione «Post locali» di `ardy-gbp-check.php` dà la
+causa senza ambiguità: sulla scheda `locations/12362250276127196060` ("Ardy di Michela Panella")
+**`metadata.canOperateLocalPost = false`** — Google non accetta post su quella scheda. L'account è
+`accounts/102932459424802940851`, `type: PERSONAL`, `verificationState: UNVERIFIED`.
+- Il resto della catena è **sano**: accesso all'API concesso, token `business.manage` buono, account e schede
+  si leggono (200 su IPv4), il parent è risolto correttamente. Non c'è niente da correggere in `ardy-gbp.php`.
+- **Si sblocca su business.google.com**, non da qui: la scheda va verificata (e/o va risolto ciò che Google
+  segnala). Lo stato «Voice of Merchant» in fondo alla sezione dice quale dei casi è — verifica da fare,
+  proprietà contesa, linee guida, o solo attesa. Serve che `mybusinessverifications.googleapis.com` sia
+  abilitata nel progetto Cloud, altrimenti quel riquadro esce vuoto.
+- Nel frattempo il toggle Google resta cliccabile ma **fallirà sempre**: FB/IG funzionano e sono indipendenti
+  (l'invio è in parallelo, il fallimento di Google non li tocca). Da rifare quando la scheda è a posto.
+
 **✅ Elenco "Fasi pubblicate" ora è a fisarmonica (20/07):** ogni fase pubblicata è **cliccabile e si espande**
 (`caricaFasiPubblicate` in `ardy-michela-app.html`) mostrando: il **testo** pubblicato, le **foto**, e il box
 **"📲 Pubblica sui social"** con le 3 iconcine **FB/IG/Google** + **Anteprima** + **Pubblica**. Google parte

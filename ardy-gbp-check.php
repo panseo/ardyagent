@@ -443,10 +443,51 @@ if ($httpCode === 200) {
                . ($puo
                     ? "Può ospitare post locali ✅"
                     : "<b>NON può ospitare post locali ❌</b> — è questa la causa del 500. "
-                    . "Di solito la scheda non è verificata, è sospesa, oppure il tipo di attività non "
-                    . "prevede i post. Si sistema su business.google.com, non nel codice.")
+                    . "Non è il codice: è lo stato della scheda su Google. Il perché esatto è qui sotto.")
                . ($qui ? "<br><span class='muted'>È la scheda che la dash sta usando.</span>" : "")
                . "</div>";
+
+            // Perché non può: la "Voice of Merchant" è lo stato che Google usa per decidere
+            // se una scheda può pubblicare. La sua risposta elenca il singolo ostacolo —
+            // verifica da fare, proprietà contesa, linee guida, o solo attesa — e quindi
+            // dice cosa fare invece di lasciare "non verificata, arrangiati".
+            if (!$puo) {
+                [$vc, $vom] = gbp_api_get(
+                    'https://mybusinessverifications.googleapis.com/v1/' . $ln . ':getVoiceOfMerchantState', $token
+                );
+                if ($vc === 403 || $vc === 404) {
+                    echo "<p class='muted'>Stato «Voice of Merchant» non leggibile (HTTP $vc): serve abilitare "
+                       . "<code>mybusinessverifications.googleapis.com</code> nel progetto Cloud. "
+                       . "Senza, resta da guardare a mano su business.google.com.</p>";
+                } elseif ($vc !== 200 || !is_array($vom)) {
+                    echo "<p class='muted'>Stato «Voice of Merchant» non leggibile (HTTP $vc).</p>";
+                } else {
+                    $motivi = [];
+                    if (isset($vom['verify']))                  $motivi[] = "<b>La scheda va verificata.</b> Su "
+                        . "business.google.com parti dalla verifica (cartolina, telefono o video, secondo quello "
+                        . "che Google propone): finché non è verificata, i post non partono.";
+                    if (isset($vom['resolveOwnershipConflict'])) $motivi[] = "<b>C'è un conflitto di proprietà</b> "
+                        . "sulla scheda (qualcun altro la rivendica, o esiste un duplicato). Va risolto su "
+                        . "business.google.com prima di poter pubblicare.";
+                    if (isset($vom['complyWithGuidelines']))     $motivi[] = "<b>La scheda è sospesa o non "
+                        . "conforme alle linee guida</b>: va sistemata e ri-sottoposta a Google.";
+                    if (isset($vom['waitForVoiceOfMerchant']))   $motivi[] = "<b>Google sta ancora elaborando</b> "
+                        . "la scheda: non c'è niente da fare se non aspettare e riprovare.";
+                    if (!empty($vom['hasVoiceOfMerchant']))      $motivi[] = "Google dice che la scheda ha già "
+                        . "«Voice of Merchant»: allora il blocco ai post viene da altro (categoria dell'attività, "
+                        . "o restrizione sul singolo account).";
+                    if (empty($vom['hasBusinessAuthority']))     $motivi[] = "L'account collegato <b>non risulta "
+                        . "avere l'autorità</b> su questa attività: controlla di aver autorizzato "
+                        . "(<code>ardy-gbp-auth.php</code>) con l'account che <b>possiede</b> la scheda, non con "
+                        . "uno che ci ha solo accesso.";
+                    echo "<div class='box warn'><b>Perché non può pubblicare</b>"
+                       . ($motivi ? "<ul><li>" . implode("</li><li>", $motivi) . "</li></ul>"
+                                  : "<br>Google non indica un ostacolo specifico.")
+                       . "<details><summary class='muted'>risposta completa</summary><pre>"
+                       . h(json_encode($vom, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE))
+                       . "</pre></details></div>";
+                }
+            }
         }
     }
 
