@@ -55,8 +55,8 @@
   <span class="step">CATALOGATO</span>
 </p>
 <p>Letto a parole: nasce l'<b>idea</b> → si passa alla <b>progettazione</b> → si realizza il <b>prototipo</b> (con le sue iterazioni) → il pezzo è definito in tutte le sue parti (<b>versione finale</b>) → si genera la <b>scheda prodotto</b> (foto di vendita + testi pubblici) → il pezzo è <b>catalogato</b>, cioè correttamente esposto nella vetrina online.</p>
-<div class="tip"><b>Ogni fase è pubblicabile</b>: articolo WordPress e fasi-racconto sono attivi <b>fin da IDEA</b>, così puoi annunciare l'idea, poi raccontare progettazione e prototipo mano a mano che il lavoro procede.</div>
-<div class="tip"><b>Ad ogni fase compaiono i moduli di quella fase</b> (le card si aprono/chiudono cliccando il titolo): articolo e fasi-racconto da IDEA, Galleria e file in PROGETTAZIONE, iterazioni e costi in PROTOTIPO, il blocco della versione finale in VERSIONE FINALE, scheda prodotto e foto vendita in SCHEDA PRODOTTO, il Negozio in CATALOGATO. Le fasi già superate restano accessibili (chiuse).</div>
+<div class="tip"><b>Ogni fase è pubblicabile</b>: galleria, documenti, articolo WordPress e fasi-racconto sono attivi <b>fin da IDEA</b>, così puoi allegare subito le foto del pezzo di partenza e i tuoi appunti, annunciare l'idea, poi raccontare progettazione e prototipo mano a mano che il lavoro procede.</div>
+<div class="tip"><b>Ad ogni fase compaiono i moduli di quella fase</b> (le card si aprono/chiudono cliccando il titolo): galleria, documenti, articolo e fasi-racconto da IDEA, archivio file di stampa in PROGETTAZIONE, iterazioni e costi in PROTOTIPO, il blocco della versione finale in VERSIONE FINALE, scheda prodotto e foto vendita in SCHEDA PRODOTTO, il Negozio in CATALOGATO. Le fasi già superate restano accessibili (chiuse).</div>
 <div class="tip"><b>CATALOGATO</b> è lo stato finale qui: da quel momento stock e vendita vivono su <b>Woo/Etsy</b>, non più nella dash.</div>
 
 <h2>3. I campi della scheda</h2>
@@ -80,6 +80,7 @@
   <li><b>Eliminare</b>: la ✕ rossa.</li>
 </ul>
 <div class="tip">I file pesanti sono archiviati in cloud (Backblaze), così il server non si intasa. Per te non cambia nulla: carichi e scarichi come sempre.</div>
+<div class="tip">Qui vanno solo i <b>binari di stampa</b>. I documenti (PDF, Word, appunti) hanno un modulo loro — <b>📚 Documenti di riferimento</b>, sezione 9-bis — perché servono a un'altra cosa: farli leggere all'AI per scrivere il racconto.</div>
 
 <h2>5. Versione finale (solo stampa 3D)</h2>
 <p>Quando il design è definitivo, <b>blocchi</b> la versione finale: è una "fotografia" dei file e dei parametri con cui realizzi il pezzo, anche se poi il CAD va avanti.</p>
@@ -112,18 +113,36 @@
 </ul>
 <div class="tip">Anche le foto delle fasi sono archiviate in cloud (Backblaze) — le vedi e le usi normalmente.</div>
 
-<h2>9. Galleria progetto (render + foto della creazione)</h2>
-<p>Sono le immagini <b>pubbliche</b> del pezzo, quelle che finiscono nell'articolo: distinte dall'archivio file (STL/CAD, interni) e dalle foto delle fasi.</p>
+<h2>9. Galleria progetto (prima · render · foto della creazione)</h2>
+<p>Sono le immagini <b>pubbliche</b> del pezzo, quelle che finiscono nell'articolo: distinte dall'archivio file (STL/CAD, interni) e dalle foto delle fasi. Disponibile <b>già da IDEA</b>.</p>
 <ul>
-  <li>Scegli il <b>tipo</b> (🎨 Render o 📸 Foto finita), poi carica da <b>📷 Scatta foto</b> o <b>🖼️ Dalla galleria</b>.</li>
+  <li>Scegli il <b>tipo</b>, poi carica da <b>📷 Scatta foto</b> o <b>🖼️ Dalla galleria</b>:
+    <ul>
+      <li><b>🪵 Prima / riferimento</b> — il punto di partenza: il pezzo com'era <b>prima del restyling</b>, uno schizzo, un'immagine di riferimento dell'idea da realizzare.</li>
+      <li><b>🎨 Render</b> — il progetto disegnato.</li>
+      <li><b>📸 Foto finita</b> — il pezzo realizzato.</li>
+    </ul>
+  </li>
   <li>Le immagini si raggruppano per tipo; la ✕ le rimuove.</li>
 </ul>
+<div class="tip">Nell'articolo escono in quest'ordine — <b>Il punto di partenza</b>, <b>Render</b>, <b>La creazione</b> — che è poi il racconto del lavoro. La <b>copertina</b> è sempre una foto finita (o, se non c'è, un render): mai una foto "prima".</div>
+
+<h2>9-bis. Documenti di riferimento (📚 quello che l'AI legge)</h2>
+<p>Allega i <b>documenti</b> da cui esce il racconto: la storia del mobile che stai recuperando, la scheda del produttore, una tua ricerca, gli appunti di progetto. Anche questi <b>già da IDEA</b>.</p>
+<ul>
+  <li>Formati ammessi: <b>PDF, DOCX, ODT, RTF, TXT, MD</b> — fino a <b>20 MB</b> l'uno.</li>
+  <li>Appena caricato, il documento viene <b>letto una volta sola</b> e il testo resta da parte: accanto al file compare <b>✅ letto</b>. Da lì in poi il <b>✨ Genera con AI</b> dell'articolo lo usa senza rileggere il file.</li>
+  <li>Se un documento arriva senza essere letto (o lo cambi), premi <b>📖 Fai leggere</b> / <b>🔁 Rileggi</b>.</li>
+</ul>
+<div class="tip">Costi: TXT, MD, DOCX e ODT si leggono sul server, <b>gratis</b>. Solo il <b>PDF</b> passa dall'AI, <b>una volta per documento</b> — non ad ogni articolo che generi.</div>
+<div class="warn">Un PDF <b>scansionato</b> (foto della pagina, senza testo) non è leggibile: serve un file con testo vero.</div>
+<div class="warn">I documenti sono <b>materiale interno</b>: alimentano la scrittura, ma non vengono pubblicati sul sito né passati alla chat di Sole. Sole racconta solo ciò che scrivi nella <b>Scheda prodotto</b>.</div>
 
 <h2>10. Pubblicare l'articolo su WordPress</h2>
 <p>Il progetto diventa un <b>articolo</b> sul sito (la sua pagina pubblica), a cui poi si agganciano le fasi-racconto. In 3 passi:</p>
 <ol>
-  <li><b>Galleria</b>: carica render e foto della creazione finita (sezione 9).</li>
-  <li><b>Articolo WordPress</b>: premi <b>✨ Genera con AI</b> per scrivere l'introduzione partendo dalla descrizione del progetto (concept/materiali/scheda), <b>rivedila</b>, poi <b>📝 Pubblica articolo</b>. Nasce il post nella categoria <b>Creazioni</b> con copertina e galleria; compare il link <b>↗ Vedi l'articolo</b>.</li>
+  <li><b>Galleria</b> (e, se ti servono, i <b>documenti</b>): carica le immagini e allega il materiale di riferimento (sezioni 9 e 9-bis).</li>
+  <li><b>Articolo WordPress</b>: premi <b>✨ Genera con AI</b> per scrivere l'introduzione partendo dalla descrizione del progetto (concept/materiali/scheda) <b>e dai documenti già letti</b>, <b>rivedila</b>, poi <b>📝 Pubblica articolo</b>. Nasce il post nella categoria <b>Creazioni</b> con copertina e galleria; compare il link <b>↗ Vedi l'articolo</b>.</li>
   <li><b>Fasi sull'articolo</b>: nelle <i>fasi racconto</i>, su ogni fase compare <b>📝 Pubblica su WP</b> — la aggiunge in coda all'articolo. Dopo, la fase mostra <b>✅ su WP</b>.</li>
 </ol>
 <div class="tip">L'introduzione è scritta dall'AI ma <b>rivedila sempre</b> prima di pubblicare: il tono e i dettagli li confermi tu.</div>

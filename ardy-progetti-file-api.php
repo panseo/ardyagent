@@ -1,7 +1,9 @@
 <?php
 // -----------------------------------------------------------
-// ARDY LAB — Dash Design: ARCHIVIO FILE DI STAMPA di un PROGETTO
-// I file veri (STL, 3MF, G-code, CAD/STEP…) che poi si prelevano e si stampano.
+// ARDY LAB — Dash Design: ARCHIVIO FILE di un PROGETTO (binari di stampa + documenti)
+// I file veri (STL, 3MF, G-code, CAD/STEP…) che poi si prelevano e si stampano, e i
+// DOCUMENTI di riferimento (categoria 'doc': PDF, DOCX, ODT, RTF, TXT, MD) da cui l'AI
+// pesca il materiale per scrivere il racconto — vedi ardy-progetti-ai.php (leggi_doc).
 // Gemello di ardy-progetti-fasi-api.php (foto), ma per i binari di stampa: upload
 // via multipart (i file sono grandi, niente base64 JSON), download via ?download=.
 // Il DB (tabella progetto_file) salva solo i NOMI file + metadati; i binari vivono
@@ -32,7 +34,10 @@ require_once __DIR__ . '/ardy-auth.php';
 ardyRequireAuth();
 
 // Categorie file e mappa estensione → categoria (whitelist: solo queste si caricano).
-const FILE_CATEGORIE = ['stl', '3mf', 'gcode', 'cad', 'altro'];
+// 'doc' è la categoria dei DOCUMENTI DI RIFERIMENTO (appunti, schede, ricerche): stanno
+// nella stessa tabella dei binari di stampa ma la dash li mostra in un modulo a parte,
+// perché servono a un'altra cosa — dare all'AI il materiale per scrivere il racconto.
+const FILE_CATEGORIE = ['stl', '3mf', 'gcode', 'cad', 'altro', 'doc'];
 const FILE_EXT_MAP = [
     'stl' => 'stl', 'obj' => 'stl',
     '3mf' => '3mf',
@@ -40,8 +45,11 @@ const FILE_EXT_MAP = [
     'step' => 'cad', 'stp' => 'cad', 'f3d' => 'cad', 'scad' => 'cad',
     'dwg' => 'cad', 'dxf' => 'cad', 'igs' => 'cad', 'iges' => 'cad',
     'zip' => 'altro',
+    'pdf' => 'doc', 'docx' => 'doc', 'odt' => 'doc',
+    'txt' => 'doc', 'md' => 'doc', 'markdown' => 'doc', 'rtf' => 'doc',
 ];
 const FILE_MAX_BYTE = 150 * 1024 * 1024; // 150 MB per file (oltre il limite PHP fa fede ini)
+const DOC_MAX_BYTE  = 20 * 1024 * 1024;  // 20 MB per i documenti: vanno letti, non stampati
 
 // Cartella archivio file di UN progetto.
 function progettoFileDir(int $progettoId): string {
@@ -92,8 +100,11 @@ try {
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $progettoId = (int) ($_GET['progetto_id'] ?? 0);
         if ($progettoId <= 0) { echo json_encode([]); exit(); }
+        // Il testo estratto NON si spedisce in lista (può essere lungo): basta sapere
+        // se c'è e di quando è, per mostrare "già letto" accanto al documento.
         $stmt = $db->prepare(
-            "SELECT id, categoria, nome_originale, dimensione, note, created_at
+            "SELECT id, categoria, nome_originale, dimensione, note, created_at, testo_estratto_at,
+                    CHAR_LENGTH(COALESCE(testo_estratto,'')) AS testo_caratteri
              FROM progetto_file WHERE progetto_id = ? ORDER BY created_at DESC, id DESC"
         );
         $stmt->execute([$progettoId]);
@@ -124,21 +135,29 @@ try {
         }
         if (!is_uploaded_file($f['tmp_name'])) { echo json_encode(['success' => false, 'error' => 'Upload non valido']); exit(); }
 
-        $size = (int) ($f['size'] ?? 0);
-        if ($size <= 0 || $size > FILE_MAX_BYTE) {
-            echo json_encode(['success' => false, 'error' => 'File vuoto o oltre 150 MB']); exit();
-        }
-
+        $size     = (int) ($f['size'] ?? 0);
         $origName = trim((string) ($f['name'] ?? ''));
-        $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
+        $ext      = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
         if (!isset(FILE_EXT_MAP[$ext])) {
-            echo json_encode(['success' => false, 'error' => 'Tipo non ammesso (.' . $ext . '). Ammessi: STL, OBJ, 3MF, G-code, STEP/CAD, ZIP']);
+            $hint = $ext === 'doc'
+                ? 'Il vecchio formato .doc non è leggibile: salvalo come PDF o DOCX.'
+                : 'Ammessi: STL, OBJ, 3MF, G-code, STEP/CAD, ZIP e documenti PDF, DOCX, ODT, RTF, TXT, MD';
+            echo json_encode(['success' => false, 'error' => 'Tipo non ammesso (.' . $ext . '). ' . $hint]);
             exit();
         }
 
-        // Categoria: dal form se valida, altrimenti derivata dall'estensione.
-        $categoria = in_array($_POST['categoria'] ?? '', FILE_CATEGORIE, true)
-            ? $_POST['categoria'] : FILE_EXT_MAP[$ext];
+        // Categoria: l'estensione comanda sul fatto che sia un documento o un binario di
+        // stampa (un PDF non è un G-code e viceversa); dentro i binari il form può scegliere.
+        $catExt    = FILE_EXT_MAP[$ext];
+        $formCat   = $_POST['categoria'] ?? '';
+        $categoria = ($catExt === 'doc' || $formCat === 'doc' || !in_array($formCat, FILE_CATEGORIE, true))
+            ? $catExt : $formCat;
+
+        $maxByte = $categoria === 'doc' ? DOC_MAX_BYTE : FILE_MAX_BYTE;
+        if ($size <= 0 || $size > $maxByte) {
+            echo json_encode(['success' => false, 'error' => 'File vuoto o oltre ' . (int) ($maxByte / 1048576) . ' MB']); exit();
+        }
+
         $note = trim((string) ($_POST['note'] ?? ''));
         if (mb_strlen($note) > 500) $note = mb_substr($note, 0, 500);
 
@@ -147,9 +166,12 @@ try {
 
         // Storage: B2 se configurato (upload diretto al bucket), altrimenti disco.
         // Se B2 fallisce, fallback su disco per non perdere il file.
+        // ECCEZIONE — i documenti restano SEMPRE su disco: sono piccoli (≤20 MB) e il
+        // server deve poterli RILEGGERE per estrarne il testo, mentre le letture da B2
+        // sono ancora quelle rotte annotate in TODO-PROSSIMI-TASK (Opzione A).
         $storage    = 'local';
         $storageKey = null;
-        if (ardyB2Configured()) {
+        if ($categoria !== 'doc' && ardyB2Configured()) {
             $objectKey = 'progetti/' . $progettoId . '/file/' . $diskName;
             if (ardyStoragePutFile($objectKey, $f['tmp_name'])) {
                 $storage = 'b2'; $storageKey = $objectKey;

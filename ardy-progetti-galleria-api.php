@@ -27,7 +27,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit();
 require_once __DIR__ . '/ardy-auth.php';
 ardyRequireAuth();
 
-const GALLERIA_TIPI = ['render', 'foto'];
+// 'prima' = il punto di partenza (il pezzo com'era prima del restyling, o un
+// riferimento/schizzo dell'idea): si carica già in fase IDEA e racconta il "da dove".
+const GALLERIA_TIPI = ['prima', 'render', 'foto'];
 
 function progettoGalleriaDir(int $progettoId): string {
     return rtrim(ARDY_UPLOAD_DIR, '/') . '/progetti/' . $progettoId . '/galleria/';

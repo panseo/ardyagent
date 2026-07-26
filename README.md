@@ -574,16 +574,18 @@ nella dash).
 `IDEA → PROGETTAZIONE → PROTOTIPO → VERSIONE_FINALE [⏟ congela file] → SCHEDA_PRODOTTO →
 CATALOGATO` (terminale). Pilotato dalla **maturazione del prodotto**, non dai pagamenti. Man mano che
 avanzi, **compaiono i moduli** di quella fase (barra pipeline cliccabile nel dettaglio).
-**Ogni fase è pubblicabile**: articolo e fasi-racconto sono attivi già da `IDEA`, così l'idea si
-annuncia subito e progettazione/prototipo si raccontano mentre accadono (revisione lug 2026:
+**Ogni fase è pubblicabile**: galleria, documenti, articolo e fasi-racconto sono attivi già da
+`IDEA` — l'idea nasce con del materiale (la foto del pezzo da recuperare, un render, gli appunti da
+cui esce il racconto), si annuncia subito e progettazione/prototipo si raccontano mentre accadono (revisione lug 2026:
 `REALIZZAZIONE` duplicava `PROTOTIPO`/`VERSIONE_FINALE` ed è stato tolto; `FOTO` → `SCHEDA_PRODOTTO`,
 `A_CATALOGO` → `CATALOGATO` = pezzo correttamente esposto in vetrina).
 
 | Modulo (sblocco) | A cosa serve | Endpoint |
 |---|---|---|
+| **Galleria** (IDEA) | Immagini del progetto (Modulo 1, → `ardy-lab.it`): `prima` (com'era / riferimento) · `render` · `foto` finite | `ardy-progetti-galleria-api.php` |
+| **Documenti** (IDEA) | Materiale di riferimento (PDF/DOCX/ODT/RTF/TXT/MD) da cui l'AI scrive: testo estratto **una volta** e salvato | `ardy-progetti-file-api.php` (cat. `doc`) + `ardy-progetti-ai.php` (`leggi_doc`) |
 | **Articolo** (IDEA) | Testo di brand riscritto con **✨ AI** (Claude), da rivedere prima di pubblicare | `ardy-progetti-ai.php` |
 | **Fasi-racconto** (IDEA) | Binario **pubblico**: le stesse `fasi` della dash Michela → reel/social/WP | `ardy-progetti-fasi-api.php` |
-| **Galleria** (PROGETTAZIONE) | Immagini di lavoro del progetto (Modulo 1, → `ardy-lab.it`) | `ardy-progetti-galleria-api.php` |
 | **File CAD/STL** (PROGETTAZIONE) | Archivio file tecnici dietro Basic Auth | `ardy-progetti-file-api.php` |
 | **Iterazioni** (PROTOTIPO) | Binario **R&D interno**: v1/v2/v3 con note "qui non torna" | `ardy-progetti-api.php` (`iter_*`) |
 | **Distinta / costi** (PROTOTIPO) | **BOM** interna → `costo_produzione` = Σ righe × (1+scarto%); mostra il **margine** | `ardy-progetti-api.php` (`mat_*`) |

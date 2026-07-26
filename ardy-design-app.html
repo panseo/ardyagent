@@ -422,9 +422,12 @@ function renderDettaglio(nuovo=false){
     ${p.id ? schedaProdottoCard() : ''}
     ${p.id ? [
       // Binario pubblico: aperto da subito, perché ogni fase (idea compresa) è pubblicabile.
+      // Galleria e documenti stanno qui perché l'idea nasce già con del materiale: la foto
+      // del pezzo da recuperare, un render, gli appunti da cui esce il racconto.
+      modSection('galleria','IDEA',false, galleriaPanel()),
+      modSection('doc','IDEA',false, docPanel()),
       modSection('articolo','IDEA',false, articoloPanel()),
       modSection('fasi','IDEA',false, fasiPanel()),
-      modSection('galleria','PROGETTAZIONE',false, galleriaPanel()),
       modSection('file','PROGETTAZIONE',true, filePanel()),
       modSection('iter','PROTOTIPO',true, iterPanel()),
       modSection('bom','PROTOTIPO',false, bomPanel()),
@@ -670,7 +673,8 @@ function fmtBytes(n){ n=Number(n)||0; if(n<1024) return n+' B'; const u=['KB','M
 function fileDownloadUrl(f){ return `${FILE_API}?progetto_id=${stato.dettaglio.progetto.id}&file_id=${f.id}&download=1`; }
 
 function filePanel(){
-  const files = stato.dettaglio.file || [];
+  // Solo i binari di stampa: i documenti stanno nella stessa tabella ma hanno un modulo loro.
+  const files = (stato.dettaglio.file || []).filter(f => f.categoria !== 'doc');
   return `
   <div class="panel">
     <h2>Archivio file di stampa <small>STL · 3MF · G-code · CAD — preleva e stampa</small></h2>
@@ -723,13 +727,90 @@ async function caricaFile(){
   toast(ok ? `Caricati ${ok} file${fail?` · ${fail} falliti`:''}` : 'Upload fallito');
   apri(stato.dettaglio.progetto.id);
 }
+// Vale per i binari di stampa e per i documenti: stessa tabella, stesso endpoint.
 async function eliminaFile(id){
-  if (!confirm('Eliminare questo file dall\'archivio?')) return;
+  if (!confirm('Eliminare questo file?')) return;
   await fetch(FILE_API, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode:'delete', id }) });
   toast('File eliminato'); apri(stato.dettaglio.progetto.id);
 }
 
-// ── Galleria progetto (render + foto della creazione, per l'articolo WP) ──
+// ── Documenti di riferimento (PDF/DOCX/ODT/RTF/TXT/MD) ────────────────────
+// Stessa tabella dell'archivio file (categoria 'doc'), modulo a parte: servono a
+// un'altra cosa — dare all'AI il materiale con cui scrivere il racconto. Il testo si
+// estrae UNA volta e resta in DB: generare l'articolo non rilegge i file.
+const AI_API = 'ardy-progetti-ai.php';
+const DOC_ACCEPT = '.pdf,.docx,.odt,.rtf,.txt,.md';
+function docPanel(){
+  const docs = (stato.dettaglio.file || []).filter(f => f.categoria === 'doc');
+  const letti = docs.filter(d => d.testo_estratto_at).length;
+  return `
+  <div class="panel">
+    <h2>📚 Documenti di riferimento <small>appunti, schede, ricerche — l'AI ci pesca per scrivere</small></h2>
+    ${docs.length ? `<div class="filelist">${docs.map(d=>docRow(d)).join('')}</div>`
+                  : '<div class="muted">Nessun documento. Allega quello che hai sul pezzo (la storia del mobile, la scheda del produttore, i tuoi appunti): l\'articolo partirà da lì invece che dal nulla.</div>'}
+    <div class="row" style="align-items:center;margin-top:12px">
+      <input type="file" id="doc_file" multiple accept="${DOC_ACCEPT}" style="flex:1;min-width:200px">
+      <button class="primary" id="docBtn" onclick="caricaDoc()">⬆ Allega documenti</button>
+    </div>
+    <div id="docOut" class="muted" style="margin-top:6px">PDF, DOCX, ODT, RTF, TXT, MD — fino a 20 MB l'uno.${docs.length?` · <b>${letti}/${docs.length}</b> già letti dall'AI.`:''}</div>
+    <div class="muted" style="font-size:.85em;margin-top:6px">Dopo il caricamento il testo viene letto e messo da parte una volta sola: da lì in poi «✨ Genera con AI» sull'articolo lo usa senza rileggere il file. TXT, MD, DOCX e ODT si leggono in locale (costo zero); solo il PDF passa dal modello, una volta per documento. I documenti restano <b>interni</b>: non finiscono sul sito né nella scheda di Sole.</div>
+  </div>`;
+}
+function docRow(d){
+  const letto = !!d.testo_estratto_at;
+  return `<div class="filerow">
+    <span class="badge filecat">${esc((d.nome_originale.split('.').pop()||'doc').toLowerCase())}</span>
+    <a class="fname" href="${fileDownloadUrl(d)}" download title="${esc(d.nome_originale)}">${esc(d.nome_originale)}</a>
+    <span class="muted">${fmtBytes(d.dimensione)}</span>
+    <span class="fnote muted">${letto
+      ? `✅ letto${d.testo_caratteri?` · ${Number(d.testo_caratteri).toLocaleString('it-IT')} caratteri`:''}`
+      : '⏳ non ancora letto'}</span>
+    <span class="factions">
+      <button class="sm" onclick="leggiDoc(${d.id})">${letto?'🔁 Rileggi':'📖 Fai leggere'}</button>
+      <button class="sm ghost danger" onclick="eliminaFile(${d.id})">✕</button>
+    </span>
+  </div>`;
+}
+async function caricaDoc(){
+  const input = document.getElementById('doc_file');
+  const files = Array.from(input.files||[]);
+  if (!files.length){ toast('Scegli almeno un documento'); return; }
+  const btn = document.getElementById('docBtn'), out = document.getElementById('docOut');
+  btn.disabled = true; const txt = btn.textContent;
+  let ok=0, fail=0, lastErr='', nuovi=[];
+  for (let i=0; i<files.length; i++){
+    btn.textContent = `⏳ Carico ${i+1}/${files.length}…`;
+    const fd = new FormData();
+    fd.append('mode','upload'); fd.append('progetto_id', stato.dettaglio.progetto.id);
+    fd.append('categoria','doc'); fd.append('file', files[i]);
+    try {
+      const d = await fetch(FILE_API, { method:'POST', body: fd }).then(r=>r.json());
+      if (d.success){ ok++; nuovi.push(d.id); } else { fail++; lastErr = `${files[i].name}: ${d.error||'errore'}`; }
+    } catch(e){ fail++; lastErr = 'Errore di rete'; }
+  }
+  // Lettura subito dopo il caricamento: è il momento in cui serve, e si paga una volta.
+  for (let i=0; i<nuovi.length; i++){
+    btn.textContent = `📖 Leggo ${i+1}/${nuovi.length}…`;
+    try { await fetch(AI_API, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ mode:'leggi_doc', file_id: nuovi[i] }) }).then(r=>r.json()); } catch(e){}
+  }
+  btn.disabled = false; btn.textContent = txt;
+  if (fail && out) out.innerHTML = `<span class="neg">${esc(lastErr)}</span>`;
+  toast(ok ? `Allegati ${ok} documenti${fail?` · ${fail} falliti`:''}` : 'Caricamento fallito');
+  apri(stato.dettaglio.progetto.id);
+}
+async function leggiDoc(id){
+  const out = document.getElementById('docOut');
+  if (out) out.textContent = '📖 Leggo il documento…';
+  try {
+    const d = await fetch(AI_API, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ mode:'leggi_doc', file_id: id }) }).then(r=>r.json());
+    if (d.success){ toast(`Letto — ${d.caratteri.toLocaleString('it-IT')} caratteri`); apri(stato.dettaglio.progetto.id); }
+    else { if (out) out.innerHTML = `<span class="neg">${esc(d.error||'Errore')}</span>`; toast(d.error||'Errore lettura'); }
+  } catch(e){ if (out) out.innerHTML = '<span class="neg">Errore di rete</span>'; }
+}
+
+// ── Galleria progetto (prima + render + foto della creazione, per l'articolo WP) ──
 const GALLERIA_API = 'ardy-progetti-galleria-api.php';
 function galleriaUrl(f){ return `${GALLERIA_API}?progetto_id=${stato.dettaglio.progetto.id}&file_id=${f.id}&file=1`; }
 
@@ -745,18 +826,19 @@ function galleriaPanel(){
     </div>`;
   return `
   <div class="panel">
-    <h2>Galleria progetto <small>render + foto della creazione · per l'articolo</small></h2>
+    <h2>Galleria progetto <small>com'era prima · render · foto della creazione — per l'articolo</small></h2>
+    ${grp('🪵 Prima / riferimento', imgs.filter(i=>i.tipo==='prima'))}
     ${grp('🎨 Render', imgs.filter(i=>i.tipo==='render'))}
     ${grp('📸 Foto finite', imgs.filter(i=>i.tipo==='foto'))}
     <div class="row" style="align-items:flex-end;margin-top:6px">
-      <div class="field" style="max-width:200px"><label>Tipo da caricare</label>
-        <select id="gal_tipo"><option value="render">🎨 Render</option><option value="foto">📸 Foto finita</option></select></div>
+      <div class="field" style="max-width:230px"><label>Tipo da caricare</label>
+        <select id="gal_tipo"><option value="prima">🪵 Prima / riferimento</option><option value="render">🎨 Render</option><option value="foto">📸 Foto finita</option></select></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <label class="filebtn">📷 Scatta foto<input type="file" accept="image/*" capture="environment" multiple onchange="caricaGalleria(this)"></label>
         <label class="filebtn">🖼️ Dalla galleria<input type="file" accept="image/*" multiple onchange="caricaGalleria(this)"></label>
       </div>
     </div>
-    <div id="galOut" class="muted" style="margin-top:6px">Render e foto del pezzo finito: finiranno nell'articolo del progetto.</div>
+    <div id="galOut" class="muted" style="margin-top:6px">Finiscono tutte nell'articolo, in quest'ordine: <b>Prima</b> è il punto di partenza (il pezzo com'era prima del restyling, uno schizzo, un riferimento dell'idea), poi i <b>render</b>, poi le <b>foto</b> del pezzo finito. La copertina è sempre una foto finita (o un render), mai una "prima".</div>
   </div>`;
 }
 async function caricaGalleria(input){
@@ -922,7 +1004,7 @@ function articoloPanel(){
     <div class="field"><label>Testo dell'articolo</label>
       <textarea id="art_testo" style="min-height:120px" oninput="stato.articoloTesto=this.value" placeholder="Scrivi qui, oppure premi ✨ Genera con AI per partire dalla descrizione del progetto">${esc(stato.articoloTesto||'')}</textarea>
       <div style="margin-top:6px"><button class="sm" id="artAiBtn" onclick="generaArticolo()">✨ Genera con AI</button>
-        <span class="muted" style="margin-left:6px">Parte da concept/materiali/scheda tecnica. Rivedi sempre prima di pubblicare.</span></div>
+        <span class="muted" style="margin-left:6px">Parte da concept/materiali/scheda tecnica e dai <b>documenti allegati</b> già letti. Rivedi sempre prima di pubblicare.</span></div>
     </div>
     <div class="row" style="align-items:center">
       <button class="primary" onclick="pubblicaArticolo()">📝 Pubblica articolo</button>
