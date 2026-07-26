@@ -50,10 +50,12 @@ Sequenza per togliere B2 dal percorso di lavoro:
    I due gesti *espliciti* di backup delle foto fasi («Invia foto a B2», «Libera spazio disco»)
    passano invece da `ardyStorageArchivia()` e continuano a funzionare: sono archiviazione,
    non offload.
-2. ⏳ `php ardy-b2-rimpatrio.php` — prima in prova, poi `--applica`. Riporta su disco i file
-   già lassù e rimette le righe a `storage='local'` (`progetto_galleria`, `progetto_file`,
-   `progetto_foto_vendita`). Finché non gira, quei file si leggono ancora da B2: la lettura
-   funziona (verificato), ma è l'ultima dipendenza da togliere.
+2. **Fatto (26/07)**: rimpatrio eseguito — **42 file su 42**, zero errori (11 immagini di
+   galleria · 5,1 MB + 31 file di stampa · 42,7 MB). `storage='b2'` ora è a **zero** in tutte e
+   tre le tabelle: nessuna operazione quotidiana (pubblicare, sfogliare la galleria, scaricare
+   un STL) tocca più il bucket. Nota di merito all'idea originale: l'offload risparmiava ~48 MB
+   su un disco da 199 GB usato al 12% — non c'era un problema di spazio da risolvere, e in
+   cambio ci si era portati una dipendenza di rete dentro la pubblicazione degli articoli.
 3. Le costanti `ARDY_B2_*` vanno **TENUTE**: servono all'archiviazione di fine ciclo. Il bucket
    non si svuota — cambia solo cosa ci finisce dentro e quando.
 
