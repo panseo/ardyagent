@@ -59,7 +59,8 @@ progetti
   id                 BIGINT PK
   slug               VARCHAR   -- per URL pubblico catalogo/lavorazione
   titolo             VARCHAR
-  tipo               VARCHAR   -- lampada | mobile | complemento | restyling | prototipo
+  tipo               VARCHAR   -- lampada | mobile | complemento | restyling | prototipo | sistema
+                               -- 'sistema' = non arredo ma apparato funzionale (impianto, IoT, automazione)
   stato              VARCHAR   -- vedi §3 (ciclo di vita nuovo)
   descrizione        TEXT      -- racconto/concept
   materiali          TEXT      -- descrizione PUBBLICA per la listing ("PLA riciclato, ottone…")

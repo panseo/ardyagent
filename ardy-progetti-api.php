@@ -38,7 +38,9 @@ ardyRequireAuth();
 // pubblicabile (articolo + fasi-racconto sono attivi già da IDEA). 'CATALOGATO' è terminale
 // lato dash: stock/ordini/venduto vivono su Woo/Etsy, non qui.
 const PROGETTO_STATI = ['IDEA', 'PROGETTAZIONE', 'PROTOTIPO', 'VERSIONE_FINALE', 'SCHEDA_PRODOTTO', 'CATALOGATO'];
-const PROGETTO_TIPI  = ['lampada', 'mobile', 'complemento', 'restyling', 'prototipo'];
+// 'sistema' = pezzo che non è arredo ma apparato funzionale: più componenti che lavorano
+// insieme (impianto, elettronica/IoT, automazione). Es. la torre idroponica.
+const PROGETTO_TIPI  = ['lampada', 'mobile', 'complemento', 'restyling', 'prototipo', 'sistema'];
 // Come si realizza il pezzo → guida i moduli tecnici mostrati nella dash.
 const PROGETTO_METODI = ['stampa_3d', 'restyling', 'altro'];
 // Come va a catalogo → guida stock/quantità su Woo (NON è una fase del ciclo).
