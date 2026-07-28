@@ -45,6 +45,54 @@ if ($mode === 'crea' && $testo === '') { echo json_encode(['success' => false, '
 const GAL_START = '<!--ardy-galleria-->';
 const GAL_END   = '<!--/ardy-galleria-->';
 
+// Titolo editoriale dell'articolo, generato alla creazione del post (gemello di
+// generaTitoloLavorazione in ardy-pubblica-lavorazione.php). Prima era un template
+// fisso ("Creazione — [nome interno del pezzo]"), uguale su ogni progetto con lo
+// stesso nome di lavorazione: bruttino sul blog. Fallback al vecchio formato se la
+// chiamata fallisce o il risultato non torna utilizzabile.
+function generaTitoloProgetto(string $titoloInterno, string $testo): string {
+    $fallback = 'Creazione — ' . $titoloInterno;
+    if (!defined('ARDY_API_KEY') || ARDY_API_KEY === '') return $fallback;
+
+    $prompt = "Sei un copywriter che scrive titoli per il blog di Ardy Lab, bottega artigianale di restauro e design a Roma.
+Scrivi UN SOLO titolo per l'articolo che presenta questo progetto di design/restyling. Lo legge chi visita il sito, non un addetto ai lavori.
+
+Nome interno del pezzo: {$titoloInterno}
+Testo di presentazione scritto da Michela: {$testo}
+
+Regole:
+- Massimo 70 caratteri.
+- Concreto e caldo, mai clickbait o sensazionalistico. Niente punto finale, niente virgolette.
+- Usa ciò che emerge davvero dal testo (stile, materiale, ispirazione, uso): non inventare nulla che non ci sia.
+- Rispondi SOLO con il titolo, nient'altro.";
+
+    $payload = json_encode([
+        'model'      => 'claude-sonnet-4-6',
+        'max_tokens' => 60,
+        'messages'   => [['role' => 'user', 'content' => $prompt]]
+    ]);
+    $ch = curl_init('https://api.anthropic.com/v1/messages');
+    curl_setopt($ch, CURLOPT_POST,           true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS,     $payload);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT,        30);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'x-api-key: ' . ARDY_API_KEY,
+        'anthropic-version: 2023-06-01'
+    ]);
+    $res      = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    if ($httpCode !== 200) { error_log('ARDY GENERA TITOLO PROGETTO: HTTP ' . $httpCode); return $fallback; }
+
+    $data   = json_decode($res, true);
+    $titolo = trim((string) ($data['content'][0]['text'] ?? ''), " \t\n\r\0\x0B\"'.");
+    $titolo = preg_replace('/\s+/', ' ', $titolo);
+    if ($titolo === '' || mb_strlen($titolo) > 120) return $fallback;
+    return $titolo;
+}
+
 $wpPostIdEsistente = 0;
 try {
     $db = ardyDB();
@@ -286,7 +334,7 @@ if ($catTerm && !is_wp_error($catTerm)) { $catId = (int) $catTerm->term_id; }
 else { $t = wp_insert_term($catName, 'category'); $catId = (!is_wp_error($t)) ? (int) $t['term_id'] : (int) get_option('default_category'); }
 
 $result = wp_insert_post([
-    'post_title'    => 'Creazione — ' . $titolo,
+    'post_title'    => generaTitoloProgetto($titolo, $testo),
     'post_content'  => $content,
     'post_status'   => 'publish',
     'post_category' => [$catId],

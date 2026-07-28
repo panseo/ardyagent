@@ -272,7 +272,7 @@ if ($wpPostId) {
     $postLink = get_permalink($wpPostId);
 
 } else {
-    $titoloPost = 'Lavorazione — ' . $mobileTitolo;
+    $titoloPost = generaTitoloLavorazione($mobileTitolo, $faseNome, $testoGenerato);
     $introHtml  = '<div style="font-family:Georgia,serif;font-size:16px;line-height:1.7;color:#444;margin-bottom:32px;">Segui qui l\'avanzamento della lavorazione del tuo mobile. Aggiorniamo questa pagina ad ogni fase completata.</div>' . $nuovoBlocko;
 
     $result = wp_insert_post([
@@ -460,6 +460,56 @@ function parseImportoLavorazione(string $s): ?float {
         $s = str_replace(',', '.', $s);
     }
     return is_numeric($s) ? (float)$s : null;
+}
+
+// Titolo editoriale dell'articolo, generato UNA SOLA VOLTA alla creazione del post
+// (le fasi successive si accodano, il titolo resta). Prima era un template fisso
+// ("Lavorazione — [mobile]"), identico su ogni scheda con lo stesso tipo di mobile:
+// bruttino da leggere sul blog e sempre uguale. Fallback al vecchio formato se la
+// chiamata fallisce o il risultato non torna utilizzabile — un post senza titolo
+// non deve mai succedere.
+function generaTitoloLavorazione(string $mobile, string $faseNome, string $testo): string {
+    $fallback = 'Lavorazione — ' . $mobile;
+    if (!defined('ARDY_API_KEY') || ARDY_API_KEY === '') return $fallback;
+
+    $prompt = "Sei un copywriter che scrive titoli per il blog di Ardy Lab, bottega artigianale di restauro mobili antichi a Roma.
+Scrivi UN SOLO titolo per l'articolo che racconterà (a puntate, nelle prossime settimane) il restauro di questo mobile. Lo legge chi visita il sito, non un addetto ai lavori.
+
+Mobile: {$mobile}
+Prima fase pubblicata: {$faseNome}
+Testo di apertura dell'articolo: {$testo}
+
+Regole:
+- Massimo 70 caratteri.
+- Concreto e caldo, mai clickbait o sensazionalistico. Niente punto finale, niente virgolette.
+- Puoi citare il tipo di mobile e un dettaglio reale (epoca, materiale, tecnica) SOLO se emerge dal testo: non inventare nulla.
+- Rispondi SOLO con il titolo, nient'altro.";
+
+    $payload = json_encode([
+        'model'      => 'claude-sonnet-4-6',
+        'max_tokens' => 60,
+        'messages'   => [['role' => 'user', 'content' => $prompt]]
+    ]);
+    $ch = curl_init('https://api.anthropic.com/v1/messages');
+    curl_setopt($ch, CURLOPT_POST,           true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS,     $payload);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT,        30);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'x-api-key: ' . ARDY_API_KEY,
+        'anthropic-version: 2023-06-01'
+    ]);
+    $res      = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    if ($httpCode !== 200) { error_log('ARDY GENERA TITOLO LAVORAZIONE: HTTP ' . $httpCode); return $fallback; }
+
+    $data   = json_decode($res, true);
+    $titolo = trim((string) ($data['content'][0]['text'] ?? ''), " \t\n\r\0\x0B\"'.");
+    $titolo = preg_replace('/\s+/', ' ', $titolo);
+    if ($titolo === '' || mb_strlen($titolo) > 120) return $fallback;
+    return $titolo;
 }
 
 function generaTestoFase(string $noteBrevi, string $faseNome, string $mobile): string {

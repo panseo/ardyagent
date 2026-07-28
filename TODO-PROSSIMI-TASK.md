@@ -32,6 +32,11 @@ agosto»* — una data che non poteva promettere, e che non risultava da nessuna
 3. **Rinomina «Promemoria»**: controllare l'etichetta in dashboard (card, modale, bottone in
    sidebar), nell'email del briefing e su WhatsApp («leggimi il promemoria»). Il bottone in
    sidebar ora dice **🗒️ PROMEMORIA**: se in sidebar sta stretto, accorciarlo.
+4. **Titoli editoriali dei post** — pubblica una fase di lavorazione nuova (mai pubblicata prima)
+   e un progetto nuovo su Creazione: il titolo del post WordPress non deve più uscire come
+   «Lavorazione — [mobile]» / «Creazione — [nome]» ma un titolo scritto da Claude sul mobile/pezzo
+   reale. Se la chiamata AI fallisce, il vecchio formato resta come fallback — non deve mai uscire
+   un post senza titolo.
 
 **In sospeso dalla sessione precedente (26/07), non ancora collaudato:**
 
@@ -41,6 +46,24 @@ agosto»* — una data che non poteva promettere, e che non risultava da nessuna
 5. **Occhio ai vecchi articoli con immagini WEBP**: si riparano premendo 🖼️ *Aggiorna le immagini
    dell'articolo*, che ora ricarica l'allegato convertito in JPEG. Da fare quando un articolo
    pubblicato prima del 26/07 deve andare sui social.
+
+---
+
+## ✍️ NOTA — Titoli editoriali per i post (deployato 28/07/2026, da collaudare)
+
+- **Il titolo era un template fisso**, mai scritto da nessuno: `'Lavorazione — ' . $mobile` in
+  `ardy-pubblica-lavorazione.php` e `'Creazione — ' . $titolo` in `ardy-pubblica-progetto.php`,
+  impostati **una sola volta** alla creazione del post (le fasi successive si accodano, il titolo
+  resta). La dashboard non aveva — e continua a non avere — un campo per modificarlo prima di
+  pubblicare: due mobili con lo stesso nome interno uscivano con titolo identico.
+- **Ora un titolo vero, scritto da Claude**, con lo stesso pattern già in uso per il testo delle
+  fasi e le caption social (`generaTestoFase`/`generaTestoSocial` in `ardy-pubblica-lavorazione.php`,
+  `ardy-progetti-ai.php`): nuove funzioni `generaTitoloLavorazione()` e `generaTitoloProgetto()`,
+  stesso file dei rispettivi publish, usano il materiale già scritto (mobile/fase/testo della prima
+  fase; nome interno/testo di presentazione del progetto). **Fallback automatico** al vecchio
+  formato se la chiamata fallisce o il risultato torna vuoto/troppo lungo.
+- Genera il titolo **solo alla creazione** del post (stesso punto di prima): pubblicare altre fasi
+  sullo stesso lavoro/progetto non lo tocca.
 
 ---
 
