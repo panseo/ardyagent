@@ -49,42 +49,23 @@ agosto»* — una data che non poteva promettere, e che non risultava da nessuna
 
 ---
 
-## 🪑 NOTA — Ardy Express: webchat dedicata + griglia prezzi (28/07/2026, NON ancora deployata)
+## 🪑 NOTA — Ardy Express: webchat dedicata + griglia prezzi (deployato e collaudato 28/07/2026)
 
-Nuova landing/webchat per il servizio Ardy Express (manutenzione a domicilio), su richiesta
-diretta di Michela/Andrea. A differenza delle altre NOTE qui sopra, questa **non è ancora sul
-server**: è solo nel branch, mancano sia il deploy sia dei passi manuali su WordPress.
+Nuova landing/webchat per il servizio Ardy Express (manutenzione a domicilio): pagina
+`ardy-lab.it/ardy-express` con widget dedicato `ardy-chat-express.js` (stampo di
+`ardy-chat-interior-design.js`). Sole chiede quali mobili/quanti, interno o esterno, zona e foto
+facoltative, poi dà una stima provvisoria in base al numero di pezzi (fino a 10), ricordando
+sempre che il costo si conferma con un sopralluogo. Integrazione CRM leggera: nessuna nuova
+tabella/colonna, il lead si salva col tool `salva_lead_crm` già esistente.
 
-- **Codice pronto**: `ardy-chat-express.js` (nuovo widget, stampo di `ardy-chat-interior-design.js`),
-  blocco system prompt e rilevamento `origine: 'ardy-express'` in `ardy-proxy.php`, contenuto pagina
-  in `wordpress-snippets/ardy-express-page.html`. Integrazione CRM **leggera**: nessuna nuova
-  tabella/colonna, il lead si salva col tool `salva_lead_crm` già esistente (`servizio` = "Ardy
-  Express (manutenzione a domicilio)").
-- ⚠️ **Sostituita la vecchia tariffa "250€/giorno"** nel prompt condiviso (`ardy-system.txt`, voce
-  "Ardy Express" in LIVELLO 1): ora è una griglia a numero di pezzi (fino a un massimo di 10),
-  **valida su TUTTI i canali** — WhatsApp, chat generale del sito, e la nuova landing dedicata. Se
-  qualcuno chiede a Sole "quanto costa Ardy Express" su WhatsApp o sul sito generico, ora deve
-  rispondere con la griglia a pezzo (mai più "250 al giorno"), sempre specificando che è una stima
-  provvisoria da confermare con sopralluogo.
-- **Da fare per andare live:**
-  1. Deploy del branch su server (git pull + `./deploy.sh`, come sempre).
-  2. **A mano su WordPress** (fuori da questo repo): creare la pagina `/ardy-express`, incollarci il
-     contenuto di `wordpress-snippets/ardy-express-page.html` in un blocco HTML personalizzato, e
-     aggiungere in WPCode (Site Wide Footer) il loader
-     `<script src="https://ardyagent.ardy-lab.it/ardy-chat-express.js"></script>`.
-  3. **Collaudo**: aprire `/ardy-express`, verificare che il bottone 🪑 compaia SOLO lì (non sulle
-     altre pagine), fare una conversazione di prova con 3-4 mobili diversi e controllare che (a) la
-     stima citata corrisponda alla griglia, (b) Sole ripeta che è provvisoria e serve sopralluogo,
-     (c) oltre i 10 pezzi Sole rimandi diretta al sopralluogo senza forzare un numero, (d) a fine
-     conversazione compaia il lead in dashboard con la nota di riepilogo.
-  4. **Verificare anche WhatsApp/sito generico**: chiedere a Sole il prezzo di Ardy Express da un
-     canale NON dedicato e controllare che risponda con la nuova griglia, non più col vecchio
-     "250€/giorno" (potrebbe essere rimasto in cache di conversazioni già aperte, ma da zero deve
-     uscire il nuovo prezzo).
-  5. **Prezzi da validare con Michela**: la griglia (150→400€ per 1→10 pezzi) è stata proposta con
-     scala a tappe partendo dai due soli punti dati da lei (1 pezzo=150€, 10 pezzi=400€); i valori
-     intermedi (2-9 pezzi) sono una stima ragionevole ma NON confermata — rivedere con lei prima di
-     considerarli definitivi.
+⚠️ Ha **sostituito la vecchia tariffa "250€/giorno"** nel prompt condiviso (`ardy-system.txt`):
+ora è una griglia a numero di pezzi, valida su **tutti i canali** (WhatsApp, sito generico,
+landing dedicata).
+
+- [ ] **Prezzi ancora da validare con Michela**: la griglia (150→400€ per 1→10 pezzi) usa scala a
+  tappe partendo dai due soli punti dati da lei (1 pezzo=150€, 10 pezzi=400€); i valori intermedi
+  (2-9 pezzi) sono una stima ragionevole ma NON confermata — rivedere con lei prima di
+  considerarli definitivi.
 
 ---
 
