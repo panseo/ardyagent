@@ -51,7 +51,7 @@ Quando arriva qualcuno di nuovo, Sole:
 1. capisce cosa ha in mente (restauro, laccatura, doratura, wrapping, corsi…);
 2. raccoglie le informazioni utili, una alla volta (tipo di mobile, condizioni, zona, obiettivo);
 3. chiede **nome, telefono, email e indirizzo** (il telefono è indispensabile);
-4. chiede **una o due foto** del pezzo; su **WhatsApp** Sole le **riceve come immagini, le guarda e le valuta** (commenta cosa vede e fa domande su misure/stato/materiale). La foto viene **salvata nella scheda del cliente** (compare in dashboard) e **allegata all'email** di notifica a Michela;
+4. chiede le **foto** del pezzo invitando a mandarle **tutte insieme in un messaggio solo** (sulla webchat il 📎 ne seleziona più d'una); su **WhatsApp** Sole le **riceve come immagini, le guarda e le valuta** (commenta cosa vede e fa domande su misure/stato/materiale). Se arrivano **una alla volta** — dal telefono capita sempre — Sole capisce che sono **lo stesso mobile da angolazioni diverse**: fa **una sola valutazione** sulla prima e poi aggiunge una riga solo se lo scatto mostra qualcosa di nuovo, invece di ricominciare la perizia a ogni foto. Le foto vengono **salvate nella scheda del cliente** (compaiono in dashboard) e **allegate all'email** di notifica a Michela;
 5. dà una **forbice di prezzo indicativa** (mai cifre precise);
 6. qualifica il budget: se il cliente si blocca propone interventi più mirati o il pagamento a rate;
 7. se serve ritiro/consegna, spiega il **trasporto** prima di passare a Michela.

@@ -98,6 +98,12 @@
     }
 
     if (fileInput) {
+        // Selezione MULTIPLA (come nella chat interior design). L'<input id="ac-file-input">
+        // vive nella pagina WordPress e non ha l'attributo `multiple`: senza questa riga il
+        // cliente può scegliere una foto per volta, quindi manda lo stesso mobile in tanti
+        // messaggi separati e Sole finisce per commentare ogni scatto. Forzandolo qui la
+        // pagina WP non si tocca (questo file è servito dal nostro server).
+        fileInput.multiple = true;
         fileInput.addEventListener('change', function () {
             processFiles(fileInput.files);
             fileInput.value = '';
@@ -147,6 +153,14 @@
             wrap.appendChild(del);
             previewEl.appendChild(wrap);
         });
+        // Suggerimento: si allegano prima tutte le foto e si invia una volta sola.
+        // Serve a far arrivare lo stesso mobile in UN messaggio invece che in cinque.
+        var hint = document.createElement('div');
+        hint.style.cssText = 'flex-basis:100%;font-size:12px;color:#888;margin-top:4px';
+        hint.textContent = pendingImages.length === 1
+            ? 'Puoi aggiungerne altre prima di inviare.'
+            : pendingImages.length + ' foto pronte — inviale insieme.';
+        previewEl.appendChild(hint);
     }
 
     function addMsg(text, role, imgPreviews) {
