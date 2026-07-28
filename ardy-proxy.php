@@ -129,6 +129,7 @@ $cleanSession = preg_replace('/[^a-zA-Z0-9_\-]/', '', $sessionId);
 // è un lead di quel servizio per definizione, anche se salta l'intervista.
 $origine = preg_replace('/[^a-z0-9_\-]/', '', strtolower((string)($input['origine'] ?? '')));
 $isInteriorDesign = ($origine === 'interior-design');
+$isArdyExpress    = ($origine === 'ardy-express');
 
 // ── Lead da portale: link firmato ?lead=<sid>&tok=<hmac16> ──
 $leadSessionId = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string)($input['leadSessionId'] ?? ''));
@@ -242,6 +243,28 @@ if ($isInteriorDesign) {
     $system .= "\n\n## SEI SULLA PAGINA CONSULENZA INTERIOR DESIGN\n"
         . "Questa conversazione arriva da `ardy-lab.it/interior-design`: chi ti scrive è interessato alla **consulenza di interior design**, non a un restauro. Applica da subito l'intervista guidata descritta sopra (permesso → cinque domande → foto → dati in fondo), senza dover capire prima di cosa si tratta.\n"
         . "Se il cliente salta l'intervista e ti detta subito i suoi dati, va benissimo: salvalo comunque con `salva_lead_crm` e usa le `note` per riassumere quel poco che sai. Non costringerlo a rispondere alle domande se ha fretta.\n";
+}
+
+// Istruzioni SOLO-WEB per la pagina dedicata Ardy Express (manutenzione a
+// domicilio). La griglia prezzi, il processo e i prodotti sono già nel
+// prompt condiviso (ardy-system.txt, voce "Ardy Express"): valgono su TUTTI
+// i canali (WhatsApp, sito generico, questa landing). Qui vive solo il
+// comportamento SPECIFICO di questa pagina: l'intervista guidata e come
+// salvare il lead — esattamente come fa il blocco Interior Design sopra.
+$system .= "\n\n## ARDY EXPRESS — INTERVISTA GUIDATA E SALVATAGGIO (webchat dedicata `ardy-lab.it/ardy-express`)\n\n"
+    . "Su questa pagina, oltre a qualificare come da voce \"Ardy Express\" del listino, segui un ordine preciso:\n"
+    . "- Chiedi SEMPRE, prima di stimare: quali mobili e quanti (elenco pezzo per pezzo), se sono per interno o esterno/giardino, la zona/indirizzo di Roma, e invita a mandare qualche foto (aiuta Michela a valutare meglio, ma non è obbligatorio per dare una stima di massima).\n"
+    . "- Usa la griglia del listino SOLO per dare un'idea di massima basata sul numero di pezzi. Se il cliente supera i 10 pezzi o descrive un caso complesso/fuori standard (mobili molto rovinati, grandi dimensioni, interventi di gommalacca estesi), NON forzare la griglia: di' che serve valutare dal vivo e proponi direttamente il sopralluogo.\n"
+    . "- **Resta sempre sul generico**: qualunque cifra tu dia in chat è UNA STIMA PROVVISORIA, mai un prezzo definitivo. Dillo esplicitamente ogni volta che comunichi un numero, con naturalezza (non come un disclaimer legale): il costo reale si conferma sempre con un sopralluogo, perché lo stato di ogni mobile è diverso.\n"
+    . "- Non promettere date: per fissare il sopralluogo puoi usare `ottieni_disponibilita_calendario` e `fissa_appuntamento_calendario` come per gli altri servizi.\n"
+    . "- A fine conversazione (o quando hai raccolto nome/contatto), chiama `salva_lead_crm` con `servizio` = \"Ardy Express (manutenzione a domicilio)\", `mobile` = l'elenco dei pezzi come te li ha dati il cliente, `zona` = la zona/indirizzo, e in `note` riassumi: numero di pezzi, se ha mandato foto, e la stima provvisoria che gli hai dato (specificando che è da confermare col sopralluogo).\n";
+
+// Contesto di pagina: idem, ma per Ardy Express — evita che Sole tratti da
+// restauro generico chi scrive dalla landing dedicata.
+if ($isArdyExpress) {
+    $system .= "\n\n## SEI SULLA PAGINA ARDY EXPRESS\n"
+        . "Questa conversazione arriva da `ardy-lab.it/ardy-express`: chi ti scrive vuole una stima di massima per la manutenzione a domicilio dei suoi mobili, non un restauro vero e proprio. Applica da subito le regole della sezione ARDY EXPRESS qui sopra (quali mobili/quanti → interno o esterno → zona → foto facoltative → stima provvisoria dalla griglia → sopralluogo), senza dover capire prima di cosa si tratta.\n"
+        . "Se il cliente salta le domande e detta subito i suoi dati, va benissimo: salvalo comunque con `salva_lead_crm` e usa le `note` per riassumere quel poco che sai. Non costringerlo a rispondere se ha fretta.\n";
 }
 
 // ── Contesto lead da portale (link firmato) ──
