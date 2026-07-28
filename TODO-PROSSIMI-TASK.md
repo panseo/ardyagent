@@ -1,28 +1,67 @@
 # Ardy Lab — Task aperti & note utili
 
 > Solo task **aperti** + note operative + verifiche residue. Tutto ciò che è fatto **e deployato**
-> è rimosso (lo storico resta nei commit git). Ultima pulizia: 26/07/2026 · ultimo aggiornamento: 26/07/2026.
+> è rimosso (lo storico resta nei commit git). Ultima pulizia: 26/07/2026 · ultimo aggiornamento: 28/07/2026.
 
 > ⚠️ Promemoria sempre valido: se Sole tace su **tutti** i canali insieme (WhatsApp + webchat),
 > sospetta **credito Anthropic esaurito** (capitato il 21/06; si ricarica da Plans & Billing).
 
 ---
 
-## 🚀 APERTURA SESSIONE — riprendi da qui (fine sessione 26/07/2026, seconda parte)
+## 🚀 APERTURA SESSIONE — riprendi da qui (fine sessione 28/07/2026)
 
-Sessione dedicata alla pubblicazione sui social dalla dash design. **Deployata e verificata dal
-vivo**: il pannello social del progetto è ora il gemello esatto di quello delle fasi cliente, e i
-post escono davvero su **Facebook, Instagram e Google** — quest'ultimo dopo aver scoperto che a
-farlo fallire era il **WEBP** (dettagli nella sezione Google, § più sotto).
+Sessione partita da **un lead vero della webchat**: la cliente ha mandato più foto dello stesso
+mobile una alla volta e Sole ha dato una valutazione completa a ogni scatto (pedante); poi, avendo
+lei detto che il lavoro era per settembre, Sole ha risposto *«dirò a Michela di chiamarti a fine
+agosto»* — una data che non poteva promettere, e che non risultava da nessuna parte.
 
-**Da fare per prime, alla riapertura:**
+**Tutto deployato il 28/07, ma NON ancora provato dal vivo.** Michela proverà con calma.
 
-1. **Collaudo archivio 📦** — l'unica cosa rimasta in sospeso da stamattina: su un progetto **fake**
-   (non su Ardy Tower, che è un prototipo reale in corso) portalo a CATALOGATO, archivia, controlla
-   che finisca con «rilettura di verifica riuscita ✅», poi cestinalo.
-2. **Occhio ai vecchi articoli con immagini WEBP**: si riparano premendo 🖼️ *Aggiorna le immagini
+**Da fare per prime, alla riapertura — i tre collaudi:**
+
+1. **Foto multiple sulla webchat** (`/ardy-agent/`): il 📎 deve permettere di selezionare **più
+   foto insieme**, e sotto le anteprime deve comparire il conteggio («3 foto pronte — inviale
+   insieme»). Poi, mandandone comunque una alla volta: Sole deve valutare per intero **solo la
+   prima** e sulle successive aggiungere una riga solo se lo scatto mostra qualcosa di nuovo.
+   ⚠️ Il `multiple` è forzato da JS in `ardy-chat-site.js` perché l'`<input id="ac-file-input">`
+   vive nella pagina WordPress: se un domani qualcuno rifà quella pagina, ricontrollare qui.
+2. **Promemoria datato** (`ricorda_a_michela`): dire a Sole «il lavoro lo farei a settembre» e
+   verificare che (a) **non risponda con una data**, (b) compaia una riga nelle **📅 cose da fare
+   con data** in dashboard e il relativo evento su Google Calendar, (c) rispunti nel **briefing
+   del mattino** di quel giorno. Vale su webchat **e** WhatsApp.
+3. **Rinomina «Promemoria»**: controllare l'etichetta in dashboard (card, modale, bottone in
+   sidebar), nell'email del briefing e su WhatsApp («leggimi il promemoria»). Il bottone in
+   sidebar ora dice **🗒️ PROMEMORIA**: se in sidebar sta stretto, accorciarlo.
+
+**In sospeso dalla sessione precedente (26/07), non ancora collaudato:**
+
+4. **Collaudo archivio 📦** — su un progetto **fake** (non su Ardy Tower, prototipo reale in corso)
+   portalo a CATALOGATO, archivia, controlla che finisca con «rilettura di verifica riuscita ✅»,
+   poi cestinalo.
+5. **Occhio ai vecchi articoli con immagini WEBP**: si riparano premendo 🖼️ *Aggiorna le immagini
    dell'articolo*, che ora ricarica l'allegato convertito in JPEG. Da fare quando un articolo
    pubblicato prima del 26/07 deve andare sui social.
+
+---
+
+## 🗒️ NOTA — Promemoria, promesse e foto di Sole (deployato 28/07/2026, da collaudare)
+
+- **Le due liste non sono la stessa cosa.** Il **Promemoria** (tabella `note_staff`, ex «cose da
+  fare questa settimana») è la lista **libera e senza date**; le **📅 voci con data e ora**
+  (`todo_datati`) occupano uno slot su Google Calendar. Sole ora scrive nella seconda col tool
+  **`ricorda_a_michela`**. Il rinomina ha toccato **solo le etichette**: tabella `note_staff`,
+  endpoint `ardy-nota-settimanale-api.php` e tool `leggi/salva_nota_settimanale` sono invariati —
+  chi legge il codice non si spaventi del disallineamento tra nome tecnico e nome a schermo.
+- **Il tool sta su entrambi i canali** (`ardy-proxy.php` e `ardy-wa-agent.php`, sia lato cliente
+  sia lato staff): è quello che permette di tenere la regola in `ardy-system.txt`, che è condiviso
+  con WhatsApp. Se un domani si aggiunge un tool a un canale solo, l'istruzione va nell'appendice
+  di quel canale, **non** nel documento condiviso (altrimenti Sole recita la sintassi del tool).
+- **Data odierna nel system prompt** (`## OGGI`): aggiunta ora su entrambi i canali. Non c'era, e
+  senza il modello indovinava giorno e anno — un promemoria datato sarebbe finito nel passato.
+- **n8n non c'entra con i prompt.** Verificato: il workflow WhatsApp ha due nodi (Webhook + Code) e
+  **zero testo di prompt**; tutto il system arriva da `ardy-wa-lookup.php`, che assembla
+  `ardy-whatsapp-system.txt` + `ardy-system.txt` lato server. Le modifiche ai prompt viaggiano
+  quindi col deploy, mai da n8n.
 
 ---
 
