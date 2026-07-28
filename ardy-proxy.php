@@ -28,6 +28,7 @@ require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-net.php';
 require_once __DIR__ . '/ardy-sanitize.php';
 require_once __DIR__ . '/ardy-notifica-michela.php';
+require_once __DIR__ . '/ardy-promemoria-lib.php';
 require_once __DIR__ . '/ardy-email.php';
 require_once __DIR__ . '/phpmailer/src/PHPMailer.php';
 require_once __DIR__ . '/phpmailer/src/SMTP.php';
@@ -209,6 +210,11 @@ $images = $validImages;
 // -----------------------------------------------------------
 $system = file_get_contents(__DIR__ . '/ardy-system.txt');
 
+// Data odierna: serve per calcolare il buffer dei sopralluoghi (+7 giorni) e
+// soprattutto per datare i promemoria di `ricorda_a_michela` — senza, il modello
+// tira a indovinare il giorno (e l'anno) e il promemoria finisce nel passato.
+$system .= "\n\n## OGGI\n\nÈ " . ardy_data_ita(new DateTime('now')) . " — in formato data: " . date('Y-m-d') . ".\n";
+
 // Istruzioni SOLO-WEB sul tool cerca_cliente / codice di accesso. Stanno qui (non in
 // ardy-system.txt) perché quel documento è condiviso anche col canale WhatsApp, dove
 // il tool NON esiste: includerle là faceva "recitare" la sintassi del tool come testo.
@@ -368,7 +374,8 @@ $tools = [
             ],
             'required' => ['codice']
         ]
-    ]
+    ],
+    ardy_tool_ricorda_a_michela()
 ];
 
 // callN8n rimossa — calendario gestito direttamente via ardy-gcal.php
@@ -933,6 +940,9 @@ while ($iteration < $maxIterations) {
                         $toolResult = 'Errore tecnico nel recupero dei dati. Chiedi al cliente di riprovare tra poco.';
                     }
                 }
+
+            } elseif ($toolName === 'ricorda_a_michela') {
+                $toolResult = ardy_esegui_ricorda_a_michela($toolInput);
             }
 
             $toolResults[] = ['type' => 'tool_result', 'tool_use_id' => $toolId, 'content' => $toolResult];

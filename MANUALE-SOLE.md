@@ -111,8 +111,13 @@ Su richiesta di Michela o Andrea, Sole agisce sul calendario **per conto di un c
 - *«sposta il sopralluogo di Alberto»* → se ne ha più d'uno, Sole **chiede QUALE** prima di spostarlo.
 > È lo stesso "motore" della lista **📅 Sopralluoghi** nella scheda della dashboard: ciò che Sole fa su WhatsApp compare lì, e viceversa.
 
-### 7c. La nota settimanale "cose da fare" (WhatsApp) — *giu 2026*
-Michela **e** Andrea possono dettare a Sole la **lista delle cose da fare della settimana** (sopralluoghi da prendere, materiali da ordinare, montaggi…). È **una sola lista condivisa**: Sole la **memorizza**, la **rilegge** (*«leggimi le cose da fare»*) e la **aggiorna** (*«aggiungi…»*, *«segna fatto il 3»* → Sole legge, modifica il testo intero e risalva, senza perdere le voci). Al **buongiorno del mattino** Sole la **include da sola** nel resoconto, senza doverla chiedere.
+### 7c. Il **Promemoria** (WhatsApp) — *giu 2026, rinominato lug 2026*
+Michela **e** Andrea possono dettare a Sole il **promemoria**: la lista libera delle cose da fare, da comprare, da ricordare (sopralluoghi da prendere, materiali da ordinare, montaggi…). Non riguarda per forza la settimana in corso — prima si chiamava "cose da fare questa settimana", ma nell'uso reale è una lista generale, e il nome è stato allineato. È **una sola lista condivisa**: Sole la **memorizza**, la **rilegge** (*«leggimi il promemoria»*) e la **aggiorna** (*«aggiungi…»*, *«segna fatto il 3»* → Sole legge, modifica il testo intero e risalva, senza perdere le voci). Al **buongiorno del mattino** Sole la **include da sola** nel resoconto, senza doverla chiedere. Le voci spuntate spariscono il lunedì.
+
+Il promemoria **non ha date**. Quando invece una cosa va ricordata in un **giorno preciso**, esiste il gemello datato: le voci **📅 con data e ora**, che occupano uno slot su Google Calendar. Le scrive Michela dalla dashboard — e ora anche **Sole**, quando un cliente rimanda il lavoro più in là (vedi 7d).
+
+### 7d. Sole si segna i clienti che rimandano — *lug 2026*
+Quando un cliente dice *«comunque io lo farei a settembre»* o *«richiamatemi dopo le ferie»*, Sole **non promette date** (mai «ti faccio chiamare a fine agosto»: l'agenda di Michela non la gestisce lei). Dice che Michela ricontatterà al momento giusto e **registra un promemoria datato** con `ricorda_a_michela`, qualche giorno prima del momento indicato dal cliente, con nome, telefono e di cosa si tratta. Quel promemoria ricompare da solo nelle **cose da fare con data** in dashboard, sul **calendario** di Michela e nel **briefing del mattino** di quel giorno. Vale sia sulla webchat sia su WhatsApp. Il lead resta comunque salvato nel CRM con la nota "vuole partire a settembre".
 
 ---
 

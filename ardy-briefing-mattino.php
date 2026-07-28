@@ -94,13 +94,13 @@ $oggi    = date('d/m/Y');
 $subject = '☀️ Buongiorno Ardy — briefing del ' . $oggi;
 $intro   = 'Buongiorno! Ecco la situazione di oggi (' . $oggi . ').';
 
-// CTA: modifica delle "Cose da fare questa settimana" dalla dashboard.
+// CTA: modifica del "Promemoria" (nota libera dello staff) dalla dashboard.
 $dashUrl = defined('ARDY_DASHBOARD_URL') && ARDY_DASHBOARD_URL !== ''
     ? ARDY_DASHBOARD_URL
     : 'https://ardyagent.ardy-lab.it/';
 $ctaHtml = '
   <div style="margin:28px 0 8px;padding:16px;background:#faf7f1;border:1px solid #ece3d3;border-radius:8px;">
-    <div style="font-size:14px;color:#555;margin-bottom:12px;">✏️ Vuoi aggiornare le «Cose da fare questa settimana»? Modificale dalla tua dashboard.</div>
+    <div style="font-size:14px;color:#555;margin-bottom:12px;">✏️ Vuoi aggiornare il «Promemoria»? Modificalo dalla tua dashboard.</div>
     <a href="' . htmlspecialchars($dashUrl, ENT_QUOTES, 'UTF-8') . '"
        style="display:inline-block;background:#c8a96e;color:#0e0e0e;text-decoration:none;font-weight:bold;padding:10px 18px;border-radius:6px;font-size:14px;">Apri la dashboard →</a>
   </div>';
