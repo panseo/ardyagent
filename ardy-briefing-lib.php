@@ -42,7 +42,7 @@ function ardy_riepilogo_settimana(PDO $db, array $staffDigits = []): string {
         }
     } catch (Throwable $e) { error_log('ARDY WA RIEPILOGO GCAL: ' . $e->getMessage()); }
 
-    // 🗒️ NOTA SETTIMANALE "cose da fare" (la più recente) — così entra nel briefing del
+    // 🗒️ PROMEMORIA dello staff (il più recente) — così entra nel briefing del
     // mattino senza che Michela debba chiederla. Stessa fonte del tool leggi_nota_settimanale
     // (tabella note_staff, ultima per id). Difensivo: se la tabella manca, salta in silenzio.
     try {
@@ -50,8 +50,8 @@ function ardy_riepilogo_settimana(PDO $db, array $staffDigits = []): string {
                    ->fetch(PDO::FETCH_ASSOC);
         $testoNota = $nota ? trim((string) $nota['testo']) : '';
         if ($testoNota !== '') {
-            $sett = !empty($nota['settimana']) ? ' (' . $nota['settimana'] . ')' : '';
-            $out[] = "🗒️ COSE DA FARE QUESTA SETTIMANA{$sett}:";
+            $sett = !empty($nota['settimana']) ? ' (aggiornato ' . $nota['settimana'] . ')' : '';
+            $out[] = "🗒️ PROMEMORIA{$sett}:";
             foreach (array_slice(preg_split('/\r\n|\r|\n/', $testoNota), 0, 20) as $riga) {
                 $riga = rtrim($riga);
                 if ($riga !== '') $out[] = "  {$riga}";

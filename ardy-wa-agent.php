@@ -11,7 +11,7 @@
 // "recitare" la sintassi di un tool che su WhatsApp non esisteva (caso Alberto).
 //
 // Anche la modalità TITOLARE (staff) passa ora di qui, con un set di tool "_staff"
-// dedicati (ricerca/creazione scheda, calendario per nome, nota settimanale). Il solo
+// dedicati (ricerca/creazione scheda, calendario per nome, promemoria). Il solo
 // marker n8n rimasto è [[CONTATTA_LEAD]] (primo contatto a freddo); la creazione scheda
 // è ora un tool VERO (crea_scheda_cliente), sincrona, così Sole crea e prenota nello
 // stesso giro senza aspettare nessuna "sincronizzazione".
@@ -30,6 +30,7 @@ require_once __DIR__ . '/ardy-sopralluoghi-lib.php';  // sopralluoghi multipli (
 require_once __DIR__ . '/ardy-net.php';       // ardyCompressImage() per le foto WhatsApp
 require_once __DIR__ . '/ardy-sanitize.php';
 require_once __DIR__ . '/ardy-notifica-michela.php';
+require_once __DIR__ . '/ardy-promemoria-lib.php';  // tool ricorda_a_michela (cose da fare con data)
 require_once __DIR__ . '/ardy-email.php';
 require_once __DIR__ . '/phpmailer/src/PHPMailer.php';
 require_once __DIR__ . '/phpmailer/src/SMTP.php';
@@ -91,6 +92,11 @@ if ($system === '' || empty($messages)) {
     echo json_encode(['success' => false, 'reply' => 'Scusa, ora non riesco a rispondere. Ti ricontatto a breve.']);
     exit();
 }
+
+// Data odierna in coda al prompt che arriva da n8n: serve per il buffer dei
+// sopralluoghi e per datare i promemoria di `ricorda_a_michela` (senza, il
+// modello indovina il giorno e l'anno, e il promemoria finisce nel passato).
+$system .= "\n\n## OGGI\n\nÈ " . ardy_data_ita(new DateTime('now')) . " — in formato data: " . date('Y-m-d') . ".\n";
 
 // -----------------------------------------------------------
 // Chiamata ad Anthropic (identica al sito: prompt caching su system + tools)
@@ -354,6 +360,7 @@ $tools = [
             'required' => ['start'],
         ],
     ],
+    ardy_tool_ricorda_a_michela(),
 ];
 
 // -----------------------------------------------------------
@@ -441,7 +448,7 @@ if ($staff) {
         ],
         [
             'name'        => 'leggi_nota_settimanale',
-            'description' => 'Restituisce la NOTA SETTIMANALE "cose da fare" dello staff salvata più di recente (un promemoria libero: sopralluoghi da prendere, materiali da ordinare, montaggi, ecc.). Usala quando lo staff chiede "cosa devo fare questa settimana / leggimi la lista / le cose da fare", e SEMPRE prima di aggiungere o spuntare una voce (così parti dal testo aggiornato).',
+            'description' => 'Restituisce il PROMEMORIA dello staff salvato più di recente: la lista libera e SENZA DATE delle cose da fare, da comprare, da ricordare (sopralluoghi da prendere, materiali da ordinare, montaggi, ecc.) — non riguarda per forza la settimana in corso. Usalo quando lo staff chiede "leggimi il promemoria / la lista / le cose da fare", e SEMPRE prima di aggiungere o spuntare una voce (così parti dal testo aggiornato).',
             'input_schema' => [
                 'type'       => 'object',
                 'properties' => (object) [],
@@ -449,15 +456,19 @@ if ($staff) {
         ],
         [
             'name'        => 'salva_nota_settimanale',
-            'description' => 'Salva/aggiorna la NOTA SETTIMANALE "cose da fare" dello staff. Passa il TESTO COMPLETO e aggiornato della nota (non solo la modifica): se lo staff chiede di aggiungere, togliere o spuntare una voce, prima leggi con leggi_nota_settimanale, modifica il testo intero e risalvalo qui. Mantieni un elenco ordinato e leggibile.',
+            'description' => 'Salva/aggiorna il PROMEMORIA dello staff (lista libera senza date). Passa il TESTO COMPLETO e aggiornato (non solo la modifica): se lo staff chiede di aggiungere, togliere o spuntare una voce, prima leggi con leggi_nota_settimanale, modifica il testo intero e risalvalo qui. Mantieni un elenco ordinato e leggibile. Se invece la cosa da ricordare ha un GIORNO preciso, usa ricorda_a_michela.',
             'input_schema' => [
                 'type'       => 'object',
                 'properties' => [
-                    'testo' => ['type' => 'string', 'description' => 'Testo COMPLETO e aggiornato della nota settimanale (l\'elenco intero, non il singolo punto).'],
+                    'testo' => ['type' => 'string', 'description' => 'Testo COMPLETO e aggiornato del promemoria (l\'elenco intero, non il singolo punto).'],
                 ],
                 'required' => ['testo'],
             ],
         ],
+        // Gemello "datato" del promemoria: qui lo staff può farsi
+        // segnare una cosa da fare in un giorno preciso ("ricordami di chiamare
+        // la signora a fine agosto"), che finisce in dashboard e sul calendario.
+        ardy_tool_ricorda_a_michela(),
     ];
 }
 
@@ -949,10 +960,10 @@ while ($iteration < $maxIterations) {
                 $db  = ardyDB();
                 $row = $db->query("SELECT testo, settimana, created_at FROM note_staff ORDER BY id DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
                 if (!$row || trim((string) $row['testo']) === '') {
-                    $toolResult = 'Non c\'è ancora una nota settimanale salvata. Quando lo staff te la detta, salvala con salva_nota_settimanale.';
+                    $toolResult = 'Non c\'è ancora un promemoria salvato. Quando lo staff te lo detta, salvalo con salva_nota_settimanale.';
                 } else {
                     $quando = !empty($row['created_at']) ? date('d/m/Y H:i', strtotime((string) $row['created_at'])) : '';
-                    $toolResult = "NOTA SETTIMANALE" . (!empty($row['settimana']) ? ' (' . $row['settimana'] . ')' : '')
+                    $toolResult = "PROMEMORIA" . (!empty($row['settimana']) ? ' (aggiornato ' . $row['settimana'] . ')' : '')
                                 . ($quando !== '' ? ' — aggiornata il ' . $quando : '') . ":\n" . $row['testo'];
                 }
             } catch (PDOException $e) {
@@ -969,12 +980,15 @@ while ($iteration < $maxIterations) {
                     $db = ardyDB();
                     $db->prepare("INSERT INTO note_staff (settimana, testo, created_at) VALUES (:s, :t, NOW())")
                        ->execute([':s' => date('o-\WW'), ':t' => $testo]);
-                    $toolResult = 'Nota settimanale salvata ✅ (la trovi con "leggimi le cose da fare").';
+                    $toolResult = 'Promemoria salvato ✅ (lo ritrovi con "leggimi il promemoria").';
                 }
             } catch (PDOException $e) {
                 error_log('ARDY WA-AGENT NOTA SALVA ERROR: ' . $e->getMessage());
                 $toolResult = 'Errore nel salvataggio della nota settimanale. Riprova.';
             }
+
+        } elseif ($toolName === 'ricorda_a_michela') {
+            $toolResult = ardy_esegui_ricorda_a_michela($toolInput);
 
         } else {
             // Tool non disponibile su questo canale: lo segnaliamo senza bloccare.

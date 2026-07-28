@@ -53,7 +53,7 @@
           <button class="btn btn--primary btn--sm btn--grow" onclick="openNuovoCliente()">+ NUOVO</button>
           <button class="btn btn--sm btn--grow" onclick="openGestioneLibreria()">LIBRERIA</button>
           <button class="btn btn--sm btn--grow" onclick="window.open('ardy-guida-michela.html','_blank')">❓ GUIDA</button>
-          <button class="btn btn--sm" onclick="apriNotaEditorDaPulsante()" id="btnNotaDaFare" title="Cose da fare questa settimana">🗒️ DA FARE</button>
+          <button class="btn btn--sm" onclick="apriNotaEditorDaPulsante()" id="btnNotaDaFare" title="Promemoria — cose da fare">🗒️ PROMEMORIA</button>
           <button class="btn btn--sm" onclick="toggleStrumenti()" id="btnStrumenti" title="Altri strumenti (import PDF, conoscenza, spazio, cestino)">⚙︎</button>
         </div>
         <!-- Strumenti quotidiani: sempre visibili, fuori dall'ingranaggio (Audit P2) -->
@@ -115,10 +115,10 @@
       <div class="big-letter">A</div>
       <p>SELEZIONA UN CLIENTE</p>
 
-      <!-- 🗒️ Nota settimanale "cose da fare" — stessa lista di Sole su WhatsApp -->
+      <!-- 🗒️ Promemoria (nota libera dello staff) — stessa lista di Sole su WhatsApp -->
       <div class="nota-card" id="notaCard">
         <div class="nota-card-head">
-          <span class="nota-card-title">🗒️ Cose da fare questa settimana</span>
+          <span class="nota-card-title">🗒️ Promemoria</span>
           <span class="nota-card-meta" id="notaMeta"></span>
         </div>
         <div class="nota-card-body" id="notaPreview">Caricamento…</div>
@@ -1295,7 +1295,7 @@ async function caricaNotaSettimanale() {
     _notaCorrente = (d && d.success && d.testo) ? d.testo : '';
     if (_notaCorrente.trim() === '') {
       prev.className = 'nota-card-body empty';
-      prev.textContent = 'Nessuna nota: scrivi le cose da fare questa settimana.';
+      prev.textContent = 'Nessun promemoria: scrivi qui le cose da fare, da comprare, da ricordare.';
       if (meta) meta.textContent = '';
     } else {
       prev.className = 'nota-card-body';
@@ -5467,15 +5467,15 @@ async function archiviaPersi() {
   </div>
 </div>
 
-<!-- MODAL NOTA SETTIMANALE "cose da fare" -->
+<!-- MODAL PROMEMORIA (nota libera dello staff) -->
 <div class="modal-overlay" id="notaEditorOverlay" onclick="if(event.target===this)chiudiNotaEditor()">
   <div class="modal-lg" onclick="event.stopPropagation()" style="width:min(560px,94vw);">
     <div class="modal-lg-head">
-      <h3>🗒️ COSE DA FARE QUESTA SETTIMANA</h3>
+      <h3>🗒️ PROMEMORIA</h3>
       <button class="modal-lg-close" onclick="chiudiNotaEditor()">✕</button>
     </div>
     <div class="modal-lg-body">
-      <p style="font-size:12px;color:var(--text-dim);margin:0 0 8px;">Una riga per ogni cosa da fare (sopralluoghi, materiali da ordinare, montaggi…). È la stessa lista che leggi e aggiorni con Sole su WhatsApp.</p>
+      <p style="font-size:12px;color:var(--text-dim);margin:0 0 8px;">Una riga per ogni cosa da ricordare: cose da fare, da comprare, da chiedere. Non deve riguardare per forza questa settimana. È la stessa lista che leggi e aggiorni con Sole su WhatsApp.</p>
       <p style="font-size:12px;color:#c8a96e;margin:0 0 12px;">Spunta <strong>«Fatto»</strong> sulle voci chiuse: ogni <strong>lunedì</strong> quelle spuntate spariscono e restano solo le cose ancora da fare. (Su WhatsApp le spunti dicendolo a Sole.)</p>
       <div id="notaRows" style="display:flex;flex-direction:column;gap:6px;max-height:38vh;overflow:auto;"></div>
       <button type="button" class="nota-add-btn" onclick="notaAddRow('', false, true)">+ Aggiungi riga</button>
