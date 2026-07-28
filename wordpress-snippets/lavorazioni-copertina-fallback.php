@@ -5,11 +5,16 @@
  * NB: in WPCode il codice gira SENZA il tag <?php (lo aggiunge WPCode).
  *     Qui il tag c'è solo per avere un .php valido/lintabile.
  *
- * Le pagine "Lavori in corso" (categoria 102) non hanno un'immagine in evidenza
- * impostata (il publish flow — ardy-pubblica-lavorazione.php — non ci prova più).
- * Qui diciamo a WordPress di usare al volo la PRIMA foto trovata nel contenuto
- * del post come se fosse la copertina, così i box di anteprima del modulo Blog
- * di Divi (es. in home) mostrano comunque un'immagine invece del placeholder.
+ * Le pagine "Lavori in corso" (categoria slug "lavori-in-corso") non hanno
+ * un'immagine in evidenza impostata (il publish flow — ardy-pubblica-lavorazione.php
+ * — non ci prova più). Qui diciamo a WordPress di usare al volo la PRIMA foto
+ * trovata nel contenuto del post come se fosse la copertina, così i box di
+ * anteprima del modulo Blog di Divi (es. in home) mostrano comunque
+ * un'immagine invece del placeholder.
+ *
+ * Cerchiamo la categoria per SLUG, non per ID fisso: stesso motivo del publish
+ * flow, se la categoria viene ricreata da WP admin con un ID diverso il filtro
+ * si autoallinea invece di smettere di funzionare in silenzio.
  *
  * Nessuna scrittura sul post: è tutto calcolato "on the fly" filtrando
  * get_post_thumbnail_id(), il punto da cui passano sia has_post_thumbnail()
@@ -20,7 +25,7 @@
  */
 add_filter('get_post_thumbnail_id', function ($thumbnail_id, $post) {
     if ($thumbnail_id) return $thumbnail_id; // copertina già impostata: non tocchiamo nulla
-    if (!$post || !has_category(102, $post)) return $thumbnail_id; // solo pagine lavorazione
+    if (!$post || !has_category('lavori-in-corso', $post)) return $thumbnail_id; // solo pagine lavorazione
 
     // Cache per richiesta: evita di rifare regex/query per lo stesso post
     // quando la funzione viene chiamata più volte nella stessa pagina.
