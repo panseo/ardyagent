@@ -30,6 +30,7 @@ ardyagent.ardy-lab.it/
 ├── ardy-chat-corsi.js         # Chat in "modalità corso" /ardy-agent/?corso= (servita dal server; in WPCode solo loader)
 ├── ardy-chat-experience.js    # Webchat "Galleria Diffusa" per i B&B partner /galleria-diffusa (servita dal server; in WPCode solo loader)
 ├── ardy-chat-interior-design.js # Webchat "Consulenza Interior Design" /interior-design (servita dal server; in WPCode solo loader)
+├── ardy-chat-express.js       # Webchat "Ardy Express" (manutenzione a domicilio) /ardy-express (servita dal server; in WPCode solo loader)
 ├── ardy-widget-lavorazione.js # Widget chat contestuale per pagine lavorazione
 ├── ardy-verify-client.php     # Verifica identità cliente (telefono + wp_post_id)
 ├── ardy-whatsapp-webhook.php  # Webhook WhatsApp Cloud API (estrae il media id delle foto; salva ogni messaggio in arrivo in wa_messaggi via ardy-wa-store → risposte visibili in dash anche senza n8n)
@@ -932,6 +933,13 @@ di oggi (coda del log), spazio disco. Ogni check è isolato in try/catch.
 ---
 
 ## 📝 Note sessioni
+
+**Luglio 2026 — Ardy Express (webchat dedicata + griglia prezzi a pezzo)**
+- **Webchat dedicata** `ardy-chat-express.js` sulla pagina `ardy-lab.it/ardy-express` (contenuto pagina in `wordpress-snippets/ardy-express-page.html`, loader di una riga in WPCode Site Wide Footer). Widget autoportante, stesso stampo di `ardy-chat-interior-design.js`: riusa `ardy-proxy.php`, si auto-limita all'URL `/ardy-express` (o `#ardy-express`/`window.ARDY_EX=true`), espone `window.ardyExOpen()` per i CTA della pagina.
+- **Nuova griglia prezzi a pezzo per Ardy Express, sostituisce il vecchio "250€/giorno"**: la voce "Ardy Express" in `ardy-system.txt` (LIVELLO 1) ora riporta un prezzo indicativo in base al numero di pezzi (fino a un massimo di 10): 1=150€ · 2=190€ · 3=220€ · 4=250€ · 5=280€ · 6=300€ · 7=320€ · 8=340€ · 9=370€ · 10=400€ (esempio 10 pezzi: 2 comodini, 4 sedie, un tavolo, una vetrina, una madia, una cassapanca), oltre a un riassunto del processo (pulizia/patinatura → olio paglierino e petrolio → cera vergine d'api, nei casi specifici gommalacca poi cera; per l'esterno olio di tung) e dei prodotti usati. **Vale su tutti i canali** (WhatsApp, sito generico, landing dedicata): è sempre una stima PROVVISORIA, il costo si conferma solo con un sopralluogo.
+- **Sole in modalità Ardy Express** (appendice solo-web di `ardy-proxy.php`, sezione "ARDY EXPRESS — INTERVISTA GUIDATA E SALVATAGGIO"): chiede sempre, prima di stimare, quali mobili e quanti, interno o esterno, zona a Roma, e invita a mandare foto (facoltative). Oltre i 10 pezzi o su casi fuori standard non forza la griglia: propone direttamente il sopralluogo. A fine conversazione salva con `salva_lead_crm` (`servizio` = "Ardy Express (manutenzione a domicilio)", `mobile` = elenco pezzi, `zona`, `note` = riepilogo con la stima data). **Nessuna nuova tabella/colonna CRM**: integrazione leggera, riusa il tool di salvataggio lead già esistente (a differenza di Interior Design, che ha una sezione dedicata in dashboard).
+- Come per Interior Design: `origine: 'ardy-express'` nel POST del widget rende deterministico il riconoscimento della pagina lato proxy (`$isArdyExpress`), senza dipendere dal modello che "capisca" da solo il contesto.
+- ⚠️ **Da fare a mano su WordPress** (fuori da questo repo, vedi nota sotto "Rebranding Ardy → Sole"): creare la pagina `/ardy-express`, incollare il contenuto di `wordpress-snippets/ardy-express-page.html` in un blocco HTML personalizzato, e aggiungere in WPCode (Site Wide Footer) il loader `<script src="https://ardyagent.ardy-lab.it/ardy-chat-express.js"></script>`.
 
 **Luglio 2026 — Foto multiple, promesse senza date e promemoria datati di Sole**
 - **Più foto dello stesso pezzo.** Un lead della webchat ha mandato le foto dello stesso mobile una alla volta e Sole ha dato una valutazione completa a ogni scatto (pedante). La causa era l'interfaccia: `ardy-chat-site.js` non impostava `multiple` sull'`<input id="ac-file-input">` (che vive nella pagina WordPress), quindi si poteva scegliere **una foto per volta**. Ora il flag è forzato da JS — la pagina WP non si tocca, il file è servito da noi — e sotto le anteprime compare il conteggio ("3 foto pronte — inviale insieme").

@@ -1,0 +1,180 @@
+<!--
+  ARDY EXPRESS — MANUTENZIONE A DOMICILIO — contenuto pagina WordPress  ardy-lab.it/ardy-express
+  ============================================================================
+  Incolla questo in un blocco "HTML personalizzato" della pagina WordPress
+  /ardy-express (o in un Code Module di Divi).
+
+  Cosa fa già:
+  - imposta il contesto pagina (#ardy-express) così la webchat di Sole
+    "modalità Ardy Express" si attiva SOLO qui;
+  - il bottone "Preventivo Ardy Express" apre la chat via window.ardyExOpen().
+
+  ⚠️ IL LOADER DEL WIDGET VA IN WPCODE, NON QUI.
+  Molti editor/temi (Divi, blocco HTML) RIMUOVONO i tag <script> incollati nel
+  contenuto della pagina → il widget non parte. Per questo il loader si mette in
+  uno snippet WPCode (vedi README.md, sezione "Ardy Express"): un solo
+  <script src="...ardy-chat-express.js"> in Site Wide Footer. Il widget si
+  auto-limita alla pagina /ardy-express (gate sull'URL), quindi non compare
+  altrove. Il <script> in fondo resta solo come fallback per editor che NON
+  strippano gli script: se usi WPCode, è inerte.
+
+  Fonte attiva del widget: ../ardy-chat-express.js (servito da
+  https://ardyagent.ardy-lab.it/ardy-chat-express.js). Questo file HTML è
+  solo un BACKUP del contenuto pagina (la cartella wordpress-snippets non
+  viene deployata).
+
+  I prezzi qui sotto sono INDICATIVI: lo stesso disclaimer va ripetuto (Sole lo
+  fa già in chat, vedi ardy-proxy.php sezione "ARDY EXPRESS"). Non toglierlo:
+  serve a evitare contestazioni quando il sopralluogo rivela un costo diverso.
+-->
+
+<style>
+  #ardy-express, #ardy-express * { box-sizing:border-box; }
+  @media (max-width:600px) {
+    #ardy-express { padding-left:6px !important; padding-right:6px !important; }
+    #ardy-express .ex-grid { flex-direction:column !important; gap:12px !important; }
+    #ardy-express .ex-card { min-width:0 !important; width:100% !important; padding:18px 16px !important; }
+    #ardy-express h1 { font-size:32px !important; }
+    #ardy-express section { padding-left:0 !important; padding-right:0 !important; }
+    #ardy-express .ex-hero { padding-top:8px !important; padding-bottom:18px !important; }
+    #ardy-express .ex-price-table { font-size:14px !important; }
+  }
+</style>
+
+<div id="ardy-express" style="max-width:980px;margin:0 auto;padding:8px 18px 40px;font-family:'DM Sans',sans-serif;color:#2d2d2d;">
+
+  <!-- ── HERO ──────────────────────────────────────────────────────── -->
+  <section class="ex-hero" style="text-align:center;padding:40px 0 28px;">
+    <p style="letter-spacing:2px;text-transform:uppercase;font-size:13px;color:#a8864a;margin:0 0 10px;">Ardy Lab · Ardy Express</p>
+    <h1 style="font-family:'Crimson Pro',serif;font-size:40px;line-height:1.1;margin:0 0 14px;color:#1a1a1a;">Manutenzione dei mobili a domicilio</h1>
+    <p style="font-size:19px;line-height:1.5;color:#555;max-width:620px;margin:0 auto 22px;">
+      Puliamo, patiniamo e rinfreschiamo i tuoi mobili di pregio — o i tuoi
+      arredi da giardino — direttamente a casa tua, in una mattina. Nessun
+      trasporto, nessun disagio: arriviamo attrezzati con i prodotti giusti e
+      ripartiamo lasciando i tuoi mobili come nuovi.
+    </p>
+    <p style="font-size:15px;color:#888;margin:0;">
+      Rispondi a qualche domanda di <strong>Sole</strong> qui sotto per una stima di massima, oppure scrivi o chiama Michela: <strong>+39 379 375 6437</strong>
+    </p>
+  </section>
+
+  <!-- ── COME FUNZIONA (3 passi) ────────────────────────────────────── -->
+  <section style="padding:30px 0;border-top:1px solid #eee;">
+    <h2 style="font-family:'Crimson Pro',serif;font-size:28px;text-align:center;margin:0 0 26px;color:#1a1a1a;">Come funziona</h2>
+    <div class="ex-grid" style="display:flex;flex-wrap:wrap;gap:20px;justify-content:center;">
+      <div class="ex-card" style="flex:1;min-width:230px;background:#faf9f6;border:1px solid #eee;border-radius:14px;padding:22px;">
+        <div style="font-size:30px;">💬</div>
+        <h3 style="font-family:'Crimson Pro',serif;font-size:19px;margin:10px 0 6px;">1 · Racconti a Sole</h3>
+        <p style="font-size:15px;line-height:1.5;color:#666;margin:0;">
+          Quali mobili e quanti (comodini, sedie, tavoli, vetrine, madie,
+          cassapanche...), se sono per <strong>interno</strong> o
+          <strong>esterno/giardino</strong>, e la tua zona a Roma. Puoi anche
+          allegare qualche foto: aiuta a farsi un'idea migliore.
+        </p>
+      </div>
+      <div class="ex-card" style="flex:1;min-width:230px;background:#faf9f6;border:1px solid #eee;border-radius:14px;padding:22px;">
+        <div style="font-size:30px;">📋</div>
+        <h3 style="font-family:'Crimson Pro',serif;font-size:19px;margin:10px 0 6px;">2 · Stima di massima</h3>
+        <p style="font-size:15px;line-height:1.5;color:#666;margin:0;">
+          In base al numero di pezzi ti diamo subito un'idea di costo — sempre
+          <strong>provvisoria</strong>: il prezzo definitivo si conferma sempre
+          con un breve sopralluogo, perché lo stato di ogni mobile è diverso.
+        </p>
+      </div>
+      <div class="ex-card" style="flex:1;min-width:230px;background:#faf9f6;border:1px solid #eee;border-radius:14px;padding:22px;">
+        <div style="font-size:30px;">🪑</div>
+        <h3 style="font-family:'Crimson Pro',serif;font-size:19px;margin:10px 0 6px;">3 · Interveniamo a casa tua</h3>
+        <p style="font-size:15px;line-height:1.5;color:#666;margin:0;">
+          Due operatori, in una mattina, con tutto l'occorrente: nessun
+          trasporto, nessuna logistica da organizzare.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── COSA FACCIAMO ───────────────────────────────────────────────── -->
+  <section style="padding:30px 0;border-top:1px solid #eee;">
+    <h2 style="font-family:'Crimson Pro',serif;font-size:28px;text-align:center;margin:0 0 22px;color:#1a1a1a;">Cosa facciamo sui tuoi mobili</h2>
+    <p style="font-size:16px;line-height:1.7;color:#555;max-width:700px;margin:0 auto 18px;">
+      I mobili vengono <strong>puliti e patinati</strong>, poi
+      <strong>reintegrati con olio paglierino e petrolio</strong>, quindi
+      rinfrescati generalmente con <strong>cera vergine d'api</strong>. Nei
+      casi specifici in cui serve, reintegriamo anche la
+      <strong>gommalacca</strong>, seguita di nuovo dalla cera. Per i mobili da
+      giardino (teak, ferro, rattan) usiamo prodotti dedicati come
+      <strong>l'olio di tung</strong>.
+    </p>
+    <p style="font-size:14px;line-height:1.7;color:#888;max-width:700px;margin:0 auto;">
+      Prodotti di bottega che portiamo con noi: olio paglierino · petrolio ·
+      solvente al limonene · cera vergine d'api · gommalacca · prodotti
+      abrasivi · olio di tung (esterni). Non interveniamo su infissi, porte,
+      finestre o strutture fisse: solo arredi mobili.
+    </p>
+  </section>
+
+  <!-- ── PREZZI INDICATIVI ───────────────────────────────────────────── -->
+  <section style="padding:30px 0;border-top:1px solid #eee;">
+    <h2 style="font-family:'Crimson Pro',serif;font-size:28px;text-align:center;margin:0 0 10px;color:#1a1a1a;">Prezzi indicativi</h2>
+    <p style="font-size:15px;color:#888;text-align:center;max-width:600px;margin:0 auto 22px;">
+      Valgono fino a un massimo di <strong>10 pezzi</strong>. Sono una stima di
+      partenza, non un preventivo: il costo definitivo si conferma sempre con
+      un sopralluogo.
+    </p>
+    <div style="overflow-x:auto;">
+      <table class="ex-price-table" style="width:100%;max-width:520px;margin:0 auto;border-collapse:collapse;font-size:15px;">
+        <thead>
+          <tr style="border-bottom:2px solid #c8a96e;">
+            <th style="text-align:left;padding:10px 12px;color:#1a1a1a;">Pezzi</th>
+            <th style="text-align:right;padding:10px 12px;color:#1a1a1a;">Prezzo indicativo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid #eee;"><td style="padding:8px 12px;">1</td><td style="text-align:right;padding:8px 12px;">150€</td></tr>
+          <tr style="border-bottom:1px solid #eee;"><td style="padding:8px 12px;">2</td><td style="text-align:right;padding:8px 12px;">190€</td></tr>
+          <tr style="border-bottom:1px solid #eee;"><td style="padding:8px 12px;">3</td><td style="text-align:right;padding:8px 12px;">220€</td></tr>
+          <tr style="border-bottom:1px solid #eee;"><td style="padding:8px 12px;">4</td><td style="text-align:right;padding:8px 12px;">250€</td></tr>
+          <tr style="border-bottom:1px solid #eee;"><td style="padding:8px 12px;">5</td><td style="text-align:right;padding:8px 12px;">280€</td></tr>
+          <tr style="border-bottom:1px solid #eee;"><td style="padding:8px 12px;">6</td><td style="text-align:right;padding:8px 12px;">300€</td></tr>
+          <tr style="border-bottom:1px solid #eee;"><td style="padding:8px 12px;">7</td><td style="text-align:right;padding:8px 12px;">320€</td></tr>
+          <tr style="border-bottom:1px solid #eee;"><td style="padding:8px 12px;">8</td><td style="text-align:right;padding:8px 12px;">340€</td></tr>
+          <tr style="border-bottom:1px solid #eee;"><td style="padding:8px 12px;">9</td><td style="text-align:right;padding:8px 12px;">370€</td></tr>
+          <tr><td style="padding:8px 12px;font-weight:600;">10</td><td style="text-align:right;padding:8px 12px;font-weight:600;">400€</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:13px;color:#999;text-align:center;max-width:600px;margin:16px auto 0;">
+      Esempio da 10 pezzi = 400€: 2 comodini, 4 sedie, un tavolo, una vetrina,
+      una madia, una cassapanca. Più di 10 pezzi o casi particolari? Ne
+      parliamo con un sopralluogo dedicato.
+    </p>
+  </section>
+
+  <!-- ── PERCHÉ NOI ─────────────────────────────────────────────────── -->
+  <section style="padding:30px 0;border-top:1px solid #eee;">
+    <h2 style="font-family:'Crimson Pro',serif;font-size:28px;text-align:center;margin:0 0 22px;color:#1a1a1a;">Perché con noi</h2>
+    <ul style="font-size:16px;line-height:1.7;color:#555;max-width:700px;margin:0 auto;padding-left:20px;">
+      <li><strong>Zero logistica:</strong> niente trasporti, niente mobili fuori casa: interveniamo dove sono.</li>
+      <li><strong>Occhio da bottega:</strong> gli stessi prodotti e le stesse tecniche del nostro laboratorio di restauro.</li>
+      <li><strong>Una mattina, due persone:</strong> intervento rapido e organizzato.</li>
+      <li><strong>Interno ed esterno:</strong> mobili di pregio in casa, o arredi da giardino in teak, ferro, rattan.</li>
+    </ul>
+  </section>
+
+  <!-- ── CTA FINALE ─────────────────────────────────────────────────── -->
+  <section style="text-align:center;padding:36px 24px;margin-top:24px;background:#1a1a1a;border-radius:18px;color:#fff;">
+    <h2 style="font-family:'Crimson Pro',serif;font-size:26px;margin:0 0 10px;color:#c8a96e;">Fatti dare subito un'idea di costo</h2>
+    <p style="font-size:16px;color:rgba(255,255,255,0.8);max-width:560px;margin:0 auto 16px;">
+      Racconta a Sole quali mobili e quanti: in due minuti hai una stima di
+      massima, poi fissiamo insieme il sopralluogo per confermarla.
+    </p>
+    <p style="font-size:15px;color:#c8a96e;margin:0 0 6px;">👉 Tocca <strong>🪑 Preventivo Ardy Express</strong> per aprire la chat.</p>
+    <p style="font-size:14px;color:rgba(255,255,255,0.6);margin:0;">Michela · +39 379 375 6437</p>
+  </section>
+
+</div>
+
+<!-- Contesto pagina per il widget (ridondante con #ardy-express, ma esplicito) -->
+<script>window.ARDY_EX = true;</script>
+
+<!-- LOADER WIDGET (fonte attiva: ardy-chat-express.js sul nostro server) -->
+<script src="https://ardyagent.ardy-lab.it/ardy-chat-express.js"></script>
