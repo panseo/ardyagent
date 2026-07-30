@@ -282,7 +282,7 @@ if ($leadContext) {
     if ($ls) $system .= "- Servizio richiesto: {$ls}\n";
     if ($lm) $system .= "- Mobile/oggetto: {$lm}\n";
     if ($lz) $system .= "- Zona: {$lz}\n";
-    $system .= "Parti con un saluto caldo che mostra che lo conosci già, es: \"Ciao {$ln}! Ho visto la tua richiesta per {$ls}. Raccontami di più, così posso darti un'idea...\" e prosegui la qualifica da dove serve (foto, misure, sopralluogo).\n";
+    $system .= "Parti con un saluto caldo che mostra che lo conosci già, MA è comunque il primo messaggio di questa sessione webchat: mantieni la dichiarazione AI (regola \"Trasparenza AI\" sopra), es: \"Ciao {$ln}! Sono Sole, l'assistente virtuale (AI) di Ardy Lab — ho visto la tua richiesta per {$ls}. Raccontami di più, così posso darti un'idea...\" e prosegui la qualifica da dove serve (foto, misure, sopralluogo).\n";
 }
 
 // Conoscenza di bottega (legno/restauro/cura): arricchisce il linguaggio e la competenza
