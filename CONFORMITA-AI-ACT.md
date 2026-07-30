@@ -182,4 +182,8 @@ materiale promozionale.
 - I contenuti generati dall'AI sono rivisti prima della pubblicazione.
 
 Persone formate: Michela Panella, Andrea (collaboratore).
-Data: ____________  Firma: ____________
+Data: 30/07/2026  Firma: ____________ (da raccogliere da Michela e Andrea — non compilabile dall'AI stessa, vedi nota sotto)
+
+> Nota: questa attestazione riguarda le persone che usano il sistema, non il
+> sistema stesso — la data sopra segna quando il documento è stato preparato/
+> verificato, ma le firme restano da raccogliere da Michela e Andrea.
