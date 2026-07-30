@@ -181,9 +181,12 @@ materiale promozionale.
 - Sole dichiara di essere un'AI; non si spaccia per umano.
 - I contenuti generati dall'AI sono rivisti prima della pubblicazione.
 
-Persone formate: Michela Panella, Andrea (collaboratore).
-Data: 30/07/2026  Firma: ____________ (da raccogliere da Michela e Andrea — non compilabile dall'AI stessa, vedi nota sotto)
+Persone formate: Michela Panella (Titolare), Andrea (collaboratore).
 
-> Nota: questa attestazione riguarda le persone che usano il sistema, non il
-> sistema stesso — la data sopra segna quando il documento è stato preparato/
-> verificato, ma le firme restano da raccogliere da Michela e Andrea.
+Data: 30/07/2026
+Firma (Titolare): ____________________ Michela Panella
+
+> Nota: firma solo la Titolare, in quanto responsabile dell'attività — Andrea,
+> collaboratore, resta indicato come persona formata ma non deve controfirmare.
+> La data sopra segna quando il documento è stato preparato/verificato; la firma
+> resta da raccogliere da Michela.
