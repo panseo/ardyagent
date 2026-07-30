@@ -75,10 +75,14 @@ Anthropic** (un modello GPAI), presente su due superfici:
 - **Catena fornitore**: il modello è Anthropic, fornitore GPAI che gestisce i propri obblighi a monte.
 - **[Trasparenza — art. 50(1)] FATTO.** Sole dichiara di essere un'AI nel **primo messaggio** su tutti i canali:
   - Chat sito `/ardy-agent/`: apertura "Sono Sole, l'assistente AI virtuale di Ardy Lab" + intestazione "Assistente Ardy Lab" + footer "Sole è un assistente AI — le informazioni vengono poi verificate da Michela" (copre anche il "no decisioni solo-AI").
-  - Widget lavorazione, WhatsApp, chat corsi: disclosure nel messaggio di benvenuto (`ardy-widget-lavorazione.js`, `ardy-whatsapp-system.txt`, `ardy-chat-corsi.js`).
+  - Widget lavorazione, WhatsApp, chat corsi, Ardy Express, interior design, Galleria Diffusa: disclosure nel messaggio di benvenuto (`ardy-widget-lavorazione.js`, `ardy-whatsapp-system.txt`, `ardy-chat-corsi.js`, `ardy-chat-express.js`, `ardy-chat-interior-design.js`, `ardy-chat-experience.js`).
   - Prompt di sistema: regola di trasparenza esplicita in `ardy-system.txt` ("dichiara sempre di essere un'AI nel primo messaggio; non spacciarti per una persona").
   - Pulsante flottante: "Chatta con Sole, l'assistente AI".
   - **Ecommerce `object.ardy-lab.it`**: widget scheda prodotto — intestazione "assistente AI di Ardy", apertura "Sono Sole, l'assistente virtuale (AI) di Ardy Lab" e regola di trasparenza in `ardy-object-system.txt`.
+  - **Corretto il 30/07/2026:** il saluto hardcoded del widget Galleria Diffusa
+    (`ardy-chat-experience.js`) diceva solo "Sono Sole di Ardy Lab", senza la
+    dicitura AI — unico canale rimasto scoperto, individuato controllando la
+    webchat dal vivo. Ora allineato agli altri.
 
 ### 🔧 Da fare (poco lavoro)
 
