@@ -197,7 +197,7 @@
     // La chat parte con un saluto di Sole già "incorniciato" su Galleria Diffusa/B&B.
     // Mettendolo anche nella history, il modello mantiene il contesto partner per
     // tutte le risposte successive (anche con il system prompt dedicato).
-    var greet = 'Ciao! Sono Sole di Ardy Lab ✨ Mi fa piacere che tu stia pensando alla ' +
+    var greet = 'Ciao! Sono Sole, l\'assistente virtuale (AI) di Ardy Lab ✨ Mi fa piacere che tu stia pensando alla ' +
       'Galleria Diffusa per il tuo B&B. Dimmi pure: vuoi capire come funziona, ' +
       'le commissioni, o preferisci prenotare una chiamata, un incontro in laboratorio o ' +
       'un sopralluogo nella tua struttura?';
