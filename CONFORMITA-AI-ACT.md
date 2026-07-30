@@ -99,15 +99,28 @@ Anthropic** (un modello GPAI), presente su due superfici:
 3. **[Documentazione] Tenere questo file aggiornato** come traccia delle scelte
    di conformità (utile in caso di domande del Garante/autorità).
 
-4. **[Ecommerce — Termini & Privacy propri] BOZZA PRONTA → revisione legale +
-   pubblicazione.** `object.ardy-lab.it` è un'installazione WordPress **separata**:
-   ha bisogno di **proprie** pagine legali. Bozza completa in
-   **`termini-privacy-object-ecommerce.md`** (3 pagine: Termini di Vendita, Privacy
-   del negozio, Recesso/Resi) con menzione dell'assistente AI Sole e le voci
-   ecommerce (vedi §4). Compilati pagamenti (Stripe/Klarna/PayPal/bonifico),
-   corrieri (SDA/GLS/UPS), area (Europa), costi spedizione e indirizzo resi;
-   restano da inserire **date di aggiornamento** e **tempi di consegna** indicativi,
-   far **validare da un legale** e **pubblicare** le tre pagine sul WP del negozio.
+4. **[Ecommerce — Termini & Privacy propri] ✅ PUBBLICATE.** `object.ardy-lab.it` ha
+   ora le sue pagine legali online, verificate live il 30/07/2026:
+   - https://object.ardy-lab.it/privacy-policy/ (agg. 14/07/2026)
+   - https://object.ardy-lab.it/termini-e-condizioni/ (agg. 14/07/2026)
+   - https://object.ardy-lab.it/rimborso_reso/ (agg. 14/07/2026)
+   - https://object.ardy-lab.it/cookie-policy/ (CookieYes, 14/07/2026)
+
+   Contenuto allineato alla bozza **`termini-privacy-object-ecommerce.md`**, incluse
+   le clausole AI Act (assistente Sole dichiarato AI, nessuna decisione automatizzata
+   solo-AI, fornitore Anthropic dichiarato, trasferimento extra-UE con garanzie
+   adeguate). Non risulta se sia avvenuta la revisione legale formale — verificare
+   con Michela.
+
+   **Refusi minori da correggere sul sito (non bloccanti per il 2 agosto):**
+   - Termini §8.1 dice ancora "Modalità e modulo: v. **Pagina 3**" — residuo del
+     documento multi-pagina originale; sul sito live la pagina si chiama
+     "**Rimborso e reso**", non "Pagina 3". Aggiornare il link/testo.
+   - Cookie Policy: la sezione "Tipi di cookie utilizzati" non mostra l'elenco (probabile
+     tabella CookieYes generata via JS, non visibile in un fetch statico) — controllare
+     a occhio nel browser che la tabella sia effettivamente popolata.
+   - Data della Cookie Policy in inglese ("July 14, 2026") mentre il resto del sito è
+     in italiano — dettaglio estetico.
 
 5. **[Trasparenza recommender — quando si attiveranno i consigli] DA FARE al
    momento giusto.** Oggi Sole parla **solo del singolo oggetto** in scheda; NON
@@ -118,10 +131,13 @@ Anthropic** (un modello GPAI), presente su due superfici:
    trasparenza. (Nota: la trasparenza dei sistemi di raccomandazione è materia
    soprattutto del **DSA**, che per un piccolo negozio ha obblighi minimi.)
 
-> **Stato al 14/07/2026:** trasparenza (art. 50) **implementata e in produzione** su
-> tutti i canali di assistenza **e sull'ecommerce** `object.ardy-lab.it`. Restano:
-> adempimenti organizzativi (firma Allegato A + revisione legale) e le **Termini &
-> Privacy dedicate del negozio** (punto 4).
+> **Stato al 30/07/2026:** trasparenza (art. 50) **implementata e in produzione** su
+> tutti i canali di assistenza **e sull'ecommerce** `object.ardy-lab.it`, incluse le
+> **Termini & Privacy dedicate del negozio** (punto 4, verificate live). Corretto anche
+> un gap nel prompt del lead da portale che rischiava di far partire una sessione
+> webchat senza dichiarazione AI (vedi `ardy-proxy.php`). Restano solo: adempimenti
+> organizzativi (firma Allegato A), conferma della revisione legale formale delle
+> pagine ecommerce, e i tre refusi minori elencati al punto 4.
 
 ### ❌ NON serve (sono obblighi solo per l'alto rischio)
 - Valutazione di conformità / marcatura CE
