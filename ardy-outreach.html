@@ -90,8 +90,11 @@
   .main::-webkit-scrollbar-thumb { background:var(--border); }
 
   /* EMPTY STATE */
-  .empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--text-dim); gap:16px; }
-  .empty-state .big { font-family:'Bebas Neue',sans-serif; font-size:48px; color:var(--border); letter-spacing:4px; }
+  .empty-state { height:100%; overflow-y:auto; color:var(--text-dim); }
+  .empty-summary { padding:28px 32px; max-width:640px; }
+  .empty-summary .stat-row { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid var(--border); }
+  .empty-summary .stat-row:last-child { border-bottom:none; }
+  .empty-summary .stat-row .n { font-family:'DM Mono',monospace; color:var(--accent); }
 
   /* DETAIL PANEL */
   .detail-panel { padding:28px 32px; max-width:800px; }
@@ -195,7 +198,7 @@
     .layout.m-sidebar .sidebar { display:flex; }
     .layout.m-main .main { display:block; }
     .btn-back-mobile { display:flex !important; }
-    .detail-panel, .campaign-panel { padding:20px 16px; }
+    .detail-panel, .campaign-panel, .empty-summary { padding:20px 16px; }
     .info-grid { grid-template-columns:1fr; }
     .info-cell.full { grid-column:1; }
     .detail-header { flex-direction:column; gap:12px; }
@@ -340,8 +343,7 @@
     <!-- CONTATTI MODE -->
     <div id="viewContatti">
       <div class="empty-state" id="emptyState">
-        <div class="big">OUTREACH</div>
-        <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;">Seleziona un contatto dalla lista</div>
+        <div class="empty-summary" id="emptySummary"></div>
       </div>
       <div class="detail-panel" id="detailPanel" style="display:none">
         <button class="btn-back-mobile" onclick="closeMobileDetail()">← LISTA</button>
@@ -952,10 +954,46 @@ const DATA_FIELDS = [
   ['indirizzo', '📍 Senza indirizzo'],
 ];
 
+// --- Riepilogo del filtro corrente (pannello principale quando nessun contatto è aperto) ---
+const STATI_LABELS = {
+  da_contattare:    'Da contattare',
+  inviato:          'Inviato',
+  risposto:         'Risposto',
+  partner:          'Partner',
+  cliente:          'Cliente',
+  non_interessato:  'Non interessato',
+};
+
+function renderEmptySummary(list) {
+  const el = document.getElementById('emptySummary');
+  if (!el) return;
+  const catLabel  = currentFilter ? currentFilter.replace('_',' ').toUpperCase() : 'TUTTI I CONTATTI';
+  const zonaLabel = currentRegione || '';
+  const counts = {};
+  list.forEach(c => { const s = c.stato || 'da_contattare'; counts[s] = (counts[s]||0) + 1; });
+  const rows = Object.keys(STATI_LABELS).filter(s => counts[s]).map(s => `
+    <div class="stat-row">
+      <span class="stato-badge stato-${s}">${escHtml(STATI_LABELS[s])}</span>
+      <span class="n">${counts[s]}</span>
+    </div>`).join('');
+  el.innerHTML = `
+    <div class="detail-nome">${escHtml(catLabel)}${zonaLabel ? ' · ' + escHtml(zonaLabel) : ''}</div>
+    <div class="detail-sub" style="margin-bottom:24px;">${list.length} contatt${list.length===1?'o':'i'} in questo filtro</div>
+    ${rows ? `<div class="contact-check-list" style="margin-bottom:24px;">${rows}</div>` : '<div class="empty-list" style="padding:0 0 24px;text-align:left;">Nessun contatto in questo filtro.</div>'}
+    <div class="campaign-label">AZIONI RAPIDE</div>
+    <div class="filter-row" style="gap:8px;margin-bottom:24px;">
+      <button class="btn-sm primary" onclick="openAddModal()">+ AGGIUNGI CONTATTO</button>
+      <button class="btn-sm" onclick="bulkEnrich()">✨ ARRICCHISCI I MANCANTI</button>
+      <button class="btn-sm" onclick="openFilterTool()">▦ FILTRI &amp; AZIONI DATI</button>
+    </div>
+    <div class="detail-sub">Seleziona un contatto dalla lista per aprirne la scheda.</div>`;
+}
+
 function renderList(q='') {
   const list = document.getElementById('contactList');
   let filtered = allContacts;
   if (q) filtered = filtered.filter(c => c.nome.toLowerCase().includes(q) || (c.email||'').toLowerCase().includes(q));
+  renderEmptySummary(filtered);
   if (!filtered.length) { list.innerHTML = '<div class="empty-list">Nessun contatto trovato</div>'; return; }
   // Mostra un'icona SOLO per i dati mancanti; se il contatto è completo, niente icone.
   const missDot = (c,f,lbl,cls) => has(c,f) ? '' : `<span class="data-dot ${cls}">${lbl}</span>`;
