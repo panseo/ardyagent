@@ -627,8 +627,11 @@ stesso login). API: `ardy-outreach-api.php` (routing per `action`); tabelle `out
 `outreach_template`.
 
 ### Funzionalità
-- **📇 Contatti / 📊 Pipeline**: lista contatti per **categoria** e **stato** (`da_contattare` = lead
-  freddo target campagne, `cliente`, `partner`, ecc.), con filtri e azioni di massa.
+- **📇 Contatti / 📊 Pipeline**: lista contatti per **categoria**, **regione/zona** (campo libero tipo
+  "Salento", "Roma" — colonna `regione` su `outreach_contatti`; azioni `get_regioni`/`bulk_set_regione`)
+  e **stato** (`da_contattare` = lead freddo target campagne, `cliente`, `partner`, ecc.), con filtri
+  combinabili (sidebar, tab Campagna, tool Filtri & Azioni Dati) e azioni di massa — inclusa
+  l'assegnazione in blocco della regione ai contatti già presenti filtrandoli per nome/indirizzo.
 - **🔎 Ricerca contatti** per verticale — target predefiniti: **antiquari, mercatini, interior designer,
   B&B**. Fonte **Google Places** (`ardy-places.php`) con fallback OpenStreetMap; i risultati si salvano
   come contatti (`save_leads`).
@@ -933,6 +936,31 @@ di oggi (coda del log), spazio disco. Ogni check è isolato in try/catch.
 ---
 
 ## 📝 Note sessioni
+
+**Agosto 2026 — Outreach: filtro regione/zona, portatori di interesse Salento, aree di testo espandibili**
+- **Regione/zona** (colonna `regione` su `outreach_contatti`, `ardy-migrate.php`): raggruppa più città/comuni
+  (es. "Salento", "Roma"). Filtrabile in sidebar Contatti, tab Campagna e tool Filtri & Azioni Dati
+  (multi-selezione, combinabile col settore); assegnabile in blocco ai contatti già presenti cercandoli
+  per nome/indirizzo (`bulk_set_regione`). I nuovi contatti si taggano direttamente dal tab Ricerca al
+  salvataggio dei lead (`save_leads`).
+- **65 B&B + 8 risorse Salento** e **29 "portatori di interesse"** (gruppi Facebook, forum, associazioni
+  di categoria, GAL/consorzi turistici, camere di commercio, media locali, agenzie immobiliari) importati
+  come contatti `bb`/`partner` con `regione='Salento'` — script one-shot idempotenti, eseguiti ed eliminati
+  dal server, non versionati in questo repo.
+- **Fix campagna**: il toggle "SOLO CON EMAIL" era attivo di default e nascondeva del tutto i contatti
+  privi di email (la maggior parte dei B&B Salento, in attesa di arricchimento) invece di mostrarli con la
+  checkbox disabilitata come già avveniva per il canale posta. Default ora disattivo.
+- **Generazione template AI per "Partner"**: aggiunta una descrizione target dedicata (`targetMap` in
+  `genera_template`, `ardy-outreach-api.php`) per il pubblico eterogeneo dei Partner Salento — prima
+  ricadeva sul generico "Target: partner". Il campo note del generatore è diventato un'area di testo
+  multi-riga, per istruzioni più articolate.
+- **Contatti: riepilogo al posto della pagina vuota** — senza un contatto selezionato, il pannello
+  principale mostra ora il filtro attivo (categoria + zona), il conteggio per stato e le azioni rapide
+  (aggiungi, arricchisci i mancanti, filtri & azioni dati), invece della sola scritta "Seleziona un
+  contatto" (che su desktop dava l'impressione di una pagina vuota/rotta).
+- **Aree di testo espandibili**: le 5 textarea dell'app (note contatto, note nuovo contatto, corpo email,
+  istruzioni AI, corpo template) hanno un pulsante "⤢" che apre un popup più grande — schermo intero su
+  mobile — per scrivere/rileggere testi lunghi più comodamente.
 
 **Luglio 2026 — Ardy Express (webchat dedicata + griglia prezzi a pezzo)**
 - **Webchat dedicata** `ardy-chat-express.js` sulla pagina `ardy-lab.it/ardy-express` (contenuto pagina in `wordpress-snippets/ardy-express-page.html`, loader di una riga in WPCode Site Wide Footer). Widget autoportante, stesso stampo di `ardy-chat-interior-design.js`: riusa `ardy-proxy.php`, si auto-limita all'URL `/ardy-express` (o `#ardy-express`/`window.ARDY_EX=true`), espone `window.ardyExOpen()` per i CTA della pagina.
