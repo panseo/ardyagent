@@ -435,7 +435,7 @@
           </div>
           <div class="filter-row" id="campRegioneRow" style="margin-bottom:10px;display:none"></div>
           <div class="filter-row" style="margin-bottom:10px;">
-            <button class="chip active" id="campChipEmail" onclick="toggleCampEmail()">✉ SOLO CON EMAIL</button>
+            <button class="chip" id="campChipEmail" onclick="toggleCampEmail()">✉ SOLO CON EMAIL</button>
             <button class="chip" id="campChipTodo" onclick="toggleCampTodo()">● SOLO DA CONTATTARE</button>
           </div>
           <div class="select-all-row">
@@ -1515,7 +1515,7 @@ function loadCampTemplate() {
 
 let campContacts = [];      // pool della categoria corrente (caricato dal server)
 let campChannel = 'email';  // 'email' | 'posta'
-let campOnlyEmail = true;    // email: solo CON email · posta: solo SENZA email
+let campOnlyEmail = false;   // email: solo CON email · posta: solo SENZA email
 let campOnlyTodo  = false;   // opzionale: solo "da contattare"
 
 async function filterCampContacts(cat) {
