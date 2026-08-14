@@ -35,22 +35,45 @@ try {
         // CONTATTI — CRUD
         // --------------------------------------------------------
         case 'get_contacts':
-            $cat    = $input['categoria'] ?? ($_GET['categoria'] ?? '');
-            $stato  = $input['stato']     ?? ($_GET['stato']     ?? '');
-            $search = $input['search']    ?? ($_GET['search']    ?? '');
+            $cat     = $input['categoria'] ?? ($_GET['categoria'] ?? '');
+            $regione = $input['regione']   ?? ($_GET['regione']   ?? '');
+            $stato   = $input['stato']     ?? ($_GET['stato']     ?? '');
+            $search  = $input['search']    ?? ($_GET['search']    ?? '');
             $sql    = "SELECT * FROM outreach_contatti WHERE 1=1";
             $params = [];
-            if ($cat)    { $sql .= " AND categoria = :cat";                                        $params[':cat']   = $cat; }
-            if ($stato)  { $sql .= " AND stato = :stato";                                          $params[':stato'] = $stato; }
-            if ($search) { $sql .= " AND (nome LIKE :s OR email LIKE :s2 OR telefono LIKE :s3)";  $params[':s'] = "%$search%"; $params[':s2'] = "%$search%"; $params[':s3'] = "%$search%"; }
+            if ($cat)     { $sql .= " AND categoria = :cat";                                          $params[':cat']     = $cat; }
+            if ($regione) { $sql .= " AND regione = :regione";                                        $params[':regione'] = $regione; }
+            if ($stato)   { $sql .= " AND stato = :stato";                                            $params[':stato']   = $stato; }
+            if ($search)  { $sql .= " AND (nome LIKE :s OR email LIKE :s2 OR telefono LIKE :s3 OR indirizzo LIKE :s4)"; $params[':s'] = "%$search%"; $params[':s2'] = "%$search%"; $params[':s3'] = "%$search%"; $params[':s4'] = "%$search%"; }
             $sql .= " ORDER BY nome ASC";
             $stmt = $db->prepare($sql);
             $stmt->execute($params);
             echo json_encode($stmt->fetchAll());
             break;
 
+        // Regioni/zone distinte già in uso, per popolare filtri e suggerimenti in UI.
+        case 'get_regioni':
+            $rows = $db->query("SELECT DISTINCT regione FROM outreach_contatti WHERE regione IS NOT NULL AND regione <> '' ORDER BY regione ASC")->fetchAll(PDO::FETCH_COLUMN);
+            echo json_encode($rows);
+            break;
+
+        // Assegna in blocco una regione/zona ai contatti indicati (es. dopo averli
+        // filtrati per nome/indirizzo nel tool "Filtri & Azioni Dati").
+        case 'bulk_set_regione':
+            $ids     = $input['ids']     ?? [];
+            $regione = trim($input['regione'] ?? '');
+            if (!is_array($ids) || !$ids) { echo json_encode(['success' => false, 'error' => 'Nessun id']); break; }
+            if ($regione === '') { echo json_encode(['success' => false, 'error' => 'Indica una regione/zona']); break; }
+            $ids = array_values(array_filter(array_map('intval', $ids), fn($v) => $v > 0));
+            if (!$ids) { echo json_encode(['success' => false, 'error' => 'Id non validi']); break; }
+            $ph = implode(',', array_fill(0, count($ids), '?'));
+            $stmt = $db->prepare("UPDATE outreach_contatti SET regione = ?, updated_at = NOW() WHERE id IN ($ph)");
+            $stmt->execute(array_merge([$regione], $ids));
+            echo json_encode(['success' => true, 'updated' => $stmt->rowCount()]);
+            break;
+
         case 'add_contact':
-            $stmt = $db->prepare("INSERT INTO outreach_contatti (nome, referente, categoria, email, telefono, sito, indirizzo, stato, note) VALUES (:nome,:ref,:cat,:email,:tel,:sito,:ind,:stato,:note)");
+            $stmt = $db->prepare("INSERT INTO outreach_contatti (nome, referente, categoria, email, telefono, sito, indirizzo, regione, stato, note) VALUES (:nome,:ref,:cat,:email,:tel,:sito,:ind,:reg,:stato,:note)");
             $stmt->execute([
                 ':nome'  => $input['nome']      ?? '',
                 ':ref'   => $input['referente'] ?? null,
@@ -59,6 +82,7 @@ try {
                 ':tel'   => $input['telefono']  ?? null,
                 ':sito'  => $input['sito']      ?? null,
                 ':ind'   => $input['indirizzo'] ?? null,
+                ':reg'   => $input['regione']   ?: null,
                 ':stato' => $input['stato']     ?? 'da_contattare',
                 ':note'  => $input['note']      ?? null,
             ]);
@@ -68,7 +92,7 @@ try {
         case 'update_contact':
             $id = (int)($input['id'] ?? 0);
             if (!$id) { echo json_encode(['success' => false, 'error' => 'ID mancante']); break; }
-            $fields = ['nome','referente','categoria','email','telefono','sito','indirizzo','stato','note','data_contatto'];
+            $fields = ['nome','referente','categoria','email','telefono','sito','indirizzo','regione','stato','note','data_contatto'];
             $set    = ['`updated_at` = NOW()'];
             $params = [':id' => $id];
             foreach ($fields as $f) {
@@ -512,9 +536,10 @@ try {
         // SALVA LEAD SELEZIONATI DALLA RICERCA (bulk)
         // --------------------------------------------------------
         case 'save_leads':
-            $leads = $input['leads'] ?? [];
-            $cat   = $input['categoria'] ?? 'antiquari';
-            $note  = (($input['fonte'] ?? 'osm') === 'google') ? 'Trovato via Google Maps' : 'Trovato via ricerca OSM';
+            $leads   = $input['leads'] ?? [];
+            $cat     = $input['categoria'] ?? 'antiquari';
+            $regione = trim($input['regione'] ?? '');
+            $note    = (($input['fonte'] ?? 'osm') === 'google') ? 'Trovato via Google Maps' : 'Trovato via ricerca OSM';
             if (empty($leads) || !is_array($leads)) { echo json_encode(['success' => false, 'error' => 'Nessun lead da salvare']); break; }
 
             // Set per dedup (nome + sito già in DB)
@@ -522,7 +547,7 @@ try {
             $exNomi = array_column($existing, 'n');
             $exSiti = array_filter(array_column($existing, 's'));
 
-            $ins = $db->prepare("INSERT INTO outreach_contatti (nome,categoria,email,telefono,sito,indirizzo,stato,note) VALUES (:nome,:cat,:email,:tel,:sito,:ind,'da_contattare',:note)");
+            $ins = $db->prepare("INSERT INTO outreach_contatti (nome,categoria,email,telefono,sito,indirizzo,regione,stato,note) VALUES (:nome,:cat,:email,:tel,:sito,:ind,:reg,'da_contattare',:note)");
             $saved = 0; $skipped = 0;
             foreach ($leads as $l) {
                 $nome = trim($l['nome'] ?? '');
@@ -536,6 +561,7 @@ try {
                     ':tel'   => ($l['telefono'] ?? '') ?: null,
                     ':sito'  => ($l['sito'] ?? '') ?: null,
                     ':ind'   => ($l['indirizzo'] ?? '') ?: null,
+                    ':reg'   => $regione ?: null,
                     ':note'  => $note,
                 ]);
                 $exNomi[] = strtolower($nome);

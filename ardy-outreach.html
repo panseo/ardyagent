@@ -265,7 +265,7 @@
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--text-dim);flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         <input type="text" id="searchInput" placeholder="Cerca nome, email..." oninput="filterContacts()">
       </div>
-      <div class="filter-row">
+      <div class="filter-row" id="catFilterRow">
         <button class="chip active" onclick="setFilter('')">TUTTI</button>
         <button class="chip" onclick="setFilter('antiquari')">ANTIQUARI</button>
         <button class="chip" onclick="setFilter('mercatini')">MERCATINI</button>
@@ -274,6 +274,7 @@
         <button class="chip" onclick="setFilter('clienti')">CLIENTI</button>
         <button class="chip" onclick="setFilter('partner')">PARTNER</button>
       </div>
+      <div class="filter-row" id="regioneFilterRow" style="margin-top:8px;display:none"></div>
       <button class="btn-add" style="width:100%;margin-top:10px;" onclick="openFilterTool()">▦ FILTRI &amp; AZIONI DATI</button>
     </div>
     <div class="contact-list" id="contactList">
@@ -371,6 +372,7 @@
           <div class="info-cell"><div class="info-label">TELEFONO</div><input class="info-input" id="editTelefono" onchange="markDirty()"></div>
           <div class="info-cell full"><div class="info-label">SITO</div><input class="info-input" id="editSito" type="url" onchange="markDirty()"></div>
           <div class="info-cell full"><div class="info-label">INDIRIZZO</div><input class="info-input" id="editIndirizzo" onchange="markDirty()"></div>
+          <div class="info-cell"><div class="info-label">REGIONE / ZONA</div><input class="info-input" id="editRegione" list="regioniList" placeholder="es. Salento, Roma..." onchange="markDirty()"></div>
           <div class="info-cell"><div class="info-label">CATEGORIA</div>
             <select class="info-select" id="editCategoria" onchange="markDirty()">
               <option value="antiquari">Antiquari</option>
@@ -431,6 +433,7 @@
             <button class="chip" onclick="filterCampContacts('clienti')">CLIENTI</button>
             <button class="chip" onclick="filterCampContacts('partner')">PARTNER</button>
           </div>
+          <div class="filter-row" id="campRegioneRow" style="margin-bottom:10px;display:none"></div>
           <div class="filter-row" style="margin-bottom:10px;">
             <button class="chip active" id="campChipEmail" onclick="toggleCampEmail()">✉ SOLO CON EMAIL</button>
             <button class="chip" id="campChipTodo" onclick="toggleCampTodo()">● SOLO DA CONTATTARE</button>
@@ -486,11 +489,12 @@
             <input class="form-input" id="srcCitta" placeholder="es. Roma, Trastevere..." onkeydown="if(event.key==='Enter')runSearch()">
             <input class="form-input" id="srcRaggio" type="number" min="1" max="50" value="10" title="Raggio in km">
           </div>
-          <div style="display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
             <select class="form-select" id="srcFonte" title="Fonte dei dati">
               <option value="osm">Fonte: OpenStreetMap (gratis)</option>
               <option value="google">Fonte: Google Maps (più completa)</option>
             </select>
+            <input class="form-input" id="srcRegione" list="regioniList" placeholder="Regione/zona (facolt., es. Salento)" title="Tag di raggruppamento salvato sui contatti, per filtrarli insieme più avanti">
           </div>
           <button class="btn-send" id="btnRunSearch" onclick="runSearch()" style="margin-top:12px;">🔎 CERCA</button>
         </div>
@@ -517,13 +521,23 @@
       <div class="campaign-panel">
         <div class="campaign-title">FILTRI &amp; AZIONI DATI</div>
         <p style="color:var(--text-dim);font-size:12px;font-family:'DM Mono',monospace;margin-bottom:20px;line-height:1.6;">
-          Filtri a <strong>selezione multipla</strong> (si combinano). Settore + dati mancanti → poi
-          arricchisci o elimina i contatti filtrati.
+          Filtri a <strong>selezione multipla</strong> (si combinano). Settore + zona + dati mancanti →
+          poi arricchisci, elimina o assegna una regione ai contatti filtrati.
         </p>
+
+        <div class="campaign-section">
+          <div class="campaign-label">CERCA (nome / indirizzo)</div>
+          <input class="form-input" id="toolSearch" placeholder="es. Otranto, Gallipoli..." oninput="setToolSearch(this.value)">
+        </div>
 
         <div class="campaign-section">
           <div class="campaign-label">SETTORE (multi)</div>
           <div class="filter-row" id="toolSectorButtons" style="gap:8px;"></div>
+        </div>
+
+        <div class="campaign-section" id="toolRegioneSection" style="display:none">
+          <div class="campaign-label">REGIONE / ZONA (multi)</div>
+          <div class="filter-row" id="toolRegioneButtons" style="gap:8px;"></div>
         </div>
 
         <div class="campaign-section">
@@ -536,6 +550,10 @@
           <div class="campaign-summary" style="margin-bottom:12px;">
             <p>In lista ora: <strong id="filtCount">0</strong> contatti</p>
             <p style="font-size:11px;color:var(--text-dim);margin-top:4px;" id="filtDesc">—</p>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:10px;">
+            <input class="form-input" id="toolAssignRegione" list="regioniList" placeholder="es. Salento" style="flex:1;">
+            <button class="btn-sm primary" onclick="assignRegioneFiltered()" style="white-space:nowrap;">📍 ASSEGNA ZONA</button>
           </div>
           <button class="btn-send" onclick="enrichFiltered()" style="margin-bottom:10px;">✨ ARRICCHISCI I FILTRATI (Google Maps + web)</button>
           <button class="btn-send" onclick="deleteFiltered()" style="background:var(--red);color:#fff;">🗑 ELIMINA I FILTRATI</button>
@@ -551,6 +569,7 @@
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+<datalist id="regioniList"></datalist>
 
 <!-- MODAL AGGIUNGI CONTATTO -->
 <div class="modal-overlay" id="addModal">
@@ -590,6 +609,10 @@
     <div class="form-group">
       <label class="form-label">INDIRIZZO</label>
       <input class="form-input" id="addIndirizzo" placeholder="Via, numero, città">
+    </div>
+    <div class="form-group">
+      <label class="form-label">REGIONE / ZONA</label>
+      <input class="form-input" id="addRegione" list="regioniList" placeholder="es. Salento, Roma...">
     </div>
     <div class="form-group">
       <label class="form-label">NOTE</label>
@@ -715,7 +738,10 @@ let allContacts = [];
 let currentContact = null;
 let allTemplates = [];
 let currentFilter = '';
+let currentRegione = '';
 let campFilter = '';
+let campRegione = '';
+let allRegioni = [];
 let isDirty = false;
 let mode = 'contatti';
 
@@ -731,9 +757,39 @@ async function init() {
   await api('init_templates');
   const imp = await api('import_antiquari');
   if (!imp.skipped) toast('✓ Importati ' + imp.imported + ' antiquari', 'ok');
-  await Promise.all([loadContacts(), loadTemplates(), loadStats()]);
+  await Promise.all([loadContacts(), loadTemplates(), loadStats(), loadRegioni()]);
   // Mobile: parti dalla Home/menu; desktop: dai Contatti.
   setMode(window.innerWidth <= 768 ? 'home' : 'contatti');
+}
+
+// ============================================================
+// REGIONI/ZONE — raggruppano più città/comuni (es. "Salento", "Roma")
+// ============================================================
+async function loadRegioni() {
+  try { allRegioni = await api('get_regioni'); } catch(e) { allRegioni = []; }
+  if (!Array.isArray(allRegioni)) allRegioni = [];
+  renderRegioneFilterRow();
+  renderRegioneDatalist();
+}
+
+function renderRegioneDatalist() {
+  const dl = document.getElementById('regioniList');
+  if (dl) dl.innerHTML = allRegioni.map(r => `<option value="${escHtml(r)}">`).join('');
+}
+
+function renderRegioneFilterRow() {
+  const row = document.getElementById('regioneFilterRow');
+  if (!row) return;
+  if (!allRegioni.length) { row.style.display = 'none'; return; }
+  row.style.display = 'flex';
+  row.innerHTML = '<button class="chip ' + (currentRegione===''?'active':'') + '" onclick="setRegioneFilter(\'\')">TUTTE LE ZONE</button>' +
+    allRegioni.map(r => `<button class="chip ${currentRegione===r?'active':''}" onclick="setRegioneFilter('${escHtml(r).replace(/'/g,"\\'")}')">${escHtml(r)}</button>`).join('');
+}
+
+function setRegioneFilter(regione) {
+  currentRegione = regione;
+  renderRegioneFilterRow();
+  loadContacts();
 }
 
 async function loadStats() {
@@ -757,7 +813,7 @@ async function loadStats() {
 }
 
 async function loadContacts() {
-  allContacts = await api('get_contacts', { categoria: currentFilter });
+  allContacts = await api('get_contacts', { categoria: currentFilter, regione: currentRegione });
   renderList();
 }
 
@@ -842,8 +898,10 @@ async function renderPipeline() {
 // Apre un lead della pipeline nella scheda Contatti (carica tutte le categorie).
 async function openLead(id) {
   currentFilter = '';
-  document.querySelectorAll('.sidebar-top .filter-row .chip').forEach(c =>
+  currentRegione = '';
+  document.querySelectorAll('#catFilterRow .chip').forEach(c =>
     c.classList.toggle('active', c.textContent.trim() === 'TUTTI'));
+  renderRegioneFilterRow();
   await loadContacts();
   setMode('contatti');
   selectContact(id);
@@ -863,7 +921,7 @@ function applyMobilePanel() {
 // ============================================================
 function setFilter(cat) {
   currentFilter = cat;
-  document.querySelectorAll('.sidebar-top .chip').forEach(c => {
+  document.querySelectorAll('#catFilterRow .chip').forEach(c => {
     c.classList.toggle('active', c.textContent.trim() === (cat ? cat.replace('_',' ').toUpperCase() : 'TUTTI') || (cat==='' && c.textContent.trim()==='TUTTI'));
   });
   loadContacts();
@@ -924,13 +982,14 @@ function selectContact(id) {
   document.getElementById('emptyState').style.display  = 'none';
   document.getElementById('detailPanel').style.display = 'block';
   document.getElementById('detNome').textContent = currentContact.nome;
-  document.getElementById('detSub').textContent  = currentContact.categoria.replace('_',' ').toUpperCase() + (currentContact.indirizzo ? ' · ' + currentContact.indirizzo : '');
+  document.getElementById('detSub').textContent  = currentContact.categoria.replace('_',' ').toUpperCase() + (currentContact.regione ? ' · ' + currentContact.regione : '') + (currentContact.indirizzo ? ' · ' + currentContact.indirizzo : '');
   document.getElementById('editNome').value        = currentContact.nome       || '';
   document.getElementById('editReferente').value   = currentContact.referente  || '';
   document.getElementById('editEmail').value       = currentContact.email      || '';
   document.getElementById('editTelefono').value    = currentContact.telefono   || '';
   document.getElementById('editSito').value        = currentContact.sito       || '';
   document.getElementById('editIndirizzo').value   = currentContact.indirizzo  || '';
+  document.getElementById('editRegione').value     = currentContact.regione    || '';
   document.getElementById('editNote').value        = currentContact.note       || '';
   document.getElementById('editCategoria').value   = currentContact.categoria  || 'antiquari';
   document.getElementById('editDataContatto').value= currentContact.data_contatto || '';
@@ -968,6 +1027,7 @@ async function saveContact() {
     telefono:     document.getElementById('editTelefono').value,
     sito:         document.getElementById('editSito').value,
     indirizzo:    document.getElementById('editIndirizzo').value,
+    regione:      document.getElementById('editRegione').value,
     note:         document.getElementById('editNote').value,
     categoria:    document.getElementById('editCategoria').value,
     data_contatto:document.getElementById('editDataContatto').value,
@@ -977,6 +1037,7 @@ async function saveContact() {
   // Aggiorna contatto in memoria
   Object.assign(currentContact, fields);
   await loadContacts();
+  await loadRegioni();
   toast('✓ Contatto salvato', 'ok');
 }
 
@@ -1203,13 +1264,18 @@ function openFilterTool() { setMode('filtri'); }
 const SECTORS = [['antiquari','Antiquari'],['mercatini','Mercatini'],['interior_designer','Designer'],['bb','B&B'],['clienti','Clienti'],['partner','Partner']];
 let toolContacts = [];
 let toolSectors = new Set();
+let toolRegioni = new Set();
 let toolMissing = new Set();
+let toolSearch = '';
 
 // Contatti che soddisfano i filtri correnti del tool.
 function getFilteredContacts() {
+  const q = toolSearch.toLowerCase();
   return (toolContacts||[]).filter(c => {
     if (toolSectors.size && !toolSectors.has(c.categoria)) return false;
+    if (toolRegioni.size && !toolRegioni.has(c.regione||'')) return false;
     for (const f of toolMissing) if (has(c,f)) return false; // il campo DEVE mancare
+    if (q && !(c.nome||'').toLowerCase().includes(q) && !(c.indirizzo||'').toLowerCase().includes(q)) return false;
     return true;
   });
 }
@@ -1223,6 +1289,15 @@ async function renderFilterTool() {
     const n = toolContacts.filter(c => c.categoria===k).length;
     return `<button class="chip ${toolSectors.has(k)?'active':''}" onclick="toggleToolSector('${k}')">${lbl} (${n})</button>`;
   }).join('');
+
+  const regioniPresenti = [...new Set(toolContacts.map(c => c.regione||'').filter(Boolean))].sort();
+  const section = document.getElementById('toolRegioneSection');
+  section.style.display = regioniPresenti.length ? 'block' : 'none';
+  document.getElementById('toolRegioneButtons').innerHTML = regioniPresenti.map(r => {
+    const n = toolContacts.filter(c => (c.regione||'')===r).length;
+    return `<button class="chip ${toolRegioni.has(r)?'active':''}" onclick="toggleToolRegione('${escHtml(r).replace(/'/g,"\\'")}')">${escHtml(r)} (${n})</button>`;
+  }).join('');
+
   document.getElementById('toolMissingButtons').innerHTML = DATA_FIELDS.map(([f,lbl]) => {
     const n = toolContacts.filter(c => !has(c,f)).length;
     return `<button class="chip ${toolMissing.has(f)?'active':''}" onclick="toggleToolMissing('${f}')">${lbl} (${n})</button>`;
@@ -1234,13 +1309,36 @@ function updateToolCount() {
   const filt = getFilteredContacts();
   document.getElementById('filtCount').textContent = filt.length;
   const parts = [];
-  if (toolSectors.size) parts.push('settori: ' + [...toolSectors].join(', '));
-  if (toolMissing.size) parts.push('mancano: ' + [...toolMissing].join(' + '));
+  if (toolSearch)        parts.push('cerca: "' + toolSearch + '"');
+  if (toolSectors.size)  parts.push('settori: ' + [...toolSectors].join(', '));
+  if (toolRegioni.size)  parts.push('zone: ' + [...toolRegioni].join(', '));
+  if (toolMissing.size)  parts.push('mancano: ' + [...toolMissing].join(' + '));
   document.getElementById('filtDesc').textContent = parts.length ? parts.join(' · ') : 'Nessun filtro: tutti i contatti.';
 }
 
+function setToolSearch(v) { toolSearch = v; updateToolCount(); }
 function toggleToolSector(k) { toolSectors.has(k) ? toolSectors.delete(k) : toolSectors.add(k); renderFilterTool(); }
+function toggleToolRegione(r) { toolRegioni.has(r) ? toolRegioni.delete(r) : toolRegioni.add(r); renderFilterTool(); }
 function toggleToolMissing(f) { toolMissing.has(f) ? toolMissing.delete(f) : toolMissing.add(f); renderFilterTool(); }
+
+// Assegna in blocco una regione/zona ai contatti attualmente filtrati (es. dopo
+// aver cercato "Otranto" per taggare quel gruppo come "Salento").
+async function assignRegioneFiltered() {
+  const regione = document.getElementById('toolAssignRegione').value.trim();
+  if (!regione) { toast('Indica una regione/zona', 'err'); return; }
+  const list = getFilteredContacts();
+  if (!list.length) { toast('Nessun contatto nel filtro', 'err'); return; }
+  if (!confirm(`Assegnare la zona "${regione}" a ${list.length} contatti filtrati?`)) return;
+  const ids = list.map(c => c.id);
+  const r = await api('bulk_set_regione', { ids, regione });
+  if (r.success) {
+    toast(`✓ Zona assegnata a ${r.updated} contatti`, 'ok');
+    await Promise.all([loadContacts(), loadRegioni()]);
+    renderFilterTool();
+  } else {
+    toast('Errore: ' + (r.error||'sconosciuto'), 'err');
+  }
+}
 
 async function enrichFiltered() {
   if (bulkRunning) { toast('Arricchimento già in corso', 'err'); return; }
@@ -1426,6 +1524,23 @@ async function filterCampContacts(cat) {
     c.classList.toggle('active', c.textContent.trim() === (cat ? cat.replace('_',' ').toUpperCase() : 'TUTTI') || (cat==='' && c.textContent.trim()==='TUTTI'));
   });
   campContacts = await api('get_contacts', { categoria: cat });
+  campRegione = '';
+  renderCampRegioneRow();
+  applyCampFilters();
+}
+
+function renderCampRegioneRow() {
+  const row = document.getElementById('campRegioneRow');
+  const regioniPresenti = [...new Set((campContacts||[]).map(c => c.regione||'').filter(Boolean))].sort();
+  if (!regioniPresenti.length) { row.style.display = 'none'; return; }
+  row.style.display = 'flex';
+  row.innerHTML = '<button class="chip ' + (campRegione===''?'active':'') + '" onclick="setCampRegione(\'\')">TUTTE LE ZONE</button>' +
+    regioniPresenti.map(r => `<button class="chip ${campRegione===r?'active':''}" onclick="setCampRegione('${escHtml(r).replace(/'/g,"\\'")}')">${escHtml(r)}</button>`).join('');
+}
+
+function setCampRegione(regione) {
+  campRegione = regione;
+  renderCampRegioneRow();
   applyCampFilters();
 }
 
@@ -1456,6 +1571,7 @@ function toggleCampTodo() {
 // Pool destinatari dopo i filtri (dipende dal canale).
 function campRecipients() {
   let list = campContacts || [];
+  if (campRegione) list = list.filter(c => (c.regione||'') === campRegione);
   if (campChannel === 'posta') {
     list = list.filter(c => has(c,'indirizzo'));                 // spedibili per posta
     if (campOnlyEmail) list = list.filter(c => !has(c,'email')); // "solo senza email"
@@ -1619,12 +1735,13 @@ async function saveNewContact() {
     telefono:  document.getElementById('addTelefono').value,
     sito:      document.getElementById('addSito').value,
     indirizzo: document.getElementById('addIndirizzo').value,
+    regione:   document.getElementById('addRegione').value,
     note:      document.getElementById('addNote').value,
   });
   closeAddModal();
-  await loadContacts(); await loadStats();
+  await Promise.all([loadContacts(), loadStats(), loadRegioni()]);
   toast('✓ Contatto aggiunto', 'ok');
-  ['addNome','addReferente','addEmail','addTelefono','addSito','addIndirizzo','addNote'].forEach(id => document.getElementById(id).value='');
+  ['addNome','addReferente','addEmail','addTelefono','addSito','addIndirizzo','addRegione','addNote'].forEach(id => document.getElementById(id).value='');
 }
 
 // ============================================================
@@ -1687,15 +1804,16 @@ async function saveLeads() {
   if (!checked.length) { toast('Seleziona almeno un risultato', 'err'); return; }
   const leads = checked.map(c => searchResults[parseInt(c.dataset.i)]);
   const categoria = document.getElementById('srcCategoria').value;
+  const regione = document.getElementById('srcRegione').value.trim();
   const btn = document.getElementById('btnSaveLeads');
   btn.disabled = true; btn.textContent = 'Salvataggio...';
   const fonte = document.getElementById('srcFonte').value;
-  const r = await api('save_leads', { leads, categoria, fonte });
+  const r = await api('save_leads', { leads, categoria, fonte, regione });
   btn.disabled = false; btn.textContent = '💾 SALVA SELEZIONATI';
   if (r.success) {
     toast(`✓ Salvati: ${r.saved} | Saltati: ${r.skipped}`, 'ok');
     // Ri-cerca per aggiornare lo stato "già presente"
-    await Promise.all([loadContacts(), loadStats()]);
+    await Promise.all([loadContacts(), loadStats(), loadRegioni()]);
     await runSearch();
   } else {
     toast('Errore: ' + (r.error||'sconosciuto'), 'err');
