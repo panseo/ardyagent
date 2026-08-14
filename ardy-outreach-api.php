@@ -186,6 +186,7 @@ try {
                 'interior_designer' => 'interior designer e studi di arredamento',
                 'bb'                => 'B&B e strutture ricettive boutique',
                 'clienti'           => 'clienti già acquisiti di Ardy Lab',
+                'partner'           => "portatori di interesse per la rete Galleria Diffusa in Salento (associazioni di categoria, GAL/consorzi turistici, camere di commercio, media e pagine social locali, agenzie immobiliari specializzate in masserie/case storiche): un pubblico eterogeneo di enti e organizzazioni, non singoli B&B",
             ];
             $target = $targetMap[$categoria] ?? $categoria;
 
