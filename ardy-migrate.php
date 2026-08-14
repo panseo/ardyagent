@@ -185,6 +185,15 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `outreach_contatti` (
     KEY `idx_stato` (`stato`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci", "CREATE outreach_contatti");
 
+// Regione/zona (es. "Salento", "Roma"): raggruppa più città/comuni per filtrare
+// e segmentare contatti e campagne a un livello più ampio della singola città.
+if (!colExists($pdo, 'outreach_contatti', 'regione')) {
+    ddl($pdo, "ALTER TABLE outreach_contatti ADD COLUMN `regione` VARCHAR(100) DEFAULT NULL AFTER `indirizzo`", "outreach_contatti.regione");
+}
+if (!indexExists($pdo, 'outreach_contatti', 'idx_regione')) {
+    ddl($pdo, "ALTER TABLE outreach_contatti ADD INDEX `idx_regione` (`regione`)", "outreach_contatti.idx_regione");
+}
+
 ddl($pdo, "CREATE TABLE IF NOT EXISTS `outreach_template` (
     `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `nome`       VARCHAR(100) NOT NULL,
