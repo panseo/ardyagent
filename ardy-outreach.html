@@ -665,10 +665,11 @@
           <option value="email">Canale: email</option>
           <option value="posta">Canale: lettera postale</option>
         </select>
-        <input class="form-input" id="aiNote" placeholder="Note/offerta (facoltativo)">
       </div>
+      <label class="form-label" style="margin-top:4px;">ISTRUZIONI PER L'AI (facoltativo)</label>
+      <textarea class="form-textarea" id="aiNote" style="min-height:70px;margin-bottom:8px;" placeholder="Es: pubblico eterogeneo (associazioni, GAL, media, immobiliari) — proponi la rete Galleria Diffusa come opportunità di visibilità/collaborazione, non parlare di camere o strutture ricettive..."></textarea>
       <button class="btn-sm primary" id="btnGenAI" style="width:100%;" onclick="generaTemplateAI()">✨ GENERA TESTO</button>
-      <p style="font-size:10px;color:var(--text-dim);margin-top:6px;">Usa la categoria selezionata sopra come target. Genera oggetto e corpo, poi puoi modificarli.</p>
+      <p style="font-size:10px;color:var(--text-dim);margin-top:6px;">Usa la categoria selezionata sopra come target di base; qui puoi correggerlo o darle indicazioni più precise. Genera oggetto e corpo, poi puoi modificarli.</p>
     </div>
     <div class="form-group">
       <label class="form-label">OGGETTO EMAIL *</label>
