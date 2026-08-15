@@ -73,7 +73,7 @@ try {
             break;
 
         case 'add_contact':
-            $stmt = $db->prepare("INSERT INTO outreach_contatti (nome, referente, categoria, email, telefono, sito, indirizzo, regione, stato, note) VALUES (:nome,:ref,:cat,:email,:tel,:sito,:ind,:reg,:stato,:note)");
+            $stmt = $db->prepare("INSERT INTO outreach_contatti (nome, referente, categoria, email, telefono, sito, instagram, facebook, linkedin, indirizzo, regione, stato, note) VALUES (:nome,:ref,:cat,:email,:tel,:sito,:ig,:fb,:li,:ind,:reg,:stato,:note)");
             $stmt->execute([
                 ':nome'  => $input['nome']      ?? '',
                 ':ref'   => $input['referente'] ?? null,
@@ -81,6 +81,9 @@ try {
                 ':email' => $input['email']     ?? null,
                 ':tel'   => $input['telefono']  ?? null,
                 ':sito'  => $input['sito']      ?? null,
+                ':ig'    => $input['instagram'] ?? null,
+                ':fb'    => $input['facebook']  ?? null,
+                ':li'    => $input['linkedin']  ?? null,
                 ':ind'   => $input['indirizzo'] ?? null,
                 ':reg'   => $input['regione']   ?: null,
                 ':stato' => $input['stato']     ?? 'da_contattare',
@@ -92,7 +95,7 @@ try {
         case 'update_contact':
             $id = (int)($input['id'] ?? 0);
             if (!$id) { echo json_encode(['success' => false, 'error' => 'ID mancante']); break; }
-            $fields = ['nome','referente','categoria','email','telefono','sito','indirizzo','regione','stato','note','data_contatto'];
+            $fields = ['nome','referente','categoria','email','telefono','sito','instagram','facebook','linkedin','indirizzo','regione','stato','note','data_contatto'];
             $set    = ['`updated_at` = NOW()'];
             $params = [':id' => $id];
             foreach ($fields as $f) {
@@ -597,6 +600,83 @@ try {
                 $proposte[$campo] = $info;
             }
             echo json_encode(['success' => true, 'id' => $id, 'campi' => $proposte, 'log' => $res['log']]);
+            break;
+
+        // --------------------------------------------------------
+        // MESSAGGIO PER UN CANALE SOCIAL — bozza breve da DM.
+        // Genera SOLO il testo: l'invio non è automatico. Instagram, Facebook
+        // e LinkedIn non permettono DM a freddo via API (vedi ardy-guida-outreach.html),
+        // quindi Michela apre il profilo e incolla — è una persona a scrivere
+        // a una persona, come vuole il codice etico.
+        // --------------------------------------------------------
+        case 'genera_messaggio_social':
+            $apiKey = defined('ARDY_API_KEY') ? ARDY_API_KEY : '';
+            if ($apiKey === '') { echo json_encode(['success' => false, 'error' => 'AI non configurata']); break; }
+
+            $cid    = (int)($input['contact_id'] ?? 0);
+            $canale = in_array(($input['canale'] ?? ''), ['instagram', 'facebook', 'linkedin'], true) ? $input['canale'] : '';
+            if (!$cid || $canale === '') { echo json_encode(['success' => false, 'error' => 'Contatto o canale mancante']); break; }
+
+            $c = $db->prepare("SELECT * FROM outreach_contatti WHERE id=:id");
+            $c->execute([':id' => $cid]);
+            $contact = $c->fetch();
+            if (!$contact) { echo json_encode(['success' => false, 'error' => 'Contatto non trovato']); break; }
+            if (trim((string)($contact[$canale] ?? '')) === '') {
+                echo json_encode(['success' => false, 'error' => 'Il contatto non ha un profilo ' . $canale]); break;
+            }
+
+            // Tono per canale: LinkedIn è professionale, Instagram/Facebook più
+            // diretti e informali (là si scrive come si parla).
+            $tonoCanale = $canale === 'linkedin'
+                ? "LinkedIn: registro professionale, si dà del Lei, niente emoji."
+                : ucfirst($canale) . ": registro cordiale e diretto, si può dare del tu se il profilo è informale, al massimo una emoji.";
+
+            $targetMapS = [
+                'antiquari'         => "antiquari e gallerie d'antiquariato",
+                'mercatini'         => "mercatini dell'usato e modernariato",
+                'interior_designer' => 'interior designer e studi di arredamento',
+                'bb'                => 'B&B e strutture ricettive boutique',
+                'clienti'           => 'clienti già acquisiti di Ardy Lab',
+                'partner'           => 'portatori di interesse per la rete Galleria Diffusa',
+            ];
+            $targetS = $targetMapS[$contact['categoria']] ?? (string)$contact['categoria'];
+
+            $noti = [];
+            foreach (['nome', 'referente', 'indirizzo', 'regione', 'sito', 'note'] as $f) {
+                $v = trim((string)($contact[$f] ?? ''));
+                if ($v !== '') $noti[] = "$f: $v";
+            }
+
+            $systemS = "Sei il copywriter di Ardy Lab, bottega artigianale di Roma EUR (fondatrice Michela Panella): "
+                . "restauro conservativo di mobili antichi, patinature e laccature, doratura a foglia oro, cornici e "
+                . "specchiere, complementi su misura anche con stampa 3D. Progetto 'Galleria Diffusa': arredi in "
+                . "comodato dentro B&B con un QR code, l'ospite inquadra, scopre la storia del pezzo e può acquistarlo.\n"
+                . "Scrivi il PRIMO messaggio diretto che Michela invierà A MANO dal profilo di Ardy Lab. {$tonoCanale}\n"
+                . "Regole ferree:\n"
+                . "- MASSIMO 60 parole. Un DM lungo non viene letto e sembra spam.\n"
+                . "- Niente oggetto, niente firma lunga, niente link di disiscrizione: è una chat, non un'email.\n"
+                . "- Aggancia il messaggio a qualcosa di REALE del destinatario (il mestiere, la zona, il tipo di "
+                . "attività) usando solo i dati qui sotto. NON inventare dettagli sui suoi post o sui suoi lavori: "
+                . "non li hai visti.\n"
+                . "- Mai aggressivo, mai finto-amichevole, niente 'ho visto il tuo profilo e mi piace tantissimo'.\n"
+                . "- Chiudi con UNA domanda semplice o un invito leggero, senza pressione.\n"
+                . "- Scrivi come una persona che scrive a un'altra persona. Chi legge deve poter dire di no facilmente.\n"
+                . "Rispondi ESCLUSIVAMENTE con un blocco JSON: {\"messaggio\":\"...\"} (usa \\n per gli a capo).";
+
+            $userMsgS = "Destinatario ({$targetS}).\nDati noti:\n" . ($noti ? implode("\n", $noti) : '(solo il nome)') . "\n"
+                . "Canale: {$canale}.\n"
+                . (trim((string)($input['obiettivo'] ?? '')) !== '' ? "Obiettivo di questo messaggio: " . trim($input['obiettivo']) . "\n" : '')
+                . "Scrivi il messaggio.";
+
+            $respS = ardyEnrichCallAnthropic($systemS, $userMsgS, [], $apiKey);
+            if (!empty($respS['error'])) { echo json_encode(['success' => false, 'error' => $respS['error']]); break; }
+            $textS = '';
+            foreach (($respS['content'] ?? []) as $block) {
+                if (($block['type'] ?? '') === 'text') $textS .= $block['text'];
+            }
+            $jsonS = ardyEnrichExtractJson($textS);
+            if (!$jsonS || !isset($jsonS['messaggio'])) { echo json_encode(['success' => false, 'error' => 'Risposta AI non interpretabile']); break; }
+            echo json_encode(['success' => true, 'messaggio' => trim((string)$jsonS['messaggio'])]);
             break;
 
         // --------------------------------------------------------
