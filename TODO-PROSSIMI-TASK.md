@@ -1,7 +1,7 @@
 # Ardy Lab — Task aperti & note utili
 
 > Solo task **aperti** + note operative + verifiche residue. Tutto ciò che è fatto **e deployato**
-> è rimosso (lo storico resta nei commit git). Ultima pulizia: 26/07/2026 · ultimo aggiornamento: 28/07/2026.
+> è rimosso (lo storico resta nei commit git). Ultima pulizia: 26/07/2026 · ultimo aggiornamento: 15/08/2026.
 
 > ⚠️ Promemoria sempre valido: se Sole tace su **tutti** i canali insieme (WhatsApp + webchat),
 > sospetta **credito Anthropic esaurito** (capitato il 21/06; si ricarica da Plans & Billing).
@@ -946,6 +946,27 @@ cliente" (etichettato). Dettagli:
 ---
 
 ## 📋 TASK DA SVILUPPARE (aperti)
+
+### ✉️ Storico email — manca ancora la cattura delle RISPOSTE del cliente (15/08/2026)
+**Deployato e collaudato (PR #116, 15/08):** bottone **✉️ Invia email** in dashboard (apre il modale
+AI già esistente — prompt + testo generato/modificabile — senza dover passare da un preventivo);
+naming pulsanti scheda accorciato (Interior / Elimina); ogni email **inviata** ora resta salvata in
+`email_log` (prima si perdeva alla spedizione) e compare nel Dossier in "Storico email".
+
+**Resta aperto — le RISPOSTE del cliente non sono ancora catturate.** Deciso: via **IMAP** sulla
+casella Gmail `ardy.documenti@gmail.com` (già Reply-To di tutte le email cliente). Piano già
+progettato e poi tolto dal merge in attesa delle credenziali:
+1. Attivare 2FA su quel Gmail + generare una **password per app**
+   (myaccount.google.com/apppasswords — la password normale non funziona con IMAP).
+2. In `ardy-config.php`: `ARDY_IMAP_USER` (l'indirizzo), `ARDY_IMAP_PASSWORD` (la password per app).
+3. Ricreare `ardy-email-inbox-sync.php` (job CLI/cron, stesso schema di `ardy-chiusura-sessioni.php`):
+   legge gli UNSEEN della casella, aggancia il mittente a un cliente via `clienti.email`, inserisce
+   in `email_log` con `direzione='entrata'`; i non abbinati restano solo marcati come letti.
+   Richiede l'estensione PHP `imap` sul server (cPanel → Select PHP Version).
+4. In `ardy-migrate.php`: riaggiungere la colonna `email_log.message_id` (UNIQUE, NULL ammessi —
+   stesso schema di `wa_messaggi.wa_msg_id`) per l'idempotenza del job.
+5. Cron ogni 5 minuti (vedi sezione "Job pianificati" in README per il formato).
+Bloccato solo sul punto 1 (credenziali Gmail) — il resto è pronto da implementare in una sessione.
 
 ### ☁️ Media su Backblaze B2 — off-load disco + semilavorato migrazione (PIANIFICATO 24/06)
 **Obiettivo doppio:** togliere i media dal disco del server attuale (oggi si "intasa") **e**, nello stesso
