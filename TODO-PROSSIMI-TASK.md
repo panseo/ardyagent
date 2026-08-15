@@ -449,6 +449,37 @@ La direzione che vogliamo dare allo strumento, da affrontare per prossimi step:
    `ardy-proxy-lavorazione.php` → chat lavorazione). ⚠️ Verificare dal vivo dopo deploy che la riga compaia in
    un'email reale e che Sole sappia esporre il codice etico se richiesto.
 
+### 📱 Outreach — Canali social (FATTO, da collaudare dal vivo)
+Obiettivo: raggiungere i soggetti che **non lasciano un'email** (tanti antiquari/mercatini/B&B stanno solo
+su Instagram). Nuove colonne `instagram`/`facebook`/`linkedin` su `outreach_contatti`.
+
+- **Scoperta**: `ardyEnrichExtractSocial()` in `ardy-enrich.php` legge le icone social di header/footer del
+  sito (gratis, fonte dichiarata dal soggetto), con filtro severo su widget di condivisione/post/gruppi.
+  L'agente web propone i profili solo quando **sta già girando per altro** (gate `$mancantiCore`) — così i
+  social non fanno scattare una ricerca web a pagamento su ogni contatto.
+- **Invio assistito**: pannello *Canali social* nella scheda → `genera_messaggio_social` scrive la bozza
+  (max ~60 parole), **📋 COPIA E APRI** copia il testo e apre la chat (`ig.me/m/…`, `m.me/…`, profilo per
+  LinkedIn). L'invio lo fa Michela a mano — **le API non consentono DM a freddo** (vedi README).
+
+⚠️ **Serve far girare `ardy-migrate.php` in produzione** (crea le tre colonne).
+
+**Da verificare dal vivo dopo il deploy:**
+1. Su un contatto con sito noto e icone social: **✨ ARRICCHISCI** propone i profili giusti, con fonte = URL del sito.
+2. Che **non** vengano proposti link di condivisione o post singoli (i falsi positivi qui sono il rischio vero).
+3. `ig.me/m/<handle>` e `m.me/<handle>`: aprono davvero la chat da desktop e da mobile? Se un profilo ha la
+   messaggistica chiusa il link non apre nulla → in quel caso ripiegare sul profilo (il bottone **APRI**).
+4. La copia negli appunti richiede **HTTPS**: verificare che funzioni sul dominio reale (in HTTP fallisce e
+   mostra l'avviso "copia a mano").
+
+**Prossimi passi possibili** (non fatti, da valutare):
+- **Stato per canale**: oggi `stato`/`data_contatto` sono unici per contatto, quindi un DM inviato "sporca"
+  lo stesso stato dell'email. Se l'outreach social diventa un binario vero, serve una tabella
+  `outreach_contatti_canali` (canale, stato, data, esito) invece delle tre colonne piatte.
+- **Altri canali**: TikTok e YouTube si estrarrebbero con lo stesso metodo; per ora esclusi perché sul
+  target (antiquari/B&B) contano poco.
+- **Instagram Messaging API**: consente di *rispondere* entro 24h a chi scrive alla pagina. Sarebbe il modo
+  legittimo di gestire **le risposte** ai DM, non di iniziarli. Da valutare insieme al Piano B WhatsApp.
+
 ### 🔌 Outreach — Altre fonti dati (VIES / P.IVA) — NOTA
 Portali aziendali IT quasi tutti gated → niente scraping. Vie aperte utili: **VIES** (ec.europa.eu, gratis,
 API senza chiave: P.IVA → ragione sociale + indirizzo ufficiale) **da integrare col futuro campo Partita IVA**;

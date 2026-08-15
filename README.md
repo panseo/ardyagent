@@ -640,14 +640,54 @@ stesso login). API: `ardy-outreach-api.php` (routing per `action`); tabelle `out
   B&B**. Fonte **Google Places** (`ardy-places.php`) con fallback OpenStreetMap; i risultati si salvano
   come contatti (`save_leads`).
 - **✨ Arricchimento** (`enrich_contact`): dato un contatto incompleto (spesso solo nome + indirizzo),
-  l'agente `ardy-enrich.php` prova a completare email/telefono/sito. `ardy-email-finder.php` (da CLI)
-  visita i siti dei contatti senza email e ne cerca una.
+  l'agente `ardy-enrich.php` prova a completare email/telefono/sito **e i canali social**.
+  `ardy-email-finder.php` (da CLI) visita i siti dei contatti senza email e ne cerca una.
+- **📱 Canali social** (colonne `instagram`/`facebook`/`linkedin` su `outreach_contatti`): servono a
+  raggiungere chi **non pubblica un'email** — molti antiquari e B&B stanno solo su Instagram. Vedi sotto.
 - **📝 Template email** generati/riscritti con AI (`genera_template`), salvati in `outreach_template`
   (`save_template` / `init_templates`).
 - **✉ Invio**: singola email (`send_email`) o **campagna** di massa (`send_campaign`) via Brevo, con
   **unsubscribe** (`unsubscribe`) e link di disiscrizione (`ardy-unsubscribe.php`).
 - **🤝 Promozione stato**: un contatto può diventare **partner** (`promote_partner`) o **cliente**
   (`promote_client`).
+
+### 📱 Canali social: scoperta automatica, invio assistito
+Serve a contattare i soggetti che **non lasciano un'email** (tanti antiquari, mercatini e B&B stanno solo
+sui social). Due metà, con confini molto diversi.
+
+**1. Scoperta — automatica.** Dentro `ardyEnrichContact()`:
+- **Passo deterministico (gratis)**: `ardyEnrichExtractSocial()` legge le **icone social** di header/footer
+  del sito ufficiale. È la fonte migliore che abbiamo — è il soggetto stesso a dichiarare i suoi canali —
+  e non costa nulla. Il filtro è volutamente severo: scarta widget di condivisione (`sharer`, `intent`),
+  singoli post (`/p/`, `/reel/`), gruppi, pixel di tracciamento e il vecchio formato `/pages/Nome/ID`.
+  **In dubbio non salva niente**: un canale sbagliato è peggio di un canale mancante, perché si finirebbe
+  per scrivere a un estraneo.
+- **Passo agente (a pagamento)**: Claude + web search cerca i profili ufficiali con fonte e confidenza.
+  ⚠️ **Non parte per i soli social**: il gate è `$mancantiCore` — se al contatto mancano *solo* i canali,
+  la chiamata web non si fa. Quasi nessun contatto ha tutti e tre i profili, quindi altrimenti avremmo
+  pagato una ricerca web a **ogni** arricchimento. Se l'agente parte comunque (manca email, sito, ecc.)
+  allora chiede anche i canali: sono nella stessa risposta, non costano una chiamata in più.
+
+I profili proposti passano dallo **stesso modal di conferma campo-per-campo** dell'arricchimento (con
+fonte e confidenza) — non vengono scritti a DB da soli. Sono anche modificabili a mano nella scheda:
+si accetta l'URL completo o il solo `@handle`.
+
+**2. Invio — assistito, non automatico.** Il pannello *Canali social* della scheda genera il testo
+(`genera_messaggio_social`: max ~60 parole, tono per canale, niente oggetto/firma) e con **📋 COPIA E APRI**
+mette il messaggio negli appunti e apre la **chat** con quella persona — `ig.me/m/<handle>` per Instagram,
+`m.me/<handle>` per Facebook, il profilo per LinkedIn (che non ha deep link alla chat). **Incolla e invia
+Michela.**
+
+> ⚠️ **Perché non è automatico, e non lo sarà.** Instagram, Facebook e LinkedIn **non espongono API per
+> il DM a freddo**: la Messenger Platform consente solo di *rispondere* entro 24h a chi ha aperto la
+> conversazione, e LinkedIn non offre messaggistica di terze parti. Chi promette "DM automatici" usa
+> automazioni non ufficiali, che violano i ToS e portano al **ban dell'account**. È lo stesso motivo per
+> cui le email outreach usano una **CTA `wa.me`** invece di scrivere per primi su WhatsApp: è il
+> destinatario a iniziare. Coerente con il codice etico di Ardy Lab — e, non secondario, un DM scritto a
+> mano converte molto meglio di uno automatico.
+
+L'AI **non vede** il profilo del destinatario (nessuno scraping dei post): scrive dai soli dati in scheda,
+e il prompt le vieta esplicitamente di inventare dettagli sui lavori altrui.
 
 ### Interazione con la dash principale (CRM → Outreach)
 Quando un lead **diventa reale** — passa a uno stato "impegnato" (es. **Acconto**) in `ardy-update-lead.php`
@@ -906,7 +946,10 @@ di oggi (coda del log), spazio disco. Ogni check è isolato in try/catch.
 
 ### Integrazioni social
 - [ ] **Google Business** — attendere aumento quote API, poi configurare nodo n8n
-- [ ] **LinkedIn** — integrare per outreach B2B
+- [x] **Canali social outreach** — scoperta automatica dei profili (Instagram/Facebook/LinkedIn) in
+      `ardy-enrich.php` + invio assistito dalla scheda contatto (copia il testo e apre la chat)
+- [ ] **LinkedIn** — integrare per outreach B2B *(nota: solo per **pubblicare**. Il DM in uscita non è
+      disponibile via API — vedi "Canali social" nella sezione Outreach)*
 
 ### Ardy Outreach
 - [ ] Completare dashboard `ardy-outreach.html`

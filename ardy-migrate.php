@@ -211,6 +211,17 @@ if (!indexExists($pdo, 'outreach_contatti', 'idx_regione')) {
     ddl($pdo, "ALTER TABLE outreach_contatti ADD INDEX `idx_regione` (`regione`)", "outreach_contatti.idx_regione");
 }
 
+// Canali social del contatto (URL del profilo pubblico). Li trova l'agente
+// Arricchimento leggendo le icone social del sito, poi con la web search.
+// Servono per raggiungere chi NON lascia l'email — tanti antiquari e B&B
+// stanno solo su Instagram/Facebook. L'invio resta assistito (vedi
+// ardy-outreach.html, pannello "Canali social"): niente DM automatici.
+foreach (['instagram', 'facebook', 'linkedin'] as $canale) {
+    if (!colExists($pdo, 'outreach_contatti', $canale)) {
+        ddl($pdo, "ALTER TABLE outreach_contatti ADD COLUMN `$canale` VARCHAR(500) DEFAULT NULL AFTER `sito`", "outreach_contatti.$canale");
+    }
+}
+
 ddl($pdo, "CREATE TABLE IF NOT EXISTS `outreach_template` (
     `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `nome`       VARCHAR(100) NOT NULL,

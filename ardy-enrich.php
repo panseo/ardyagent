@@ -4,11 +4,12 @@
 //
 // Dato un contatto incompleto (spesso solo nome + indirizzo, come arrivano
 // dalla ricerca OSM), prova a completare i campi mancanti — email, telefono,
-// sito, indirizzo, referente — in due passi:
+// sito, indirizzo, referente, canali social — in due passi:
 //
 //   1) PASS DETERMINISTICO (gratis): se manca il sito ma c'è l'email, deriva
 //      il dominio; poi visita il sito (home + pagine "contatti/chi-siamo") ed
-//      estrae email/telefono dai mailto:/tel: e dal testo. Fonte: sito ufficiale.
+//      estrae email/telefono dai mailto:/tel: e dal testo, più i canali social
+//      dalle icone di header/footer. Fonte: sito ufficiale.
 //
 //   2) PASS AGENTE (Claude + web search): per i buchi rimasti, Claude cerca in
 //      rete (sito ufficiale, Pagine Gialle, ecc.) e restituisce i campi mancanti
@@ -22,7 +23,11 @@ require_once __DIR__ . '/ardy-net.php';    // ardySafeHttpGet, ardyValidatePubli
 require_once __DIR__ . '/ardy-places.php'; // ardyPlacesConfigured, ardyPlacesFindOne
 
 // Campi che l'agente prova a completare (corrispondono a colonne reali del DB).
-const ARDY_ENRICH_FIELDS = ['sito', 'email', 'telefono', 'indirizzo', 'referente'];
+const ARDY_ENRICH_FIELDS = ['sito', 'email', 'telefono', 'indirizzo', 'referente', 'instagram', 'facebook', 'linkedin'];
+
+// Canali social: sottoinsieme di ARDY_ENRICH_FIELDS trattato a parte, perché
+// si estrae dalle icone del sito (link diretti) e non dal testo della pagina.
+const ARDY_ENRICH_SOCIAL = ['instagram', 'facebook', 'linkedin'];
 
 // Provider email "free": un'email @gmail.com NON identifica il dominio del sito.
 const ARDY_FREE_MAIL = [
@@ -120,13 +125,22 @@ function ardyEnrichContact(array $contact, string $apiKey, string $model = 'clau
     // --- 2) Pass agente (web search) per i buchi rimasti -------------------
     // Ricalcola cosa manca dopo i passi gratuiti.
     $ancoraMancanti = [];
+    $mancantiCore   = []; // i mancanti che NON sono canali social
     foreach (ARDY_ENRICH_FIELDS as $f) {
         $haContatto = trim((string)($contact[$f] ?? '')) !== '';
         $haProposta = isset($proposte[$f]) && trim((string)$proposte[$f]['valore']) !== '';
-        if (!$haContatto && !$haProposta) $ancoraMancanti[] = $f;
+        if ($haContatto || $haProposta) continue;
+        $ancoraMancanti[] = $f;
+        if (!in_array($f, ARDY_ENRICH_SOCIAL, true)) $mancantiCore[] = $f;
     }
 
-    if (!empty($ancoraMancanti) && $apiKey !== '') {
+    // Il pass agente si paga, quindi lo attiviamo solo se manca un dato di
+    // contatto vero (email, telefono, sito, indirizzo, referente). I social da
+    // soli non valgono la chiamata: quasi nessuno ha tutti e tre i canali, e
+    // finiremmo per pagare una ricerca web a ogni singolo arricchimento.
+    // Quando invece l'agente parte comunque, gli chiediamo anche i canali —
+    // sono nella stessa risposta, non costano una chiamata in più.
+    if (!empty($mancantiCore) && $apiKey !== '') {
         $agent = ardyEnrichAgent($contact, $ancoraMancanti, $sito, $apiKey, $model);
         if (!empty($agent['error'])) {
             $log[] = 'Agente web: ' . $agent['error'];
@@ -161,13 +175,15 @@ function ardyEnrichSiteFromEmail(string $email): ?string {
 }
 
 /**
- * Visita il sito (home + pagine tipiche di contatto) ed estrae email e
- * telefono. Si ferma appena ha entrambi. Ritorna campo => ['valore','fonte','confidenza'].
+ * Visita il sito (home + pagine tipiche di contatto) ed estrae email, telefono
+ * e canali social. Si ferma appena ha email e telefono. Ritorna
+ * campo => ['valore','fonte','confidenza'].
  */
 function ardyEnrichScrapeSite(string $sito): array {
     $base = rtrim($sito, '/');
     $pagine = ['', '/contatti', '/contact', '/chi-siamo', '/about', '/contattaci', '/info', '/dove-siamo'];
     $out = [];
+    $socialFatto = false;
 
     foreach ($pagine as $p) {
         if (isset($out['email']) && isset($out['telefono'])) break; // abbiamo abbastanza
@@ -175,6 +191,15 @@ function ardyEnrichScrapeSite(string $sito): array {
         $resp = ardySafeHttpGet($url, 12, 3, 2_000_000);
         if ($resp === null || ($resp['code'] ?? 0) >= 400 || empty($resp['body'])) continue;
         $html = html_entity_decode($resp['body'], ENT_QUOTES | ENT_HTML5);
+
+        // Le icone social stanno nell'header/footer, quindi sono uguali su tutte
+        // le pagine: basta guardarle sulla prima pagina che risponde.
+        if (!$socialFatto) {
+            foreach (ardyEnrichExtractSocial($html) as $canale => $profilo) {
+                $out[$canale] = ['valore' => $profilo, 'fonte' => $url, 'confidenza' => 'alta'];
+            }
+            $socialFatto = true;
+        }
 
         if (!isset($out['email'])) {
             $em = ardyEnrichExtractEmail($html);
@@ -185,6 +210,62 @@ function ardyEnrichScrapeSite(string $sito): array {
             if ($tel) $out['telefono'] = ['valore' => $tel, 'fonte' => $url, 'confidenza' => 'alta'];
         }
         usleep(200000); // gentile col server remoto
+    }
+    return $out;
+}
+
+/**
+ * Estrae i link ai profili social dall'HTML — in pratica le icone che quasi
+ * tutti i siti mettono in header/footer. È la fonte più affidabile che
+ * abbiamo: è il soggetto stesso a dichiarare i propri canali.
+ *
+ * Scarta tutto ciò che NON è un profilo (pulsanti di condivisione, singoli
+ * post, gruppi, pagine di login): in dubbio non salviamo nulla, perché un
+ * canale sbagliato è peggio di un canale mancante — si finirebbe per
+ * scrivere a un estraneo.
+ *
+ * @return array canale => URL del profilo (es. 'instagram' => 'https://instagram.com/tizio')
+ */
+function ardyEnrichExtractSocial(string $html): array {
+    $canali = [
+        'instagram' => [
+            'host'   => '(?:www\.)?instagram\.com',
+            'prefix' => '',
+            // p/reel/tv = singoli post; explore/accounts/direct = pagine di servizio.
+            'scarta' => ['p', 'reel', 'reels', 'tv', 'stories', 'explore', 'accounts', 'direct', 'about', 'legal', 'privacy'],
+        ],
+        'facebook' => [
+            'host'   => '(?:www\.|m\.|[a-z]{2}-[a-z]{2}\.|web\.)?facebook\.com',
+            'prefix' => '',
+            // sharer/dialog/plugins/tr = widget di condivisione e pixel;
+            // pages = vecchio formato /pages/Nome/ID, che questo regex
+            // troncherebbe a un URL rotto → meglio saltarlo.
+            'scarta' => ['sharer', 'sharer.php', 'share.php', 'share', 'dialog', 'plugins', 'tr',
+                         'groups', 'events', 'hashtag', 'login', 'login.php', 'help',
+                         'policies', 'watch', 'pages', 'people'],
+        ],
+        'linkedin' => [
+            'host'   => '(?:[a-z]{2}\.)?(?:www\.)?linkedin\.com',
+            // Su LinkedIn solo /in/ (persona) e /company/ (azienda) sono profili:
+            // vincolando il prefisso, i link di condivisione cadono da soli.
+            'prefix' => '(?:in|company|school)/',
+            'scarta' => [],
+        ],
+    ];
+
+    $out = [];
+    foreach ($canali as $nome => $cfg) {
+        $re = '~https?://' . $cfg['host'] . '/' . $cfg['prefix'] . '([A-Za-z0-9_.\-]{2,60})(\?id=\d+)?~i';
+        if (!preg_match_all($re, $html, $m, PREG_SET_ORDER)) continue;
+        foreach ($m as $match) {
+            $slug  = strtolower($match[1]);
+            $query = $match[2] ?? '';
+            if (in_array($slug, $cfg['scarta'], true)) continue;
+            // facebook.com/profile.php vale solo con l'id in coda.
+            if ($slug === 'profile.php' && $query === '') continue;
+            $out[$nome] = $match[0];
+            break; // il primo profilo buono basta: gli altri sono ripetizioni dell'icona
+        }
     }
     return $out;
 }
@@ -253,6 +334,11 @@ function ardyEnrichAgent(array $contact, array $mancanti, string $sito, string $
         . "- Verifica che i dati siano della STESSA azienda (nome + città coincidono), non di omonime.\n"
         . "- 'referente' è il nome di una persona di riferimento, non il nome dell'azienda.\n"
         . "- 'sito' deve essere l'URL del sito ufficiale (non un profilo Pagine Gialle/Facebook).\n"
+        . "- 'instagram', 'facebook', 'linkedin' sono gli URL dei PROFILI UFFICIALI dell'azienda "
+        . "(es. https://instagram.com/nomeazienda). NON mettere: singoli post, gruppi, pagine di "
+        . "fan non ufficiali, profili di omonimi o di dipendenti a titolo personale. Se il profilo "
+        . "non è chiaramente quello dell'azienda, lascialo a null: un canale sbagliato ci farebbe "
+        . "scrivere a un estraneo.\n"
         . "- Per ogni campo indica la fonte (URL) e la confidenza: alta, media o bassa.\n"
         . "- Rispondi ESCLUSIVAMENTE con un blocco JSON, senza testo prima o dopo, in questo formato:\n"
         . '{"campi":{"<campo>":{"valore":"...","fonte":"https://...","confidenza":"alta|media|bassa"}}}'
