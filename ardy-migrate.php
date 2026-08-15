@@ -160,6 +160,17 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `email_log` (
     INDEX idx_session (session_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE email_log");
 
+// message_id: header Message-ID della mail IMAP, per l'idempotenza di
+// ardy-email-inbox-sync.php (stesso schema di wa_messaggi.wa_msg_id: UNIQUE
+// con NULL ammessi, così le righe 'uscita' — che non hanno un Message-ID
+// IMAP — restano NULL senza scontrarsi tra loro).
+if (!colExists($pdo, 'email_log', 'message_id')) {
+    ddl($pdo, "ALTER TABLE email_log ADD COLUMN message_id VARCHAR(255) NULL AFTER allegato_pdf", "email_log.message_id");
+}
+if (!indexExists($pdo, 'email_log', 'uq_email_message_id')) {
+    ddl($pdo, "ALTER TABLE email_log ADD UNIQUE INDEX uq_email_message_id (message_id)", "INDEX email_log.uq_email_message_id");
+}
+
 ddl($pdo, "CREATE TABLE IF NOT EXISTS `libreria_fasi` (
     `id`         VARCHAR(64) NOT NULL PRIMARY KEY,
     `nome`       VARCHAR(255) NOT NULL,

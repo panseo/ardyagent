@@ -464,6 +464,27 @@ Installazione: `sudo -u micoperibg crontab -e` (o append non interattivo). Test 
 `sudo -u micoperibg /opt/cpanel/ea-php83/root/usr/bin/php .../ardy-chiusura-sessioni.php`
 → stampa `{"success":true,"esaminate":N,"inviate":M}`.
 
+### Storico email cliente (in entrata) — `ardy-email-inbox-sync.php`
+Le email che Ardy Lab manda al cliente (bottone **✉️ Invia email**) hanno Reply-To
+`ardy.documenti@gmail.com`: quando il cliente risponde, la mail atterra lì. Questo
+job legge via **IMAP** i messaggi non letti di quella casella, prova ad agganciare
+il mittente a un cliente (match su `clienti.email`) e salva la riga in `email_log`
+con `direzione='entrata'` — da lì compare nel **Dossier**, sezione "Storico email",
+insieme alle email inviate e alla chat WhatsApp/web. I messaggi non abbinati a
+nessun cliente vengono solo marcati come letti (restano su Gmail, non si perdono).
+
+Richiede l'estensione PHP `imap` e, in `ardy-config.php`, `ARDY_IMAP_USER` +
+`ARDY_IMAP_PASSWORD` (una **password per app** di quel Gmail — serve il 2FA attivo
+sull'account: myaccount.google.com/apppasswords; la password normale non funziona
+con IMAP). `ARDY_IMAP_HOST` è opzionale (default `{imap.gmail.com:993/imap/ssl}INBOX`).
+
+**Cron (ogni 5 minuti, come utente del sito):**
+```cron
+*/5 * * * * /opt/cpanel/ea-php83/root/usr/bin/php /home/micoperibg/public_html/ardyagent.ardy-lab.it/ardy-email-inbox-sync.php >/dev/null 2>&1
+```
+Test a mano: `sudo -u micoperibg /opt/cpanel/ea-php83/root/usr/bin/php .../ardy-email-inbox-sync.php`
+→ stampa `{"success":true,"esaminati":N,"abbinati":M,"scartati":K}`.
+
 ## 🖥 Dashboard Michela (ardy-michela-app.html)
 
 Single-file HTML con CSS esterno (`ardy-michela-app.css`).
@@ -491,8 +512,12 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
   cima dice **chi** l'ha attivata e **quando**; **✕ Disattiva** la richiude senza perdere i dati.
   In lista compare il badge **🛋️ interior**, e i dati finiscono anche nel Dossier
 - **📄 Dossier**: apre il quadro completo del cliente in Markdown (anagrafica, preventivi, fasi,
-  chat WhatsApp + web) da `ardy-dossier.php` — copia/scarica. Lo stesso dossier (client-safe, senza
-  note interne) alimenta il contesto di Sole su web e WhatsApp
+  chat WhatsApp + web, storico email) da `ardy-dossier.php` — copia/scarica. Lo stesso dossier
+  (client-safe, senza note interne) alimenta il contesto di Sole su web e WhatsApp
+- **✉️ Invia email**: apre il modale AI (prompt + testo generato/modificabile, allegato preventivo
+  opzionale, salva bozza o invia) senza dover passare da un preventivo. Ogni email inviata resta in
+  `email_log` e compare nel Dossier; le risposte del cliente vengono agganciate dallo stesso storico
+  via IMAP, vedi `ardy-email-inbox-sync.php` sotto "Job pianificati"
 - **🤝 Ringraziamento alla consegna**: al passaggio a CONSEGNATO parte in automatico l'email al
   cliente (recensione Google + social + newsletter); bottone **📧 Reinvia ringraziamento**
 - **Generatore preventivi PDF** con form completo
