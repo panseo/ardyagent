@@ -667,6 +667,11 @@ sui social). Due metà, con confini molto diversi.
   la chiamata web non si fa. Quasi nessun contatto ha tutti e tre i profili, quindi altrimenti avremmo
   pagato una ricerca web a **ogni** arricchimento. Se l'agente parte comunque (manca email, sito, ecc.)
   allora chiede anche i canali: sono nella stessa risposta, non costano una chiamata in più.
+- **Ricerca mirata dei soli canali** (`enrich_contact` con `scope: 'social'`, bottone **🔎 TROVA SOLO I
+  CANALI** nel pannello): scavalca il gate — l'ha chiesto Michela, quindi la spesa è voluta. Salta Google
+  Places (non restituisce social) e **scarta le proposte fuori tema**: se i passi gratuiti trovano un'email
+  o deducono il sito, in questo giro non vengono proposti. Serve quando il sito non ha le icone social,
+  o non c'è proprio un sito.
 
 I profili proposti passano dallo **stesso modal di conferma campo-per-campo** dell'arricchimento (con
 fonte e confidenza) — non vengono scritti a DB da soli. Sono anche modificabili a mano nella scheda:

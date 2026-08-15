@@ -457,6 +457,9 @@ su Instagram). Nuove colonne `instagram`/`facebook`/`linkedin` su `outreach_cont
   sito (gratis, fonte dichiarata dal soggetto), con filtro severo su widget di condivisione/post/gruppi.
   L'agente web propone i profili solo quando **sta già girando per altro** (gate `$mancantiCore`) — così i
   social non fanno scattare una ricerca web a pagamento su ogni contatto.
+- **Ricerca mirata**: bottone **🔎 TROVA SOLO I CANALI** (`enrich_contact` con `scope: 'social'`) per
+  forzare la ricerca web sui soli profili quando il sito non ha le icone. Scavalca il gate di proposito,
+  salta Google Places e scarta le proposte fuori tema (email/sito trovati per strada).
 - **Invio assistito**: pannello *Canali social* nella scheda → `genera_messaggio_social` scrive la bozza
   (max ~60 parole), **📋 COPIA E APRI** copia il testo e apre la chat (`ig.me/m/…`, `m.me/…`, profilo per
   LinkedIn). L'invio lo fa Michela a mano — **le API non consentono DM a freddo** (vedi README).
