@@ -591,7 +591,9 @@ try {
             // Modello scelto dalla dash, con whitelist (default Haiku, economico).
             $modelliOk = ['claude-haiku-4-5', 'claude-sonnet-4-6'];
             $model = in_array(($input['model'] ?? ''), $modelliOk, true) ? $input['model'] : 'claude-haiku-4-5';
-            $res = ardyEnrichContact($contact, $apiKey, $model);
+            // 'social' = cerca SOLO i canali (bottone dedicato nel pannello Canali social).
+            $scope = (($input['scope'] ?? '') === 'social') ? 'social' : 'tutto';
+            $res = ardyEnrichContact($contact, $apiKey, $model, $scope);
 
             // Per ogni campo proposto, allega anche il valore attuale (per il diff in UI).
             $proposte = [];

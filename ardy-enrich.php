@@ -42,9 +42,14 @@ const ARDY_FREE_MAIL = [
  *
  * @param array  $contact  riga del DB (nome, email, telefono, sito, indirizzo, referente, categoria, ...)
  * @param string $apiKey   Anthropic API key
+ * @param string $scope    'tutto' (default) oppure 'social' per cercare SOLO i canali:
+ *                         in quel caso salta Google Places (non restituisce social) e
+ *                         autorizza il pass agente anche se i dati di contatto sono
+ *                         completi — è una richiesta esplicita, la spesa è voluta.
  * @return array  ['campi' => [campo => ['valore','fonte','confidenza','passo']], 'log' => [...]]
  */
-function ardyEnrichContact(array $contact, string $apiKey, string $model = 'claude-haiku-4-5'): array {
+function ardyEnrichContact(array $contact, string $apiKey, string $model = 'claude-haiku-4-5', string $scope = 'tutto'): array {
+    $soloSocial = ($scope === 'social');
     $log    = [];
     $proposte = []; // campo => ['valore','fonte','confidenza','passo']
 
@@ -81,7 +86,9 @@ function ardyEnrichContact(array $contact, string $apiKey, string $model = 'clau
     // --- 1b) Google Places (se configurato): dato strutturato e affidabile --
     // Riempie i campi ancora vuoti (sito, telefono, indirizzo) prima di pagare
     // l'agente Claude. Email e referente non li fornisce → restano a Claude.
-    if (ardyPlacesConfigured()) {
+    // Con scope 'social' si salta: Places non restituisce profili social, sarebbe
+    // solo una chiamata a pagamento buttata via.
+    if (!$soloSocial && ardyPlacesConfigured()) {
         $serveQualcosa = false;
         foreach (['sito', 'telefono', 'indirizzo'] as $f) {
             if (trim((string)($contact[$f] ?? '')) === '' && !isset($proposte[$f])) { $serveQualcosa = true; break; }
@@ -123,10 +130,12 @@ function ardyEnrichContact(array $contact, string $apiKey, string $model = 'clau
     }
 
     // --- 2) Pass agente (web search) per i buchi rimasti -------------------
-    // Ricalcola cosa manca dopo i passi gratuiti.
+    // Ricalcola cosa manca dopo i passi gratuiti. Con scope 'social' guardiamo
+    // solo i canali: i dati di contatto non sono affar nostro in questo giro.
+    $campiScope     = $soloSocial ? ARDY_ENRICH_SOCIAL : ARDY_ENRICH_FIELDS;
     $ancoraMancanti = [];
     $mancantiCore   = []; // i mancanti che NON sono canali social
-    foreach (ARDY_ENRICH_FIELDS as $f) {
+    foreach ($campiScope as $f) {
         $haContatto = trim((string)($contact[$f] ?? '')) !== '';
         $haProposta = isset($proposte[$f]) && trim((string)$proposte[$f]['valore']) !== '';
         if ($haContatto || $haProposta) continue;
@@ -134,25 +143,34 @@ function ardyEnrichContact(array $contact, string $apiKey, string $model = 'clau
         if (!in_array($f, ARDY_ENRICH_SOCIAL, true)) $mancantiCore[] = $f;
     }
 
-    // Il pass agente si paga, quindi lo attiviamo solo se manca un dato di
-    // contatto vero (email, telefono, sito, indirizzo, referente). I social da
-    // soli non valgono la chiamata: quasi nessuno ha tutti e tre i canali, e
-    // finiremmo per pagare una ricerca web a ogni singolo arricchimento.
-    // Quando invece l'agente parte comunque, gli chiediamo anche i canali —
-    // sono nella stessa risposta, non costano una chiamata in più.
-    if (!empty($mancantiCore) && $apiKey !== '') {
+    // Quando l'agente (a pagamento) può partire:
+    //  - scope 'tutto'  → solo se manca un dato di contatto vero. I social da
+    //    soli non valgono la chiamata: quasi nessuno ha tutti e tre i canali, e
+    //    finiremmo per pagare una ricerca web a ogni singolo arricchimento.
+    //    Se però parte per altro, gli chiediamo anche i canali — stessa risposta.
+    //  - scope 'social' → l'ha chiesto Michela esplicitamente, quindi basta che
+    //    manchi un canale: qui la spesa è voluta, non un effetto collaterale.
+    $agentePuoPartire = $soloSocial ? !empty($ancoraMancanti) : !empty($mancantiCore);
+    if ($agentePuoPartire && $apiKey !== '') {
         $agent = ardyEnrichAgent($contact, $ancoraMancanti, $sito, $apiKey, $model);
         if (!empty($agent['error'])) {
             $log[] = 'Agente web: ' . $agent['error'];
         } else {
             foreach ($agent['campi'] as $campo => $val) {
-                if (!in_array($campo, ARDY_ENRICH_FIELDS, true)) continue;
+                if (!in_array($campo, $campiScope, true)) continue;
                 if (trim((string)$val['valore']) === '') continue;
                 if (isset($proposte[$campo])) continue; // non sovrascrivere il sito ufficiale
                 $proposte[$campo] = $val + ['passo' => 'web'];
             }
             $log[] = 'Agente web: ' . (count($agent['campi']) ? implode(', ', array_keys($agent['campi'])) . ' proposti' : 'nulla trovato');
         }
+    }
+
+    // Con scope 'social' i passi gratuiti possono aver raccolto anche email,
+    // telefono o il sito dedotto dal dominio: fuori tema per questo giro, si
+    // buttano. Chi vuole quei campi lancia l'arricchimento completo.
+    if ($soloSocial) {
+        $proposte = array_intersect_key($proposte, array_flip(ARDY_ENRICH_SOCIAL));
     }
 
     return ['campi' => $proposte, 'log' => $log];
