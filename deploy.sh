@@ -14,6 +14,8 @@
 # ATTENZIONE: rsync NON legge .gitignore — copia tutto ciò che non è escluso qui
 # sotto a mano. Per questo log e file di lavoro hanno le loro --exclude: senza,
 # l'error_log di PHP scritto nella cartella del repo finirebbe in public_html.
+# Stessa ragione per ardy-mcp/: è il server MCP che gira sul desktop, non
+# contenuto web — e con node_modules dentro sarebbero migliaia di file esposti.
 
 set -euo pipefail
 
@@ -45,6 +47,7 @@ rsync -av \
   --exclude='ardy-rate-limit/' \
   --exclude='ardy-wa-log.json' \
   --exclude='wordpress-snippets/' \
+  --exclude='ardy-mcp/' \
   --exclude='error_log' \
   --exclude='*.log' \
   --exclude='*.tmp' \

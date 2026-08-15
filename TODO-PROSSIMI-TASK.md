@@ -483,6 +483,30 @@ su Instagram). Nuove colonne `instagram`/`facebook`/`linkedin` su `outreach_cont
 - **Instagram Messaging API**: consente di *rispondere* entro 24h a chi scrive alla pagina. Sarebbe il modo
   legittimo di gestire **le risposte** ai DM, non di iniziarli. Da valutare insieme al Piano B WhatsApp.
 
+### 🖥️ Ardy dal desktop — server MCP (FATTO, da collaudare)
+`ardy-mcp/` (Node/TypeScript, stdio) collega **Claude Desktop** all'outreach via `ardy-outreach-api.php`
+con Basic Auth. 11 tool: ricerca/dettaglio contatti, statistiche, regioni, template, scoperta canali,
+arricchimento, aggiornamento, stesura DM ed email, invio email singola.
+
+Non richiede **nessuna modifica al server**: usa le API esistenti. Escluso da `deploy.sh` — gira sul
+desktop, non è contenuto web.
+
+**Da fare per usarlo:** `cd ardy-mcp && npm install && npm run build`, poi incollare il blocco
+`mcpServers` in `claude_desktop_config.json` con `ARDY_API_URL`/`ARDY_USER`/`ARDY_PASS` (vedi
+`ardy-mcp/README.md`).
+
+**Da verificare dal vivo:**
+1. Che il Basic Auth passi dal client MCP (in dash lo fa il browser; qui l'header lo mette il server).
+2. Una ricerca contatti reale, poi `ardy_trova_canali_social` su un contatto con sito noto.
+3. `ardy_invia_email` su un indirizzo **di prova**: deve arrivare con unsubscribe e codice etico, e il
+   contatto deve passare a `inviato`.
+
+**Scelte da rivedere se dà fastidio:**
+- `send_campaign` e le cancellazioni **non** sono esposte di proposito (blast radius). Se serve
+  davvero mandare campagne dal desktop, aggiungere prima un passo di anteprima esplicito.
+- `get_contacts` non pagina lato server: l'MCP scarica tutto e pagina in locale. Con qualche migliaio
+  di contatti va ripensato (LIMIT/OFFSET nell'API).
+
 ### 🔌 Outreach — Altre fonti dati (VIES / P.IVA) — NOTA
 Portali aziendali IT quasi tutti gated → niente scraping. Vie aperte utili: **VIES** (ec.europa.eu, gratis,
 API senza chiave: P.IVA → ragione sociale + indirizzo ufficiale) **da integrare col futuro campo Partita IVA**;

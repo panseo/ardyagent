@@ -694,6 +694,27 @@ Michela.**
 L'AI **non vede** il profilo del destinatario (nessuno scraping dei post): scrive dai soli dati in scheda,
 e il prompt le vieta esplicitamente di inventare dettagli sui lavori altrui.
 
+### 🖥️ Server MCP — Ardy dal desktop (`ardy-mcp/`)
+Collega **Claude Desktop** all'outreach: dal desktop si parla in italiano e l'agente lavora sui contatti
+veri via `ardy-outreach-api.php` (Basic Auth su HTTPS). Node/TypeScript, trasporto **stdio**, gira in
+locale — **non è contenuto web**, e `deploy.sh` lo esclude apposta (con `node_modules` sarebbero
+migliaia di file nel document root).
+
+11 tool: ricerca e dettaglio contatti, statistiche, regioni, template; scoperta canali social e
+arricchimento (che **propongono** e non scrivono); aggiornamento contatto; stesura di DM e email;
+invio email singola.
+
+**Confini scelti**, non limiti tecnici:
+- L'**unico** tool che manda qualcosa fuori è `ardy_invia_email` — un destinatario alla volta, con
+  `conferma: true` obbligatorio.
+- **Campagne in massa e cancellazioni non sono esposte**: un errore di battitura in chat non deve poter
+  scrivere a duecento persone né cancellarne altrettante. Restano in dash, dove si vede la lista prima
+  di premere invio.
+- I **DM social si scrivono ma non si inviano** (stesso motivo della dash: le API non lo consentono a
+  freddo). Il tool restituisce testo + link `ig.me`/`m.me` alla chat.
+
+Installazione e configurazione: [`ardy-mcp/README.md`](ardy-mcp/README.md).
+
 ### Interazione con la dash principale (CRM → Outreach)
 Quando un lead **diventa reale** — passa a uno stato "impegnato" (es. **Acconto**) in `ardy-update-lead.php`
 — viene **agganciato automaticamente** ai contatti outreach come `cliente` (via
