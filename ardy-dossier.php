@@ -3,7 +3,7 @@
 // ARDY LAB — Dossier cliente in Markdown
 // -----------------------------------------------------------
 // Assembla, per un dato session_id, un quadro COMPLETO del cliente in Markdown:
-//   anagrafica/servizio/stato, preventivo/i, fasi di lavorazione, chat WhatsApp.
+//   anagrafica/servizio/stato, preventivo/i, fasi di lavorazione, chat WhatsApp, storico email.
 // Serve a dare a Sole (e a Michela) un contesto immediato, sia da chat web che WA.
 //
 // Uso:
@@ -279,6 +279,29 @@ function ardy_genera_dossier(PDO $db, string $sessionId, bool $perCliente = fals
             $md .= "\n";
         }
     } catch (Throwable $e) { error_log('ARDY DOSSIER web chat: ' . $e->getMessage()); }
+
+    // 7) Storico email (inviate al cliente; le ricevute richiedono un ricevitore
+    // IMAP/webhook non ancora presente — la colonna 'entrata' è pronta per quando ci sarà).
+    if (!$senzaChat) {
+        try {
+            $qe = $db->prepare(
+                "SELECT direzione, destinatario, mittente, oggetto, testo, created_at
+                 FROM email_log WHERE session_id = :sid ORDER BY id DESC LIMIT 20");
+            $qe->execute([':sid' => $sid]);
+            $mails = array_reverse($qe->fetchAll(PDO::FETCH_ASSOC));
+            if ($mails) {
+                $md .= "## Storico email (" . count($mails) . ")\n";
+                foreach ($mails as $m) {
+                    $chi    = ($m['direzione'] === 'entrata') ? 'Cliente' : 'Ardy Lab';
+                    $quando = ardy_dossier_dataora($m['created_at'] ?? '');
+                    $ogg    = trim((string) ($m['oggetto'] ?? ''));
+                    $md .= "- **{$chi}**" . ($quando ? " · {$quando}" : '') . ($ogg !== '' ? " · {$ogg}" : '') . "\n";
+                    $md .= "  " . ardy_dossier_tronca(str_replace("\n", ' ', $m['testo'] ?? ''), 400) . "\n";
+                }
+                $md .= "\n";
+            }
+        } catch (PDOException $e) { error_log('ARDY DOSSIER email: ' . $e->getMessage()); }
+    }
 
     return $md;
 }

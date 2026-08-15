@@ -143,6 +143,23 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `email_bozze` (
     INDEX (session_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE email_bozze");
 
+// Storico delle email scambiate col cliente (a differenza di email_bozze, che
+// si svuota all'invio): ogni riga inviata/ricevuta resta qui, per poterla
+// mostrare nel Dossier accanto a chat WhatsApp e web. 'entrata' non ancora
+// popolato (serve un ricevitore IMAP/webhook), la colonna è già pronta.
+ddl($pdo, "CREATE TABLE IF NOT EXISTS `email_log` (
+    `id`           INT AUTO_INCREMENT PRIMARY KEY,
+    `session_id`   VARCHAR(64)  NOT NULL,
+    `direzione`    ENUM('uscita','entrata') NOT NULL DEFAULT 'uscita',
+    `destinatario` VARCHAR(255) NOT NULL DEFAULT '',
+    `mittente`     VARCHAR(255) NULL,
+    `oggetto`      VARCHAR(255) NOT NULL DEFAULT '',
+    `testo`        MEDIUMTEXT NOT NULL,
+    `allegato_pdf` VARCHAR(255) NULL,
+    `created_at`   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_session (session_id, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE email_log");
+
 ddl($pdo, "CREATE TABLE IF NOT EXISTS `libreria_fasi` (
     `id`         VARCHAR(64) NOT NULL PRIMARY KEY,
     `nome`       VARCHAR(255) NOT NULL,
