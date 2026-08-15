@@ -213,6 +213,15 @@ try {
             if ($bozzaId) {
                 $db->prepare("DELETE FROM email_bozze WHERE id = ?")->execute([$bozzaId]);
             }
+            // Storico: a differenza della bozza (cancellata sopra), questa riga resta
+            // per sempre — è ciò che il Dossier legge per mostrare lo scambio email.
+            $db->prepare(
+                "INSERT INTO email_log (session_id, direzione, destinatario, oggetto, testo, allegato_pdf)
+                 VALUES (:sid, 'uscita', :dest, :ogg, :txt, :pdf)"
+            )->execute([
+                ':sid' => $sessionId, ':dest' => $destinatario, ':ogg' => $oggetto,
+                ':txt' => $testo, ':pdf' => $allegatoNome,
+            ]);
             echo json_encode(['success' => true, 'inviata' => true]);
             exit();
         }

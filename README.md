@@ -491,8 +491,12 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
   cima dice **chi** l'ha attivata e **quando**; **✕ Disattiva** la richiude senza perdere i dati.
   In lista compare il badge **🛋️ interior**, e i dati finiscono anche nel Dossier
 - **📄 Dossier**: apre il quadro completo del cliente in Markdown (anagrafica, preventivi, fasi,
-  chat WhatsApp + web) da `ardy-dossier.php` — copia/scarica. Lo stesso dossier (client-safe, senza
-  note interne) alimenta il contesto di Sole su web e WhatsApp
+  chat WhatsApp + web, storico email) da `ardy-dossier.php` — copia/scarica. Lo stesso dossier
+  (client-safe, senza note interne) alimenta il contesto di Sole su web e WhatsApp
+- **✉️ Invia email**: apre il modale AI (prompt + testo generato/modificabile, allegato preventivo
+  opzionale, salva bozza o invia) senza dover passare da un preventivo. Ogni email inviata resta in
+  `email_log` e compare nel Dossier (le risposte del cliente non sono ancora catturate: serve un
+  ricevitore IMAP/webhook, non ancora implementato)
 - **🤝 Ringraziamento alla consegna**: al passaggio a CONSEGNATO parte in automatico l'email al
   cliente (recensione Google + social + newsletter); bottone **📧 Reinvia ringraziamento**
 - **Generatore preventivi PDF** con form completo

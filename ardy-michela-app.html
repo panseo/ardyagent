@@ -147,16 +147,17 @@
           <div class="detail-sub" id="dSub">—</div>
         </div>
         <div style="display:flex;gap:6px;margin-left:8px;align-self:flex-start;flex-wrap:wrap;justify-content:flex-end;">
-          <button id="btnDossier" class="btn btn--link" onclick="apriDossier()" title="Apri il dossier completo del cliente: anagrafica, preventivi, fasi, chat WhatsApp.">📄 Dossier</button>
+          <button id="btnDossier" class="btn btn--link" onclick="apriDossier()" title="Apri il dossier completo del cliente: anagrafica, preventivi, fasi, chat WhatsApp, storico email.">📄 Dossier</button>
           <button id="btnAttivaInterior" class="btn" onclick="attivaInterior()" title="Attiva per questo cliente la sezione Consulenza Interior Design (stile, colori, luce, budget)."
-            style="display:none;">🛋️ Attiva Interior Design</button>
+            style="display:none;">🛋️ Interior</button>
+          <button id="btnInviaEmailTop" class="btn" onclick="openModal('email')" title="Scrivi e invia un'email al cliente, con generazione AI e allegato preventivo opzionale.">✉️ Invia email</button>
           <button id="btnReinviaGrazie" class="btn" onclick="reinviaGrazie()" title="Reinvia al cliente l'email (e WhatsApp se configurato) di ringraziamento alla consegna: recensione Google, social, newsletter."
             style="display:none;">📧 Reinvia ringraziamento</button>
           <button id="btnArchiviaB2" class="btn" onclick="archiviaClienteB2()" title="Lavoro consegnato: deposita su Backblaze il dossier completo, i PDF dei preventivi e le foto del lead. È una copia: sul server non cancella nulla."
             style="display:none;">📦 Archivia documentazione</button>
           <button id="btnLiberaSpazio" class="btn" onclick="liberaSpazioCliente()" title="Lavoro concluso: cancella foto e reel dal server per liberare spazio. Tiene scheda, preventivi (con PDF), fasi e pagina sito."
             style="display:none;">🧹 Libera spazio cliente</button>
-          <button id="btnEliminaCliente" class="btn btn--danger" onclick="cestinaCliente()" title="Sposta questo cliente nel cestino (recuperabile per 30 giorni)">🗑 Cestina cliente</button>
+          <button id="btnEliminaCliente" class="btn btn--danger" onclick="cestinaCliente()" title="Sposta questo cliente nel cestino (recuperabile per 30 giorni)">🗑 Elimina</button>
         </div>
       </div>
 
@@ -1630,7 +1631,7 @@ async function cestinaCliente() {
   } catch(e) {
     showToast('⚠ Errore di rete', 'error');
   }
-  if (btn) { btn.disabled = false; btn.textContent = '🗑 Cestina cliente'; }
+  if (btn) { btn.disabled = false; btn.textContent = '🗑 Elimina'; }
 }
 
 // ─── VISTA CESTINO ───
