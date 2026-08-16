@@ -652,12 +652,17 @@ stesso login). API: `ardy-outreach-api.php` (routing per `action`); tabelle `out
 - **✨ Arricchimento** (`enrich_contact`): dato un contatto incompleto (spesso solo nome + indirizzo),
   l'agente `ardy-enrich.php` prova a completare email/telefono/sito **e i canali social**.
   `ardy-email-finder.php` (da CLI) visita i siti dei contatti senza email e ne cerca una.
-- **📞 Prova di copertura Places** (`ardy-places-prova.php`, da CLI): prima di pagare l'arricchimento
-  su un'intera regione, misura su un campione **quanti di quei B&B Google ha davvero in scheda col
-  telefono**. Pesca il campione a passo regolare su più pagine di portale (la pagina 1 è piena di
-  strutture promosse e falserebbe la stima), fa **una chiamata Places per struttura** e stampa
-  copertura, chiamate usate e proiezione di spesa. Campione limitato a 50 e **non scrive sul DB**:
-  è solo una misura. `php ardy-places-prova.php puglia 20`
+- **📞 Prova di copertura Places** (`places_prova` / `ardyPlacesCoperturaCampione`): prima di pagare
+  l'arricchimento su un elenco intero, misura su un campione **quanti di quei B&B Google ha davvero
+  in scheda col telefono** — nessun listino può dirlo, dipende da quelle strutture lì. Il campione è
+  preso **a passo regolare**, non le prime N: in cima all'elenco del portale stanno le strutture
+  promosse, le più curate, che gonfierebbero la stima. Una chiamata Places per struttura, campione
+  limitato a 50 e **niente scritture sul DB**: è una misura, non un import. Due modi:
+  - **Dalla dash** (bottone 📞 PROVA COPERTURA, sotto i risultati): campiona le strutture già a
+    schermo, chiede conferma col numero di chiamate e mostra copertura, proiezione sull'elenco intero
+    e consumo rispetto al tetto giornaliero.
+  - **Da CLI** (`php ardy-places-prova.php puglia 20`): si legge da sé l'elenco dal portale, utile
+    per misurare una regione **prima** di importarla. Stampa anche la proiezione di spesa.
 - **📱 Canali social** (colonne `instagram`/`facebook`/`linkedin` su `outreach_contatti`): servono a
   raggiungere chi **non pubblica un'email** — molti antiquari e B&B stanno solo su Instagram. Vedi sotto.
 - **📝 Template email** generati/riscritti con AI (`genera_template`), salvati in `outreach_template`

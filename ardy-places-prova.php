@@ -78,9 +78,6 @@ printf("Bacino: %d strutture · campione: %d (una ogni %d)\n\n", count($bacino),
 
 // --- 2. Lookup su Google, uno per struttura ------------------------------
 echo "Interrogo Google Places (" . count($campione) . " chiamate)...\n\n";
-$conTel = $conSito = $trovate = 0;
-$righe  = [];
-$idx    = 0;
 
 /** Pad a larghezza di caratteri, non di byte: senza, gli accenti sfasano le colonne. */
 $colonna = function (string $s, int $largh): string {
@@ -88,36 +85,28 @@ $colonna = function (string $s, int $largh): string {
     return $s . str_repeat(' ', max(0, $largh - mb_strlen($s)));
 };
 
-foreach ($campione as $s) {
+// Stessa misura che gira dietro il bottone della dash (azione places_prova).
+$m = ardyPlacesCoperturaCampione($campione);
+
+$idx = 0;
+foreach ($m['righe'] as $r) {
     $idx++;
-    // Nome + comune: la query che funziona meglio su Google. L'indirizzo completo
-    // del portale a volte differisce dal loro e peggiora il match.
-    $zona = trim($s['comune'] . ($s['provincia'] !== '' ? ' (' . $s['provincia'] . ')' : ''));
-    $g    = ardyPlacesFindOne($s['nome'], $zona);
-
-    if (ardyPlacesCapHit()) {
-        echo "\n⚠ Tetto giornaliero Places raggiunto: mi fermo qui.\n";
-        break;
-    }
-
-    $tel  = $g['telefono'] ?? '';
-    $sito = $g['sito'] ?? '';
-    if ($g)    { $trovate++; }
-    if ($tel)  { $conTel++; }
-    if ($sito) { $conSito++; }
-
     printf("%2d. %s %s %s\n",
         $idx,
-        $colonna($s['nome'], 38),
-        $colonna($zona, 24),
-        $tel !== '' ? "☎ $tel" : ($g ? '— trovata, senza telefono' : '✗ non trovata')
+        $colonna($r['nome'], 38),
+        $colonna($r['zona'], 24),
+        $r['telefono'] !== '' ? "☎ {$r['telefono']}"
+            : ($r['esito'] === 'senza_telefono' ? '— trovata, senza telefono' : '✗ non trovata')
     );
-    $righe[] = ['nome' => $s['nome'], 'zona' => $zona, 'telefono' => $tel, 'sito' => $sito];
-    usleep(200000);
 }
+if ($m['capHit']) { echo "\n⚠ Tetto giornaliero Places raggiunto: mi fermo qui.\n"; }
 
 // --- 3. Esito ------------------------------------------------------------
-$fatte = count($righe);
+$righe   = $m['righe'];
+$trovate = $m['trovate'];
+$conTel  = $m['conTel'];
+$conSito = $m['conSito'];
+$fatte   = $m['fatte'];
 if ($fatte === 0) { fwrite(STDERR, "\nNessuna chiamata eseguita.\n"); exit(1); }
 
 $percTel  = round($conTel  * 100 / $fatte);

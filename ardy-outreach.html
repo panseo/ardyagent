@@ -587,6 +587,20 @@
           <div class="contact-check-list" id="srcResultsList"></div>
         </div>
 
+        <div class="campaign-section" id="provaSection" style="display:none">
+          <div class="campaign-label">PRIMA DI ARRICCHIRE: QUANTI TELEFONI CI SONO DAVVERO?</div>
+          <p style="color:var(--text-dim);font-size:12px;font-family:'DM Mono',monospace;margin-bottom:10px;line-height:1.6;">
+            Prova su un campione quante di queste strutture Google ha in scheda col telefono, prima di
+            arricchirle tutte. Una chiamata Google a struttura, prese a distanza regolare dall'elenco.<br>
+            Non salva niente: è solo una misura.
+          </p>
+          <div style="display:grid;grid-template-columns:120px 1fr;gap:10px;align-items:center;">
+            <input class="form-input" id="provaQuante" type="number" min="5" max="50" value="20" title="Quante strutture provare (max 50)">
+            <button class="btn-send" id="btnProva" onclick="provaCopertura()" style="margin:0;">📞 PROVA COPERTURA</button>
+          </div>
+          <div id="provaEsito" style="display:none;margin-top:14px;"></div>
+        </div>
+
         <div class="campaign-summary" id="srcSummary" style="display:none">
           <p>Nuovi selezionati: <strong id="srcCount">0</strong></p>
           <p style="font-size:11px;color:var(--text-dim);margin-top:4px;">Dopo il salvataggio, usa ✨ ARRICCHISCI sul singolo contatto o ✨ BLOCCO per completare email e dati mancanti.</p>
@@ -2125,6 +2139,7 @@ function renderSearchResults(zona) {
   sec.style.display = 'block';
   document.getElementById('srcSummary').style.display = searchResults.length ? 'block' : 'none';
   document.getElementById('btnSaveLeads').style.display = searchResults.length ? 'block' : 'none';
+  document.getElementById('provaSection').style.display = searchResults.length ? 'block' : 'none';
   if (!searchResults.length) { list.innerHTML = '<div style="padding:16px;color:var(--text-dim);font-size:13px;">Nessuna attività trovata in questa zona</div>'; return; }
   list.innerHTML = searchResults.map((c,i) => `
     <label class="check-item">
@@ -2135,6 +2150,79 @@ function renderSearchResults(zona) {
       </div>
     </label>`).join('');
   updateLeadCount();
+}
+
+// ============================================================
+// PROVA DI COPERTURA GOOGLE PLACES
+// Prende un campione dalle strutture già a schermo e chiede a Google quante
+// hanno il telefono. Serve a decidere se conviene arricchire tutto l'elenco.
+// ============================================================
+function provaCopertura() {
+  if (!searchResults.length) { toast('Prima estrai o cerca delle strutture', 'err'); return; }
+  const quante = Math.max(5, Math.min(50, parseInt(document.getElementById('provaQuante').value) || 20));
+
+  // Campione a passo regolare, non le prime N: in cima all'elenco del portale
+  // stanno le strutture promosse, le più curate, che gonfierebbero la stima.
+  const passo = Math.max(1, Math.floor(searchResults.length / quante));
+  const campione = [];
+  for (let i = 0; i < searchResults.length && campione.length < quante; i += passo) {
+    const s = searchResults[i];
+    campione.push({ nome: s.nome, comune: s.comune || '', provincia: s.provincia || '' });
+  }
+  if (!confirm(`Chiedo a Google ${campione.length} strutture su ${searchResults.length}.\n\n` +
+               `Sono ${campione.length} chiamate Places (le prime 1.000 del mese sono gratis).\nProcedo?`)) return;
+
+  runProva(campione);
+}
+
+async function runProva(campione) {
+  const btn = document.getElementById('btnProva');
+  btn.disabled = true; btn.textContent = `Chiedo a Google (${campione.length})...`;
+  let r;
+  try { r = await api('places_prova', { campione }); }
+  catch(e) { r = { success:false, error:'rete' }; }
+  btn.disabled = false; btn.textContent = '📞 PROVA COPERTURA';
+  if (!r.success) { toast('Errore: ' + (r.error||'sconosciuto'), 'err'); return; }
+  renderProva(r);
+}
+
+function renderProva(r) {
+  const box = document.getElementById('provaEsito');
+  const lettura = r.perc_tel >= 60
+    ? 'Copertura buona: conviene arricchire tutto l\'elenco con Google, e lasciare ✨ ARRICCHISCI solo alle strutture rimaste scoperte.'
+    : (r.perc_tel >= 30
+      ? 'Copertura media: ha senso su tutto l\'elenco solo se i telefoni ti servono davvero. Altrimenti filtra prima per provincia e voto.'
+      : 'Copertura bassa: non spendere sul grosso dell\'elenco. Meglio scegliere le strutture migliori e usare ✨ ARRICCHISCI, che trova anche email e social.');
+
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:12px;font-family:'DM Mono',monospace;">
+      <div><div style="font-size:22px;font-weight:700;">${r.con_tel}/${r.fatte}</div>
+           <div style="font-size:11px;color:var(--text-dim);">CON TELEFONO (${r.perc_tel}%)</div></div>
+      <div><div style="font-size:22px;font-weight:700;">${r.trovate}</div>
+           <div style="font-size:11px;color:var(--text-dim);">TROVATE SU GOOGLE</div></div>
+      <div><div style="font-size:22px;font-weight:700;">${r.con_sito}</div>
+           <div style="font-size:11px;color:var(--text-dim);">CON SITO (${r.perc_sito}%)</div></div>
+    </div>
+    <p style="font-size:12px;line-height:1.6;margin-bottom:10px;">${escHtml(lettura)}</p>
+    <p style="font-size:11px;color:var(--text-dim);margin-bottom:10px;">
+      Proiezione su ${searchResults.length} strutture: circa
+      <strong>${Math.round(searchResults.length * r.perc_tel / 100)} telefoni</strong>.
+      Chiamate Google usate oggi: ${r.usate_oggi}/${r.tetto}.
+      ${r.cap_hit ? '<br>⚠ Tetto giornaliero raggiunto: la prova si è fermata prima.' : ''}
+    </p>
+    <div class="contact-check-list" style="max-height:260px;">
+      ${r.righe.map(x => `
+        <div class="check-item" style="cursor:default;">
+          <div style="flex:1">
+            <div class="check-nome">${escHtml(x.nome)}</div>
+            <div class="check-email">${escHtml(x.zona)} · ${
+              x.telefono ? '☎ ' + escHtml(x.telefono)
+                         : (x.esito === 'senza_telefono' ? 'trovata, senza telefono' : 'non trovata')
+            }</div>
+          </div>
+        </div>`).join('')}
+    </div>`;
 }
 
 function toggleSelectAllLeads() {

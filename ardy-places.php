@@ -191,6 +191,61 @@ function ardyPlacesFindOne(string $nome, string $indirizzo = ''): ?array {
     return null;
 }
 
+/**
+ * MISURA DI COPERTURA — su un campione di strutture, quante Google ha in scheda
+ * e con che dati. Serve a decidere se conviene pagare l'arricchimento su un
+ * elenco intero: nessun listino può dirlo, dipende da quelle strutture lì.
+ *
+ * Una chiamata Places per struttura. Si ferma se scatta il tetto giornaliero.
+ * NON scrive niente: è una misura, non un import.
+ *
+ * @param array<int,array{nome:string,comune?:string,provincia?:string}> $strutture
+ * @return array{righe:array<int,array<string,string>>, trovate:int, conTel:int,
+ *                conSito:int, fatte:int, capHit:bool}
+ */
+function ardyPlacesCoperturaCampione(array $strutture): array {
+    $righe = [];
+    $trovate = $conTel = $conSito = 0;
+    $capHit = false;
+
+    foreach ($strutture as $s) {
+        $nome = trim((string)($s['nome'] ?? ''));
+        if ($nome === '') { continue; }
+
+        // Nome + comune: la query che funziona meglio su Google. L'indirizzo
+        // completo del portale a volte differisce dal loro e peggiora il match.
+        $prov = trim((string)($s['provincia'] ?? ''));
+        $zona = trim((string)($s['comune'] ?? '') . ($prov !== '' ? " ($prov)" : ''));
+
+        $g = ardyPlacesFindOne($nome, $zona);
+        if (ardyPlacesCapHit()) { $capHit = true; break; }
+
+        $tel  = $g['telefono'] ?? '';
+        $sito = $g['sito'] ?? '';
+        if ($g)    { $trovate++; }
+        if ($tel)  { $conTel++; }
+        if ($sito) { $conSito++; }
+
+        $righe[] = [
+            'nome'     => $nome,
+            'zona'     => $zona,
+            'telefono' => $tel,
+            'sito'     => $sito,
+            'esito'    => $tel !== '' ? 'telefono' : ($g ? 'senza_telefono' : 'non_trovata'),
+        ];
+        usleep(200000); // non martelliamo Google
+    }
+
+    return [
+        'righe'   => $righe,
+        'trovate' => $trovate,
+        'conTel'  => $conTel,
+        'conSito' => $conSito,
+        'fatte'   => count($righe),
+        'capHit'  => $capHit,
+    ];
+}
+
 /** Normalizza un oggetto "place" di Google nel formato lead di Ardy. */
 function ardyPlacesNormalize(array $place): ?array {
     $nome = trim($place['displayName']['text'] ?? '');

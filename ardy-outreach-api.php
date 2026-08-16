@@ -578,6 +578,47 @@ try {
             break;
 
         // --------------------------------------------------------
+        // PROVA DI COPERTURA GOOGLE PLACES
+        // Su un campione di strutture già a schermo, misura quante Google ha in
+        // scheda col telefono: serve a decidere se conviene pagare
+        // l'arricchimento sull'elenco intero. Una chiamata Places a struttura,
+        // campione limitato a 50 (spesa contenuta anche se si sbaglia), e
+        // NON scrive niente sul DB — è una misura, non un import.
+        // --------------------------------------------------------
+        case 'places_prova':
+            if (!ardyPlacesConfigured()) {
+                echo json_encode(['success' => false, 'error' => 'Google Places non è configurato sul server']); break;
+            }
+            $camp = $input['campione'] ?? [];
+            if (!is_array($camp) || !count($camp)) {
+                echo json_encode(['success' => false, 'error' => 'Nessuna struttura da provare']); break;
+            }
+            $camp = array_slice($camp, 0, 50);   // tetto di sicurezza sulla spesa
+
+            $m = ardyPlacesCoperturaCampione($camp);
+            if ($m['fatte'] === 0) {
+                $err = $m['capHit']
+                    ? 'Tetto giornaliero Google raggiunto: riprova domani.'
+                    : 'Nessuna risposta da Google: riprova.';
+                echo json_encode(['success' => false, 'error' => $err]); break;
+            }
+
+            echo json_encode([
+                'success'    => true,
+                'righe'      => $m['righe'],
+                'fatte'      => $m['fatte'],
+                'trovate'    => $m['trovate'],
+                'con_tel'    => $m['conTel'],
+                'con_sito'   => $m['conSito'],
+                'perc_tel'   => (int) round($m['conTel']  * 100 / $m['fatte']),
+                'perc_sito'  => (int) round($m['conSito'] * 100 / $m['fatte']),
+                'cap_hit'    => $m['capHit'],
+                'usate_oggi' => ardyPlacesCountToday(),
+                'tetto'      => ardyPlacesDailyCap(),
+            ]);
+            break;
+
+        // --------------------------------------------------------
         // SALVA LEAD SELEZIONATI DALLA RICERCA (bulk)
         // --------------------------------------------------------
         case 'save_leads':
