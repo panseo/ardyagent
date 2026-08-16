@@ -60,6 +60,8 @@ ardyagent.ardy-lab.it/
 ├── ardy-email-finder.php      # Ricerca email lead
 ├── ardy-outreach.html         # Tool outreach
 ├── ardy-outreach-api.php      # API outreach
+├── ardy-portale-bb.php        # Estrae i B&B di una regione da bed-and-breakfast.it (JSON-LD)
+├── ardy-places-prova.php      # CLI: misura quanti B&B Google ha col telefono, prima di spendere
 ├── ardy-pubblica-lavorazione.php  # Pubblica fase: pagina WP + immagine in evidenza + email cliente (NO social auto)
 ├── ardy-pubblica-social.php   # Pubblica sui social (passo manuale, separato) → webhook n8n
 ├── ardy-social-bozze.php      # Bozze post social "salva per dopo" persistite in DB (tabella social_bozze) — multi-dispositivo
@@ -636,6 +638,18 @@ stesso login). API: `ardy-outreach-api.php` (routing per `action`); tabelle `out
   e **stato** (`da_contattare` = lead freddo target campagne, `cliente`, `partner`, ecc.), con filtri
   combinabili (sidebar, tab Campagna, tool Filtri & Azioni Dati) e azioni di massa — inclusa
   l'assegnazione in blocco della regione ai contatti già presenti filtrandoli per nome/indirizzo.
+- **▦ Filtri & Azioni Dati**: i quattro gruppi (ricerca testo, settore, zona, dati mancanti) si
+  **sommano fra loro**. Regole da conoscere, perché sono state fonte di confusione reale:
+  - **I numeri sui chip sono relativi agli altri filtri accesi** (`contaChip()`): se un chip dice 40,
+    cliccandolo vedi 40 righe. Erano conteggi globali, e contraddicevano la lista sotto.
+  - **"Dati mancanti" ha due modi**: *ne manca almeno uno* (allarga — quel che serve dopo un
+    arricchimento) e *mancano tutti insieme* (restringe). Default il secondo: è lo storico, e
+    allargarlo allargherebbe anche il bersaglio di **ELIMINA I FILTRATI**.
+  - **Lista con spunta**: casella = seleziona per le azioni di massa, nome = apre la scheda
+    (`openContactFromTool` → `openLead`, che allarga i filtri della sidebar o la scheda non si
+    aprirebbe). In scheda compare **← AI FILTRATI** per tornare con filtri e spunte intatti.
+  - **Nessuna spunta = tutti i filtrati**; spuntandone qualcuno le azioni valgono solo su quelli,
+    e le conferme distinguono "SELEZIONATI" da "filtrati".
 - **🔎 Ricerca contatti** per verticale — target predefiniti: **antiquari, mercatini, interior designer,
   B&B**. Fonte **Google Places** (`ardy-places.php`) con fallback OpenStreetMap; i risultati si salvano
   come contatti (`save_leads`).
@@ -644,14 +658,28 @@ stesso login). API: `ardy-outreach-api.php` (routing per `action`); tabelle `out
   schema.org** che il portale pubblica in ogni pagina di elenco — dato strutturato, non scraping di
   HTML — e ne ricava nome, indirizzo completo, comune, provincia, CAP, coordinate, tipologia
   (B&B, affittacamere, agriturismo…), voto ospiti e link alla scheda. **Telefono ed email non ci sono**:
-  il portale li serve da endpoint `/ajax/` che il suo `robots.txt` vieta ai bot, quindi non li tocchiamo
-  — si completano dopo con ✨ ARRICCHISCI. Una pagina per chiamata (~24 strutture) con pausa fra l'una
+  non compaiono in nessuna pagina leggibile (né elenco né scheda, nemmeno come link `tel:`). Esistono
+  endpoint `/ajax/` che il `robots.txt` del portale vieta ai bot: **non li interroghiamo**, quindi se il
+  numero sia lì dentro non lo sappiamo — si completa dopo con ✨ ARRICCHISCI, che lo prende da Google.
+  Una pagina per chiamata (~24 strutture) con pausa fra l'una
   e l'altra, User-Agent `ArdyBot` dichiarato: la dash cicla e mostra l'avanzamento, si può fermare a
   metà. I risultati passano dalla **stessa revisione a spunta** della ricerca zona e si salvano con
   `save_leads` (`fonte: 'portale'`), con dedup per nome.
 - **✨ Arricchimento** (`enrich_contact`): dato un contatto incompleto (spesso solo nome + indirizzo),
   l'agente `ardy-enrich.php` prova a completare email/telefono/sito **e i canali social**.
   `ardy-email-finder.php` (da CLI) visita i siti dei contatti senza email e ne cerca una.
+  I passi vanno **dal gratis al caro** e si fermano appena il buco è tappato: 0) sito dedotto dal
+  dominio dell'email · 1) scraping del sito ufficiale · 1b) Google Places · **1c) se Places ha appena
+  scoperto il sito, lo visita subito** — è il passo che spesso porta a casa l'email senza pagare ·
+  2) agente Claude con web search, l'unico a pagamento, e l'unico che trova i social.
+  - **Scope `google`** (bottone 🌐 SOLO GOOGLE nel tool Filtri): esegue **solo i passi gratuiti**
+    (0/1/1b/1c) e non chiama mai l'agente. Nato per i grandi import: senza, l'agente partirebbe su
+    **ogni** struttura importata, perché `referente` resta vuoto per tutte e da solo basta ad
+    autorizzare la chiamata. Email e social possono comparire lo stesso, via passo 1c.
+  - **Scope `social`**: cerca solo i canali, spesa voluta ed esplicita.
+  - Il log dell'arricchimento in blocco distingue **✓ SALVATO** (già scritto sul DB) da
+    **✗ NON salvato** e **· nulla da salvare**: le proposte del singolo contatto si applicano a
+    mano, quelle del blocco vengono scritte subito.
 - **📞 Prova di copertura Places** (`places_prova` / `ardyPlacesCoperturaCampione`): prima di pagare
   l'arricchimento su un elenco intero, misura su un campione **quanti di quei B&B Google ha davvero
   in scheda col telefono** — nessun listino può dirlo, dipende da quelle strutture lì. Il campione è

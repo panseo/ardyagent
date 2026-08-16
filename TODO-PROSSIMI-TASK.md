@@ -1,10 +1,57 @@
 # Ardy Lab — Task aperti & note utili
 
 > Solo task **aperti** + note operative + verifiche residue. Tutto ciò che è fatto **e deployato**
-> è rimosso (lo storico resta nei commit git). Ultima pulizia: 26/07/2026 · ultimo aggiornamento: 15/08/2026.
+> è rimosso (lo storico resta nei commit git). Ultima pulizia: 26/07/2026 · ultimo aggiornamento: 16/08/2026.
 
 > ⚠️ Promemoria sempre valido: se Sole tace su **tutti** i canali insieme (WhatsApp + webchat),
 > sospetta **credito Anthropic esaurito** (capitato il 21/06; si ricarica da Plans & Billing).
+
+---
+
+## 🏨 APERTURA SESSIONE — riprendi da qui (fine sessione 16/08/2026, tutto deployato)
+
+> La sezione 28/07 qui sotto resta valida per i suoi collaudi: è più vecchia, non l'ho toccata.
+
+**Dove siamo.** Importate da `bed-and-breakfast.it` le **715 strutture della Puglia** (712 taggate
+"Puglia"; in totale i contatti categoria `bb` sono 901 con quelli di prima). Prova di copertura
+Google: **20 su 20 col telefono, 18 col sito** — copertura piena, molto meglio del previsto.
+Fatto un primo giro **🌐 SOLO GOOGLE** su ~41 contatti: telefono, sito e in parecchi casi anche
+email e social, tutto salvato.
+
+**I prossimi passi, in quest'ordine (dal gratis al caro):**
+
+1. **🌐 SOLO GOOGLE sul resto.** In *Filtri & Azioni Dati*: settore `bb`, "dati mancanti" =
+   telefono con **"ne manca almeno uno"**, poi il bottone. Non chiama l'agente a pagamento.
+   ⚠️ Le chiamate Google gratis sono **1.000 al mese**: le ~900 della Puglia ci stanno, ma
+   un'altra regione nello stesso mese si paga (vedi Nota costi).
+2. **`php ardy-email-finder.php`** (da CLI, gratis) sui rimasti senza email ma col sito.
+3. **✨ ARRICCHISCI I FILTRATI** solo su chi resta **senza email**: è l'unico passo a pagamento,
+   e a quel punto agisce su poche centinaia invece che su 900.
+
+**Aperti / da decidere:**
+
+- **La prova di copertura non salva quello che trova.** Nata come misura "conviene spendere?",
+  butta via telefoni veri (20 chiamate sprecate sulla Puglia). Sulle prossime regioni conviene
+  farle scrivere i campi vuoti, o toglierla e andare diretti sull'arricchimento.
+- **Rielaborare le view dell'outreach** — richiesta di Michela, non ancora messa a fuoco: la
+  navigazione fra sidebar, Filtri & Azioni Dati e scheda contatto la disorienta. Da capire
+  usandola, non da ridisegnare a indovinare.
+- **Altre regioni**: l'estrazione funziona su tutte e 20 (menù a tendina). Distanziarle di un mese
+  per restare dentro il gratuito Google.
+
+**Note operative da ricordare:**
+
+- **Non toccare gli endpoint `/ajax/` del portale**: il loro `robots.txt` li vieta ai bot. Gli
+  elenchi invece sono consentiti ed è da lì che leggiamo (JSON-LD schema.org). Telefono ed email
+  il portale non li pubblica: arrivano da Google e dal sito della struttura.
+- **L'estrazione dipende dal JSON-LD del portale.** Se un giorno esce 0 strutture su una regione
+  che ne ha, è cambiato il loro markup: guardare `ardyPortaleBbPagina()` in `ardy-portale-bb.php`.
+- **"Dati mancanti" ha due modi**: *ne manca almeno uno* (allarga, quel che serve dopo un
+  arricchimento) e *mancano tutti insieme* (restringe). Il default resta il secondo, perché è il
+  comportamento storico e perché allargarlo allargherebbe anche il bersaglio di **ELIMINA I
+  FILTRATI**. Leggere sempre il numero nella richiesta di conferma prima di dire sì.
+- **I numeri sui chip** ora sono relativi agli altri filtri accesi: se un chip dice 40, cliccandolo
+  vedi 40 righe. Prima erano calcolati su tutti i contatti e contraddicevano la lista.
 
 ---
 
@@ -1173,4 +1220,13 @@ no concorrenza); diventa prioritario con più utenti o se compaiono 504. Refacto
 ## 💶 Nota costi (riferimento)
 - **Costo dominante = API Claude per messaggio**, mitigato col **prompt caching** (web ✅, lavorazione ✅, WhatsApp ✅).
 - **Outreach AI**: arricchimento ~$0,05-0,10 a contatto (Google ~$0,03 + Claude web search); generatore template ~1 chiamata. Tetto Google giornaliero come rete di sicurezza.
+- **Google Places, tariffa verificata (16/08/2026)**: chiediamo telefono e sito, quindi fascia
+  **Enterprise** — **1.000 chiamate gratis al mese**, poi **$35 ogni 1.000** (~3,5 cent l'una).
+  Il gratuito è mensile e **non** per regione: due regioni da ~700 nello stesso mese sfondano il
+  tetto. Il limite giornaliero in `ardy-config.php` (`ARDY_PLACES_DAILY_CAP`, default 500) è una
+  rete di sicurezza contro i loop, non un limite di spesa. Ricontrollare i prezzi in console prima
+  di una passata grossa: cambiano spesso.
+- **Il giro "🌐 SOLO GOOGLE" costa solo Places**: fa Google + lettura del sito ufficiale (entrambi
+  gratuiti) e **non** chiama mai l'agente Claude. Email e social possono comparire lo stesso —
+  li pubblica il sito della struttura, li legge il passo 1c.
 - **Meta**: Michela↔Sole user-initiated = gratis; costi solo su template business→cliente fuori 24h (~3-4 cent/msg). Media Meta scadono → scaricarli subito col media ID.
