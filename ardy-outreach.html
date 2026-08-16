@@ -649,7 +649,13 @@
             <input class="form-input" id="toolAssignRegione" list="regioniList" placeholder="es. Salento" style="flex:1;">
             <button class="btn-sm primary" onclick="assignRegioneFiltered()" style="white-space:nowrap;">📍 ASSEGNA ZONA</button>
           </div>
-          <button class="btn-send" onclick="enrichFiltered()" style="margin-bottom:10px;">✨ ARRICCHISCI I FILTRATI (Google Maps + web)</button>
+          <button class="btn-send" onclick="enrichFiltered('google')" style="margin-bottom:6px;">🌐 SOLO GOOGLE — telefono e sito (non paghi l'agente)</button>
+          <p style="font-size:11px;color:var(--text-dim);font-family:'DM Mono',monospace;margin-bottom:12px;line-height:1.5;">
+            Il giro economico per i grandi import: prende telefono, sito e indirizzo da Google Maps
+            e non chiama l'agente Claude. <strong>L'email non la trova</strong> — dopo, con i siti
+            riempiti, la recuperi gratis con <code>ardy-email-finder.php</code>.
+          </p>
+          <button class="btn-send" onclick="enrichFiltered('tutto')" style="margin-bottom:10px;">✨ ARRICCHISCI I FILTRATI (Google Maps + web)</button>
           <button class="btn-send" onclick="deleteFiltered()" style="background:var(--red);color:#fff;">🗑 ELIMINA I FILTRATI</button>
           <p style="font-size:11px;color:var(--text-dim);margin-top:12px;line-height:1.6;">
             📄 Le <strong>lettere cartacee</strong> si generano dalla <strong>Campagna</strong> (canale "Lettera postale").
@@ -833,8 +839,8 @@
 <!-- MODAL ARRICCHIMENTO IN BLOCCO -->
 <div class="modal-overlay" id="bulkModal">
   <div class="modal">
-    <div class="modal-title">✨ ARRICCHIMENTO IN BLOCCO</div>
-    <p style="color:var(--text-dim);font-size:12px;font-family:'DM Mono',monospace;margin-bottom:14px;line-height:1.6;">
+    <div class="modal-title" id="bulkTitle">✨ ARRICCHIMENTO IN BLOCCO</div>
+    <p style="color:var(--text-dim);font-size:12px;font-family:'DM Mono',monospace;margin-bottom:14px;line-height:1.6;" id="bulkSottotitolo">
       Completa solo i campi vuoti dei contatti incompleti (confidenza alta/media). Non sovrascrive dati esistenti.
     </p>
     <div id="bulkProgressWrap" style="height:8px;background:var(--border,#333);border-radius:4px;overflow:hidden;margin-bottom:10px;">
@@ -1499,7 +1505,7 @@ async function bulkEnrich() {
   runBulkEnrich(candidati);
 }
 
-async function runBulkEnrich(candidati) {
+async function runBulkEnrich(candidati, scope = 'tutto') {
   if (bulkRunning) return;
   bulkRunning = true;
   const bar = document.getElementById('bulkProgressBar');
@@ -1507,6 +1513,16 @@ async function runBulkEnrich(candidati) {
   const logEl = document.getElementById('bulkLog');
   const closeBtn = document.getElementById('btnBulkClose');
   logEl.innerHTML = ''; bar.style.width = '0'; closeBtn.textContent = 'INTERROMPI';
+
+  // Titolo parlante: da qui si vede a colpo d'occhio se il giro sta pagando
+  // l'agente o no — è la differenza che conta su centinaia di contatti.
+  const soloGoogle = (scope === 'google');
+  document.getElementById('bulkTitle').textContent =
+    soloGoogle ? '🌐 SOLO GOOGLE — TELEFONO E SITO' : '✨ ARRICCHIMENTO IN BLOCCO';
+  document.getElementById('bulkSottotitolo').textContent = soloGoogle
+    ? "Riempie telefono, sito e indirizzo vuoti da Google Maps. Nessuna chiamata all'agente Claude, quindi l'email non viene cercata."
+    : 'Completa solo i campi vuoti dei contatti incompleti (confidenza alta/media). Non sovrascrive dati esistenti.';
+
   document.getElementById('bulkModal').classList.add('open');
 
   const log = (msg, color) => {
@@ -1524,7 +1540,7 @@ async function runBulkEnrich(candidati) {
     bar.style.width = ((i)/candidati.length*100) + '%';
 
     let r;
-    try { r = await api('enrich_contact', { id: c.id, model: getEnrichModel() }); }
+    try { r = await api('enrich_contact', { id: c.id, model: getEnrichModel(), scope }); }
     catch(e) { r = { success:false, error:'rete' }; }
     if (!r || !r.success) { log(`✗ ${c.nome}: ${r&&r.error||'errore'}`, 'var(--orange,#e90)'); continue; }
 
@@ -1653,12 +1669,16 @@ async function assignRegioneFiltered() {
   }
 }
 
-async function enrichFiltered() {
+async function enrichFiltered(scope) {
   if (bulkRunning) { toast('Arricchimento già in corso', 'err'); return; }
   const list = getFilteredContacts();
   if (!list.length) { toast('Nessun contatto nel filtro', 'err'); return; }
-  if (!confirm(`Arricchire ${list.length} contatti filtrati?\nUsa Google Maps + web, riempie solo i campi vuoti (confidenza alta/media), senza sovrascrivere.\nConsuma chiamate Google (entro il tetto giornaliero). Può richiedere qualche minuto.`)) return;
-  runBulkEnrich(list);
+  const soloGoogle = (scope === 'google');
+  const msg = soloGoogle
+    ? `Arricchire ${list.length} contatti filtrati SOLO con Google?\n\nRiempie telefono, sito e indirizzo vuoti. NON chiama l'agente Claude, quindi non trova l'email.\nConsuma chiamate Google (entro il tetto giornaliero).`
+    : `Arricchire ${list.length} contatti filtrati?\nUsa Google Maps + web, riempie solo i campi vuoti (confidenza alta/media), senza sovrascrivere.\nConsuma chiamate Google (entro il tetto giornaliero) e una ricerca web a pagamento per contatto. Può richiedere qualche minuto.`;
+  if (!confirm(msg)) return;
+  runBulkEnrich(list, soloGoogle ? 'google' : 'tutto');
 }
 
 async function deleteFiltered() {

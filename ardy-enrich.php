@@ -42,14 +42,22 @@ const ARDY_FREE_MAIL = [
  *
  * @param array  $contact  riga del DB (nome, email, telefono, sito, indirizzo, referente, categoria, ...)
  * @param string $apiKey   Anthropic API key
- * @param string $scope    'tutto' (default) oppure 'social' per cercare SOLO i canali:
- *                         in quel caso salta Google Places (non restituisce social) e
- *                         autorizza il pass agente anche se i dati di contatto sono
- *                         completi — è una richiesta esplicita, la spesa è voluta.
+ * @param string $scope    'tutto' (default), oppure:
+ *                         - 'social' per cercare SOLO i canali: salta Google Places
+ *                           (non restituisce social) e autorizza il pass agente anche
+ *                           se i dati di contatto sono completi — è una richiesta
+ *                           esplicita, la spesa è voluta.
+ *                         - 'google' per i soli passi SENZA agente (sito ufficiale +
+ *                           Google Places). Serve sui grandi import: riempie telefono
+ *                           e sito di centinaia di contatti senza pagare una ricerca
+ *                           web a testa. L'email resta scoperta: la si recupera dopo
+ *                           con ardy-email-finder.php (gratis) e, per chi resta,
+ *                           con un giro 'tutto' mirato.
  * @return array  ['campi' => [campo => ['valore','fonte','confidenza','passo']], 'log' => [...]]
  */
 function ardyEnrichContact(array $contact, string $apiKey, string $model = 'claude-haiku-4-5', string $scope = 'tutto'): array {
     $soloSocial = ($scope === 'social');
+    $soloGoogle = ($scope === 'google');
     $log    = [];
     $proposte = []; // campo => ['valore','fonte','confidenza','passo']
 
@@ -150,7 +158,12 @@ function ardyEnrichContact(array $contact, string $apiKey, string $model = 'clau
     //    Se però parte per altro, gli chiediamo anche i canali — stessa risposta.
     //  - scope 'social' → l'ha chiesto Michela esplicitamente, quindi basta che
     //    manchi un canale: qui la spesa è voluta, non un effetto collaterale.
-    $agentePuoPartire = $soloSocial ? !empty($ancoraMancanti) : !empty($mancantiCore);
+    //  - scope 'google' → mai. È il giro economico dei grandi import: si prende
+    //    quel che danno il sito e Google, e non si paga nulla a contatto.
+    //    Senza questo freno l'agente partirebbe COMUNQUE su ogni struttura
+    //    importata: 'referente' resta vuoto per tutte, e da solo basta ad
+    //    autorizzare la chiamata.
+    $agentePuoPartire = $soloGoogle ? false : ($soloSocial ? !empty($ancoraMancanti) : !empty($mancantiCore));
     if ($agentePuoPartire && $apiKey !== '') {
         $agent = ardyEnrichAgent($contact, $ancoraMancanti, $sito, $apiKey, $model);
         if (!empty($agent['error'])) {

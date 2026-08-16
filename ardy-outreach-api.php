@@ -679,7 +679,8 @@ try {
             $modelliOk = ['claude-haiku-4-5', 'claude-sonnet-4-6'];
             $model = in_array(($input['model'] ?? ''), $modelliOk, true) ? $input['model'] : 'claude-haiku-4-5';
             // 'social' = cerca SOLO i canali (bottone dedicato nel pannello Canali social).
-            $scope = (($input['scope'] ?? '') === 'social') ? 'social' : 'tutto';
+            // 'social' = solo canali; 'google' = solo passi gratuiti/Places, niente agente.
+            $scope = in_array(($input['scope'] ?? ''), ['social', 'google'], true) ? $input['scope'] : 'tutto';
             $res = ardyEnrichContact($contact, $apiKey, $model, $scope);
 
             // Per ogni campo proposto, allega anche il valore attuale (per il diff in UI).
