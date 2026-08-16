@@ -667,9 +667,11 @@
           </div>
           <button class="btn-send" onclick="enrichFiltered('google')" style="margin-bottom:6px;">🌐 SOLO GOOGLE — telefono e sito (non paghi l'agente)</button>
           <p style="font-size:11px;color:var(--text-dim);font-family:'DM Mono',monospace;margin-bottom:12px;line-height:1.5;">
-            Il giro economico per i grandi import: prende telefono, sito e indirizzo da Google Maps
-            e non chiama l'agente Claude. <strong>L'email non la trova</strong> — dopo, con i siti
-            riempiti, la recuperi gratis con <code>ardy-email-finder.php</code>.
+            Il giro economico per i grandi import: Google Maps per telefono, sito e indirizzo, più la
+            lettura del sito ufficiale dove c'è. <strong>Nessuna ricerca web a pagamento.</strong>
+            Email e social a volte saltano fuori lo stesso — li pubblica il sito della struttura —
+            ma non è garantito: per quelle che restano scoperte usa poi
+            <code>ardy-email-finder.php</code> (gratis) e l'arricchimento completo.
           </p>
           <button class="btn-send" onclick="enrichFiltered('tutto')" style="margin-bottom:10px;">✨ ARRICCHISCI I FILTRATI (Google Maps + web)</button>
           <button class="btn-send" onclick="deleteFiltered()" style="background:var(--red);color:#fff;">🗑 ELIMINA I FILTRATI</button>
@@ -1545,9 +1547,10 @@ async function runBulkEnrich(candidati, scope = 'tutto') {
   const soloGoogle = (scope === 'google');
   document.getElementById('bulkTitle').textContent =
     soloGoogle ? '🌐 SOLO GOOGLE — TELEFONO E SITO' : '✨ ARRICCHIMENTO IN BLOCCO';
-  document.getElementById('bulkSottotitolo').textContent = soloGoogle
-    ? "Riempie telefono, sito e indirizzo vuoti da Google Maps. Nessuna chiamata all'agente Claude, quindi l'email non viene cercata."
-    : 'Completa solo i campi vuoti dei contatti incompleti (confidenza alta/media). Non sovrascrive dati esistenti.';
+  document.getElementById('bulkSottotitolo').innerHTML = (soloGoogle
+    ? "Google Maps per telefono, sito e indirizzo, più la lettura del sito ufficiale — entrambi gratuiti. Nessuna chiamata a pagamento all'agente Claude. Email e social possono comparire lo stesso: li pubblica il sito della struttura."
+    : 'Google Maps, sito ufficiale e, per i buchi rimasti, una ricerca web a pagamento per contatto. Riempie solo i campi vuoti (confidenza alta/media), senza sovrascrivere.')
+    + '<br><strong>Ogni riga qui sotto è già scritta sul database:</strong> ✓ salvato · ✗ non salvato · · niente da salvare.';
 
   document.getElementById('bulkModal').classList.add('open');
 
@@ -1587,17 +1590,19 @@ async function runBulkEnrich(candidati, scope = 'tutto') {
       if (u.success) {
         Object.assign(c, fields);
         arricchiti++; campiTot += applicati.length;
-        log(`✓ ${c.nome}: ${applicati.join(', ')}`, 'var(--green,#3a8)');
+        // "SALVATO" e non "trovato": la riga esce solo a scrittura riuscita, e
+        // dev'essere chiaro senza doverlo chiedere.
+        log(`✓ SALVATO · ${c.nome} → ${applicati.join(', ')}`, 'var(--green,#3a8)');
       } else {
-        log(`✗ ${c.nome}: salvataggio fallito`, 'var(--orange,#e90)');
+        log(`✗ NON salvato · ${c.nome} (trovati: ${applicati.join(', ')})`, 'var(--orange,#e90)');
       }
     } else {
-      log(`· ${c.nome}: niente di affidabile`);
+      log(`· nulla da salvare · ${c.nome}`);
     }
   }
 
   bar.style.width = '100%';
-  status.textContent = `Fatto · ${arricchiti} contatti arricchiti · ${campiTot} campi`;
+  status.textContent = `Fatto · ${arricchiti} contatti aggiornati sul database · ${campiTot} campi salvati`;
   closeBtn.textContent = 'CHIUDI';
   bulkRunning = false;
   await Promise.all([loadContacts(), loadStats()]);
@@ -1786,7 +1791,7 @@ async function enrichFiltered(scope) {
   const soloGoogle = (scope === 'google');
   const chi = toolTargetLabel(list);
   const msg = soloGoogle
-    ? `Arricchire ${chi} SOLO con Google?\n\nRiempie telefono, sito e indirizzo vuoti. NON chiama l'agente Claude, quindi non trova l'email.\nConsuma ${list.length} chiamate Google al massimo (entro il tetto giornaliero).`
+    ? `Arricchire ${chi} SOLO con Google?\n\nGoogle Maps + lettura del sito ufficiale, entrambi gratuiti. NESSUNA ricerca web a pagamento.\nI dati trovati vengono salvati subito sul contatto.\nConsuma al massimo ${list.length} chiamate Google (entro il tetto giornaliero).`
     : `Arricchire ${chi}?\nUsa Google Maps + web, riempie solo i campi vuoti (confidenza alta/media), senza sovrascrivere.\nConsuma chiamate Google (entro il tetto giornaliero) e una ricerca web A PAGAMENTO per contatto. Può richiedere qualche minuto.`;
   if (!confirm(msg)) return;
   runBulkEnrich(list, soloGoogle ? 'google' : 'tutto');
