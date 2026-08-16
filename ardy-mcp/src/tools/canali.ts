@@ -98,27 +98,35 @@ Errori:
     'ardy_arricchisci_contatto',
     {
       title: 'Arricchisci i dati di un contatto',
-      description: `Cerca TUTTI i dati mancanti di un contatto (email, telefono, sito, indirizzo, referente e canali social) e li propone senza salvarli.
+      description: `Cerca i dati mancanti di un contatto (email, telefono, sito, indirizzo, referente e canali social) e li propone senza salvarli.
 
 Differenza con ardy_trova_canali_social: quello cerca solo i profili social, questo completa la scheda intera. Se al contatto manca solo il social, usa l'altro.
 
-⚠️ COSTO: se mancano dati di contatto, parte una ricerca web a pagamento (~$0,05-0,10 col passo Google Places). Se invece la scheda è già completa e mancano solo i social, la ricerca a pagamento NON parte: viene solo riletto il sito, gratis.
+⚠️ COSTO, secondo lo scope:
+  - scope='tutto' (default): se mancano dati di contatto, parte una ricerca web a pagamento (~$0,05-0,10, include Google Places). Se manca solo il social, la ricerca a pagamento NON parte: viene solo riletto il sito, gratis.
+  - scope='google': MAI ricerca web a pagamento sull'account Anthropic. Prova solo i passi gratuiti (sito ufficiale) più Google Places (sito/telefono/indirizzo — costa sull'account Google Places di Ardy Lab, non su questo). Pensato per gli import grossi: completa telefono e sito su centinaia di contatti senza far partire l'agente su ognuno. Prima di lanciarlo su tante schede, misura quanto renderebbe con ardy_prova_copertura_places.
 
 ⚠️ NON salva niente: verifica le proposte e salvale con ardy_aggiorna_contatto.
 
 Args:
   - id (number): id del contatto
-  - model ('claude-haiku-4-5'|'claude-sonnet-4-6', default haiku)
+  - scope ('tutto'|'google', default 'tutto')
+  - model ('claude-haiku-4-5'|'claude-sonnet-4-6', default haiku): ignorato con scope='google', che non chiama l'agente
   - response_format ('markdown'|'json', default 'markdown')
 
 Returns (json): stessa forma di ardy_trova_canali_social, ma i campi possono includere
-anche email, telefono, sito, indirizzo, referente.
+anche email, telefono, sito, indirizzo, referente (email e referente restano vuoti con scope='google': Places non li fornisce).
 
 Esempi:
-  - "completa i dati di questo antiquario" -> id=17`,
+  - "completa i dati di questo antiquario" -> id=17
+  - "arricchisci questo B&B senza spendere sull'agente" -> id=17, scope='google'`,
       inputSchema: {
         id: z.number().int().positive().describe('Id del contatto'),
-        model: z.enum(MODELLI).default('claude-haiku-4-5').describe('Modello AI per la ricerca web'),
+        scope: z
+          .enum(['tutto', 'google'])
+          .default('tutto')
+          .describe("'tutto' = anche l'agente web se serve; 'google' = solo sito+Places, mai l'agente"),
+        model: z.enum(MODELLI).default('claude-haiku-4-5').describe("Modello AI per la ricerca web (ignorato con scope='google')"),
         response_format: z
           .nativeEnum(ResponseFormat)
           .default(ResponseFormat.MARKDOWN)
@@ -129,7 +137,7 @@ Esempi:
     async (p) => {
       try {
         const c = await getContatto(p.id);
-        const r = await apiCall<RispostaEnrich>('enrich_contact', { id: p.id, model: p.model, scope: 'tutto' });
+        const r = await apiCall<RispostaEnrich>('enrich_contact', { id: p.id, model: p.model, scope: p.scope });
         const campi = r.campi ?? {};
         const dati = { id: p.id, nome: c.nome, campi, log: r.log ?? [] };
         return risposta(dati, proposteMarkdown(`Dati proposti per ${c.nome}`, campi, r.log ?? []), p.response_format);

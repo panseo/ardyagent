@@ -26,9 +26,11 @@ Gira **in locale**, come sottoprocesso del client, su trasporto stdio. Non va de
 | Tool | Cosa fa |
 |---|---|
 | `ardy_trova_canali_social` | Cerca i profili Instagram/Facebook/LinkedIn di un contatto |
-| `ardy_arricchisci_contatto` | Completa tutta la scheda: email, telefono, sito, indirizzo, referente, social |
+| `ardy_arricchisci_contatto` | Completa la scheda: email, telefono, sito, indirizzo, referente, social. `scope='google'` limita ai passi gratuiti + Places, senza mai far partire l'agente — pensato per gli import grossi |
+| `ardy_estrai_portale_bb` | Legge una pagina di B&B da bed-and-breakfast.it (gratis, dato pubblico del portale) |
+| `ardy_prova_copertura_places` | Misura quanti telefoni darebbe Google Places su un campione, prima di spendere sull'arricchimento di tutta una regione |
 
-Entrambi restituiscono **proposte con fonte e confidenza**, e non scrivono niente sul database.
+Tutti e quattro restituiscono **proposte/misure, non scritture**: niente arriva sul database senza passare da `ardy_aggiorna_contatto`. Il salvataggio in blocco dei lead trovati sul portale (`save_leads`) resta in dash di proposito — stessa logica di `send_campaign`, vedi sotto.
 
 **Scrive**
 
@@ -50,6 +52,9 @@ Entrambi restituiscono **proposte con fonte e confidenza**, e non scrivono nient
   scrivere a duecento persone. Le campagne restano in dash, dove vedi la lista prima di premere invio.
 - **Cancellazione contatti** (`delete_contact`, `delete_contacts`). Stessa ragione, al contrario.
 - **Import clienti dal CRM**. Operazione rara, meglio farla dove si vede cosa entra.
+- **Salvataggio dei lead trovati sul portale B&B** (`save_leads`). `ardy_estrai_portale_bb` propone,
+  non scrive: è un inserimento in blocco di righe nuove, e resta in dash per lo stesso motivo delle
+  campagne — si vede l'elenco prima di importarlo.
 
 ### Perché i DM social non partono da qui
 
@@ -116,11 +121,16 @@ Alcuni tool chiamano l'AI e si pagano sull'account Anthropic di Ardy Lab:
 | Tool | Costo indicativo |
 |---|---|
 | `ardy_trova_canali_social` | gratis se il sito ha le icone social, altrimenti ~$0,02–0,07 |
-| `ardy_arricchisci_contatto` | ~$0,05–0,10 se mancano dati di contatto (include Google Places) |
+| `ardy_arricchisci_contatto` (default, scope='tutto') | ~$0,05–0,10 se mancano dati di contatto (include Google Places) |
+| `ardy_arricchisci_contatto` (scope='google') | $0 sull'account Anthropic — sito ufficiale + Google Places, mai l'agente |
+| `ardy_prova_copertura_places` | una chiamata Places a struttura del campione, sull'account Google (non Anthropic); prime 1.000/mese gratis |
+| `ardy_estrai_portale_bb` | gratis — legge dato pubblico del portale |
 | `ardy_scrivi_messaggio_social`, `ardy_scrivi_email` | pochi centesimi a chiamata |
 
 Tutto il resto è gratuito. Se al contatto manca **solo** il social,
-`ardy_arricchisci_contatto` non fa partire la ricerca a pagamento: rilegge solo il sito.
+`ardy_arricchisci_contatto` (scope='tutto') non fa partire la ricerca a pagamento: rilegge solo il sito.
+Su un giro di import grosso conviene `ardy_prova_copertura_places` su un campione, poi
+`ardy_arricchisci_contatto` con `scope='google'` su tutti: zero spesa sull'agente Claude.
 
 ---
 
@@ -138,6 +148,11 @@ Tutto il resto è gratuito. Se al contatto manca **solo** il social,
 
 > **"Manda a questo antiquario l'email di presentazione."**
 > → `ardy_lista_template_email` → `ardy_invia_email` (con `conferma: true` dopo che hai approvato)
+
+> **"Quanti B&B ci sono in Puglia sul portale, e conviene arricchirli con Google?"**
+> → `ardy_estrai_portale_bb` (regione_slug=puglia, più pagine finché `fine`) →
+> `ardy_prova_copertura_places` su un campione dei risultati → se la copertura è buona, importa da dash
+> e poi `ardy_arricchisci_contatto` con `scope='google'` su ognuno
 
 ---
 

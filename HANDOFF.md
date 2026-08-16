@@ -69,6 +69,12 @@ tutto il progetto.
 
 ## 3. ⚠️ Il disallineamento da sistemare per primo
 
+> ✅ **Allineato il 16/08.** `ardy_arricchisci_contatto` accetta ora `scope='google'`, e due tool
+> nuovi (`ardy_estrai_portale_bb`, `ardy_prova_copertura_places`) ricalcano `portale_bb` e
+> `places_prova`. Build e smoke test via stdio passano; **resta da fare** il collaudo dal vivo
+> contro il server (vedi il paragrafo sul blocco account qui sotto — non ancora superato). Tabella
+> e descrizione lasciate come traccia storica del gap.
+
 **Il server MCP (`ardy-mcp/`) non sa niente del filone B.** È stato scritto prima e non è
 stato aggiornato. Non è rotto — funziona per quello che copre — ma è indietro:
 
@@ -161,7 +167,8 @@ destinatario alla volta, con `conferma: true` verificata prima di ogni chiamata 
 
 **Tecnico**
 
-- **Allineare l'MCP al filone B** (§3) e provarlo davvero.
+- **Provare davvero l'MCP allineato al filone B** (§3): il codice è allineato, manca il collaudo
+  dal vivo contro il server — vedi i punti in `TODO-PROSSIMI-TASK.md` §*Ardy dal desktop*.
 - **Paginazione.** `get_contacts` restituisce tutto senza `LIMIT`: l'MCP scarica e pagina in
   locale. Verso il migliaio di contatti va aggiunta lato API.
 - **Altri canali social.** TikTok e YouTube si estrarrebbero con lo stesso metodo; esclusi

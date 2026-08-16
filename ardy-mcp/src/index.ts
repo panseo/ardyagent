@@ -25,12 +25,14 @@ import { initConfig } from './client.js';
 import { registraCanali } from './tools/canali.js';
 import { registraContatti } from './tools/contatti.js';
 import { registraMessaggi } from './tools/messaggi.js';
+import { registraPortale } from './tools/portale.js';
 
 const server = new McpServer({ name: 'ardy-mcp-server', version: '1.0.0' });
 
 registraContatti(server);
 registraCanali(server);
 registraMessaggi(server);
+registraPortale(server);
 
 async function main(): Promise<void> {
   // Fallisce subito se la configurazione manca: un server che parte e poi dà

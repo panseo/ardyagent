@@ -530,13 +530,23 @@ su Instagram). Nuove colonne `instagram`/`facebook`/`linkedin` su `outreach_cont
 - **Instagram Messaging API**: consente di *rispondere* entro 24h a chi scrive alla pagina. Sarebbe il modo
   legittimo di gestire **le risposte** ai DM, non di iniziarli. Da valutare insieme al Piano B WhatsApp.
 
-### 🖥️ Ardy dal desktop — server MCP (FATTO, da collaudare)
+### 🖥️ Ardy dal desktop — server MCP (FATTO, allineato al filone import, da collaudare)
 `ardy-mcp/` (Node/TypeScript, stdio) collega **Claude Desktop** all'outreach via `ardy-outreach-api.php`
-con Basic Auth. 11 tool: ricerca/dettaglio contatti, statistiche, regioni, template, scoperta canali,
-arricchimento, aggiornamento, stesura DM ed email, invio email singola.
+con Basic Auth. 13 tool: ricerca/dettaglio contatti, statistiche, regioni, template, scoperta canali,
+arricchimento (con `scope='google'`, senza agente), estrazione B&B dal portale, prova di copertura
+Google Places, aggiornamento, stesura DM ed email, invio email singola.
 
 Non richiede **nessuna modifica al server**: usa le API esistenti. Escluso da `deploy.sh` — gira sul
 desktop, non è contenuto web.
+
+> ✅ **Allineamento al filone import fatto**: `ardy_arricchisci_contatto` ora accetta `scope='google'`
+> (solo sito ufficiale + Places, mai l'agente — per gli import grossi), e due tool nuovi ricalcano
+> `portale_bb`/`places_prova` della dash: `ardy_estrai_portale_bb` (elenco B&B da
+> bed-and-breakfast.it, gratis) e `ardy_prova_copertura_places` (misura la copertura Places su un
+> campione prima di spendere sull'arricchimento). Nessuno dei due scrive sul database — il
+> salvataggio in blocco (`save_leads`) resta in dash di proposito, stessa logica di `send_campaign`.
+> Build (`npm run build`) e uno smoke test manuale via stdio (lista tool, chiamata con parametri
+> validi/non validi) passano; **non provato contro il server reale** — vedi punto 1 sotto.
 
 **Da fare per usarlo:** `cd ardy-mcp && npm install && npm run build`, poi incollare il blocco
 `mcpServers` in `claude_desktop_config.json` con `ARDY_API_URL`/`ARDY_USER`/`ARDY_PASS` (vedi
@@ -544,13 +554,20 @@ desktop, non è contenuto web.
 
 **Da verificare dal vivo:**
 1. Che il Basic Auth passi dal client MCP (in dash lo fa il browser; qui l'header lo mette il server).
+   Mai fatta una chiamata vera andata a buon fine (vedi `HANDOFF.md` §7) — è il primo test da fare.
 2. Una ricerca contatti reale, poi `ardy_trova_canali_social` su un contatto con sito noto.
 3. `ardy_invia_email` su un indirizzo **di prova**: deve arrivare con unsubscribe e codice etico, e il
    contatto deve passare a `inviato`.
+4. `ardy_arricchisci_contatto` con `scope='google'` su un contatto senza sito/telefono: deve proporre
+   dati (se Places lo trova) e **non** far partire l'agente — controllare il log restituito.
+5. `ardy_estrai_portale_bb` su una regione vera, poi `ardy_prova_copertura_places` passandogli
+   qualche risultato: deve tornare percentuali coerenti con quelle che dà lo script
+   `php ardy-places-prova.php` da CLI sullo stesso campione.
 
 **Scelte da rivedere se dà fastidio:**
-- `send_campaign` e le cancellazioni **non** sono esposte di proposito (blast radius). Se serve
-  davvero mandare campagne dal desktop, aggiungere prima un passo di anteprima esplicito.
+- `send_campaign`, le cancellazioni e `save_leads` **non** sono esposte di proposito (blast radius).
+  Se serve davvero mandare campagne o importare lead in blocco dal desktop, aggiungere prima un passo
+  di anteprima esplicito.
 - `get_contacts` non pagina lato server: l'MCP scarica tutto e pagina in locale. Con qualche migliaio
   di contatti va ripensato (LIMIT/OFFSET nell'API).
 
