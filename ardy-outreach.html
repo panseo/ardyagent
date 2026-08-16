@@ -381,6 +381,7 @@
             <div class="detail-sub" id="detSub">—</div>
           </div>
           <div class="detail-actions">
+            <button class="btn-sm" id="btnTornaFiltri" onclick="tornaAiFiltrati()" style="display:none;" title="Torna alla lista filtrata, con filtri e spunte com'erano">← AI FILTRATI</button>
             <select id="enrichModel" class="btn-sm" title="Modello AI dell'arricchimento: Haiku costa meno, Sonnet è più accurato sui contatti difficili" style="padding:4px 8px;">
               <option value="claude-haiku-4-5">AI: Haiku (economico)</option>
               <option value="claude-sonnet-4-6">AI: Sonnet (accurato)</option>
@@ -999,6 +1000,12 @@ function setMode(m) {
     const b = document.getElementById('btnMode'+x);
     if(b) b.classList.toggle('active', m===x.toLowerCase());
   });
+  // Il ritorno "← AI FILTRATI" ha senso solo nella scheda in cui si è atterrati:
+  // se si cambia vista dai bottoni in alto, il filo con i filtrati è rotto.
+  if (m!=='contatti' && m!=='filtri') {
+    const b = document.getElementById('btnTornaFiltri');
+    if (b) b.style.display = 'none';
+  }
   if (m==='campagna') filterCampContacts('');
   if (m==='template') renderTplList();
   if (m==='filtri')   renderFilterTool();
@@ -1160,6 +1167,10 @@ function renderList(q='') {
 // SELECT CONTACT
 // ============================================================
 function selectContact(id) {
+  // Il ritorno ai filtrati appartiene alla scheda aperta DA lì: aprendone
+  // un'altra dalla sidebar il filo è rotto, e il bottone se ne va.
+  const bTorna = document.getElementById('btnTornaFiltri');
+  if (bTorna) bTorna.style.display = 'none';
   currentContact = allContacts.find(c => c.id==id);
   if (!currentContact) return;
   if (mode!=='contatti') setMode('contatti');
@@ -1673,17 +1684,36 @@ function renderToolList() {
       // Qui serve il nome nudo del campo, non l'etichetta dei chip ("Senza email").
       const mancano = DATA_FIELDS.filter(([f]) => !has(c, f)).map(([f]) => f);
       const sotto = [c.regione, c.indirizzo].filter(Boolean).join(' · ');
+      // Non è un <label>: la spunta e l'apertura della scheda sono due gesti
+      // distinti. Casella = seleziono per le azioni di massa, nome = entro.
       return `
-        <label class="check-item">
-          <input type="checkbox" class="tool-check" value="${c.id}" ${toolSelected.has(c.id)?'checked':''} onchange="onToolCheck(${c.id}, this.checked)">
-          <div style="flex:1">
-            <div class="check-nome">${escHtml(c.nome||'—')}</div>
+        <div class="check-item">
+          <input type="checkbox" class="tool-check" value="${c.id}" ${toolSelected.has(c.id)?'checked':''}
+                 onchange="onToolCheck(${c.id}, this.checked)" title="Seleziona per le azioni di massa">
+          <div style="flex:1;cursor:pointer;" onclick="openContactFromTool(${c.id})" title="Apri la scheda">
+            <div class="check-nome">${escHtml(c.nome||'—')} <span style="color:var(--accent);">›</span></div>
             <div class="check-email">${escHtml(sotto || '—')}${mancano.length ? ' · manca: ' + escHtml(mancano.join(', ')) : ' · completo'}</div>
           </div>
-        </label>`;
+        </div>`;
     }).join('');
   }
   updateToolSelCount();
+}
+
+// Apre la scheda di un contatto partendo dalla lista dei filtrati.
+// Riusa openLead(): la sidebar è ristretta ai suoi filtri mentre il tool lavora
+// su tutti i contatti, quindi senza allargarla prima la scheda non si aprirebbe.
+// È lo stesso salto che fa la Pipeline, e lì funziona già.
+async function openContactFromTool(id) {
+  await openLead(id);                 // apre la scheda (selectContact nasconde il ritorno)
+  const b = document.getElementById('btnTornaFiltri');
+  if (b && currentContact && currentContact.id == id) b.style.display = 'inline-block';
+}
+
+// Ritorno alla vista Filtri: filtri e spunte sono in memoria, li ritrova com'erano.
+function tornaAiFiltrati() {
+  document.getElementById('btnTornaFiltri').style.display = 'none';
+  setMode('filtri');
 }
 
 function onToolCheck(id, checked) {
