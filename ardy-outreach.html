@@ -640,6 +640,21 @@
         </div>
 
         <div class="campaign-section">
+          <div class="campaign-label">CONTATTI FILTRATI</div>
+          <div class="select-all-row" style="justify-content:space-between;align-items:center;">
+            <button class="btn-select-all" onclick="toggleSelectAllTool()">Seleziona/deseleziona tutti</button>
+            <span style="font-size:11px;color:var(--text-dim);font-family:'DM Mono',monospace;">
+              Selezionati: <strong id="toolSelCount">0</strong>
+            </span>
+          </div>
+          <div class="contact-check-list" id="toolContactList" style="max-height:340px;"></div>
+          <p style="font-size:11px;color:var(--text-dim);font-family:'DM Mono',monospace;margin-top:8px;line-height:1.5;">
+            Se non spunti niente, le azioni qui sotto valgono per <strong>tutti</strong> i filtrati.
+            Spuntandone qualcuno, valgono <strong>solo su quelli</strong>.
+          </p>
+        </div>
+
+        <div class="campaign-section">
           <div class="campaign-label">AZIONI SUI FILTRATI</div>
           <div class="campaign-summary" style="margin-bottom:12px;">
             <p>In lista ora: <strong id="filtCount">0</strong> contatti</p>
@@ -1634,9 +1649,66 @@ async function renderFilterTool() {
   updateToolCount();
 }
 
+// Selezione manuale dentro il filtro. Vuota = "tutti i filtrati": è il
+// comportamento storico dei bottoni, quindi chi non spunta niente non cambia
+// abitudini. Tiene gli id anche di contatti usciti dal filtro corrente, così
+// cambiando un chip e tornando indietro non si perde quel che si era spuntato.
+let toolSelected = new Set();
+
+function toolTargetContacts() {
+  const filt = getFilteredContacts();
+  const sel  = filt.filter(c => toolSelected.has(c.id));
+  return sel.length ? sel : filt;
+}
+
+function renderToolList() {
+  const box = document.getElementById('toolContactList');
+  if (!box) return;
+  const filt = getFilteredContacts();
+  if (!filt.length) {
+    box.innerHTML = '<div style="padding:16px;color:var(--text-dim);font-size:13px;">Nessun contatto in questo filtro.</div>';
+  } else {
+    box.innerHTML = filt.map(c => {
+      // Mostra cosa MANCA: è il dato che serve per decidere chi arricchire.
+      // Qui serve il nome nudo del campo, non l'etichetta dei chip ("Senza email").
+      const mancano = DATA_FIELDS.filter(([f]) => !has(c, f)).map(([f]) => f);
+      const sotto = [c.regione, c.indirizzo].filter(Boolean).join(' · ');
+      return `
+        <label class="check-item">
+          <input type="checkbox" class="tool-check" value="${c.id}" ${toolSelected.has(c.id)?'checked':''} onchange="onToolCheck(${c.id}, this.checked)">
+          <div style="flex:1">
+            <div class="check-nome">${escHtml(c.nome||'—')}</div>
+            <div class="check-email">${escHtml(sotto || '—')}${mancano.length ? ' · manca: ' + escHtml(mancano.join(', ')) : ' · completo'}</div>
+          </div>
+        </label>`;
+    }).join('');
+  }
+  updateToolSelCount();
+}
+
+function onToolCheck(id, checked) {
+  checked ? toolSelected.add(id) : toolSelected.delete(id);
+  updateToolSelCount();
+}
+
+function updateToolSelCount() {
+  const filt = getFilteredContacts();
+  const n = filt.filter(c => toolSelected.has(c.id)).length;
+  const el = document.getElementById('toolSelCount');
+  if (el) el.textContent = n;
+}
+
+function toggleSelectAllTool() {
+  const filt = getFilteredContacts();
+  const tuttiSpuntati = filt.length > 0 && filt.every(c => toolSelected.has(c.id));
+  filt.forEach(c => tuttiSpuntati ? toolSelected.delete(c.id) : toolSelected.add(c.id));
+  renderToolList();
+}
+
 function updateToolCount() {
   const filt = getFilteredContacts();
   document.getElementById('filtCount').textContent = filt.length;
+  renderToolList();
   const parts = [];
   if (toolSearch)        parts.push('cerca: "' + toolSearch + '"');
   if (toolSectors.size)  parts.push('settori: ' + [...toolSectors].join(', '));
@@ -1655,9 +1727,9 @@ function toggleToolMissing(f) { toolMissing.has(f) ? toolMissing.delete(f) : too
 async function assignRegioneFiltered() {
   const regione = document.getElementById('toolAssignRegione').value.trim();
   if (!regione) { toast('Indica una regione/zona', 'err'); return; }
-  const list = getFilteredContacts();
+  const list = toolTargetContacts();
   if (!list.length) { toast('Nessun contatto nel filtro', 'err'); return; }
-  if (!confirm(`Assegnare la zona "${regione}" a ${list.length} contatti filtrati?`)) return;
+  if (!confirm(`Assegnare la zona "${regione}" a ${toolTargetLabel(list)}?`)) return;
   const ids = list.map(c => c.id);
   const r = await api('bulk_set_regione', { ids, regione });
   if (r.success) {
@@ -1669,27 +1741,37 @@ async function assignRegioneFiltered() {
   }
 }
 
+/** Etichetta per le conferme: chiarisce se si agisce sulla selezione o su tutto. */
+function toolTargetLabel(list) {
+  const filt = getFilteredContacts();
+  return list.length < filt.length
+    ? `${list.length} contatti SELEZIONATI`
+    : `${list.length} contatti filtrati`;
+}
+
 async function enrichFiltered(scope) {
   if (bulkRunning) { toast('Arricchimento già in corso', 'err'); return; }
-  const list = getFilteredContacts();
+  const list = toolTargetContacts();
   if (!list.length) { toast('Nessun contatto nel filtro', 'err'); return; }
   const soloGoogle = (scope === 'google');
+  const chi = toolTargetLabel(list);
   const msg = soloGoogle
-    ? `Arricchire ${list.length} contatti filtrati SOLO con Google?\n\nRiempie telefono, sito e indirizzo vuoti. NON chiama l'agente Claude, quindi non trova l'email.\nConsuma chiamate Google (entro il tetto giornaliero).`
-    : `Arricchire ${list.length} contatti filtrati?\nUsa Google Maps + web, riempie solo i campi vuoti (confidenza alta/media), senza sovrascrivere.\nConsuma chiamate Google (entro il tetto giornaliero) e una ricerca web a pagamento per contatto. Può richiedere qualche minuto.`;
+    ? `Arricchire ${chi} SOLO con Google?\n\nRiempie telefono, sito e indirizzo vuoti. NON chiama l'agente Claude, quindi non trova l'email.\nConsuma ${list.length} chiamate Google al massimo (entro il tetto giornaliero).`
+    : `Arricchire ${chi}?\nUsa Google Maps + web, riempie solo i campi vuoti (confidenza alta/media), senza sovrascrivere.\nConsuma chiamate Google (entro il tetto giornaliero) e una ricerca web A PAGAMENTO per contatto. Può richiedere qualche minuto.`;
   if (!confirm(msg)) return;
   runBulkEnrich(list, soloGoogle ? 'google' : 'tutto');
 }
 
 async function deleteFiltered() {
   if (!toolMissing.size) { toast('Seleziona almeno un "dato mancante" per eliminare', 'err'); return; }
-  const list = getFilteredContacts();
+  const list = toolTargetContacts();
   if (!list.length) { toast('Nessun contatto nel filtro', 'err'); return; }
-  if (!confirm(`ELIMINARE ${list.length} contatti attualmente filtrati?\nOperazione NON reversibile. Usala per togliere gli introvabili dopo l'arricchimento.`)) return;
+  if (!confirm(`ELIMINARE ${toolTargetLabel(list)}?\nOperazione NON reversibile. Usala per togliere gli introvabili dopo l'arricchimento.`)) return;
   if (!confirm(`Conferma definitiva: cancello ${list.length} contatti?`)) return;
   const ids = list.map(c => c.id);
   const r = await api('delete_contacts', { ids });
   if (r.success) {
+    ids.forEach(id => toolSelected.delete(id)); // non tenere spuntati dei fantasmi
     if (currentContact && ids.includes(currentContact.id)) {
       currentContact = null;
       document.getElementById('detailPanel').style.display = 'none';
