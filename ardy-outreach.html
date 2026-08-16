@@ -636,8 +636,14 @@
         </div>
 
         <div class="campaign-section">
-          <div class="campaign-label">DATI MANCANTI (multi, in AND)</div>
-          <div class="filter-row" id="toolMissingButtons" style="gap:8px;"></div>
+          <div class="campaign-label">DATI MANCANTI</div>
+          <div class="filter-row" id="toolMissingButtons" style="gap:8px;margin-bottom:8px;"></div>
+          <div class="filter-row" id="toolMissingMode" style="gap:8px;"></div>
+          <p style="font-size:11px;color:var(--text-dim);font-family:'DM Mono',monospace;margin-top:8px;line-height:1.5;">
+            Spuntandone più di uno decidi tu come sommarli: <strong>ne manca almeno uno</strong> allarga
+            (chi ha ancora un buco qualsiasi), <strong>mancano tutti insieme</strong> restringe
+            (solo chi non ha nessuno dei dati).
+          </p>
         </div>
 
         <div class="campaign-section">
@@ -1628,25 +1634,59 @@ let toolRegioni = new Set();
 let toolMissing = new Set();
 let toolSearch = '';
 
+// 'and' = devono mancare TUTTI i campi spuntati (storico); 'or' = ne basta uno.
+// Dopo un arricchimento serve quasi sempre 'or': "chi ha ancora un buco?".
+let toolMissingMode = 'and';
+
+/**
+ * Un contatto passa i filtri? I gruppi si possono sovrascrivere uno per uno:
+ * serve per contare quanti finirebbero in un chip ignorando il gruppo del chip
+ * stesso — altrimenti i numeri raccontano una storia diversa dalla lista.
+ */
+function toolMatch(c, over = {}) {
+  const sectors = over.sectors !== undefined ? over.sectors : toolSectors;
+  const regioni = over.regioni !== undefined ? over.regioni : toolRegioni;
+  const missing = over.missing !== undefined ? over.missing : toolMissing;
+  const search  = over.search  !== undefined ? over.search  : toolSearch;
+
+  if (sectors.size && !sectors.has(c.categoria)) return false;
+  if (regioni.size && !regioni.has(c.regione||'')) return false;
+  if (missing.size) {
+    const mancanti = [...missing].filter(f => !has(c, f)).length;
+    const ok = (over.mode || toolMissingMode) === 'or' ? mancanti > 0 : mancanti === missing.size;
+    if (!ok) return false;
+  }
+  const q = (search||'').toLowerCase();
+  if (q && !(c.nome||'').toLowerCase().includes(q) && !(c.indirizzo||'').toLowerCase().includes(q)) return false;
+  return true;
+}
+
 // Contatti che soddisfano i filtri correnti del tool.
 function getFilteredContacts() {
-  const q = toolSearch.toLowerCase();
-  return (toolContacts||[]).filter(c => {
-    if (toolSectors.size && !toolSectors.has(c.categoria)) return false;
-    if (toolRegioni.size && !toolRegioni.has(c.regione||'')) return false;
-    for (const f of toolMissing) if (has(c,f)) return false; // il campo DEVE mancare
-    if (q && !(c.nome||'').toLowerCase().includes(q) && !(c.indirizzo||'').toLowerCase().includes(q)) return false;
-    return true;
-  });
+  return (toolContacts||[]).filter(c => toolMatch(c));
 }
+
+/** Quanti contatti stanno in questo chip, dentro gli ALTRI filtri attivi. */
+function contaChip(gruppo, valore) {
+  const vuoto = new Set();
+  return (toolContacts||[]).filter(c => {
+    if (gruppo === 'settore')  return toolMatch(c, { sectors: vuoto }) && c.categoria === valore;
+    if (gruppo === 'regione')  return toolMatch(c, { regioni: vuoto }) && (c.regione||'') === valore;
+    return toolMatch(c, { missing: vuoto }) && !has(c, valore);   // dato mancante
+  }).length;
+}
+
+function setToolMissingMode(m) { toolMissingMode = m; renderFilterTool(); }
 
 async function renderFilterTool() {
   // Carica TUTTI i contatti (il tool filtra da sé, indipendente dalla sidebar).
   try { toolContacts = await api('get_contacts', {}); } catch(e) { toolContacts = []; }
   if (!Array.isArray(toolContacts)) toolContacts = [];
 
+  // I numeri sui chip sono SEMPRE relativi agli altri filtri attivi: un chip che
+  // dice 40 deve dare 40 righe, altrimenti il pannello si contraddice da solo.
   document.getElementById('toolSectorButtons').innerHTML = SECTORS.map(([k,lbl]) => {
-    const n = toolContacts.filter(c => c.categoria===k).length;
+    const n = contaChip('settore', k);
     return `<button class="chip ${toolSectors.has(k)?'active':''}" onclick="toggleToolSector('${k}')">${lbl} (${n})</button>`;
   }).join('');
 
@@ -1654,14 +1694,18 @@ async function renderFilterTool() {
   const section = document.getElementById('toolRegioneSection');
   section.style.display = regioniPresenti.length ? 'block' : 'none';
   document.getElementById('toolRegioneButtons').innerHTML = regioniPresenti.map(r => {
-    const n = toolContacts.filter(c => (c.regione||'')===r).length;
+    const n = contaChip('regione', r);
     return `<button class="chip ${toolRegioni.has(r)?'active':''}" onclick="toggleToolRegione('${escHtml(r).replace(/'/g,"\\'")}')">${escHtml(r)} (${n})</button>`;
   }).join('');
 
   document.getElementById('toolMissingButtons').innerHTML = DATA_FIELDS.map(([f,lbl]) => {
-    const n = toolContacts.filter(c => !has(c,f)).length;
+    const n = contaChip('mancante', f);
     return `<button class="chip ${toolMissing.has(f)?'active':''}" onclick="toggleToolMissing('${f}')">${lbl} (${n})</button>`;
   }).join('');
+  document.getElementById('toolMissingMode').innerHTML = [
+    ['or',  'ne manca almeno uno'],
+    ['and', 'mancano tutti insieme'],
+  ].map(([m,lbl]) => `<button class="chip ${toolMissingMode===m?'active':''}" onclick="setToolMissingMode('${m}')">${lbl}</button>`).join('');
   updateToolCount();
 }
 
@@ -1748,8 +1792,12 @@ function updateToolCount() {
   if (toolSearch)        parts.push('cerca: "' + toolSearch + '"');
   if (toolSectors.size)  parts.push('settori: ' + [...toolSectors].join(', '));
   if (toolRegioni.size)  parts.push('zone: ' + [...toolRegioni].join(', '));
-  if (toolMissing.size)  parts.push('mancano: ' + [...toolMissing].join(' + '));
-  document.getElementById('filtDesc').textContent = parts.length ? parts.join(' · ') : 'Nessun filtro: tutti i contatti.';
+  if (toolMissing.size)  parts.push('manca ' + [...toolMissing].join(toolMissingMode==='or' ? ' oppure ' : ' e '));
+  const tot = (toolContacts||[]).length;
+  const testa = `${filt.length} su ${tot} contatti`;
+  document.getElementById('filtDesc').textContent = parts.length
+    ? testa + ' · ' + parts.join(' · ') + ' (i filtri si sommano)'
+    : testa + ' · nessun filtro attivo';
 }
 
 function setToolSearch(v) { toolSearch = v; updateToolCount(); }
