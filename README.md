@@ -652,6 +652,12 @@ stesso login). API: `ardy-outreach-api.php` (routing per `action`); tabelle `out
 - **✨ Arricchimento** (`enrich_contact`): dato un contatto incompleto (spesso solo nome + indirizzo),
   l'agente `ardy-enrich.php` prova a completare email/telefono/sito **e i canali social**.
   `ardy-email-finder.php` (da CLI) visita i siti dei contatti senza email e ne cerca una.
+- **📞 Prova di copertura Places** (`ardy-places-prova.php`, da CLI): prima di pagare l'arricchimento
+  su un'intera regione, misura su un campione **quanti di quei B&B Google ha davvero in scheda col
+  telefono**. Pesca il campione a passo regolare su più pagine di portale (la pagina 1 è piena di
+  strutture promosse e falserebbe la stima), fa **una chiamata Places per struttura** e stampa
+  copertura, chiamate usate e proiezione di spesa. Campione limitato a 50 e **non scrive sul DB**:
+  è solo una misura. `php ardy-places-prova.php puglia 20`
 - **📱 Canali social** (colonne `instagram`/`facebook`/`linkedin` su `outreach_contatti`): servono a
   raggiungere chi **non pubblica un'email** — molti antiquari e B&B stanno solo su Instagram. Vedi sotto.
 - **📝 Template email** generati/riscritti con AI (`genera_template`), salvati in `outreach_template`
