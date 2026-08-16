@@ -125,6 +125,12 @@ $agentePuoPartire = $soloGoogle ? false : ($soloSocial ? !empty($ancoraMancanti)
 - scope `google` → mai. Senza questo freno l'agente partirebbe comunque su ogni struttura
   importata, perché `referente` resta vuoto per tutte e da solo autorizza la chiamata.
 
+**Il passo 1c di `ardy-enrich.php`.** Quando Places scopre il sito di un contatto che non ne
+aveva, 1c lo visita **subito, nello stesso giro**. Sembra ridondante col passo 1 e non lo è: sui
+contatti appena importati il passo 1 gira a vuoto (il sito ancora non c'è), e senza 1c l'email
+finirebbe a carico dell'agente a pagamento. È il motivo per cui il giro `google` porta a casa
+email e social **senza spendere**. Toglierlo sposterebbe quel costo sull'agente, in silenzio.
+
 **L'arricchimento propone, non scrive.** Ritorna `{valore, fonte, confidenza}` e la conferma è
 campo per campo in UI. Un profilo social sbagliato significa scrivere a un estraneo: meglio il
 vuoto di un dato indovinato. (L'arricchimento **in blocco** invece salva, ed è dichiarato:
