@@ -544,6 +544,41 @@
           <button class="btn-send" id="btnRunSearch" onclick="runSearch()" style="margin-top:12px;">🔎 CERCA</button>
         </div>
 
+        <div class="campaign-section">
+          <div class="campaign-label">OPPURE: TUTTI I B&amp;B DI UNA REGIONE (bed-and-breakfast.it)</div>
+          <p style="color:var(--text-dim);font-size:12px;font-family:'DM Mono',monospace;margin-bottom:10px;line-height:1.6;">
+            Scorre l'elenco pubblico del portale (~24 strutture a pagina) e le porta qui sotto per la revisione.<br>
+            Il portale non pubblica telefono ed email: si completano dopo con ✨ ARRICCHISCI.
+          </p>
+          <div style="display:grid;grid-template-columns:1fr 120px;gap:10px;">
+            <select class="form-select" id="portaleRegione">
+              <option value="">Scegli la regione...</option>
+              <option value="abruzzo">Abruzzo</option>
+              <option value="basilicata">Basilicata</option>
+              <option value="calabria">Calabria</option>
+              <option value="campania">Campania</option>
+              <option value="emilia-romagna">Emilia-Romagna</option>
+              <option value="friuli-venezia-giulia">Friuli-Venezia Giulia</option>
+              <option value="lazio">Lazio</option>
+              <option value="liguria">Liguria</option>
+              <option value="lombardia">Lombardia</option>
+              <option value="marche">Marche</option>
+              <option value="molise">Molise</option>
+              <option value="piemonte">Piemonte</option>
+              <option value="puglia">Puglia</option>
+              <option value="sardegna">Sardegna</option>
+              <option value="sicilia">Sicilia</option>
+              <option value="toscana">Toscana</option>
+              <option value="trentino-alto-adige">Trentino-Alto Adige</option>
+              <option value="umbria">Umbria</option>
+              <option value="valle-d-aosta">Valle d'Aosta</option>
+              <option value="veneto">Veneto</option>
+            </select>
+            <input class="form-input" id="portalePagine" type="number" min="1" max="60" value="40" title="Pagine massime da scorrere (~24 strutture ciascuna)">
+          </div>
+          <button class="btn-send" id="btnPortale" onclick="importPortale()" style="margin-top:12px;">📥 ESTRAI DAL PORTALE</button>
+        </div>
+
         <div class="campaign-section" id="srcResultsSection" style="display:none">
           <div class="campaign-label" id="srcResultsLabel">RISULTATI</div>
           <div class="select-all-row">
@@ -2012,6 +2047,8 @@ async function saveNewContact() {
 // RICERCA AZIENDE
 // ============================================================
 let searchResults = [];
+let searchFonte   = 'osm';   // fonte dell'elenco a schermo: decide la nota salvata
+let portaleRunning = false;  // true mentre scorriamo le pagine del portale
 
 async function runSearch() {
   const categoria = document.getElementById('srcCategoria').value;
@@ -2028,7 +2065,54 @@ async function runSearch() {
   if (!r.success) { toast('Errore: ' + (r.error||'sconosciuto'), 'err'); return; }
   if (r.avviso) toast(r.avviso, 'err');
   searchResults = r.results || [];
+  searchFonte   = r.fonte || fonte;
   renderSearchResults(r.zona + (r.fonte==='google' ? ' · Google Maps' : ''));
+}
+
+// Estrazione dal portale bed-and-breakfast.it: una pagina per chiamata, in
+// sequenza e con una pausa, per non martellare il sito. I risultati finiscono
+// nella stessa lista a spunta della ricerca zona: si rivedono e si salvano
+// con lo stesso bottone. Ripremendo il bottone durante lo scorrimento si ferma.
+async function importPortale() {
+  const btn  = document.getElementById('btnPortale');
+  if (portaleRunning) { portaleRunning = false; btn.textContent = 'Interrompo...'; return; }
+
+  const slug = document.getElementById('portaleRegione').value;
+  if (!slug) { toast('Scegli una regione', 'err'); return; }
+  const maxPag = Math.max(1, Math.min(60, parseInt(document.getElementById('portalePagine').value) || 40));
+
+  portaleRunning = true;
+  searchResults  = [];
+  searchFonte    = 'portale';
+  let regioneNome = '', errore = '';
+
+  for (let p = 1; p <= maxPag && portaleRunning; p++) {
+    btn.textContent = `Pagina ${p} · ${searchResults.length} strutture — clicca per fermare`;
+    let r;
+    try { r = await api('portale_bb', { regione_slug: slug, pagina: p }); }
+    catch(e) { r = { success:false, error:'rete' }; }
+    if (!r.success) { errore = r.error || 'sconosciuto'; break; }
+    regioneNome = r.regione || regioneNome;
+    if (r.fine) break;                       // pagina oltre l'ultima: elenco finito
+    searchResults = searchResults.concat(r.results || []);
+    renderSearchResults(`${regioneNome} · bed-and-breakfast.it`);
+    if (p < maxPag) await new Promise(res => setTimeout(res, 600));
+  }
+
+  portaleRunning = false;
+  btn.textContent = '📥 ESTRAI DAL PORTALE';
+  if (errore) { toast('Errore: ' + errore, 'err'); }
+
+  // Queste strutture sono B&B: prepara categoria e tag regione per il salvataggio.
+  document.getElementById('srcCategoria').value = 'bb';
+  const regInput = document.getElementById('srcRegione');
+  if (regioneNome && !regInput.value.trim()) { regInput.value = regioneNome; }
+
+  renderSearchResults(`${regioneNome} · bed-and-breakfast.it`);
+  if (!errore) {
+    const nuovi = searchResults.filter(x => !x.exists).length;
+    toast(`✓ ${searchResults.length} strutture · ${nuovi} nuove`, 'ok');
+  }
 }
 
 function renderSearchResults(zona) {
@@ -2037,6 +2121,7 @@ function renderSearchResults(zona) {
   const list = document.getElementById('srcResultsList');
   const nuovi = searchResults.filter(x => !x.exists).length;
   lab.textContent = `RISULTATI · ${searchResults.length} trovati (${nuovi} nuovi) · ${zona||''}`;
+  lab.dataset.zona = zona || '';
   sec.style.display = 'block';
   document.getElementById('srcSummary').style.display = searchResults.length ? 'block' : 'none';
   document.getElementById('btnSaveLeads').style.display = searchResults.length ? 'block' : 'none';
@@ -2046,7 +2131,7 @@ function renderSearchResults(zona) {
       <input type="checkbox" class="lead-check" data-i="${i}" ${c.exists?'disabled':''} onchange="updateLeadCount()">
       <div style="flex:1">
         <div class="check-nome">${escHtml(c.nome)} ${c.exists?'<span style="color:var(--orange);font-size:11px;">(già presente)</span>':''}</div>
-        <div class="check-email">${escHtml([c.indirizzo, c.telefono, c.sito].filter(Boolean).join(' · ')||'—')}</div>
+        <div class="check-email">${escHtml([c.indirizzo, c.tipologia, c.voto ? `★ ${c.voto}/10` : '', c.telefono, c.sito].filter(Boolean).join(' · ')||'—')}</div>
       </div>
     </label>`).join('');
   updateLeadCount();
@@ -2071,14 +2156,20 @@ async function saveLeads() {
   const regione = document.getElementById('srcRegione').value.trim();
   const btn = document.getElementById('btnSaveLeads');
   btn.disabled = true; btn.textContent = 'Salvataggio...';
-  const fonte = document.getElementById('srcFonte').value;
-  const r = await api('save_leads', { leads, categoria, fonte, regione });
+  const r = await api('save_leads', { leads, categoria, fonte: searchFonte, regione });
   btn.disabled = false; btn.textContent = '💾 SALVA SELEZIONATI';
   if (r.success) {
     toast(`✓ Salvati: ${r.saved} | Saltati: ${r.skipped}`, 'ok');
-    // Ri-cerca per aggiornare lo stato "già presente"
     await Promise.all([loadContacts(), loadStats(), loadRegioni()]);
-    await runSearch();
+    // Aggiorna lo stato "già presente". Dal portale non ri-scorriamo le pagine:
+    // marchiamo in locale quello che abbiamo appena salvato.
+    if (searchFonte === 'portale') {
+      const salvati = new Set(leads.map(l => (l.nome||'').toLowerCase()));
+      searchResults.forEach(x => { if (salvati.has((x.nome||'').toLowerCase())) x.exists = true; });
+      renderSearchResults(document.getElementById('srcResultsLabel').dataset.zona || '');
+    } else {
+      await runSearch();
+    }
   } else {
     toast('Errore: ' + (r.error||'sconosciuto'), 'err');
   }

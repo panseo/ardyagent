@@ -639,6 +639,16 @@ stesso login). API: `ardy-outreach-api.php` (routing per `action`); tabelle `out
 - **🔎 Ricerca contatti** per verticale — target predefiniti: **antiquari, mercatini, interior designer,
   B&B**. Fonte **Google Places** (`ardy-places.php`) con fallback OpenStreetMap; i risultati si salvano
   come contatti (`save_leads`).
+- **📥 Estrazione dal portale B&B** (`portale_bb`, `ardy-portale-bb.php`): scarica **tutte le strutture
+  ricettive di una regione** da `bed-and-breakfast.it` (es. Puglia: **715**). Legge il **JSON-LD
+  schema.org** che il portale pubblica in ogni pagina di elenco — dato strutturato, non scraping di
+  HTML — e ne ricava nome, indirizzo completo, comune, provincia, CAP, coordinate, tipologia
+  (B&B, affittacamere, agriturismo…), voto ospiti e link alla scheda. **Telefono ed email non ci sono**:
+  il portale li serve da endpoint `/ajax/` che il suo `robots.txt` vieta ai bot, quindi non li tocchiamo
+  — si completano dopo con ✨ ARRICCHISCI. Una pagina per chiamata (~24 strutture) con pausa fra l'una
+  e l'altra, User-Agent `ArdyBot` dichiarato: la dash cicla e mostra l'avanzamento, si può fermare a
+  metà. I risultati passano dalla **stessa revisione a spunta** della ricerca zona e si salvano con
+  `save_leads` (`fonte: 'portale'`), con dedup per nome.
 - **✨ Arricchimento** (`enrich_contact`): dato un contatto incompleto (spesso solo nome + indirizzo),
   l'agente `ardy-enrich.php` prova a completare email/telefono/sito **e i canali social**.
   `ardy-email-finder.php` (da CLI) visita i siti dei contatti senza email e ne cerca una.

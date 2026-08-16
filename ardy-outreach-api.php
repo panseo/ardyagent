@@ -9,6 +9,7 @@ require_once __DIR__ . '/ardy-auth.php';
 require_once __DIR__ . '/ardy-email.php';
 require_once __DIR__ . '/ardy-enrich.php';
 require_once __DIR__ . '/ardy-places.php';
+require_once __DIR__ . '/ardy-portale-bb.php';
 
 header('Access-Control-Allow-Origin: https://ardyagent.ardy-lab.it');
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
@@ -537,13 +538,58 @@ try {
             break;
 
         // --------------------------------------------------------
+        // ELENCO STRUTTURE DAL PORTALE bed-and-breakfast.it
+        // Una pagina per chiamata (~24 strutture): la dash cicla le pagine con
+        // una pausa, così non stressiamo il portale né i timeout di PHP.
+        // I risultati NON vengono scritti: passano dalla stessa revisione a
+        // spunta della ricerca zona, poi save_leads con fonte='portale'.
+        // --------------------------------------------------------
+        case 'portale_bb':
+            $slug   = strtolower(trim($input['regione_slug'] ?? ''));
+            $pagina = max(1, (int)($input['pagina'] ?? 1));
+            $regioni = ardyPortaleBbRegioni();
+            if (!isset($regioni[$slug])) {
+                echo json_encode(['success' => false, 'error' => 'Scegli una regione']); break;
+            }
+
+            $r = ardyPortaleBbPagina($slug, $pagina);
+            if (!$r['ok']) {
+                echo json_encode(['success' => false, 'error' => $r['error'] ?? 'Estrazione non riuscita']); break;
+            }
+            $results = $r['results'];
+
+            // Marca i contatti già presenti (per nome, come la ricerca zona:
+            // dal portale non arrivano siti web da confrontare).
+            $existing = $db->query("SELECT LOWER(nome) AS n FROM outreach_contatti")->fetchAll();
+            $exNomi   = array_column($existing, 'n');
+            foreach ($results as &$rr) {
+                $rr['exists'] = in_array(strtolower($rr['nome']), $exNomi, true);
+            }
+            unset($rr);
+
+            echo json_encode([
+                'success' => true,
+                'regione' => $regioni[$slug],
+                'pagina'  => $pagina,
+                'fine'    => count($results) === 0,   // pagina oltre l'ultima
+                'count'   => count($results),
+                'results' => $results,
+            ]);
+            break;
+
+        // --------------------------------------------------------
         // SALVA LEAD SELEZIONATI DALLA RICERCA (bulk)
         // --------------------------------------------------------
         case 'save_leads':
             $leads   = $input['leads'] ?? [];
             $cat     = $input['categoria'] ?? 'antiquari';
             $regione = trim($input['regione'] ?? '');
-            $note    = (($input['fonte'] ?? 'osm') === 'google') ? 'Trovato via Google Maps' : 'Trovato via ricerca OSM';
+            $fonte   = $input['fonte'] ?? 'osm';
+            $note    = match ($fonte) {
+                'google'  => 'Trovato via Google Maps',
+                'portale' => 'Trovato su bed-and-breakfast.it',
+                default   => 'Trovato via ricerca OSM',
+            };
             if (empty($leads) || !is_array($leads)) { echo json_encode(['success' => false, 'error' => 'Nessun lead da salvare']); break; }
 
             // Set per dedup (nome + sito già in DB)
@@ -566,7 +612,7 @@ try {
                     ':sito'  => ($l['sito'] ?? '') ?: null,
                     ':ind'   => ($l['indirizzo'] ?? '') ?: null,
                     ':reg'   => $regione ?: null,
-                    ':note'  => $note,
+                    ':note'  => ardyNotaLead($note, $l),
                 ]);
                 $exNomi[] = strtolower($nome);
                 if ($sitoL) { $exSiti[] = $sitoL; }
