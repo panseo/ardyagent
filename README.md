@@ -749,8 +749,10 @@ veri via `ardy-outreach-api.php` (Basic Auth su HTTPS). Node/TypeScript, traspor
 locale — **non è contenuto web**, e `deploy.sh` lo esclude apposta (con `node_modules` sarebbero
 migliaia di file nel document root).
 
-11 tool: ricerca e dettaglio contatti, statistiche, regioni, template; scoperta canali social e
-arricchimento (che **propongono** e non scrivono); aggiornamento contatto; stesura di DM e email;
+13 tool: ricerca e dettaglio contatti, statistiche, regioni, template; scoperta canali social e
+arricchimento — anche con `scope='google'`, senza mai far partire l'agente, per gli import grossi —
+(che **propongono** e non scrivono); estrazione B&B da bed-and-breakfast.it e prova di copertura
+Google Places (allineati al filone import della dash); aggiornamento contatto; stesura di DM e email;
 invio email singola.
 
 **Confini scelti**, non limiti tecnici:
