@@ -43,24 +43,33 @@ Scritto in italiano piano, non in gergo: va bene leggerlo fra sei mesi o girarlo
   senza risposta.
 - **Il modulo di ricorso non si apre**: `claude.ai/restricted` reindirizza altrove invece di
   mostrare il form (verificato anche da qui: fetch diretto della pagina risponde 403).
-- **Precisazione importante, emersa dopo aver mandato la mail al supporto** (in due passaggi,
-  corretta qui):
-  1. Il login Google `a.panse@gmail.com` con cui si naviga claude.ai da browser **funziona
-     regolarmente, senza alcun avviso**. Il blocco compare **solo** autenticando da terminale,
-     sul computer Debian (`bebo@bebo`), con Claude Code.
-  2. **È lo stesso identico login Google**, non un account diverso. Quello che cambia è
-     **l'organizzazione Anthropic** a cui quel login accede: sullo stesso Google ne esistono
-     almeno due — quella "di default" usata su claude.ai da browser (senza problemi) e quella
-     usata da Claude Code per Ardy Lab (bloccata), che ha `a.panseo@protonmail.com` registrata
-     come **email di recupero**, non come credenziale — con quell'indirizzo non ci si logga.
-  - Quindi: **non è un ban dell'account/persona**, è un problema scoped a **una singola
-    organizzazione** dietro lo stesso login. La mail già inviata al supporto parlava di
-    "the Claude account a.panseo@protonmail.com" come se fosse l'identità di accesso: è
-    impreciso su entrambi i punti sopra. Se si scrive un follow-up, va impostato così: stesso
-    Google login di sempre, stesso account "principale" claude.ai regolare, ma
-    **l'organizzazione secondaria usata per Ardy Lab (email di recupero
-    a.panseo@protonmail.com) risulta disabilitata/in cancellazione** — probabile problema di
-    org-selection lato Anthropic più che una sospensione per policy.
+- **Precisazione importante, emersa in più passaggi dopo aver mandato la mail al supporto** —
+  la mail conteneva un quadro impreciso, corretto qui. Sono coinvolte **tre organizzazioni
+  Anthropic**, non una:
+
+  | Organizzazione | Come si accede | Stato al 17/08 sera | A cosa serve |
+  |---|---|---|---|
+  | "Principale" | login Google `a.panse@gmail.com`, da browser su claude.ai | ✅ regolare, nessun avviso | uso normale di claude.ai |
+  | **Ardy Lab / Claude Code** | stesso login Google `a.panse@gmail.com`, ma da **Claude Code CLI** sul computer Debian | 🔴 **bloccata** ("*scheduled for deletion*") | far girare l'MCP e i tool `ardy_*` dal desktop |
+  | Console (API billing) | login/carta con indirizzo `a.panseo`, separata dalle altre due | ✅ regolare, nessun avviso (verificato il 17/08) | genera/paga `ARDY_API_KEY`, la chiave usata **in produzione** sul server da tutte le funzioni AI di Ardy Lab (§2) |
+
+  Punti chiave:
+  - **È lo stesso login Google** (`a.panse@gmail.com`) sia per l'organizzazione "principale"
+    (che funziona) sia per quella bloccata: non sono due account diversi, è lo stesso login che
+    risolve verso organizzazioni diverse a seconda del contesto (browser vs Claude Code CLI).
+  - `a.panseo@protonmail.com` è solo l'**email di recupero** registrata sull'organizzazione
+    Ardy Lab/Claude Code — non è mai stata una credenziale di login.
+  - **La Console è una terza organizzazione**, separata anche da quella bloccata, e **funziona
+    regolarmente**: quindi `ARDY_API_KEY` e tutta la produzione (§2) **non sono a rischio** da
+    questo blocco. L'unico impatto reale è non poter usare Claude Code (e quindi l'MCP) dal
+    computer di casa.
+  - La mail già inviata al supporto parlava di "the Claude account a.panseo@protonmail.com"
+    come se fosse l'identità di accesso, e lasciava intendere che la produzione fosse a rischio:
+    entrambe le cose sono imprecise. Un eventuale follow-up va impostato così: stesso Google
+    login di sempre, organizzazione "principale" e Console regolari, **solo l'organizzazione
+    Ardy Lab/Claude Code (email di recupero a.panseo@protonmail.com) risulta disabilitata** —
+    sembra un problema di org-selection lato Anthropic più che una sospensione per policy,
+    visto che le altre due organizzazioni sullo stesso profilo non hanno alcun avviso.
 
 ### Cosa fare, in ordine
 
@@ -75,8 +84,9 @@ Scritto in italiano piano, non in gergo: va bene leggerlo fra sei mesi o girarlo
    può cambiare, l'articolo di supporto di solito resta aggiornato.
 4. Se il form si apre: compilarlo restando loggati con `a.panse@gmail.com` (è l'unico login che
    esiste), specificando che l'organizzazione colpita è quella con email di recupero
-   `a.panseo@protonmail.com` e che su di essa gira una chiave API in produzione per un
-   gestionale attivo (vedi §2) — è l'argomento più forte per dare priorità al ricorso.
+   `a.panseo@protonmail.com`, usata per collegare Claude Code al gestionale Ardy Lab dal
+   computer di casa (non genera direttamente `ARDY_API_KEY`, quella è su una Console separata
+   e non risulta toccata — vedi tabella sopra).
 5. **Non ha aiutato** (già escluso): variabile `ANTHROPIC_API_KEY` spuria sul computer di casa
    (verificata assente), `/logout` + nuovo login, `claude auth login`, `claude doctor`. Nessuno
    di questi comandi tocca lo stato dell'organizzazione: il problema è sul lato Anthropic, non
@@ -89,9 +99,14 @@ sospensione diventi definitiva. Non aspettare: seguire i punti sopra appena poss
 
 ## 2. Cosa si ferma se la chiave API smette di funzionare
 
+> ✅ **Al 17/08 sera non sta succedendo**: `ARDY_API_KEY` viene dalla Console Anthropic, che è
+> un'organizzazione separata da quella bloccata (vedi tabella in §1) e risulta regolare. Questa
+> sezione resta come riferimento — cosa succederebbe se in futuro la Console avesse lo stesso
+> problema, o se andasse rigenerata la chiave per un altro motivo — non come descrizione dello
+> stato attuale.
+
 Ardy usa una chiave Anthropic (`ARDY_API_KEY`, in `ardy-config.php`, non versionato) per
-**tutte** le funzioni AI. Se la chiave viene disattivata insieme all'organizzazione, **18
-file** smettono di funzionare.
+**tutte** le funzioni AI. Se la chiave smettesse di funzionare, **18 file** si fermerebbero.
 
 **Si ferma:**
 
@@ -133,7 +148,9 @@ toccato dal deploy**.
   Anthropic per esistere — dipende però da un account **funzionante** per essere collaudato
   dal vivo, il che è esattamente ciò che il blocco impedisce.
 - **Il database e i file** stanno sul server OVH/cPanel, non c'entrano niente con Anthropic.
-- **La dashboard funziona**: outreach, import B&B, prova di copertura Places sono già online.
+- **La dashboard funziona**, AI compresa: outreach, import B&B, prova di copertura Places sono
+  già online, e `ARDY_API_KEY` gira su una Console Anthropic **separata** dall'organizzazione
+  bloccata — verificata regolare il 17/08 (§1).
 - **Il server MCP** sul computer `bebo` è stato ricompilato oggi con i tool nuovi (13 in
   totale) e la build è pulita. Aspetta lì: quando l'account torna a posto, riprende a
   funzionare senza rifare nulla — **ma non è mai stata completata una chiamata vera**, né col
