@@ -846,15 +846,10 @@ function brevoSend(string $toEmail, string $toName, string $oggetto, string $cor
     $unsubToken  = substr(hash_hmac('sha256', strtolower(trim($toEmail)), $unsubSecret), 0, 20);
     $unsubLink   = 'https://ardy-lab.it/ardy-unsubscribe.php?email=' . urlencode($toEmail) . '&t=' . $unsubToken;
     $corpoHtml  = nl2br(htmlspecialchars($corpo));
-    // CTA WhatsApp: invita a risticontattare Sole. È il destinatario a iniziare
-    // la conversazione (wa.me verso il numero di Sole, con testo precompilato) →
-    // compliant con WhatsApp (niente outbound a freddo) e con la privacy.
-    $waNum  = function_exists('ardy_email_wa_number') ? ardy_email_wa_number() : '393793756437';
-    $waText = rawurlencode('Salve, ho ricevuto la vostra email di Ardy Lab e vorrei saperne di più.');
     $waCta  = '
   <div style="margin-top:30px;text-align:center;">
-    <a href="https://wa.me/' . $waNum . '?text=' . $waText . '" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;font-family:sans-serif;font-size:15px;font-weight:600;padding:13px 28px;border-radius:8px;">💬 Scrivici su WhatsApp</a>
-    <p style="font-family:sans-serif;font-size:12px;color:#999;margin:10px 0 0;">Rispondi a questa email o scrivici su WhatsApp, come preferisci.</p>
+    <a href="https://ardy-lab.it/galleria-diffusa/" style="display:inline-block;background:#c8a96e;color:#ffffff;text-decoration:none;font-family:sans-serif;font-size:15px;font-weight:600;padding:13px 28px;border-radius:8px;">🖼️ Scopri la Galleria Diffusa</a>
+    <p style="font-family:sans-serif;font-size:12px;color:#999;margin:10px 0 0;">Oppure rispondi direttamente a questa email.</p>
   </div>';
     $htmlEmail  = '<!DOCTYPE html><html><body style="font-family:Georgia,serif;background:#f5f5f5;margin:0;padding:20px;">
 <div style="max-width:600px;margin:0 auto;background:#fff;padding:40px;border-radius:4px;">
