@@ -1,10 +1,17 @@
 # Emergenza e ripresa — stato al 17/08/2026 (sera)
 
-Documento scritto di corsa, mentre l'account Anthropic `a.panseo@protonmail.com` risulta di
-nuovo bloccato — stavolta in modo più serio del blocco del 15/08 (quello si era risolto da
-solo col supporto, vedi §6). Serve a due cose: rimettere in piedi la situazione se va storto
-per davvero, e permettere a chiunque (o a una sessione Claude nuova) di riprendere il lavoro
-da dove è rimasto.
+Documento scritto di corsa, mentre **un'organizzazione Anthropic** collegata al login Google
+`a.panse@gmail.com` risulta di nuovo bloccata — stavolta in modo più serio del blocco del 15/08
+(quello si era risolto da solo col supporto, vedi §6). Serve a due cose: rimettere in piedi la
+situazione se va storto per davvero, e permettere a chiunque (o a una sessione Claude nuova) di
+riprendere il lavoro da dove è rimasto.
+
+⚠️ **Non è un blocco dell'account Google/claude.ai della persona**: lo stesso login
+`a.panse@gmail.com` naviga claude.ai da browser normalmente, senza avvisi. Il problema riguarda
+**una specifica organizzazione** raggiungibile con quel login — quella usata da Claude Code sul
+computer di casa per il lavoro su Ardy Lab, che ha `a.panseo@protonmail.com` **come email di
+recupero registrata**, non come credenziale di accesso: con quell'indirizzo non ci si logga da
+nessuna parte, è solo il contatto di recupero sul file dell'organizzazione. Dettagli in §1.
 
 Scritto in italiano piano, non in gergo: va bene leggerlo fra sei mesi o girarlo al supporto.
 
@@ -15,7 +22,7 @@ Scritto in italiano piano, non in gergo: va bene leggerlo fra sei mesi o girarlo
 
 ---
 
-## 1. 🔴 URGENTE — l'account Anthropic, seconda volta
+## 1. 🔴 URGENTE — un'organizzazione Anthropic bloccata, seconda volta
 
 ### Cronologia
 
@@ -36,16 +43,24 @@ Scritto in italiano piano, non in gergo: va bene leggerlo fra sei mesi o girarlo
   senza risposta.
 - **Il modulo di ricorso non si apre**: `claude.ai/restricted` reindirizza altrove invece di
   mostrare il form (verificato anche da qui: fetch diretto della pagina risponde 403).
-- **Precisazione importante, dopo aver mandato la mail al supporto**: l'account normale con
-  cui si naviga claude.ai da browser (`a.panse@gmail.com`) **funziona regolarmente, senza
-  alcun avviso**. Il blocco compare **solo** autenticando da terminale, sul computer Debian
-  (`bebo@bebo`), col login di Claude Code legato all'organizzazione di
-  `a.panseo@protonmail.com` — quella con la chiave API di produzione di Ardy Lab. Non è quindi
-  (o non sembra essere) l'intero account Anthropic della persona a essere sospeso: è
-  **l'organizzazione specifica usata dal server MCP/Claude Code su quella macchina** a
-  risultare bloccata. La mail già inviata al supporto conteneva questa imprecisione (lasciava
-  intendere un blocco più generale); se serve, va corretta con una mail di follow-up che
-  isoli meglio il perimetro del problema.
+- **Precisazione importante, emersa dopo aver mandato la mail al supporto** (in due passaggi,
+  corretta qui):
+  1. Il login Google `a.panse@gmail.com` con cui si naviga claude.ai da browser **funziona
+     regolarmente, senza alcun avviso**. Il blocco compare **solo** autenticando da terminale,
+     sul computer Debian (`bebo@bebo`), con Claude Code.
+  2. **È lo stesso identico login Google**, non un account diverso. Quello che cambia è
+     **l'organizzazione Anthropic** a cui quel login accede: sullo stesso Google ne esistono
+     almeno due — quella "di default" usata su claude.ai da browser (senza problemi) e quella
+     usata da Claude Code per Ardy Lab (bloccata), che ha `a.panseo@protonmail.com` registrata
+     come **email di recupero**, non come credenziale — con quell'indirizzo non ci si logga.
+  - Quindi: **non è un ban dell'account/persona**, è un problema scoped a **una singola
+    organizzazione** dietro lo stesso login. La mail già inviata al supporto parlava di
+    "the Claude account a.panseo@protonmail.com" come se fosse l'identità di accesso: è
+    impreciso su entrambi i punti sopra. Se si scrive un follow-up, va impostato così: stesso
+    Google login di sempre, stesso account "principale" claude.ai regolare, ma
+    **l'organizzazione secondaria usata per Ardy Lab (email di recupero
+    a.panseo@protonmail.com) risulta disabilitata/in cancellazione** — probabile problema di
+    org-selection lato Anthropic più che una sospensione per policy.
 
 ### Cosa fare, in ordine
 
@@ -58,9 +73,10 @@ Scritto in italiano piano, non in gergo: va bene leggerlo fra sei mesi o girarlo
    dati mobili), per escludere cache/cookie locali.
 3. Cercare su **support.claude.com** l'articolo su account sospesi/ricorso: il link diretto
    può cambiare, l'articolo di supporto di solito resta aggiornato.
-4. Se il form si apre: compilarlo con l'account `a.panseo@protonmail.com`, spiegando che sulla
-   stessa organizzazione gira una chiave API in produzione per un gestionale attivo (vedi §2)
-   — è l'argomento più forte per dare priorità al ricorso.
+4. Se il form si apre: compilarlo restando loggati con `a.panse@gmail.com` (è l'unico login che
+   esiste), specificando che l'organizzazione colpita è quella con email di recupero
+   `a.panseo@protonmail.com` e che su di essa gira una chiave API in produzione per un
+   gestionale attivo (vedi §2) — è l'argomento più forte per dare priorità al ricorso.
 5. **Non ha aiutato** (già escluso): variabile `ANTHROPIC_API_KEY` spuria sul computer di casa
    (verificata assente), `/logout` + nuovo login, `claude auth login`, `claude doctor`. Nessuno
    di questi comandi tocca lo stato dell'organizzazione: il problema è sul lato Anthropic, non
