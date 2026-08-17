@@ -36,6 +36,16 @@ Scritto in italiano piano, non in gergo: va bene leggerlo fra sei mesi o girarlo
   senza risposta.
 - **Il modulo di ricorso non si apre**: `claude.ai/restricted` reindirizza altrove invece di
   mostrare il form (verificato anche da qui: fetch diretto della pagina risponde 403).
+- **Precisazione importante, dopo aver mandato la mail al supporto**: l'account normale con
+  cui si naviga claude.ai da browser (`a.panse@gmail.com`) **funziona regolarmente, senza
+  alcun avviso**. Il blocco compare **solo** autenticando da terminale, sul computer Debian
+  (`bebo@bebo`), col login di Claude Code legato all'organizzazione di
+  `a.panseo@protonmail.com` — quella con la chiave API di produzione di Ardy Lab. Non è quindi
+  (o non sembra essere) l'intero account Anthropic della persona a essere sospeso: è
+  **l'organizzazione specifica usata dal server MCP/Claude Code su quella macchina** a
+  risultare bloccata. La mail già inviata al supporto conteneva questa imprecisione (lasciava
+  intendere un blocco più generale); se serve, va corretta con una mail di follow-up che
+  isoli meglio il perimetro del problema.
 
 ### Cosa fare, in ordine
 
@@ -222,7 +232,9 @@ Per rifarlo da capo: `claude mcp remove ardy -s user`, poi di nuovo il comando s
 | `Autenticazione rifiutata (401). Controlla ARDY_USER e ARDY_PASS` | risposta dei tool `ardy_*` dentro una sessione Claude | server MCP ↔ **ardy-lab.it** | rifare `claude mcp add` con le credenziali giuste |
 
 Il terzo è scritto in italiano apposta, per riconoscerlo a colpo d'occhio. Il secondo è quello
-che sta bloccando tutto in questo momento.
+che sta bloccando tutto in questo momento — ma solo per l'organizzazione legata al login di
+Claude Code sul terminale Debian, **non** per l'account claude.ai usato normalmente da browser
+(`a.panse@gmail.com`), che resta senza avvisi (vedi §1).
 
 ---
 
