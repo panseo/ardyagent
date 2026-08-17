@@ -208,7 +208,7 @@ function ardy_wa_prompt_titolare_static(string $nome = 'Michela'): string {
 
 // Costruisce il system prompt completo per n8n:
 // wrapper WhatsApp + contesto (mode/cliente) + documento principale Ardy Lab.
-function ardy_wa_system_prompt(string $mode, ?array $cliente): string {
+function ardy_wa_system_prompt(string $mode, ?array $cliente, ?array $outreach = null): string {
     $wrap = @file_get_contents(__DIR__ . '/ardy-whatsapp-system.txt') ?: '';
     $base = @file_get_contents(__DIR__ . '/ardy-system.txt') ?: '';
     // Conoscenza di bottega (legno/restauro/cura): solo lato cliente (qui), NON nel
@@ -219,6 +219,30 @@ function ardy_wa_system_prompt(string $mode, ?array $cliente): string {
         $ctx .= "cliente:\n" . json_encode($cliente, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
     } else {
         $ctx .= "cliente: (nessuno — nuovo contatto)\n";
+    }
+
+    // Non è (ancora) un cliente CRM, ma questo numero risulta già nel nostro elenco
+    // contatti outreach (import B&B/antiquari per Galleria Diffusa o altre campagne):
+    // gli abbiamo scritto noi, o ci scrive lui in risposta. Sole non deve trattarlo
+    // come uno sconosciuto qualsiasi.
+    if (!$cliente && $outreach) {
+        $on = trim((string)($outreach['nome'] ?? ''));
+        $oc = trim((string)($outreach['categoria'] ?? ''));
+        $mancano = [];
+        foreach (['referente', 'email', 'sito', 'indirizzo'] as $c) {
+            if (empty($outreach[$c])) $mancano[] = $c;
+        }
+        $ctx .= "\n## CONTATTO OUTREACH GIÀ REGISTRATO\n"
+            . "Questo numero è già nel nostro elenco contatti outreach (id={$outreach['id']}), NON ancora come cliente/partner CRM. "
+            . "Probabilmente scrive in risposta a una nostra email o a un primo contatto WhatsApp. "
+            . "Riconoscilo con naturalezza invece di ripartire come se fosse uno sconosciuto totale.\n"
+            . ($on ? "- Nome attività: {$on}\n" : '')
+            . ($oc ? "- Categoria: {$oc}\n" : '')
+            . (!empty($outreach['referente']) ? "- Referente: {$outreach['referente']}\n" : '')
+            . (!empty($outreach['stato']) ? "- Stato attuale nel nostro elenco: {$outreach['stato']}\n" : '')
+            . (!empty($outreach['note'])  ? "- Note: {$outreach['note']}\n" : '')
+            . ($mancano ? "- Campi ancora mancanti: " . implode(', ', $mancano) . " — se il contatto te li dà in chat, salvali con aggiorna_contatto_outreach (id={$outreach['id']}).\n" : '')
+            . "Se è un B&B/struttura ricettiva, segui il flusso GALLERIA DIFFUSA / PARTNER B&B.\n";
     }
 
     // Lead da portale: Sole lo riconosce già e continua la conversazione senza riqualificare.
@@ -254,13 +278,22 @@ function ardy_wa_system_prompt(string $mode, ?array $cliente): string {
     return $wrap . $ctx . "\n" . $doc;
 }
 
-// Nessun match → nuovo contatto
+// Nessun match nei clienti CRM: prova a vedere se il numero è già nel nostro
+// elenco contatti outreach (import B&B/antiquari per Galleria Diffusa o altre
+// campagne) — non è un cliente, ma non è nemmeno uno sconosciuto per noi.
 if (!$row) {
+    $outreach = null;
+    try {
+        $outreach = ardyOutreachCerca($db, $digits);
+    } catch (PDOException $e) {
+        error_log('ARDY WA LOOKUP OUTREACH ERROR: ' . $e->getMessage());
+    }
+
     echo json_encode([
         'success'       => true,
         'mode'          => 'lead',
         'cliente'       => null,
-        'system_prompt' => ardy_wa_system_prompt('lead', null),
+        'system_prompt' => ardy_wa_system_prompt('lead', null, $outreach),
     ]);
     exit();
 }
