@@ -648,11 +648,16 @@
 
         <div class="campaign-section">
           <div class="campaign-label">CONTATTI FILTRATI</div>
-          <div class="select-all-row" style="justify-content:space-between;align-items:center;">
+          <div class="select-all-row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
             <button class="btn-select-all" onclick="toggleSelectAllTool()">Seleziona/deseleziona tutti</button>
             <span style="font-size:11px;color:var(--text-dim);font-family:'DM Mono',monospace;">
               Selezionati: <strong id="toolSelCount">0</strong>
             </span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+            <button class="btn-sm" onclick="selectBatchTool()">Seleziona un blocco di</button>
+            <input class="form-input" id="toolBatchN" type="number" min="1" step="1" value="50" style="width:70px;">
+            <span style="font-size:11px;color:var(--text-dim);">dall'inizio dei filtrati</span>
           </div>
           <div class="contact-check-list" id="toolContactList" style="max-height:340px;"></div>
           <p style="font-size:11px;color:var(--text-dim);font-family:'DM Mono',monospace;margin-top:8px;line-height:1.5;">
@@ -1782,6 +1787,19 @@ function toggleSelectAllTool() {
   const tuttiSpuntati = filt.length > 0 && filt.every(c => toolSelected.has(c.id));
   filt.forEach(c => tuttiSpuntati ? toolSelected.delete(c.id) : toolSelected.add(c.id));
   renderToolList();
+}
+
+// Seleziona un blocco dei primi N contatti filtrati (sostituisce la selezione
+// corrente): via di mezzo fra "tutti" e lo spunto a mano, per chi preferisce
+// arricchire/agire a lotti invece che sull'intero filtro in un colpo solo.
+function selectBatchTool() {
+  const n = parseInt(document.getElementById('toolBatchN').value, 10);
+  if (!n || n < 1) { toast('Indica quanti contatti selezionare', 'err'); return; }
+  const filt = getFilteredContacts();
+  if (!filt.length) { toast('Nessun contatto nel filtro', 'err'); return; }
+  toolSelected = new Set(filt.slice(0, n).map(c => c.id));
+  renderToolList();
+  toast(`✓ Selezionati i primi ${Math.min(n, filt.length)} contatti del filtro`, 'ok');
 }
 
 function updateToolCount() {
