@@ -95,6 +95,16 @@ Scritto in italiano piano, non in gergo: va bene leggerlo fra sei mesi o girarlo
 ⏳ Come il 15/08, è ragionevole assumere che ci sia una finestra di tempo prima che una
 sospensione diventi definitiva. Non aspettare: seguire i punti sopra appena possibile.
 
+### Corrispondenza inviata al supporto
+
+| Quando | A | Contenuto | Nota |
+|---|---|---|---|
+| 17/08 | `support@anthropic.com` (prima mail) | Ricorso iniziale, con link alle issue GitHub del bug su `/restricted`. Descriveva `a.panseo@protonmail.com` come identità di accesso e lasciava intendere un rischio per la produzione. | **Imprecisa** su entrambi i punti — vedi correzione sotto. |
+| 17/08 | `support@anthropic.com` (follow-up) | Corregge la prima mail: stesso login Google per tutte e tre le organizzazioni, `a.panseo@protonmail.com` solo email di recupero, produzione (Console) confermata regolare e non a rischio. Inquadra il problema come scoped a una singola organizzazione, non un ban dell'account. | Nessuna risposta ricevuta ancora al momento della stesura. |
+
+Se arriva una risposta (anche solo automatica), vale la pena annotare qui data e contenuto —
+aiuta a non perdere il filo se la conversazione con il supporto va per le lunghe.
+
 ---
 
 ## 2. Cosa si ferma se la chiave API smette di funzionare
