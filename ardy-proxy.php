@@ -388,6 +388,32 @@ $tools = [
         ]
     ],
     [
+        'name'        => 'cerca_contatto_outreach',
+        'description' => 'Cerca un\'attività (B&B, antiquario, interior designer...) nell\'elenco contatti outreach di Ardy Lab, per telefono e/o nome. Usalo nel flusso GALLERIA DIFFUSA / PARTNER B&B non appena hai il nome dell\'attività o un numero di telefono, PRIMA di fissare l\'incontro o salvare la scheda con salva_lead_crm: se l\'attività risulta già nel nostro elenco (perché le abbiamo scritto o ci ha già scritto), riconoscilo nella conversazione invece di trattarla come del tutto sconosciuta. Il risultato ti dice anche quali campi (es. il referente) mancano ancora: se il contatto te li dà durante la chat, salvali con aggiorna_contatto_outreach.',
+        'input_schema' => [
+            'type'       => 'object',
+            'properties' => [
+                'telefono' => ['type' => 'string', 'description' => 'Numero di telefono dell\'attività, se lo conosci'],
+                'nome'     => ['type' => 'string', 'description' => 'Nome dell\'attività/struttura, se lo conosci']
+            ]
+        ]
+    ],
+    [
+        'name'        => 'aggiorna_contatto_outreach',
+        'description' => 'Completa un dato mancante su un contatto outreach già trovato con cerca_contatto_outreach (es. il nome del referente, quando il tool ti ha detto che mancava e il contatto te lo dà in chat). Passa SEMPRE l\'id restituito da cerca_contatto_outreach. Riempie solo i campi vuoti: non sovrascrive mai un dato già presente.',
+        'input_schema' => [
+            'type'       => 'object',
+            'properties' => [
+                'id'        => ['type' => 'integer', 'description' => 'id del contatto outreach, restituito da cerca_contatto_outreach'],
+                'referente' => ['type' => 'string', 'description' => 'Nome della persona di riferimento, se te lo ha dato'],
+                'email'     => ['type' => 'string', 'description' => 'Email, se te la ha data e mancava'],
+                'sito'      => ['type' => 'string', 'description' => 'Sito web, se te lo ha dato e mancava'],
+                'indirizzo' => ['type' => 'string', 'description' => 'Indirizzo, se te lo ha dato e mancava']
+            ],
+            'required' => ['id']
+        ]
+    ],
+    [
         'name'        => 'cerca_cliente',
         'description' => 'Recupera lo stato del lavoro di un cliente che possiede un CODICE DI ACCESSO Ardy Lab (formato ARD-XXXX-XXXX), ricevuto via email quando ha lasciato i suoi dati. Usalo SOLO quando il cliente ti comunica spontaneamente il suo codice e vuole sapere a che punto è il suo lavoro o il suo sopralluogo. NON cercare MAI per nome, telefono o email: serve esclusivamente il codice. Se il cliente non ha un codice, invitalo a lasciare i suoi dati (così gliene generiamo uno) oppure a contattare Ardy Lab.',
         'input_schema' => [
@@ -902,6 +928,48 @@ while ($iteration < $maxIterations) {
                 } catch (PDOException $e) {
                     error_log('ARDY ATTIVA INTERIOR DESIGN ERROR: ' . $e->getMessage());
                     $toolResult = 'Errore tecnico nell\'attivazione della sezione Interior Design. Riprova.';
+                }
+
+            } elseif ($toolName === 'cerca_contatto_outreach') {
+                $telIn  = trim((string) ($toolInput['telefono'] ?? ''));
+                $nomeIn = trim((string) ($toolInput['nome'] ?? ''));
+                if ($telIn === '' && $nomeIn === '') {
+                    $toolResult = 'Serve almeno un telefono o un nome per cercare.';
+                } else {
+                    try {
+                        $found = ardyOutreachCerca(ardyDB(), $telIn, $nomeIn);
+                        if ($found) {
+                            $mancano = [];
+                            foreach (['referente', 'email', 'sito', 'indirizzo'] as $c) {
+                                if (empty($found[$c])) $mancano[] = $c;
+                            }
+                            $toolResult = 'Attività GIÀ presente nel nostro elenco contatti outreach (non ancora cliente/partner attivo). '
+                                . 'Riconoscila con naturalezza, senza ripetere domande su dati che già hai qui. '
+                                . ($mancano ? 'Campi ancora mancanti: ' . implode(', ', $mancano) . ' — se il contatto te li dà in chat, salvali con aggiorna_contatto_outreach. ' : '')
+                                . 'Dati: ' . json_encode($found, JSON_UNESCAPED_UNICODE);
+                        } else {
+                            $toolResult = 'Nessun contatto trovato nel nostro elenco outreach con questi dati: trattala come nuovo contatto.';
+                        }
+                    } catch (PDOException $e) {
+                        error_log('ARDY CERCA CONTATTO OUTREACH ERROR: ' . $e->getMessage());
+                        $toolResult = 'Errore tecnico nella ricerca. Prosegui normalmente, senza bloccarti su questo.';
+                    }
+                }
+
+            } elseif ($toolName === 'aggiorna_contatto_outreach') {
+                $idIn = (int) ($toolInput['id'] ?? 0);
+                if ($idIn <= 0) {
+                    $toolResult = 'Errore: manca l\'id del contatto (usa quello restituito da cerca_contatto_outreach).';
+                } else {
+                    try {
+                        $r = ardyOutreachAggiorna(ardyDB(), $idIn, $toolInput);
+                        $toolResult = $r['ok']
+                            ? 'Salvato. Campi aggiornati: ' . implode(', ', $r['aggiornati'])
+                            : 'Nessun campo da aggiornare (nessun dato nuovo passato).';
+                    } catch (PDOException $e) {
+                        error_log('ARDY AGGIORNA CONTATTO OUTREACH ERROR: ' . $e->getMessage());
+                        $toolResult = 'Errore tecnico nel salvataggio. Prosegui la conversazione normalmente.';
+                    }
                 }
 
             } elseif ($toolName === 'cerca_cliente') {

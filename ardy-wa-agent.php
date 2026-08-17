@@ -360,6 +360,21 @@ $tools = [
             'required' => ['start'],
         ],
     ],
+    [
+        'name'        => 'aggiorna_contatto_outreach',
+        'description' => 'Completa un dato mancante su un contatto outreach (B&B/antiquario/altro) già segnalato come "già registrato" nel contesto di questa conversazione — es. il nome del referente, se te lo dà in chat. Passa SEMPRE l\'id indicato nel contesto (blocco CONTATTO OUTREACH GIÀ REGISTRATO). Riempie solo i campi vuoti: non sovrascrive mai un dato già presente.',
+        'input_schema' => [
+            'type'       => 'object',
+            'properties' => [
+                'id'        => ['type' => 'integer', 'description' => 'id del contatto outreach, dal contesto della conversazione'],
+                'referente' => ['type' => 'string', 'description' => 'Nome della persona di riferimento, se te lo ha dato'],
+                'email'     => ['type' => 'string', 'description' => 'Email, se te la ha data e mancava'],
+                'sito'      => ['type' => 'string', 'description' => 'Sito web, se te lo ha dato e mancava'],
+                'indirizzo' => ['type' => 'string', 'description' => 'Indirizzo, se te lo ha dato e mancava'],
+            ],
+            'required' => ['id'],
+        ],
+    ],
     ardy_tool_ricorda_a_michela(),
 ];
 
@@ -698,6 +713,22 @@ while ($iteration < $maxIterations) {
                 $toolResult = 'Scheda cliente salvata nel CRM. Prosegui con naturalezza, NON elencare i dati al cliente.';
             } else {
                 $toolResult = 'Non sono riuscita a salvare la scheda adesso. Prosegui comunque la conversazione; se serve, di\' che Michela la registra.';
+            }
+
+        } elseif ($toolName === 'aggiorna_contatto_outreach') {
+            $idIn = (int) ($toolInput['id'] ?? 0);
+            if ($idIn <= 0) {
+                $toolResult = 'Errore: manca l\'id del contatto (lo trovi nel contesto CONTATTO OUTREACH GIÀ REGISTRATO).';
+            } else {
+                try {
+                    $r = ardyOutreachAggiorna(ardyDB(), $idIn, $toolInput);
+                    $toolResult = $r['ok']
+                        ? 'Salvato. Campi aggiornati: ' . implode(', ', $r['aggiornati'])
+                        : 'Nessun campo da aggiornare (nessun dato nuovo passato).';
+                } catch (PDOException $e) {
+                    error_log('ARDY WA-AGENT AGGIORNA CONTATTO OUTREACH ERROR: ' . $e->getMessage());
+                    $toolResult = 'Errore tecnico nel salvataggio. Prosegui la conversazione normalmente.';
+                }
             }
 
         } elseif ($toolName === 'sposta_appuntamento') {
