@@ -678,8 +678,8 @@ try {
             // Modello scelto dalla dash, con whitelist (default Haiku, economico).
             $modelliOk = ['claude-haiku-4-5', 'claude-sonnet-4-6'];
             $model = in_array(($input['model'] ?? ''), $modelliOk, true) ? $input['model'] : 'claude-haiku-4-5';
-            // 'social' = cerca SOLO i canali (bottone dedicato nel pannello Canali social).
-            // 'social' = solo canali; 'google' = solo passi gratuiti/Places, niente agente.
+            // 'social' = solo i canali (bottone dedicato nel pannello Canali social);
+            // 'google' = solo i passi gratuiti (sito + Places), senza agente a pagamento.
             $scope = in_array(($input['scope'] ?? ''), ['social', 'google'], true) ? $input['scope'] : 'tutto';
             $res = ardyEnrichContact($contact, $apiKey, $model, $scope);
 
@@ -689,7 +689,11 @@ try {
                 $info['attuale'] = $contact[$campo] ?? '';
                 $proposte[$campo] = $info;
             }
-            echo json_encode(['success' => true, 'id' => $id, 'campi' => $proposte, 'log' => $res['log']]);
+            // Contatore Places allegato a ogni risposta: costa zero (è un file locale)
+            // e permette alla dash di mostrare il consumo mentre il blocco gira,
+            // senza doverlo chiedere con una chiamata a pagamento.
+            echo json_encode(['success' => true, 'id' => $id, 'campi' => $proposte, 'log' => $res['log'],
+                'places' => ['usate_oggi' => ardyPlacesCountToday(), 'tetto' => ardyPlacesDailyCap()]]);
             break;
 
         // --------------------------------------------------------

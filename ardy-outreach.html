@@ -875,7 +875,8 @@
     <div id="bulkProgressWrap" style="height:8px;background:var(--border,#333);border-radius:4px;overflow:hidden;margin-bottom:10px;">
       <div id="bulkProgressBar" style="height:100%;width:0;background:var(--accent,#c8a96e);transition:width .2s;"></div>
     </div>
-    <div id="bulkStatus" style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text,#eee);margin-bottom:8px;">In attesa…</div>
+    <div id="bulkStatus" style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text,#eee);margin-bottom:4px;">In attesa…</div>
+    <div id="bulkPlaces" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:8px;">Chiamate Google oggi: —</div>
     <div id="bulkLog" style="max-height:240px;overflow:auto;font-size:11px;color:var(--text-dim);line-height:1.7;font-family:'DM Mono',monospace;"></div>
     <div class="modal-footer">
       <button class="btn-sm" id="btnBulkClose" onclick="closeBulkModal()">CHIUDI</button>
@@ -1544,6 +1545,22 @@ async function bulkEnrich() {
   runBulkEnrich(candidati);
 }
 
+// Il tetto giornaliero non e' un limite di spesa (quello e' il gratuito MENSILE
+// di Google, visibile solo in console): e' la rete di sicurezza contro i loop.
+// Mostrarlo mentre il blocco gira evita di scoprire a meta' corsa che si e' fermo.
+function mostraPlaces(p) {
+  const el = document.getElementById('bulkPlaces');
+  if (!el || !p) return;
+  const usate = p.usate_oggi, tetto = p.tetto;
+  // tetto 0 = nessun limite configurato: "25/0" si leggerebbe come "esaurito".
+  el.textContent = tetto > 0
+    ? `Chiamate Google oggi: ${usate}/${tetto}`
+    : `Chiamate Google oggi: ${usate} (nessun tetto impostato)`;
+  const vicino = tetto > 0 && usate >= tetto * 0.9;
+  el.style.color = vicino ? 'var(--orange,#e90)' : 'var(--text-dim)';
+  if (vicino) el.textContent += ' — tetto giornaliero quasi raggiunto';
+}
+
 async function runBulkEnrich(candidati, scope = 'tutto') {
   if (bulkRunning) return;
   bulkRunning = true;
@@ -1552,6 +1569,7 @@ async function runBulkEnrich(candidati, scope = 'tutto') {
   const logEl = document.getElementById('bulkLog');
   const closeBtn = document.getElementById('btnBulkClose');
   logEl.innerHTML = ''; bar.style.width = '0'; closeBtn.textContent = 'INTERROMPI';
+  document.getElementById('bulkPlaces').textContent = 'Chiamate Google oggi: —';
 
   // Titolo parlante: da qui si vede a colpo d'occhio se il giro sta pagando
   // l'agente o no — è la differenza che conta su centinaia di contatti.
@@ -1582,6 +1600,7 @@ async function runBulkEnrich(candidati, scope = 'tutto') {
     let r;
     try { r = await api('enrich_contact', { id: c.id, model: getEnrichModel(), scope }); }
     catch(e) { r = { success:false, error:'rete' }; }
+    if (r && r.places) mostraPlaces(r.places);
     if (!r || !r.success) { log(`✗ ${c.nome}: ${r&&r.error||'errore'}`, 'var(--orange,#e90)'); continue; }
 
     // Applica solo i campi nuovi a confidenza alta/media (mai sovrascrittura: il
