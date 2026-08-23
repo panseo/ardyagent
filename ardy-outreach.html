@@ -876,7 +876,7 @@
       <div id="bulkProgressBar" style="height:100%;width:0;background:var(--accent,#c8a96e);transition:width .2s;"></div>
     </div>
     <div id="bulkStatus" style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text,#eee);margin-bottom:4px;">In attesa…</div>
-    <div id="bulkPlaces" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:8px;">Chiamate Google oggi: —</div>
+    <div id="bulkPlaces" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:8px;">Chiamate Google — …</div>
     <div id="bulkLog" style="max-height:240px;overflow:auto;font-size:11px;color:var(--text-dim);line-height:1.7;font-family:'DM Mono',monospace;"></div>
     <div class="modal-footer">
       <button class="btn-sm" id="btnBulkClose" onclick="closeBulkModal()">CHIUDI</button>
@@ -1553,12 +1553,26 @@ function mostraPlaces(p) {
   if (!el || !p) return;
   const usate = p.usate_oggi, tetto = p.tetto;
   // tetto 0 = nessun limite configurato: "25/0" si leggerebbe come "esaurito".
-  el.textContent = tetto > 0
-    ? `Chiamate Google oggi: ${usate}/${tetto}`
-    : `Chiamate Google oggi: ${usate} (nessun tetto impostato)`;
-  const vicino = tetto > 0 && usate >= tetto * 0.9;
-  el.style.color = vicino ? 'var(--orange,#e90)' : 'var(--text-dim)';
-  if (vicino) el.textContent += ' — tetto giornaliero quasi raggiunto';
+  const oggi = tetto > 0 ? `oggi ${usate}/${tetto}` : `oggi ${usate} (nessun tetto)`;
+
+  // Il mese è il numero che conta per la SPESA: il gratuito di Google è mensile,
+  // il tetto giornaliero è solo la rete di sicurezza contro i loop.
+  const mese = p.mese, gratis = p.gratis_mese;
+  let testo = `Chiamate Google — ${oggi}`;
+  let avviso = '';
+  if (mese !== undefined && gratis > 0) {
+    testo += ` · mese ${mese}/${gratis} gratis`;
+    if (mese >= gratis) {
+      avviso = ` — gratuito finito: da qui ~3,5 cent a chiamata`;
+    } else if (mese >= gratis * 0.9) {
+      avviso = ` — restano ${gratis - mese} chiamate gratis questo mese`;
+    }
+  }
+  if (!avviso && tetto > 0 && usate >= tetto * 0.9) {
+    avviso = ' — tetto giornaliero quasi raggiunto';
+  }
+  el.textContent = testo + avviso;
+  el.style.color = avviso ? 'var(--orange,#e90)' : 'var(--text-dim)';
 }
 
 async function runBulkEnrich(candidati, scope = 'tutto') {
@@ -1569,7 +1583,7 @@ async function runBulkEnrich(candidati, scope = 'tutto') {
   const logEl = document.getElementById('bulkLog');
   const closeBtn = document.getElementById('btnBulkClose');
   logEl.innerHTML = ''; bar.style.width = '0'; closeBtn.textContent = 'INTERROMPI';
-  document.getElementById('bulkPlaces').textContent = 'Chiamate Google oggi: —';
+  document.getElementById('bulkPlaces').textContent = 'Chiamate Google — …';
 
   // Titolo parlante: da qui si vede a colpo d'occhio se il giro sta pagando
   // l'agente o no — è la differenza che conta su centinaia di contatti.
@@ -2430,7 +2444,7 @@ function renderProva(r) {
     <p style="font-size:11px;color:var(--text-dim);margin-bottom:10px;">
       Proiezione su ${searchResults.length} strutture: circa
       <strong>${Math.round(searchResults.length * r.perc_tel / 100)} telefoni</strong>.
-      Chiamate Google usate oggi: ${r.usate_oggi}/${r.tetto}.
+      Chiamate Google: oggi ${r.usate_oggi}/${r.tetto}${r.places && r.places.gratis_mese ? ` · mese ${r.places.mese}/${r.places.gratis_mese} gratis` : ''}.
       ${r.cap_hit ? '<br>⚠ Tetto giornaliero raggiunto: la prova si è fermata prima.' : ''}
     </p>
     <div class="contact-check-list" style="max-height:260px;">

@@ -615,6 +615,7 @@ try {
                 'cap_hit'    => $m['capHit'],
                 'usate_oggi' => ardyPlacesCountToday(),
                 'tetto'      => ardyPlacesDailyCap(),
+                'places'     => ardyPlacesStato(),
             ]);
             break;
 
@@ -693,7 +694,7 @@ try {
             // e permette alla dash di mostrare il consumo mentre il blocco gira,
             // senza doverlo chiedere con una chiamata a pagamento.
             echo json_encode(['success' => true, 'id' => $id, 'campi' => $proposte, 'log' => $res['log'],
-                'places' => ['usate_oggi' => ardyPlacesCountToday(), 'tetto' => ardyPlacesDailyCap()]]);
+                'places' => ardyPlacesStato()]);
             break;
 
         // --------------------------------------------------------

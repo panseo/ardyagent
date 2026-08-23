@@ -34,7 +34,7 @@ if (php_sapi_name() !== 'cli') {
 const PROVA_MAX_CAMPIONE = 50;   // rete di sicurezza contro i refusi
 const PROVA_MAX_PAGINE   = 6;    // pagine di portale da cui pescare il campione
 const PROVA_COSTO_MILLE  = 35.0; // $ per 1.000 chiamate, fascia Enterprise
-const PROVA_GRATIS_MESE  = 1000; // chiamate gratis al mese sulla stessa fascia
+// Il gratuito mensile lo sa ardyPlacesFreeMonth() (sovrascrivibile da config).
 
 $slug   = strtolower(trim($argv[1] ?? 'puglia'));
 $quante = (int)($argv[2] ?? 20);
@@ -117,15 +117,19 @@ echo "ESITO SU $fatte STRUTTURE\n\n";
 printf("  Trovate su Google : %d (%d%%)\n", $trovate, round($trovate * 100 / $fatte));
 printf("  Con TELEFONO      : %d (%d%%)   ← il dato che ci serve\n", $conTel, $percTel);
 printf("  Con sito web      : %d (%d%%)\n", $conSito, $percSito);
-printf("\n  Chiamate Places usate oggi: %d (tetto giornaliero: %d)\n",
+printf("\n  Chiamate Places oggi: %d (tetto giornaliero: %d)\n",
     ardyPlacesCountToday(), ardyPlacesDailyCap());
+printf("  Questo mese: %d su %d gratis\n", ardyPlacesCountMonth(), ardyPlacesFreeMonth());
 
 // Proiezione sul resto della regione, per decidere se vale la spesa.
+// Il residuo gratuito tiene conto di quel che si e' gia' consumato nel mese:
+// dire "le prime 1.000 sono gratis" a chi ne ha gia' spese 543 e' fuorviante.
+$gratisRimaste = max(0, ardyPlacesFreeMonth() - ardyPlacesCountMonth());
 echo "\nSE ESTENDI A TUTTA LA REGIONE\n";
-echo "  Serve 1 chiamata per struttura. Le prime " . PROVA_GRATIS_MESE . " del mese\n";
-echo "  sono gratis, oltre costano ~$" . number_format(PROVA_COSTO_MILLE, 2) . " ogni 1.000.\n";
+printf("  Serve 1 chiamata per struttura. Questo mese te ne restano %d gratis,\n", $gratisRimaste);
+echo "  oltre costano ~$" . number_format(PROVA_COSTO_MILLE, 2) . " ogni 1.000.\n";
 foreach ([715, 1000, 1500] as $tot) {
-    $oltre  = max(0, $tot - PROVA_GRATIS_MESE);
+    $oltre  = max(0, $tot - $gratisRimaste);
     $costo  = $oltre * PROVA_COSTO_MILLE / 1000;
     printf("  %4d strutture → ~%d telefoni · costo ~$%s\n",
         $tot, (int) round($tot * $percTel / 100), number_format($costo, 2));
