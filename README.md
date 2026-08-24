@@ -690,7 +690,19 @@ stesso login). API: `ardy-outreach-api.php` (routing per `action`); tabelle `out
     schermo, chiede conferma col numero di chiamate e mostra copertura, proiezione sull'elenco intero
     e consumo rispetto al tetto giornaliero.
   - **Da CLI** (`php ardy-places-prova.php puglia 20`): si legge da sé l'elenco dal portale, utile
-    per misurare una regione **prima** di importarla. Stampa anche la proiezione di spesa.
+    per misurare una regione **prima** di importarla. La proiezione di spesa parte dalle chiamate
+    gratuite **rimaste** nel mese, non dalle 1.000 teoriche.
+- **📊 Contatori Places** (`ardyPlacesStato()` in `ardy-places.php`): il **giorno**
+  (`ardyPlacesCountToday()`, contro `ARDY_PLACES_DAILY_CAP`, default 500 — rete di sicurezza contro i
+  loop, **non** un limite di spesa) e il **mese** (`ardyPlacesCountMonth()`, somma dei contatori
+  giornalieri di `ARDY_RATE_LIMIT_DIR`, contro `ardyPlacesFreeMonth()`, default 1.000 — **questo** è il
+  numero che decide la spesa). Lo stato viaggia allegato alle risposte di `enrich_contact` e
+  `places_prova`: sono file locali, quindi leggerlo **non costa una chiamata**. In dash compare sotto la
+  barra dell'arricchimento in blocco (`oggi 227/500 · mese 543/1000 gratis`) e diventa arancione quando
+  il gratuito sta per finire o è finito.
+  > Il totale mensile è un **minimo attendibile**, non la verità: conta solo le chiamate passate da
+  > questo codice, e la pulizia dei file rate-limit in `ardy-proxy.php` può portarsi via i giorni
+  > vecchi. La fonte autorevole resta la console Google.
 - **📱 Canali social** (colonne `instagram`/`facebook`/`linkedin` su `outreach_contatti`): servono a
   raggiungere chi **non pubblica un'email** — molti antiquari e B&B stanno solo su Instagram. Vedi sotto.
 - **📝 Template email** generati/riscritti con AI (`genera_template`), salvati in `outreach_template`

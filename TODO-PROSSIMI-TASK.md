@@ -1,29 +1,37 @@
 # Ardy Lab — Task aperti & note utili
 
 > Solo task **aperti** + note operative + verifiche residue. Tutto ciò che è fatto **e deployato**
-> è rimosso (lo storico resta nei commit git). Ultima pulizia: 26/07/2026 · ultimo aggiornamento: 16/08/2026.
+> è rimosso (lo storico resta nei commit git). Ultima pulizia: 26/07/2026 · ultimo aggiornamento: 23/08/2026.
 
 > ⚠️ Promemoria sempre valido: se Sole tace su **tutti** i canali insieme (WhatsApp + webchat),
 > sospetta **credito Anthropic esaurito** (capitato il 21/06; si ricarica da Plans & Billing).
 
 ---
 
-## 🏨 APERTURA SESSIONE — riprendi da qui (fine sessione 16/08/2026, tutto deployato)
+## 🏨 APERTURA SESSIONE — riprendi da qui (aggiornata 23/08/2026, tutto deployato)
 
 > La sezione 28/07 qui sotto resta valida per i suoi collaudi: è più vecchia, non l'ho toccata.
 
-**Dove siamo.** Importate da `bed-and-breakfast.it` le **715 strutture della Puglia** (712 taggate
-"Puglia"; in totale i contatti categoria `bb` sono 901 con quelli di prima). Prova di copertura
-Google: **20 su 20 col telefono, 18 col sito** — copertura piena, molto meglio del previsto.
-Fatto un primo giro **🌐 SOLO GOOGLE** su ~41 contatti: telefono, sito e in parecchi casi anche
-email e social, tutto salvato.
+**Dove siamo (23/08).** Importate da `bed-and-breakfast.it` le **715 strutture della Puglia** (712
+taggate "Puglia"; i contatti categoria `bb` sono ~901 con quelli di prima). Prova di copertura Google:
+**20 su 20 col telefono, 18 col sito** — copertura piena. Arricchimento **🌐 SOLO GOOGLE** avviato e
+portato avanti a lotti: telefono, sito e in parecchi casi anche email e social, tutto salvato.
+
+**⚠️ Il numero da guardare prima di ripartire: il budget Google del mese.** Al 23/08 il contatore
+locale dice **543 chiamate usate su 1.000 gratis** (57 il 14/08, 109 il 16, 150 il 17, 227 il 23).
+Restano **~457 gratuite**, e i contatti ancora senza telefono erano **~724**.
+
+> Quindi finire la Puglia questo mese sfora di ~270 chiamate ≈ **9 dollari**. Decisione ancora aperta:
+> **(a)** fare ~450 contatti ora e riprendere il **1° settembre** quando il gratuito si azzera, oppure
+> **(b)** spendere i ~9 dollari e chiudere subito. In ogni caso servono più giorni: il tetto
+> giornaliero è 500. Il contatore ora si vede in dash, sotto la barra dell'arricchimento in blocco.
 
 **I prossimi passi, in quest'ordine (dal gratis al caro):**
 
 1. **🌐 SOLO GOOGLE sul resto.** In *Filtri & Azioni Dati*: settore `bb`, "dati mancanti" =
    telefono con **"ne manca almeno uno"**, poi il bottone. Non chiama l'agente a pagamento.
-   ⚠️ Le chiamate Google gratis sono **1.000 al mese**: le ~900 della Puglia ci stanno, ma
-   un'altra regione nello stesso mese si paga (vedi Nota costi).
+   Conviene procedere **a lotti** col pulsante "Seleziona un blocco di N", tenendo d'occhio il
+   contatore del mese nella finestra (vedi il budget qui sopra).
 2. **`php ardy-email-finder.php`** (da CLI, gratis) sui rimasti senza email ma col sito.
 3. **✨ ARRICCHISCI I FILTRATI** solo su chi resta **senza email**: è l'unico passo a pagamento,
    e a quel punto agisce su poche centinaia invece che su 900.
@@ -52,6 +60,14 @@ email e social, tutto salvato.
   FILTRATI**. Leggere sempre il numero nella richiesta di conferma prima di dire sì.
 - **I numeri sui chip** ora sono relativi agli altri filtri accesi: se un chip dice 40, cliccandolo
   vedi 40 righe. Prima erano calcolati su tutti i contatti e contraddicevano la lista.
+- **Controllare il consumo Google da server** (il dettaglio giorno per giorno, utile se il numero in
+  dash non torna). I contatori stanno in `ardy-rate-limit/`, che `deploy.sh` non tocca:
+  ```
+  cd /home/micoperibg/public_html/ardyagent.ardy-lab.it/ardy-rate-limit/
+  for f in places_2026*.txt; do echo "$f = $(cat "$f")"; done
+  ```
+  Il conto che fa fede per la fattura resta comunque la **console Google**: il nostro contatore vede
+  solo le chiamate passate da questo codice.
 
 ---
 
