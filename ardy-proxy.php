@@ -149,6 +149,34 @@ if ($leadSessionId !== '' && $leadToken !== '') {
     }
 }
 
+// ── Contatto Outreach da campagna email: link firmato ?rif=<id>&tok=<hmac16> ──
+// Stesso schema del lead da portale qui sopra, ma sorgente e tabella diverse:
+// qui il link parte dalla mail di campagna Outreach (ardy-outreach-api.php,
+// brevoSend) verso la pagina Galleria Diffusa, e la scheda è in
+// outreach_contatti (potenziale partner), non ancora in clienti.
+$outreachRif = (int)($input['outreachRif'] ?? 0);
+$outreachTok = (string)($input['outreachTok'] ?? '');
+$outreachContext = null;
+if ($outreachRif > 0 && $outreachTok !== '') {
+    $expectedOutreachTok = substr(hash_hmac('sha256', (string)$outreachRif, WA_LOOKUP_SECRET), 0, 16);
+    if (hash_equals($expectedOutreachTok, $outreachTok)) {
+        try {
+            $odb  = ardyDB();
+            $ostm = $odb->prepare("SELECT id, nome, categoria, referente, indirizzo, regione, note FROM outreach_contatti WHERE id = :id LIMIT 1");
+            $ostm->execute([':id' => $outreachRif]);
+            $outreachContext = $ostm->fetch(PDO::FETCH_ASSOC) ?: null;
+            if ($outreachContext) {
+                // Segna l'ingaggio in pipeline: solo un avanzamento (mai un
+                // downgrade), così un contatto già promosso/scartato non torna indietro.
+                $odb->prepare("UPDATE outreach_contatti SET stato = IF(stato IN ('da_contattare','inviato'), 'risposto', stato), updated_at = NOW() WHERE id = :id")
+                    ->execute([':id' => $outreachRif]);
+            }
+        } catch (PDOException $e) {
+            error_log('ARDY PROXY OUTREACH CONTEXT: ' . $e->getMessage());
+        }
+    }
+}
+
 // -----------------------------------------------------------
 // RATE LIMIT PER SESSIONE
 // -----------------------------------------------------------
@@ -283,6 +311,27 @@ if ($leadContext) {
     if ($lm) $system .= "- Mobile/oggetto: {$lm}\n";
     if ($lz) $system .= "- Zona: {$lz}\n";
     $system .= "Parti con un saluto caldo che mostra che lo conosci già, MA è comunque il primo messaggio di questa sessione webchat: mantieni la dichiarazione AI (regola \"Trasparenza AI\" sopra), es: \"Ciao {$ln}! Sono Sole, l'assistente virtuale (AI) di Ardy Lab — ho visto la tua richiesta per {$ls}. Raccontami di più, così posso darti un'idea...\" e prosegui la qualifica da dove serve (foto, misure, sopralluogo).\n";
+}
+
+// ── Contesto contatto Outreach (link firmato dalla mail di campagna) ──
+// Chi clicca il link nella mail NON è un lead anonimo: è già una riga nel
+// nostro elenco Outreach (spesso un potenziale partner B&B). Sole lo sa dal
+// primo messaggio e non deve rifare domande su chi è.
+if ($outreachContext) {
+    $on = trim((string)($outreachContext['nome']      ?? ''));
+    $or = trim((string)($outreachContext['referente'] ?? ''));
+    $oc = trim((string)($outreachContext['categoria'] ?? ''));
+    $oz = trim((string)($outreachContext['regione']   ?? ''));
+    $oi = trim((string)($outreachContext['indirizzo'] ?? ''));
+    $system .= "\n\n## CONTATTO OUTREACH RICONOSCIUTO — CONTESTO PRECARICATO\n"
+        . "Questa persona ha cliccato il link nella nostra email di outreach: è GIÀ un contatto nel nostro elenco (non un lead anonimo che scrive dal nulla). NON chiedere da capo chi è o il nome della sua attività: saluta mostrando che la conosci già e vai dritto al punto (Galleria Diffusa, dubbi, appuntamento).\n";
+    if ($on) $system .= "- Attività: {$on}\n";
+    if ($or) $system .= "- Referente: {$or}\n";
+    if ($oc) $system .= "- Categoria: {$oc}\n";
+    if ($oz) $system .= "- Zona: {$oz}\n";
+    if ($oi) $system .= "- Indirizzo: {$oi}\n";
+    $system .= "Parti con un saluto caldo che mostra che la conosci già, MA è comunque il primo messaggio di questa sessione webchat: mantieni la dichiarazione AI (regola \"Trasparenza AI\" sopra), es: \"Ciao! Sono Sole, l'assistente virtuale (AI) di Ardy Lab — ho visto che siete {$on}, grazie per aver aperto il link sulla Galleria Diffusa. Ti va che ti racconto come funziona, o preferisci partire da un dubbio preciso?\"\n"
+        . "Quando (e se) chiami `salva_lead_crm`, aggiungi in `note` che il contatto arriva dalla campagna Outreach (contatto #{$outreachContext['id']}), così Michela vede il collegamento.\n";
 }
 
 // Conoscenza di bottega (legno/restauro/cura): arricchisce il linguaggio e la competenza

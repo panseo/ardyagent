@@ -130,9 +130,18 @@ negli ambienti del B&B, l'ospite compra dal telefono, il B&B prende una commissi
 **fissare un appuntamento in laboratorio** per vedere gli oggetti dal vivo (riusa il calendario
 reale: `ottieni_disponibilita_calendario` + `fissa_appuntamento_calendario`, poi salva il partner
 nel CRM). Non promette mai condizioni economiche precise: quelle le concorda Michela.
+
+**Riconoscimento da campagna email — *ago 2026*.** Chi arriva su questa pagina cliccando il
+link "🖼️ Scopri la Galleria Diffusa" di una mail di campagna Outreach non è un lead anonimo:
+il link porta un riferimento firmato al contatto già presente in Outreach (stesso schema del
+link "lead da portale" usato su WhatsApp). Sole lo riconosce dal **primo messaggio** — saluta
+sapendo già chi è (attività, categoria, zona) invece di richiedere da capo chi scrive — e il
+contatto passa da sola a **"risposto"** nella pipeline Outreach appena la chat parte, così
+Michela lo vede subito tra chi ha reagito alla campagna.
 > Dove vive: pagina/loader in `wordpress-snippets/galleria-diffusa-page.html`, widget chat
 > autoportante `ardy-chat-experience.js` (→ `ardy-proxy.php`), regole in `ardy-system.txt`
-> (sezione "GALLERIA DIFFUSA — PARTNER B&B").
+> (sezione "GALLERIA DIFFUSA — PARTNER B&B"), generazione del link in `ardy-outreach-api.php`
+> (`brevoSend`).
 
 ### 9. Raccogliere la consulenza di Interior Design — *lug 2026*
 Michela, oltre al restauro, offre una **consulenza di interior design**. Sulla pagina

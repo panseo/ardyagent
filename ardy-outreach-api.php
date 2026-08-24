@@ -428,7 +428,7 @@ try {
             $nome  = $contact['referente'] ?: $contact['nome'];
             $corpo = str_replace(['{{nome}}','{{azienda}}'], [$nome, $contact['nome']], $corpo);
 
-            $result = brevoSend($contact['email'], $nome, $oggetto, $corpo);
+            $result = brevoSend($contact['email'], $nome, $oggetto, $corpo, (int) $contact['id']);
             if ($result['ok']) {
                 $db->prepare("UPDATE outreach_contatti SET stato='inviato', data_contatto=CURDATE(), updated_at=NOW() WHERE id=:id")->execute([':id' => $cid]);
                 echo json_encode(['success' => true]);
@@ -459,7 +459,7 @@ try {
             foreach ($contacts as $c) {
                 $nome  = $c['referente'] ?: $c['nome'];
                 $corpo = str_replace(['{{nome}}','{{azienda}}'], [$nome, $c['nome']], $t['corpo']);
-                $res   = brevoSend($c['email'], $nome, $t['oggetto'], $corpo);
+                $res   = brevoSend($c['email'], $nome, $t['oggetto'], $corpo, (int) $c['id']);
                 if ($res['ok']) {
                     $db->prepare("UPDATE outreach_contatti SET stato='inviato', data_contatto=CURDATE(), updated_at=NOW() WHERE id=:id")->execute([':id' => $c['id']]);
                     $sent++;
@@ -854,14 +854,23 @@ try {
 // ============================================================
 // FUNZIONE INVIO BREVO
 // ============================================================
-function brevoSend(string $toEmail, string $toName, string $oggetto, string $corpo): array {
+function brevoSend(string $toEmail, string $toName, string $oggetto, string $corpo, int $contactId = 0): array {
     $unsubSecret = defined('ARDY_UNSUB_SECRET') ? ARDY_UNSUB_SECRET : (defined('ARDY_API_KEY') ? ARDY_API_KEY : '');
     $unsubToken  = substr(hash_hmac('sha256', strtolower(trim($toEmail)), $unsubSecret), 0, 20);
     $unsubLink   = 'https://ardy-lab.it/ardy-unsubscribe.php?email=' . urlencode($toEmail) . '&t=' . $unsubToken;
     $corpoHtml  = nl2br(htmlspecialchars($corpo));
+
+    // Link con riferimento firmato al contatto Outreach: se clicca, la webchat
+    // Galleria Diffusa lo riconosce da subito (stesso schema HMAC del link
+    // "lead da portale" già usato per i clienti in ardy-lead-contatto.php).
+    $gdLink = 'https://ardy-lab.it/galleria-diffusa/';
+    if ($contactId > 0 && defined('WA_LOOKUP_SECRET') && WA_LOOKUP_SECRET !== '') {
+        $rifTok  = substr(hash_hmac('sha256', (string) $contactId, WA_LOOKUP_SECRET), 0, 16);
+        $gdLink .= '?rif=' . $contactId . '&tok=' . $rifTok;
+    }
     $waCta  = '
   <div style="margin-top:30px;text-align:center;">
-    <a href="https://ardy-lab.it/galleria-diffusa/" style="display:inline-block;background:#c8a96e;color:#ffffff;text-decoration:none;font-family:sans-serif;font-size:15px;font-weight:600;padding:13px 28px;border-radius:8px;">🖼️ Scopri la Galleria Diffusa</a>
+    <a href="' . htmlspecialchars($gdLink) . '" style="display:inline-block;background:#c8a96e;color:#ffffff;text-decoration:none;font-family:sans-serif;font-size:15px;font-weight:600;padding:13px 28px;border-radius:8px;">🖼️ Scopri la Galleria Diffusa</a>
     <p style="font-family:sans-serif;font-size:12px;color:#999;margin:10px 0 0;">Oppure rispondi direttamente a questa email.</p>
   </div>';
     $htmlEmail  = '<!DOCTYPE html><html><body style="font-family:Georgia,serif;background:#f5f5f5;margin:0;padding:20px;">
