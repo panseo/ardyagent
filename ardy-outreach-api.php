@@ -698,33 +698,41 @@ try {
             break;
 
         // --------------------------------------------------------
-        // MESSAGGIO PER UN CANALE SOCIAL — bozza breve da DM.
+        // MESSAGGIO PER UN CANALE SOCIAL (o WhatsApp) — bozza breve da DM.
         // Genera SOLO il testo: l'invio non è automatico. Instagram, Facebook
         // e LinkedIn non permettono DM a freddo via API (vedi ardy-guida-outreach.html),
-        // quindi Michela apre il profilo e incolla — è una persona a scrivere
-        // a una persona, come vuole il codice etico.
+        // quindi Michela apre il profilo e incolla. WhatsApp non ha questa
+        // restrizione (wa.me apre la chat con il testo già scritto verso
+        // chiunque), ma l'invio resta comunque un tap suo — è una persona a
+        // scrivere a una persona, come vuole il codice etico.
         // --------------------------------------------------------
         case 'genera_messaggio_social':
             $apiKey = defined('ARDY_API_KEY') ? ARDY_API_KEY : '';
             if ($apiKey === '') { echo json_encode(['success' => false, 'error' => 'AI non configurata']); break; }
 
             $cid    = (int)($input['contact_id'] ?? 0);
-            $canale = in_array(($input['canale'] ?? ''), ['instagram', 'facebook', 'linkedin'], true) ? $input['canale'] : '';
+            $canale = in_array(($input['canale'] ?? ''), ['instagram', 'facebook', 'linkedin', 'whatsapp'], true) ? $input['canale'] : '';
             if (!$cid || $canale === '') { echo json_encode(['success' => false, 'error' => 'Contatto o canale mancante']); break; }
 
             $c = $db->prepare("SELECT * FROM outreach_contatti WHERE id=:id");
             $c->execute([':id' => $cid]);
             $contact = $c->fetch();
             if (!$contact) { echo json_encode(['success' => false, 'error' => 'Contatto non trovato']); break; }
-            if (trim((string)($contact[$canale] ?? '')) === '') {
-                echo json_encode(['success' => false, 'error' => 'Il contatto non ha un profilo ' . $canale]); break;
+            // WhatsApp non ha un campo profilo suo: dipende dal TELEFONO in scheda.
+            $campoCheck = $canale === 'whatsapp' ? 'telefono' : $canale;
+            if (trim((string)($contact[$campoCheck] ?? '')) === '') {
+                echo json_encode(['success' => false, 'error' => $canale === 'whatsapp'
+                    ? 'Il contatto non ha un numero di telefono' : 'Il contatto non ha un profilo ' . $canale]); break;
             }
 
             // Tono per canale: LinkedIn è professionale, Instagram/Facebook più
-            // diretti e informali (là si scrive come si parla).
+            // diretti e informali (là si scrive come si parla), WhatsApp ancora
+            // più diretto — è il canale più "da persona a persona" di tutti.
             $tonoCanale = $canale === 'linkedin'
                 ? "LinkedIn: registro professionale, si dà del Lei, niente emoji."
-                : ucfirst($canale) . ": registro cordiale e diretto, si può dare del tu se il profilo è informale, al massimo una emoji.";
+                : ($canale === 'whatsapp'
+                    ? "WhatsApp: registro diretto e informale come un messaggio scritto a voce, si dà del tu, al massimo una emoji, mai da 'azienda' — deve sembrare scritto da una persona."
+                    : ucfirst($canale) . ": registro cordiale e diretto, si può dare del tu se il profilo è informale, al massimo una emoji.");
 
             $targetMapS = [
                 'antiquari'         => "antiquari e gallerie d'antiquariato",

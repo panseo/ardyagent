@@ -426,7 +426,9 @@
             <strong>🔎 TROVA SOLO I CANALI</strong> qui sotto fa una ricerca in rete mirata, senza toccare gli altri campi.
             Il messaggio lo scrive l'AI, ma <strong>l'invio lo fai tu</strong>: apri il profilo e incolli. Instagram,
             Facebook e LinkedIn non permettono messaggi automatici a chi non ti ha scritto per primo — e un DM
-            scritto a mano funziona meglio.
+            scritto a mano funziona meglio. Il <strong>WhatsApp</strong> qui sotto usa il TELEFONO già in scheda —
+            quasi sempre un cellulare, trovato con ricerca e arricchimento — e apre la chat col messaggio già
+            scritto: l'invio resta comunque una tua scelta, un tap.
           </p>
           <div id="canaliRows"></div>
           <button class="btn-sm" id="btnTrovaCanali" onclick="enrichContact('social')" style="margin-top:12px;"
@@ -849,8 +851,9 @@
     <div class="modal-title" id="socialModalTitle">✍ SCRIVI SU…</div>
     <p style="color:var(--text-dim);font-size:12px;font-family:'DM Mono',monospace;margin-bottom:14px;line-height:1.6;">
       Bozza breve, da DM. <strong>Rileggila e correggila</strong> prima di mandarla: l'AI non ha visto il profilo,
-      quindi non può citare i suoi lavori. Poi <em>Copia e apri</em> mette il testo negli appunti e apre la chat
-      (su LinkedIn il profilo, poi usa "Messaggio"): <strong>a inviare sei tu</strong>.
+      quindi non può citare i suoi lavori. Poi <em>Copia e apri</em> apre la chat (su LinkedIn il profilo, poi
+      usa "Messaggio"; su WhatsApp il testo è già scritto nel box, sugli altri canali va incollato):
+      <strong>a inviare sei tu</strong>.
     </p>
     <div class="ta-wrap">
       <textarea class="composer-body" id="socialMsg" style="height:150px;" placeholder="Genera o scrivi il messaggio…"></textarea>
@@ -1405,8 +1408,36 @@ const ARDY_CANALI = {
   facebook:  { ico:'👍', label:'FACEBOOK',  dominio:'facebook.com',  chat: h => `https://m.me/${h}` },
   // LinkedIn non ha un deep link alla chat: si apre il profilo e si usa "Messaggio".
   linkedin:  { ico:'💼', label:'LINKEDIN',  dominio:'linkedin.com',  chat: null },
+  // WhatsApp non è un profilo social ma il TELEFONO in scheda: renderCanali()
+  // lo disegna a parte (riga sola, sola lettura), questa voce serve solo per
+  // il titolo del modal e l'etichetta. Vedi waNumero()/waLink() sotto.
+  whatsapp:  { ico:'💬', label:'WHATSAPP' },
 };
 let socialCanale = null;
+
+/** Numero WhatsApp in formato internazionale senza "+" (solo cifre). Assume Italia se manca il prefisso. */
+function waNumero(tel) {
+  let d = String(tel || '').replace(/[^\d+]/g, '');
+  if (!d) return '';
+  if (d.startsWith('+')) d = d.slice(1);
+  else if (d.startsWith('00')) d = d.slice(2);
+  else if (!d.startsWith('39') && /^3\d{8,9}$/.test(d)) d = '39' + d; // cellulare IT senza prefisso
+  return /^\d{8,15}$/.test(d) ? d : '';
+}
+
+/** Link wa.me con testo precompilato (l'invio resta manuale: si apre solo la chat). */
+function waLink(tel, testo) {
+  const n = waNumero(tel);
+  if (!n) return '';
+  const t = String(testo || '').trim();
+  return `https://wa.me/${n}` + (t ? `?text=${encodeURIComponent(t)}` : '');
+}
+
+/** Valore "grezzo" da cui dipende un canale: per WhatsApp è il TELEFONO, non un campo suo. */
+function canaleValoreGrezzo(canale) {
+  if (!currentContact) return '';
+  return canale === 'whatsapp' ? (currentContact.telefono || '') : (currentContact[canale] || '');
+}
 
 /** URL completo del profilo da quel che c'è nel campo: URL, @handle o handle nudo. */
 function canaleUrl(canale, val) {
@@ -1433,7 +1464,21 @@ function canaleHandle(canale, val) {
 function renderCanali() {
   const box = document.getElementById('canaliRows');
   if (!currentContact) { box.innerHTML = ''; return; }
-  box.innerHTML = Object.entries(ARDY_CANALI).map(([k, c]) => {
+
+  const waTel = currentContact.telefono || '';
+  const waUrl = waLink(waTel);
+  const waRow = `<div class="canale-row">
+      <span class="canale-ico">${ARDY_CANALI.whatsapp.ico}</span>
+      <span class="canale-nome">${ARDY_CANALI.whatsapp.label}</span>
+      <span class="canale-input" style="cursor:default;color:var(--text-dim);">${waTel ? escHtml(waTel) : 'nessun telefono — compila il campo TELEFONO qui sopra'}</span>
+      <span class="canale-azioni">
+        ${waUrl ? `<a class="btn-sm" href="${escHtml(waLink(waTel))}" target="_blank" rel="noopener noreferrer" title="Apri la chat WhatsApp">APRI</a>` : ''}
+        <button class="btn-sm primary" onclick="openSocialModal('whatsapp')" ${waUrl ? '' : 'disabled'}
+                title="${waUrl ? 'Prepara il messaggio da inviare' : 'Manca un numero di cellulare valido'}">✍ SCRIVI</button>
+      </span>
+    </div>`;
+
+  const socialRows = Object.entries(ARDY_CANALI).filter(([k]) => k !== 'whatsapp').map(([k, c]) => {
     const val = currentContact[k] || '';
     const url = canaleUrl(k, val);
     return `<div class="canale-row">
@@ -1448,6 +1493,8 @@ function renderCanali() {
       </span>
     </div>`;
   }).join('');
+
+  box.innerHTML = waRow + socialRows;
 }
 
 /** Valore corrente del campo di un canale (dal DOM, con fallback sul contatto in memoria). */
@@ -1465,7 +1512,7 @@ function setCanale(canale, val) {
 }
 
 function openSocialModal(canale) {
-  if (!currentContact || !currentContact[canale]) return;
+  if (!currentContact || !canaleValoreGrezzo(canale)) return;
   socialCanale = canale;
   document.getElementById('socialModalTitle').textContent = '✍ SCRIVI SU ' + ARDY_CANALI[canale].label;
   document.getElementById('socialMsg').value = '';
@@ -1509,11 +1556,19 @@ async function copiaEApriCanale() {
   const testo = document.getElementById('socialMsg').value.trim();
   if (!testo) { toast('✗ Scrivi o genera il messaggio', 'err'); return; }
 
-  const val    = currentContact[socialCanale];
-  const handle = canaleHandle(socialCanale, val);
-  const cfg    = ARDY_CANALI[socialCanale];
-  // Link diretto alla chat se la piattaforma ce l'ha, altrimenti il profilo.
-  const dest = (cfg.chat && handle) ? cfg.chat(handle) : canaleUrl(socialCanale, val);
+  let dest;
+  if (socialCanale === 'whatsapp') {
+    // WhatsApp, a differenza di IG/FB/LinkedIn, apre la chat con il testo GIÀ
+    // scritto nel box (parametro ?text=) verso chiunque: non serve incollare.
+    dest = waLink(currentContact.telefono, testo);
+    if (!dest) { toast('✗ Numero di telefono non valido', 'err'); return; }
+  } else {
+    const val    = currentContact[socialCanale];
+    const handle = canaleHandle(socialCanale, val);
+    const cfg    = ARDY_CANALI[socialCanale];
+    // Link diretto alla chat se la piattaforma ce l'ha, altrimenti il profilo.
+    dest = (cfg.chat && handle) ? cfg.chat(handle) : canaleUrl(socialCanale, val);
+  }
 
   let copiato = false;
   try {
@@ -1524,7 +1579,11 @@ async function copiaEApriCanale() {
     // si copia a mano. Meglio aprire comunque il canale che bloccare tutto.
   }
   window.open(dest, '_blank', 'noopener');
-  toast(copiato ? '📋 Testo copiato — incollalo e invia' : '⚠ Copia il testo a mano, canale aperto', copiato ? 'ok' : 'err');
+  if (socialCanale === 'whatsapp') {
+    toast('💬 Chat WhatsApp aperta col messaggio già scritto — controllalo e invia', 'ok');
+  } else {
+    toast(copiato ? '📋 Testo copiato — incollalo e invia' : '⚠ Copia il testo a mano, canale aperto', copiato ? 'ok' : 'err');
+  }
 }
 
 // ============================================================
