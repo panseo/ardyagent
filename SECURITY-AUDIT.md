@@ -1,16 +1,25 @@
 # Security Audit — ardyagent
 
 **Date:** 2026-06-20 (primi due giri) · 2026-07-04 (terzo giro — difesa in profondità sui dati utente)
-**Ambito:** intero progetto (60+ file PHP, JS, `.htaccess`, config, deploy, snippet WordPress, n8n)
+· 2026-08-25 (quarto giro — SSRF, XSS, coerenza auth a due livelli)
+**Ambito:** intero progetto (95+ file PHP, JS, `.htaccess`, config, deploy, snippet WordPress, n8n,
+`ardy-mcp` TypeScript)
 **Esito:** codebase complessivamente solida; chiusi 4 gruppi di vulnerabilità nei primi due giri
 (1 critico, 1 medio auth + 1 medio XSS + bassi), tutti verificati in produzione, con rotazione del
 token di verifica del webhook. Il terzo giro (§8) ha esteso la **difesa in profondità** a tutti gli
-endpoint dell'area riservata e completato i fix fail-closed sugli endpoint che leggono PII.
+endpoint dell'area riservata e completato i fix fail-closed sugli endpoint che leggono PII. Il quarto
+giro (§9) — un ri-audit completo, non solo sul codice nuovo — ha trovato e corretto una **SSRF
+autenticata** e uno **stored XSS** nel codice aggiunto dopo il terzo giro, oltre a colmare
+l'ultimo endpoint distruttivo senza `ardyRequireAuth()` e a rendere quel guard una verifica
+**reale** delle credenziali (prima controllava solo che ce ne fossero, non che fossero corrette).
 
 > **Struttura del documento:** §1–4 = primo giro (auth + hardening). §5 = secondo giro
 > (XSS, token webhook, password). §6 = rotazione `WA_VERIFY_TOKEN`. §7 = aree pulite senza rilievi nel 2° giro.
 > §8 = terzo giro (2026-07-04): `ardyRequireAuth()` esteso, fail-closed su `wa-lookup`/`wa-memoria`,
 > guard su `ardy-migrate`, hardening `verify-client`.
+> §9 = quarto giro (2026-08-25): SSRF su `ardy-gbp-check`, stored XSS su `ardy-outreach.html`,
+> `ardyRequireAuth()` con verifica password reale, `ardy-elimina-cliente`/`ardy-places-prova`
+> allineati alla difesa in profondità, header di sicurezza, `composer.lock`, hardening minori.
 
 ---
 
@@ -250,3 +259,161 @@ resta l'alternativa forte per il cliente.
   disiscrizione (`ardy-unsubscribe`) e cancellazione (`ardy-elimina-cliente`); manca una **policy di
   retention** esplicita e non risulta cifratura at-rest oltre a quella eventuale del DB. Da valutare
   in ottica GDPR (minimizzazione + retention).
+
+---
+
+## 9. Quarto giro (2026-08-25) — ri-audit completo
+
+**Metodo.** Non un controllo del solo codice nuovo: ri-verificate da zero tutte le classi di
+vulnerabilità dei giri precedenti (SQLi, command injection, SSRF, XSS, upload, segreti, IDOR,
+CSRF, OAuth) su tutto il codebase attuale (95 file `.php`, dashboard HTML/JS, `ardy-mcp/`
+TypeScript, `n8n/`, `wordpress-snippets/`), con verifica puntuale di ogni finding (lettura diretta
+del codice, non solo grep) prima di considerarlo confermato. Nessuna regressione trovata sui fix
+dei giri 1–3. Tutti i fix di questo giro sono stati validati con `php -l` su ogni file toccato e,
+per i due finding critici, con un test isolato che riproduce lo scenario di attacco end-to-end
+(vedi §9.1 e §9.2) — **non ancora verificati in produzione** (serve un deploy, come per i giri
+precedenti; §2 di questo documento andrà aggiornato dopo).
+
+| # | Severità | Problema | Stato |
+|---|---|---|---|
+| 9.1 | 🟠 Media | SSRF autenticata in `ardy-gbp-check.php` (bypassava `ardySafeHttpGet`) | ✅ risolto |
+| 9.2 | 🟠 Media | Stored XSS in `ardy-outreach.html` (escape JS-in-attributo nell'ordine sbagliato) | ✅ risolto |
+| 9.3 | 🟠 Media | `ardyRequireAuth()` verificava solo la *presenza* di credenziali, mai la password | ✅ risolto |
+| 9.4 | 🟠 Media | `ardy-elimina-cliente.php` (hard-delete) senza `ardyRequireAuth()` come 2° livello | ✅ risolto |
+| 9.5 | 🟠 Media | `ardy-places-prova.php` fuori dal blocco Basic Auth `.htaccess` | ✅ risolto |
+| 9.6 | 🟡 Bassa | `ardy-progetti-file-api.php`: whitelist solo su estensione, niente firma binaria | ✅ risolto |
+| 9.7 | 🟡 Bassa | Header di sicurezza (nosniff/X-Frame-Options/CSP minima/HSTS) assenti ovunque | ✅ risolto |
+| 9.8 | 🟡 Bassa | `ardy-design-app.html`: `esc()` non escapava l'apostrofo (inconsistente, non sfruttato) | ✅ risolto |
+| 9.9 | 🟡 Bassa | `ardy-gcal-auth.php`: token OAuth stampato senza `htmlspecialchars` | ✅ risolto |
+| 9.10 | 🔵 Info | `osmHttpGet()` in `ardy-outreach-api.php`: redirect non limitati/ristretti a http(s) | ✅ risolto |
+| 9.11 | 🔵 Info | `composer.lock` non versionato → build mPDF non riproducibile | ✅ risolto |
+| 9.12 | 🟡 Bassa | Nessun rate-limit sugli endpoint AI/email costosi ma autenticati | ⏳ aperto (vedi nota) |
+| 9.13 | 🔵 Info | mPDF senza hardening esplicito anti-fetch remoto (oggi non sfruttabile) | ⏳ aperto (vedi nota) |
+| 9.14 | 🔵 Info | `ZipArchive` su DOCX/ODT (`ardy-progetti-ai.php`): rischio zip-bomb minimo, autenticato | ⏳ aperto (vedi nota) |
+
+### 9.1 🟠 SSRF autenticata in `ardy-gbp-check.php`
+**Problema.** Il pannello diagnostico Google Business Profile scarica l'immagine passata in
+`?img=<url>` con un `curl_init()` diretto, non con `ardySafeHttpGet()` (il wrapper SSRF-safe che
+tutto il resto del codebase usa): `filter_var($imgTest, FILTER_VALIDATE_URL)` accetta **qualunque
+schema** (anche `file://`, `gopher://`), niente blocco IP privati/loopback/metadata, redirect
+seguiti senza validazione. Un utente autenticato (o chi avesse rubato la sessione/credenziali) poteva
+richiedere `?img=file:///etc/passwd` o `?img=http://169.254.169.254/...` e leggere dalla risposta
+dimensioni/MIME del contenuto scaricato — fingerprint di servizi interni o dei metadata cloud, e
+potenzialmente lettura di file locali a seconda della build di libcurl.
+
+**Fix.** Sostituito il `curl_init()` diretto con `ardyValidatePublicUrl()` (solo http/https, blocca
+host privati) + `ardySafeHttpGet()` (redirect validati uno a uno, niente `FOLLOWLOCATION` cieco,
+limite di byte). Verificato con un endpoint che simula il download: URL `file://`/host privati ora
+respinti a monte, prima di qualunque `curl_exec`.
+
+### 9.2 🟠 Stored XSS in `ardy-outreach.html`
+**Problema.** Il filtro "regione" (campo testo libero sui contatti, popolato anche da import/OSM)
+veniva reso in un attributo `onclick` con `` `onclick="setRegioneFilter('${escHtml(r).replace(/'/g,"\\'")}')"` ``
+— il `.replace()` per l'apice girava **dopo** `escHtml()`, quando l'apice era già diventato
+l'entità `&#39;` e quindi non c'era più nulla da sostituire (operazione a vuoto). Un valore regione
+come `x');alert(document.cookie);//` sopravviveva come `x&#39;);alert(...);//`: il browser
+decodifica l'entità HTML dell'attributo **prima** di eseguire il JS dell'`onclick`, quindi il codice
+eseguito diventava `setRegioneFilter('x');alert(document.cookie);//')` — breakout completo, XSS
+nella sessione di chi apre il tool Outreach.
+
+**Fix.** Aggiunta la funzione `escJs()` (stesso pattern già corretto e in uso in
+`ardy-michela-app.html`): escape di backslash e apice **prima** del contesto JS, poi `escHtml()` per
+il contesto HTML — ordine invertito rispetto al bug. Sostituite tutte e 3 le occorrenze del pattern
+rotto (righe dei filtri regione in outreach, tool multi-regione, filtro campagne). **Verificato con
+un test isolato** (Node, replicando escape → rendering HTML → decodifica attributo come farebbe un
+browser) che il payload sopra non esegue più: dopo il fix, l'apice resta escapato come `\'` dentro
+la stringa JS e il codice iniettato resta testo inerte, non eseguibile.
+
+### 9.3 🟠 `ardyRequireAuth()` non verificava la password
+**Problema.** Il guard applicativo di secondo livello (introdotto in §8.1 proprio per non dipendere
+solo dal Basic Auth di `.htaccess`) controllava solo che `PHP_AUTH_USER` fosse **presente**, mai che
+la password fosse corretta. Ma PHP popola `PHP_AUTH_USER`/`PHP_AUTH_PW` da qualunque header
+`Authorization: Basic ...` il client invii, **indipendentemente** dal fatto che Apache l'abbia
+validato — è esattamente lo scenario che il guard dichiara di coprire (regex `FilesMatch` non
+combaciante, deploy errato) a restare scoperto: bastava un header Basic con credenziali qualsiasi
+per superarlo.
+
+**Fix.** `ardyRequireAuth()` ora, quando la password è disponibile a PHP (che è il caso comune),
+la verifica **davvero** contro `.htpasswd` con `password_verify()` (il file è generato da
+`ardy-setup-login.php` con `PASSWORD_BCRYPT`, quindi il formato combacia sempre). Se `.htpasswd`
+non fosse leggibile da PHP (problema di permessi, non lo scenario che vogliamo coprire) il guard
+ricade sul comportamento storico — di proposito, per non rischiare un lockout in produzione per un
+problema di permessi invece che per una reale falla di auth. Quando l'utente risulta da
+`REMOTE_USER` (Apache ha già validato lui stesso la password) non c'è nulla da riverificare.
+**Verificato con un test isolato** (bcrypt reale, utente/password corretti → autorizzato; password
+sbagliata → rifiutato; utente inesistente → rifiutato).
+
+### 9.4 🟠 `ardy-elimina-cliente.php` senza secondo livello di difesa
+L'endpoint più distruttivo del progetto (hard-delete di scheda/preventivi/fasi/storico WhatsApp +
+file, e "libera spazio" che cancella foto/reel) era rimasto l'unico, tra quelli del blocco Basic
+Auth, a non chiamare `ardyRequireAuth()` — nonostante §8.1 dichiari il pattern esteso a "tutti" gli
+endpoint riservati. Un commento nel codice giustificava l'omissione con "su questo server
+`ardyRequireAuth` non riceve l'header Authorization", affermazione non riscontrata: lo stesso guard
+funziona sugli altri ~50 endpoint sullo stesso server. **Fix.** Aggiunto `require_once
+ardy-auth.php` + `ardyRequireAuth()`, stesso punto (dopo il preflight CORS, prima di ogni
+side-effect) degli altri endpoint.
+
+### 9.5 🟠 `ardy-places-prova.php` fuori dal blocco Basic Auth
+Chiamava `ardyRequireAuth()` ma non era nella regex `FilesMatch` dell'`.htaccess` — e, prima del fix
+§9.3, `ardyRequireAuth()` da sola non era una vera barriera. Consumava budget Google Places a
+pagamento senza autenticazione reale. **Fix.** Aggiunto al blocco Basic Auth in `.htaccess`.
+
+### 9.6 🟡 Upload progetti: aggiunta verifica della firma binaria
+`ardy-progetti-file-api.php` ammette un ventaglio ampio di formati (STL/OBJ/3MF/G-code/STEP/CAD/
+ZIP/PDF/DOCX/ODT/RTF/TXT/MD) validando solo l'estensione dichiarata dal client — a differenza di
+tutti gli altri upload del progetto, che verificano il MIME reale via `finfo`. Impatto già mitigato
+(nome rigenerato server-side, cartella non eseguibile via `ardyHardenUploadDir()`), ma un file
+rinominato passava senza controlli. **Fix.** Aggiunta `ardyFileSignatureOk()`: verifica i primi
+byte per i formati con una firma affidabile (PDF, ZIP-based — zip/3mf/docx/odt, RTF); i formati
+senza una firma universale (STL ASCII, G-code, STEP/CAD, testo semplice) restano sull'estensione,
+perché un controllo firma lì darebbe solo falsi negativi.
+
+### 9.7 🟡 Header di sicurezza globali
+Nessun endpoint impostava `X-Content-Type-Options`, `X-Frame-Options` o `Strict-Transport-Security`
+(solo 2 file su 95 avevano un `nosniff` locale). **Fix.** Aggiunto un blocco `mod_headers` globale
+in `.htaccess`: `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`,
+`Content-Security-Policy: frame-ancestors 'self'; object-src 'none'` (solo anti-clickjacking/
+anti-plugin-embedding — **niente** `script-src` restrittivo: la dashboard usa ampiamente `onclick=`
+inline, una CSP che lo blocchi richiede un refactor dedicato, fuori scope di un fix di audit) e
+`Strict-Transport-Security`.
+
+### 9.8 / 9.9 🟡 Difesa in profondità XSS minori
+- **9.8** — `esc()` in `ardy-design-app.html` non escapava l'apice (a differenza di `escHtml()`
+  usato ovunque altrove); oggi non risultava sfruttabile in nessun punto d'uso, ma la trappola si
+  sarebbe riaperta al primo riuso in un contesto ad apice singolo. Allineato a `escHtml()`.
+- **9.9** — `ardy-gcal-auth.php` stampava il token OAuth di errore con `json_encode()` ma senza
+  `htmlspecialchars()`; rischio basso (endpoint autenticato, `$token` è la risposta di Google, non
+  input diretto dell'attaccante) ma incoerente col resto del codice. Aggiunto `htmlspecialchars()`.
+
+### 9.10 / 9.11 🔵 Consistenza e riproducibilità
+- **9.10** — `osmHttpGet()` (geocoding Nominatim/Overpass in `ardy-outreach-api.php`) usa un
+  `curl_init()` dedicato invece di `ardySafeHttpGet()` — scelta corretta, perché quest'ultimo non
+  supporta lo User-Agent identificativo richiesto dalla policy di Nominatim. Host sempre hardcoded,
+  quindi non SSRF-sfruttabile oggi; aggiunta comunque `CURLOPT_PROTOCOLS`/`CURLOPT_REDIR_PROTOCOLS`
+  ristretti a http/https e `CURLOPT_MAXREDIRS` per difesa in profondità sui redirect.
+- **9.11** — `composer.lock` non era versionato (era in `.gitignore`): ogni `composer install` in
+  un deploy fresco poteva risolvere una minor di mPDF diversa da quella testata, senza traccia in
+  audit. **Fix.** Generato (`mpdf/mpdf v8.3.1` — nessun advisory di sicurezza noto, verificato con
+  `composer audit`), tolto da `.gitignore` e versionato; `vendor/` resta ignorato.
+
+### 9.12 – 9.14 🔵 Aperti (raccomandati, non applicati in questo giro)
+Lasciati intenzionalmente fuori scope perché toccano flussi live (alcuni innescati da cron/n8n) che
+non è prudente modificare alla cieca senza poter verificare il comportamento in produzione — a
+differenza dei fix sopra, tutti validati con `php -l` e/o test isolato riproducibile.
+- **9.12** — Gli endpoint AI/email costosi ma autenticati (`ardy-crea-faq`, `ardy-progetti-ai`,
+  `ardy-preventivo` mode=ai, `ardy-email-cliente-api`, `ardy-solleciti`, ecc.) non hanno un
+  rate-limit applicativo: se le credenziali dashboard trapelassero, si potrebbe generare in loop
+  chiamate a pagamento o email di massa. Consigliato un cap orario per-endpoint, riusando lo stesso
+  pattern file-based già in `ardy-save-lead.php`/`ardy-proxy.php` — da tarare endpoint per endpoint
+  (alcuni sono anche raggiunti da cron/n8n con pattern di chiamata diversi dal click umano).
+- **9.13** — mPDF non ha una configurazione esplicita che vieti il fetch di contenuti remoti
+  (`isRemoteEnabled`/equivalenti). Oggi non sfruttabile: ogni campo utente che finisce in
+  `WriteHTML()` passa da `sanitizeInput()` o da `parseImgDataUris()` (che accetta **solo**
+  `data:image/...;base64,` per le immagini) — quindi nessun `<img src="http://...">` costruibile da
+  input utente. Consigliato bloccare comunque il fetch remoto lato configurazione mPDF, così la
+  protezione non dipende solo dalla disciplina futura di chi tocca `ardy-preventivo.php`.
+- **9.14** — `ardy-progetti-ai.php` estrae testo da DOCX/ODT con `ZipArchive::getFromName()` (niente
+  XXE — non usa `DOMDocument`/`SimpleXML`, positivo). Un archivio con una entry fortemente
+  compressa potrebbe causare un picco di memoria (DoS locale). Endpoint autenticato e file limitato
+  a 20 MB in ingresso: rischio basso. Consigliato un limite esplicito sulla dimensione decompressa
+  prima di leggere l'entry.

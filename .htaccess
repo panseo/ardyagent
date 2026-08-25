@@ -79,6 +79,24 @@ DirectoryIndex ardy-michela-app.html
     <FilesMatch "\.(png|jpe?g|webp|svg|ico|woff2?)$">
         Header set Cache-Control "public, max-age=2592000"
     </FilesMatch>
+
+    # -----------------------------------------------------------
+    # HEADER DI SICUREZZA (globali, su tutte le risposte)
+    # - nosniff: il browser non deve "indovinare" il MIME type di un file
+    #   servito (mitiga XSS via upload interpretato come HTML/JS).
+    # - X-Frame-Options + frame-ancestors: nessun sito esterno può incorniciare
+    #   la dashboard (mitiga clickjacking sull'area riservata).
+    # - object-src 'none': blocca plugin/Flash-style embedding, nessun impatto
+    #   sul sito (non ne usa).
+    # - HSTS: forza HTTPS anche su richieste future dello stesso browser.
+    # Niente script-src/style-src nella CSP: la dashboard usa ampiamente script
+    # e attributi inline (onclick=...), una policy restrittiva li romperebbe
+    # senza un refactor dedicato — restano fuori scope di un fix di audit.
+    # -----------------------------------------------------------
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Content-Security-Policy "frame-ancestors 'self'; object-src 'none'"
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
 </IfModule>
 
 # -----------------------------------------------------------
@@ -86,7 +104,7 @@ DirectoryIndex ardy-michela-app.html
 # Le pagine pubbliche (chatbot, widget, unsubscribe) restano aperte.
 # Il file con utente+password (.htpasswd) si crea con ardy-setup-login.php
 # -----------------------------------------------------------
-<FilesMatch "^(ardy-michela-app\.html|ardy-crm-api\.php|ardy-update-lead\.php|ardy-preventivo\.php|ardy-get-fasi\.php|ardy-pubblica-lavorazione\.php|ardy-pubblica-social\.php|ardy-crea-reel\.php|ardy-pubblica-reel\.php|ardy-lista-musica\.php|ardy-reel-template-api\.php|ardy-libreria-api\.php|ardy-lead-foto\.php|ardy-upload-video\.php|ardy-stats\.php|ardy-solleciti\.php|ardy-trasporti\.php|ardy-outreach\.html|ardy-outreach-api\.php|ardy-email-finder\.php|ardy-gcal\.php|ardy-gcal-auth\.php|ardy-import-preventivi\.php|ardy-import-scheda-pdf\.php|ardy-dossier\.php|ardy-grazie-consegna\.php|ardy-social-bozze\.php|ardy-social-foto\.php|ardy-genera-social\.php|ardy-conoscenza-appresa\.php|ardy-template-scheda-cliente\.html|ardy-elimina-cliente\.php|ardy-conversazioni\.php|ardy-email-cliente-api\.php|ardy-crea-faq\.php|ardy-fasi-bozza-api\.php|ardy-allega-preventivo\.php|ardy-estrai-preventivo-pdf\.php|ardy-archivia-persi\.php|ardy-sopralluoghi-api\.php|ardy-nota-settimanale-api\.php|ardy-todo-datati-api\.php|ardy-design-app\.html|ardy-progetti-api\.php|ardy-progetti-fasi-api\.php|ardy-progetti-file-api\.php|ardy-progetti-galleria-api\.php|ardy-pubblica-progetto\.php|ardy-pubblica-fase-progetto\.php|ardy-progetti-ai\.php|ardy-archivia-b2\.php|ardy-object-push\.php|ardy-object-foto-api\.php|ardy-guida-michela\.html|ardy-guida-design\.html|ardy-guida-outreach\.html|ardy-gbp-post\.php|ardy-gbp-check\.php|ardy-gbp-auth\.php|ardy-health\.php)$">
+<FilesMatch "^(ardy-michela-app\.html|ardy-crm-api\.php|ardy-update-lead\.php|ardy-preventivo\.php|ardy-get-fasi\.php|ardy-pubblica-lavorazione\.php|ardy-pubblica-social\.php|ardy-crea-reel\.php|ardy-pubblica-reel\.php|ardy-lista-musica\.php|ardy-reel-template-api\.php|ardy-libreria-api\.php|ardy-lead-foto\.php|ardy-upload-video\.php|ardy-stats\.php|ardy-solleciti\.php|ardy-trasporti\.php|ardy-outreach\.html|ardy-outreach-api\.php|ardy-email-finder\.php|ardy-gcal\.php|ardy-gcal-auth\.php|ardy-import-preventivi\.php|ardy-import-scheda-pdf\.php|ardy-dossier\.php|ardy-grazie-consegna\.php|ardy-social-bozze\.php|ardy-social-foto\.php|ardy-genera-social\.php|ardy-conoscenza-appresa\.php|ardy-template-scheda-cliente\.html|ardy-elimina-cliente\.php|ardy-conversazioni\.php|ardy-email-cliente-api\.php|ardy-crea-faq\.php|ardy-fasi-bozza-api\.php|ardy-allega-preventivo\.php|ardy-estrai-preventivo-pdf\.php|ardy-archivia-persi\.php|ardy-sopralluoghi-api\.php|ardy-nota-settimanale-api\.php|ardy-todo-datati-api\.php|ardy-design-app\.html|ardy-progetti-api\.php|ardy-progetti-fasi-api\.php|ardy-progetti-file-api\.php|ardy-progetti-galleria-api\.php|ardy-pubblica-progetto\.php|ardy-pubblica-fase-progetto\.php|ardy-progetti-ai\.php|ardy-archivia-b2\.php|ardy-object-push\.php|ardy-object-foto-api\.php|ardy-guida-michela\.html|ardy-guida-design\.html|ardy-guida-outreach\.html|ardy-gbp-post\.php|ardy-gbp-check\.php|ardy-gbp-auth\.php|ardy-health\.php|ardy-places-prova\.php)$">
     AuthType Basic
     AuthName "Area riservata Ardy Lab"
     AuthUserFile /home/micoperibg/public_html/ardyagent.ardy-lab.it/.htpasswd

@@ -950,7 +950,7 @@ function renderRegioneFilterRow() {
   if (!allRegioni.length) { row.style.display = 'none'; return; }
   row.style.display = 'flex';
   row.innerHTML = '<button class="chip ' + (currentRegione===''?'active':'') + '" onclick="setRegioneFilter(\'\')">TUTTE LE ZONE</button>' +
-    allRegioni.map(r => `<button class="chip ${currentRegione===r?'active':''}" onclick="setRegioneFilter('${escHtml(r).replace(/'/g,"\\'")}')">${escHtml(r)}</button>`).join('');
+    allRegioni.map(r => `<button class="chip ${currentRegione===r?'active':''}" onclick="setRegioneFilter('${escJs(r)}')">${escHtml(r)}</button>`).join('');
 }
 
 function setRegioneFilter(regione) {
@@ -1108,6 +1108,13 @@ function filterContacts() {
 // Escape per output in HTML: i contatti possono arrivare da ricerca OSM o
 // inserimento manuale, quindi nome/stato/ecc. non sono fidati (anti-XSS).
 function escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+// Escape per un valore inserito dentro un letterale JS a singolo apice, che a
+// sua volta finisce in un attributo HTML (es. onclick="fn('${escJs(x)}')"):
+// va escapato PRIMA per il contesto JS (backslash e apice) e SOLO DOPO per
+// l'HTML — l'ordine inverso (escHtml poi .replace) non funziona, perché dopo
+// escHtml non restano più apici letterali da sostituire, e il browser
+// decodifica le entità HTML dell'attributo prima di eseguire il JS.
+function escJs(s){return escHtml(String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"));}
 
 // --- Completezza dati ---------------------------------------------------
 const has = (c,f) => !!String(c?.[f]||'').trim();
@@ -1792,7 +1799,7 @@ async function renderFilterTool() {
   section.style.display = regioniPresenti.length ? 'block' : 'none';
   document.getElementById('toolRegioneButtons').innerHTML = regioniPresenti.map(r => {
     const n = contaChip('regione', r);
-    return `<button class="chip ${toolRegioni.has(r)?'active':''}" onclick="toggleToolRegione('${escHtml(r).replace(/'/g,"\\'")}')">${escHtml(r)} (${n})</button>`;
+    return `<button class="chip ${toolRegioni.has(r)?'active':''}" onclick="toggleToolRegione('${escJs(r)}')">${escHtml(r)} (${n})</button>`;
   }).join('');
 
   document.getElementById('toolMissingButtons').innerHTML = DATA_FIELDS.map(([f,lbl]) => {
@@ -2143,7 +2150,7 @@ function renderCampRegioneRow() {
   if (!regioniPresenti.length) { row.style.display = 'none'; return; }
   row.style.display = 'flex';
   row.innerHTML = '<button class="chip ' + (campRegione===''?'active':'') + '" onclick="setCampRegione(\'\')">TUTTE LE ZONE</button>' +
-    regioniPresenti.map(r => `<button class="chip ${campRegione===r?'active':''}" onclick="setCampRegione('${escHtml(r).replace(/'/g,"\\'")}')">${escHtml(r)}</button>`).join('');
+    regioniPresenti.map(r => `<button class="chip ${campRegione===r?'active':''}" onclick="setCampRegione('${escJs(r)}')">${escHtml(r)}</button>`).join('');
 }
 
 function setCampRegione(regione) {
