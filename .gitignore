@@ -32,3 +32,6 @@ Guida-Dashboard-Ardy-Michela.pdf
 
 # Sistema
 cgi-bin/
+
+# Stato locale Claude Code (worktree temporanee dei sub-agent, ecc.)
+.claude/
