@@ -1,7 +1,6 @@
 # Dipendenze PHP
 vendor/
 composer.phar
-composer.lock
 
 # File sensibili
 ardy-config.php

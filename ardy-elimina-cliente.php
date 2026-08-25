@@ -19,14 +19,14 @@
 //
 // Versione minima del task "Gestione archivio cliente / Cestino" (vedi TODO).
 //
-// Auth: come gli altri endpoint chiamati in fetch dal browser, ci si
-// affida al Basic Auth del .htaccess (NON ardyRequireAuth, che su questo
-// server in CGI/FPM non riceve l'header Authorization).
+// Auth: Basic Auth via .htaccess + ardyRequireAuth() come secondo livello
+// (difesa in profondità — è l'endpoint più distruttivo del progetto).
 // Sicurezza: richiede la parola di conferma giusta e session_id sanificato.
 // -----------------------------------------------------------
 
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
+require_once __DIR__ . '/ardy-auth.php';
 
 header('Access-Control-Allow-Origin: https://ardyagent.ardy-lab.it');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -34,6 +34,8 @@ header('Access-Control-Allow-Headers: Content-Type');
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
+
+ardyRequireAuth();
 
 // session_id sempre sanificato (no path traversal)
 function ardy_clean_session($s) {

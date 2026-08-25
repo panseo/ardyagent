@@ -14,6 +14,7 @@
 
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-gbp.php';    // per gbp_get_access_token() (token dedicato)
+require_once __DIR__ . '/ardy-net.php';    // per ardySafeHttpGet()/ardyValidatePublicUrl() (fetch img SSRF-safe)
 
 // Difesa in profondità: se il Basic Auth a monte (.htaccess) non venisse
 // applicato, questo guard rifiuta comunque le richieste non autenticate.
@@ -502,8 +503,9 @@ if ($httpCode === 200) {
     // L'immagine: Google deve poterla SCARICARE (min 250×250, JPG/PNG, < 5 MB).
     // Si passa con ?img=<url> — lo si copia dall'articolo o dal log della pubblicazione.
     $imgTest = trim((string)($_GET['img'] ?? ''));
+    $imgSafeUrl = $imgTest !== '' ? ardyValidatePublicUrl($imgTest) : null;
     echo "<h3 style='font-size:14px'>L'immagine del post</h3>";
-    if ($imgTest === '' || !filter_var($imgTest, FILTER_VALIDATE_URL)) {
+    if ($imgSafeUrl === null) {
         echo "<p class='muted'>Serve l'URL della foto che il post avrebbe usato: pubblica, JPG/PNG, almeno "
            . "250×250, sotto i 5 MB. Puoi incollarlo in <code>?img=&lt;url&gt;</code> (lo trovi nel log della "
            . "pubblicazione fallita, campo <code>media=</code>), oppure prenderlo da qui:</p>";
@@ -531,22 +533,23 @@ if ($httpCode === 200) {
             echo "<p class='muted'>(elenco progetti non disponibile: " . h($e->getMessage()) . ")</p>";
         }
     } else {
-        $ci = curl_init($imgTest);
-        curl_setopt($ci, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ci, CURLOPT_TIMEOUT,        20);
-        curl_setopt($ci, CURLOPT_FOLLOWLOCATION, true);
-        $imgBytes = (string)curl_exec($ci);
-        $imgCode  = (int)curl_getinfo($ci, CURLINFO_HTTP_CODE);
-        $imgType  = (string)curl_getinfo($ci, CURLINFO_CONTENT_TYPE);
-        curl_close($ci);
+        // ardySafeHttpGet: blocca IP privati/loopback/metadata, valida ogni
+        // redirect, solo http/https — a differenza di un curl_init() diretto
+        // (che qui accettava anche file://, gopher:// e host interni).
+        $resp     = ardySafeHttpGet($imgSafeUrl, 20, 3, 8 * 1024 * 1024);
+        $imgBytes = (string)($resp['body'] ?? '');
+        $imgCode  = (int)($resp['code'] ?? 0);
         $dim = $imgBytes !== '' ? @getimagesizefromstring($imgBytes) : false;
         $kb  = round(strlen($imgBytes) / 1024);
-        if ($imgCode !== 200) {
+        if ($resp === null) {
+            echo "<div class='box err'><b>❌ Non riesco a scaricarla</b> (URL non raggiungibile, non pubblico, "
+               . "o troppi redirect).</div>";
+        } elseif ($imgCode !== 200) {
             echo "<div class='box err'><b>❌ Google non può scaricarla: HTTP $imgCode.</b><br>"
                . "Se è 401 sta dietro Basic Auth (è il nostro server, non WordPress): al post va l'URL "
                . "pubblico di WP, non quello della dash.</div>";
         } elseif (!$dim) {
-            echo "<div class='box err'><b>❌ Scaricata ($kb KB, <code>" . h($imgType) . "</code>) ma non è "
+            echo "<div class='box err'><b>❌ Scaricata ($kb KB) ma non è "
                . "un'immagine leggibile.</b></div>";
         } else {
             $ok = $dim[0] >= 250 && $dim[1] >= 250 && $kb < 5120
@@ -563,7 +566,7 @@ if ($httpCode === 200) {
     // che ha fatto fallire il post vero. È il modo diretto per sapere se il 500 dipende
     // dall'immagine, visto che dai post riusciti sappiamo che la scheda pubblica.
     // Sta dietro un link apposta: non deve partire per sbaglio.
-    $imgValida = $imgTest !== '' && filter_var($imgTest, FILTER_VALIDATE_URL);
+    $imgValida = $imgSafeUrl !== null;
     echo "<h3 style='font-size:14px'>Prova di pubblicazione</h3>";
     if (($_GET['post_test'] ?? '') === '1') {
         $conFoto = ($_GET['con_img'] ?? '') === '1' && $imgValida;

@@ -929,9 +929,17 @@ function osmHttpGet(string $url, int $timeout = 45): ?string {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_TIMEOUT,        $timeout);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_MAXREDIRS,      3);
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Accept: application/json']);
     // Nominatim/Overpass richiedono uno User-Agent identificativo
     curl_setopt($ch, CURLOPT_USERAGENT, 'ArdyLabOutreach/1.0 (https://ardy-lab.it)');
+    // Host sempre hardcoded (Nominatim / mirror Overpass), non da ardySafeHttpGet
+    // per non violare la loro policy sullo User-Agent identificativo — qui
+    // restringiamo comunque schema/redirect a difesa in profondità.
+    if (defined('CURLOPT_PROTOCOLS')) {
+        curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
+        curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
+    }
     $res  = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
