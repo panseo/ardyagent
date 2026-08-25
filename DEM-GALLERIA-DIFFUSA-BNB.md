@@ -54,7 +54,8 @@ noi: per te nessun pensiero, solo vantaggi.
 Curioso di scoprire come funziona?
 Sulla pagina qui sotto trovi tutti i dettagli e puoi parlare subito con Sole, la
 nostra assistente: ti risponde a ogni dubbio e ti fissa una chiamata conoscitiva
-di 10 minuti o un sopralluogo gratuito nella tua struttura.
+di 10 minuti (o, se la zona lo consente, un sopralluogo gratuito nella tua
+struttura).
 
 👉 Scopri la Galleria Diffusa: https://ardy-lab.it/galleria-diffusa
 
@@ -78,6 +79,8 @@ Roma · Restauro, design e ospitalità sostenibile · ardy-lab.it
 
 - **CTA = il link alla pagina** `ardy-lab.it/galleria-diffusa`: lì Sole risponde,
   può **fissare una chiamata o un sopralluogo**, e invita a sentire Michela.
+  ⚠️ Per i B&B della **Puglia** (regola in `ardy-system.txt`) Sole non fissa mai un
+  sopralluogo: propone solo il colloquio telefonico/videochiamata con Michela.
   Sulle commissioni Sole conferma che c'è, ma **non dà percentuali** (a voce con Michela).
 - **Mittente:** firmato **Michela** (più caldo e coerente con la pagina/Sole). Se
   preferisci un tono istituzionale, sostituisci con "Il Team di Ardy Lab".
