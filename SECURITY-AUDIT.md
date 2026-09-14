@@ -291,6 +291,23 @@ precedenti; §2 di questo documento andrà aggiornato dopo).
 | 9.13 | 🔵 Info | mPDF senza hardening esplicito anti-fetch remoto (oggi non sfruttabile) | ⏳ aperto (vedi nota) |
 | 9.14 | 🔵 Info | `ZipArchive` su DOCX/ODT (`ardy-progetti-ai.php`): rischio zip-bomb minimo, autenticato | ⏳ aperto (vedi nota) |
 
+### Verifica live in produzione (2026-09-14)
+
+Deploy eseguito (`git pull` + `deploy.sh`, sintassi PHP OK, sync + migrazione schema senza errori).
+Controlli post-deploy:
+
+| Controllo | Atteso | Risultato |
+|---|---|---|
+| `ardy-places-prova.php` (era il gap, §9.5) | 401 senza login | 401 ✅ |
+| `ardy-elimina-cliente.php` (§9.4) | 401 senza login | 401 ✅ |
+| Endpoint pubblico di riferimento (`ardy-unsubscribe.php`) | non-401 | 200 ✅ |
+| Header di sicurezza globali (§9.7): nosniff / X-Frame-Options / CSP / HSTS | presenti | tutti presenti ✅ |
+| File `.md`/`.json`/`.sql` | 403 Deny | 403 ✅ |
+| Dashboard (`ardy-michela-app.html`) senza credenziali | 401 + `WWW-Authenticate` | 401 ✅ |
+| **Login con credenziali reali** (il fix più delicato, §9.3: `ardyRequireAuth()` ora verifica davvero la password contro `.htpasswd`) | accesso riuscito | **confermato da Michela: login OK** ✅ |
+
+Nessuna regressione. Giro chiuso.
+
 ### 9.1 🟠 SSRF autenticata in `ardy-gbp-check.php`
 **Problema.** Il pannello diagnostico Google Business Profile scarica l'immagine passata in
 `?img=<url>` con un `curl_init()` diretto, non con `ardySafeHttpGet()` (il wrapper SSRF-safe che
