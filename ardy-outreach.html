@@ -913,8 +913,24 @@ let isDirty = false;
 let mode = 'contatti';
 
 async function api(action, data={}) {
-  const r = await fetch(API, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action,...data}) });
-  return r.json();
+  // Non deve mai lanciare: un errore di rete o una risposta non-JSON (es. PHP
+  // fatal error, 401, timeout) farebbe fallire silenziosamente l'await del
+  // chiamante — bottone che resta bloccato su "Invio in corso...", nessun
+  // errore visibile. Meglio restituire sempre un oggetto {success:false,...}.
+  let r;
+  try {
+    r = await fetch(API, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action,...data}) });
+  } catch (e) {
+    console.error('api() rete:', action, e);
+    return { success:false, error:'Errore di rete: impossibile contattare il server' };
+  }
+  const text = await r.text();
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    console.error('api() risposta non-JSON:', action, r.status, text);
+    return { success:false, error:'Risposta non valida dal server' + (r.ok ? '' : ' (HTTP ' + r.status + ')') };
+  }
 }
 
 // ============================================================
@@ -2139,6 +2155,7 @@ async function filterCampContacts(cat) {
     c.classList.toggle('active', c.textContent.trim() === (cat ? cat.replace('_',' ').toUpperCase() : 'TUTTI') || (cat==='' && c.textContent.trim()==='TUTTI'));
   });
   campContacts = await api('get_contacts', { categoria: cat });
+  if (!Array.isArray(campContacts)) campContacts = [];
   campRegione = '';
   renderCampRegioneRow();
   applyCampFilters();

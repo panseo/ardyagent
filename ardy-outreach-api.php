@@ -845,7 +845,11 @@ try {
             echo json_encode(['error' => 'Azione non riconosciuta: ' . $action]);
     }
 
-} catch (PDOException $e) {
+} catch (Throwable $e) {
+    // Throwable (non solo PDOException): qualunque errore non previsto qui
+    // deve comunque chiudersi con una risposta JSON valida, altrimenti il
+    // frontend riceve un body non-JSON (o vuoto) e la Promise si rifiuta in
+    // silenzio — bottone che resta bloccato, nessun errore visibile.
     error_log('ARDY OUTREACH API ERROR: ' . $e->getMessage());
     http_response_code(500);
     echo json_encode(['error' => 'Errore interno']);
@@ -855,6 +859,13 @@ try {
 // FUNZIONE INVIO BREVO
 // ============================================================
 function brevoSend(string $toEmail, string $toName, string $oggetto, string $corpo, int $contactId = 0): array {
+    // Senza la chiave configurata, ARDY_BREVO_API_KEY più sotto è una costante
+    // indefinita: in PHP 8 questo lancia un Error non catturabile dal
+    // catch(PDOException) dell'endpoint, e la richiesta muore senza rispondere
+    // in JSON (il frontend resta "appeso" senza errore visibile).
+    if (!defined('ARDY_BREVO_API_KEY') || ARDY_BREVO_API_KEY === '') {
+        return ['ok' => false, 'error' => 'Email (Brevo) non configurata sul server'];
+    }
     $unsubSecret = defined('ARDY_UNSUB_SECRET') ? ARDY_UNSUB_SECRET : (defined('ARDY_API_KEY') ? ARDY_API_KEY : '');
     $unsubToken  = substr(hash_hmac('sha256', strtolower(trim($toEmail)), $unsubSecret), 0, 20);
     $unsubLink   = 'https://ardy-lab.it/ardy-unsubscribe.php?email=' . urlencode($toEmail) . '&t=' . $unsubToken;
