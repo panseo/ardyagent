@@ -356,12 +356,13 @@ if ($appresa !== '') {
 $tools = [
     [
         'name'        => 'ottieni_disponibilita_calendario',
-        'description' => 'Controlla la disponibilità del calendario di Ardy Lab in una finestra temporale. Usalo per proporre al cliente 2 finestre orarie disponibili per un sopralluogo o appuntamento.',
+        'description' => 'Controlla la disponibilità del calendario di Ardy Lab. La fascia oraria cercata è quella tra l\'ora di start e l\'ora di end (es. start 17:00 / end 18:00 → solo slot tra le 17 e le 18, su tutti i giorni fino alla data di end). Restituisce orari ESATTI (inizio–fine): proponi al cliente al massimo 2 di quegli orari, senza modificarli.',
         'input_schema' => [
             'type'       => 'object',
             'properties' => [
                 'start' => ['type' => 'string', 'description' => 'Data e ora inizio, ISO 8601. Es: 2026-06-10T09:00:00+02:00'],
-                'end'   => ['type' => 'string', 'description' => 'Data e ora fine, ISO 8601. Es: 2026-06-10T18:00:00+02:00']
+                'end'   => ['type' => 'string', 'description' => 'Data e ora fine, ISO 8601. Es: 2026-06-10T18:00:00+02:00'],
+                'durata_minuti' => ['type' => 'integer', 'description' => 'Durata dell\'appuntamento in minuti (es. 30 per una chiamata, 90 per un sopralluogo B&B, 120 per un sopralluogo restauro). Gli slot restituiti hanno già questa durata: proponili così come sono.'],
             ],
             'required' => ['start', 'end']
         ]
@@ -703,20 +704,7 @@ while ($iteration < $maxIterations) {
             $toolResult = '';
 
             if ($toolName === 'ottieni_disponibilita_calendario') {
-                // Usa la data di inizio richiesta da Claude se presente
-                $fromDate = null;
-                if (!empty($toolInput['start'])) {
-                    try { $fromDate = new DateTime($toolInput['start']); if ($fromDate < new DateTime('now')) { $fromDate = new DateTime("+7 days"); } } catch (Exception $e) { $fromDate = new DateTime("+7 days"); }
-                }
-                $slots = gcal_get_free_slots(14, 9, 18, $fromDate);
-                if ($slots === null) {
-                    $toolResult = 'Errore calendario: impossibile leggere la disponibilità.';
-                } elseif (empty($slots)) {
-                    $toolResult = 'Nessuno slot disponibile nel periodo richiesto.';
-                } else {
-                    $toolResult = json_encode($slots);
-                    error_log('ARDY SLOTS: ' . $toolResult);
-                }
+                $toolResult = gcal_tool_disponibilita($toolInput, ['ardy_session' => $cleanSession]);
 
             } elseif ($toolName === 'fissa_appuntamento_calendario') {
                 // Guard anti-doppione: se la scheda ha GIÀ un appuntamento (in questo
@@ -734,29 +722,17 @@ while ($iteration < $maxIterations) {
                 if (!empty($existingEventId)) {
                     $toolResult = 'Questo cliente ha GIÀ un appuntamento fissato: NON crearne un altro (creeresti un doppione nel calendario). Se vuole cambiare data usa sposta_appuntamento; altrimenti conferma l\'appuntamento già esistente.';
                 } else try {
-                    if (empty($toolInput['start'])) {
-                        $toolResult = 'Errore: data/ora mancante. Chiedi al cliente di confermare giorno e ora.';
-                    } else {
-                        $startDt  = new DateTime($toolInput['start']);
-                        $dateStr  = $startDt->format('Y-m-d');
-                        $timeStr  = $startDt->format('H:i');
-                        // Usa summary e description direttamente come li fornisce Claude
-                        $summary  = $toolInput['summary']     ?? 'Sopralluogo Ardy Lab';
-                        $desc     = $toolInput['description'] ?? '';
-                        $r = gcal_create_event($dateStr, $timeStr, $summary, '', '', '', $desc);
-                        if ($r) {
-                            $bookingMade = true;
-                            $bookingWhen = $startDt;
-                            // gcal_create_event ritorna l'evento completo: tieni l'id per poterlo spostare in futuro
-                            $bookingEventId = is_array($r) ? ($r['id'] ?? null) : null;
-                        }
-                        $toolResult = $r
-                            ? 'Appuntamento creato con successo nel calendario di Michela.'
-                            : 'Errore nella creazione dell\'appuntamento. Riprova.';
+                    $fx = gcal_tool_fissa($toolInput, ['ardy_session' => $cleanSession]);
+                    $toolResult = $fx['result'];
+                    if ($fx['event']) {
+                        $bookingMade = true;
+                        $bookingWhen = $fx['when'];
+                        // tieni l'id dell'evento per poterlo spostare in futuro
+                        $bookingEventId = $fx['event']['id'] ?? null;
                     }
                 } catch (Exception $e) {
                     error_log('ARDY BOOKING ERROR: ' . $e->getMessage() . ' input=' . json_encode($toolInput));
-                    $toolResult = 'Errore tecnico nella prenotazione. Chiedi al cliente di riprovare.';
+                    $toolResult = 'Errore tecnico nella prenotazione: NON è stata fissata. Chiedi al cliente di riprovare.';
                 }
 
             } elseif ($toolName === 'salva_lead_crm') {
