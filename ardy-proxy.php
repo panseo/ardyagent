@@ -416,12 +416,12 @@ $tools = [
     ],
     [
         'name'        => 'avvisa_michela',
-        'description' => 'Invia a Michela una notifica WhatsApp breve, come farebbe una segretaria efficiente. Usalo SOLO quando emerge qualcosa che Michela deve sapere subito e che NON è già coperto dal salvataggio lead/appuntamento: un reclamo o insoddisfazione, un problema di pagamento, una richiesta di modifica a un lavoro già concordato, oppure una richiesta fuori standard (tempi urgenti, lavoro particolare). Non usarlo per conversazioni di routine.',
+        'description' => 'Invia a Michela una notifica WhatsApp breve, come farebbe una segretaria efficiente. Usalo SOLO quando emerge qualcosa che Michela deve sapere subito e che NON è già coperto dal salvataggio lead/appuntamento: un reclamo o insoddisfazione, un problema di pagamento, una richiesta di modifica a un lavoro già concordato, una richiesta fuori standard (tempi urgenti, lavoro particolare) oppure un\'anomalia del calendario (quello che risulta non torna con l\'appuntamento che hai già confermato al cliente). Non usarlo per conversazioni di routine.',
         'input_schema' => [
             'type'       => 'object',
             'properties' => [
                 'messaggio' => ['type' => 'string', 'description' => 'Riepilogo breve, diretto e azionabile per Michela. Includi nome del cliente, di cosa si tratta e cosa serve fare. Es: "Mario Rossi (Prati) si lamenta: dice che il preventivo era diverso da quanto concordato. Vuole essere richiamato."'],
-                'motivo'    => ['type' => 'string', 'description' => 'Categoria: reclamo | pagamento | modifica | fuori_standard | altro']
+                'motivo'    => ['type' => 'string', 'description' => 'Categoria: reclamo | pagamento | modifica | fuori_standard | anomalia_calendario | altro']
             ],
             'required' => ['messaggio']
         ]

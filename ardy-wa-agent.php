@@ -377,6 +377,18 @@ $tools = [
         ],
     ],
     ardy_tool_ricorda_a_michela(),
+    [
+        'name'        => 'avvisa_michela',
+        'description' => 'Invia a Michela una notifica WhatsApp breve, come farebbe una segretaria efficiente. Usalo SOLO quando emerge qualcosa che Michela deve sapere subito e che NON è già coperto dal salvataggio lead/appuntamento: un reclamo o insoddisfazione, un problema di pagamento, una richiesta di modifica a un lavoro già concordato, una richiesta fuori standard (tempi urgenti, lavoro particolare) oppure un\'anomalia del calendario (quello che risulta non torna con l\'appuntamento che hai già confermato al cliente). Non usarlo per conversazioni di routine. Il numero WhatsApp del cliente viene aggiunto in automatico.',
+        'input_schema' => [
+            'type'       => 'object',
+            'properties' => [
+                'messaggio' => ['type' => 'string', 'description' => 'Riepilogo breve, diretto e azionabile per Michela. Includi nome del cliente, di cosa si tratta e cosa serve fare. Es: "Veronica (B&B) — le avevo confermato la chiamata giovedì 1/10 alle 17:00, ora il calendario lo dà occupato. Verifica e confermale tu l\'orario."'],
+                'motivo'    => ['type' => 'string', 'description' => 'Categoria: reclamo | pagamento | modifica | fuori_standard | anomalia_calendario | altro'],
+            ],
+            'required' => ['messaggio'],
+        ],
+    ],
 ];
 
 // -----------------------------------------------------------
@@ -709,6 +721,21 @@ while ($iteration < $maxIterations) {
                     error_log('ARDY WA-AGENT AGGIORNA CONTATTO OUTREACH ERROR: ' . $e->getMessage());
                     $toolResult = 'Errore tecnico nel salvataggio. Prosegui la conversazione normalmente.';
                 }
+            }
+
+        } elseif ($toolName === 'avvisa_michela') {
+            $msg = trim((string) ($toolInput['messaggio'] ?? ''));
+            if ($msg === '') {
+                $toolResult = 'Errore: messaggio mancante.';
+            } else {
+                $motivo = preg_replace('/[^a-z_]/', '', (string) ($toolInput['motivo'] ?? 'altro')) ?: 'altro';
+                $testo  = "🔔 Sole WhatsApp — segnalazione (" . $motivo . ")\n\n" . $msg
+                        . ($phone !== '' ? "\n\n📞 +" . $phone : '');
+                // Dedupe sul contenuto: evita doppioni se il tool viene richiamato
+                $ok = notificaMichela($testo, 'wa-avvisa:' . ($phone !== '' ? $phone : $sessionId) . ':' . md5($msg));
+                $toolResult = $ok
+                    ? 'Michela è stata avvisata su WhatsApp.'
+                    : 'Avviso registrato (eventuale invio WhatsApp gestito a parte).';
             }
 
         } elseif ($toolName === 'sposta_appuntamento') {
