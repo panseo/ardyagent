@@ -453,6 +453,8 @@ i dati essenziali (nome, contatto, canale, n° messaggi, stato CRM, ultimo messa
 Una sola notifica per sessione, grazie al dedupe di `notificaMichela()`
 (chiave `chat-chiusa:<canale>:<id>:<ultimo_msg>`). Soglie regolabili con le costanti
 `ARDY_CHIUSURA_IDLE_MIN` (60) e `ARDY_CHIUSURA_LOOKBACK_H` (24) in cima al file.
+Le chat dello **staff** con Sole (numeri `WA_MICHELA_NUMBER`/`WA_ANDREA_NUMBER`) sono escluse; il
+cliente WhatsApp si aggancia al CRM su `clienti.telefono_last9`.
 
 Da CLI salta il controllo del segreto; via HTTP è protetto da `WA_LOOKUP_SECRET`
 (`?secret=` o header `X-Ardy-Secret`). Richiede la config WhatsApp di

@@ -913,6 +913,15 @@ while ($iteration < $maxIterations) {
                                     } else {
                                         $db->prepare("UPDATE clienti SET sopralluogo_at = :dt, stato = 'SOPRALLUOGO', updated_at = NOW() WHERE session_id = :sid")
                                            ->execute([':dt' => $startDt->format('Y-m-d H:i:s'), ':sid' => $cli['session_id']]);
+                                        // Anche la riga in `sopralluoghi` (se la dashboard l'ha già creata, con lo
+                                        // stesso evento): altrimenti la lista mostra la data vecchia e il prossimo
+                                        // sopr_mirror() riscrive la data vecchia su clienti.sopralluogo_at.
+                                        try {
+                                            $db->prepare("UPDATE sopralluoghi SET data_ora = :dt, updated_at = NOW() WHERE session_id = :sid AND gcal_event_id = :e")
+                                               ->execute([':dt' => $startDt->format('Y-m-d H:i:s'), ':sid' => $cli['session_id'], ':e' => $cli['gcal_event_id']]);
+                                        } catch (PDOException $e) {
+                                            error_log('ARDY SPOSTA SOPRALLUOGHI SYNC: ' . $e->getMessage());
+                                        }
                                         $bookingMade = true;
                                         $bookingWhen = $startDt;
                                         $nomeCli = trim(($cli['nome'] ?? '') . ' ' . ($cli['cognome'] ?? '')) ?: 'cliente';
