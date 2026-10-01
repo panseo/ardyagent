@@ -808,7 +808,9 @@ Sui clienti (NON sullo staff) Sole gira con lo **stesso loop agentico del sito**
 - **salvare il lead nel CRM** (`ardy-wa-crea-scheda.php`); se il cliente non lascia il telefono
   usa in automatico il suo **numero WhatsApp**;
 - **spostare un appuntamento già fissato** (tool `sposta_appuntamento`), identificandolo dal numero
-  WhatsApp del mittente (un cliente può spostare **solo il PROPRIO** appuntamento);
+  WhatsApp del mittente (un cliente può spostare **solo il PROPRIO** appuntamento). In webchat vale
+  solo per l'appuntamento della conversazione in corso. La **durata** dell'evento si conserva; se il
+  calendario non è leggibile **non sposta nulla** e avvisa Michela su WhatsApp, che ricontatta il cliente;
 - inviare le **email** come il sito: notifica a Michela, conferma del sopralluogo al cliente,
   email di benvenuto col **codice di accesso** al lead.
 

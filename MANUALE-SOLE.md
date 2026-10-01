@@ -217,7 +217,7 @@ Per i clienti che non pagano, Sole indossa un secondo cappello — più formale 
 |---|---|
 | `ottieni_disponibilita_calendario` | Legge gli slot liberi nel calendario di Michela |
 | `fissa_appuntamento_calendario` | Crea davvero l'evento del sopralluogo |
-| `sposta_appuntamento` | Sposta un sopralluogo già fissato (su WhatsApp è legato al numero di chi scrive) |
+| `sposta_appuntamento` | Sposta un sopralluogo già fissato (su WhatsApp è legato al numero di chi scrive, in webchat alla conversazione). Calendario illeggibile → non sposta, avvisa Michela |
 | `salva_lead_crm` | Salva/aggiorna il cliente nel CRM |
 | `attiva_interior_design` | Scrive il riepilogo della consulenza nella sezione Interior Design della scheda |
 

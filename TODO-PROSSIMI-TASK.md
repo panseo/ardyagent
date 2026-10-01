@@ -22,14 +22,12 @@ l'output di `ardy-migrate.php`: la riga *riallineo telefono_last9* dice quante s
   - nuovo cliente da dashboard (passa da `ardy-save-lead.php`);
   - spostare una **chiamata da 30'** (da WhatsApp, webchat o dalla dashboard): in calendario deve
     restare da 30', e spostarla di 15' non deve risultare "occupato" (l'evento non collide con sé stesso).
+  - (se capita) calendario non leggibile durante uno spostamento: Sole **non** sposta e Michela riceve
+    su WhatsApp "⚠️ Spostamento NON fatto (calendario non leggibile)…".
 - [ ] **`ardy-mcp/`: `npm audit fix`** — 4 dipendenze indirette dell'SDK MCP con advisory (1 alta
   `fast-uri`, 3 medie `hono`/`ip-address`/`qs`). Rischio basso (il server usa stdio, non HTTP), ma il
   fix resta nei range di `package.json`: `cd ardy-mcp && npm audit fix && npm run build`, poi commit
   del `package-lock.json`.
-- [ ] **Spostamento con calendario illeggibile.** Se `gcal_is_slot_free()` non riesce a leggere il
-  calendario, `sposta_appuntamento` (webchat e WhatsApp) sposta comunque l'evento senza aver
-  verificato che il nuovo orario sia libero. Da decidere se fermarsi e rimandare a Michela.
-  (La durata ora è conservata: vedi *collaudo* sopra.)
 - [ ] **`ardy-visita.php`**: whitelist delle pagine note (oggi chiunque può creare contatori nuovi).
 
 ---

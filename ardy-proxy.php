@@ -908,8 +908,16 @@ while ($iteration < $maxIterations) {
                                 $free = gcal_is_slot_free($dateStr, $timeStr, $durMin / 60, $cli['gcal_event_id']);
                                 if ($free === false) {
                                     $toolResult = 'Quel nuovo orario è già occupato. Proponi al cliente un altro slot tra quelli liberi.';
+                                } elseif ($free === null) {
+                                    // Calendario illeggibile: NON spostare alla cieca (si rischia di
+                                    // sovrapporsi a un altro appuntamento). Avvisa Michela, che decide lei.
+                                    $nomeCli = trim(($cli['nome'] ?? '') . ' ' . ($cli['cognome'] ?? '')) ?: 'cliente';
+                                    $avviso  = "⚠️ Spostamento NON fatto (calendario non leggibile): " . $nomeCli
+                                             . " (webchat, tel. " . $tel . ") chiede di spostare l'appuntamento a " . ardy_data_ita($startDt)
+                                             . ". Verifica e ricontattalo tu.";
+                                    notificaMichela($avviso, 'sposta-ko:' . $cli['gcal_event_id'] . ':' . $startDt->format('YmdHi'));
+                                    $toolResult = 'Errore calendario: in questo momento non riesco a verificare il nuovo orario, quindi l\'appuntamento NON è stato spostato e resta quello di prima. Non confermare il nuovo orario al cliente: di\' che hai passato la richiesta a Michela, che lo ricontatta per confermare.';
                                 } else {
-                                    // free === true (libero) oppure null (impossibile verificare): procediamo comunque
                                     $upd = gcal_update_event($cli['gcal_event_id'], $dateStr, $timeStr, $durMin / 60);
                                     if (!$upd) {
                                         $toolResult = 'Non sono riuscita a spostare l\'appuntamento sul calendario. Riprova o di\' che Michela ricontatta.';
