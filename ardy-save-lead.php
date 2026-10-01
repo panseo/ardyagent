@@ -50,8 +50,18 @@ if (!$isTrusted && defined('ARDY_RATE_LIMIT_DIR')) {
 $input     = json_decode(file_get_contents('php://input'), true);
 $sessionId = $input['session_id'] ?? '';
 
-if (empty($sessionId)) {
+if (empty($sessionId) || !is_string($sessionId)) {
     echo json_encode(['success' => false, 'error' => 'session_id mancante']);
+    exit();
+}
+
+// Endpoint pubblico con upsert su session_id: una chiamata NON interna non può
+// toccare le schede con session_id deterministico (wa-/pdf-/imp-/otr-), che si
+// ricalcolano dal telefono del cliente → altrimenti chiunque ne conosca il numero
+// ne sovrascriverebbe nome, telefono, email, stato e note.
+if (!$isTrusted && ardySessioneServerSide($sessionId)) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => 'session_id non consentito']);
     exit();
 }
 
@@ -74,6 +84,14 @@ try {
         $values[$f] = isset($input[$f]) && $input[$f] !== ''
             ? $input[$f]
             : null;
+    }
+    // Il collegamento alla pagina lavorazione lo fa solo la dashboard (update-lead,
+    // dietro login): da qui, senza segreto interno, non si può impostare — un
+    // wp_post_id scelto a mano aggancerebbe una scheda alla lavorazione di un altro
+    // cliente (è la chiave della verifica nel widget lavorazione).
+    if (!$isTrusted) {
+        $values['wp_post_id']   = null;
+        $values['wp_post_link'] = null;
     }
     // telefono_last9 non arriva dall'input: si calcola dal telefono.
     $values['telefono_last9'] = $values['telefono'] !== null ? ardyTelefonoLast9((string)$values['telefono']) : null;

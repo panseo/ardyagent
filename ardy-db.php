@@ -41,6 +41,20 @@ function ardyEnsureTelefonoLast9(PDO $db): void {
 }
 
 /**
+ * True se il session_id è di quelli generati LATO SERVER in modo deterministico
+ * (wa-/pdf-/imp-/otr- + md5 di telefono o nome: ardy-wa-crea-scheda,
+ * ardy-wa-agent, ardy-import-scheda-pdf, ardy-import-preventivi, outreach).
+ * Chi conosce il telefono di un cliente può ricalcolarli: per questo non vanno
+ * MAI accettati come identità da un endpoint pubblico (chatbot, save-lead)
+ * senza una prova in più (link firmato HMAC o segreto interno). I session_id
+ * dei widget web sono invece casuali generati dal browser, quindi non indovinabili.
+ * Case-insensitive: la collation MySQL farebbe combaciare "WA-..." con "wa-...".
+ */
+function ardySessioneServerSide(string $sessionId): bool {
+    return (bool) preg_match('/^(wa|pdf|imp|otr)-/i', $sessionId);
+}
+
+/**
  * Cerca un'attività nell'elenco contatti outreach (import B&B/antiquari/altre
  * campagne), per telefono e/o nome — usata da WhatsApp e webchat per riconoscere
  * un'attività già nel nostro elenco prima di trattarla come sconosciuta.

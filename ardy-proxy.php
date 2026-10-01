@@ -135,9 +135,11 @@ $isArdyExpress    = ($origine === 'ardy-express');
 $leadSessionId = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string)($input['leadSessionId'] ?? ''));
 $leadToken     = (string)($input['leadToken'] ?? '');
 $leadContext    = null;
+$leadTokenOk    = false;
 if ($leadSessionId !== '' && $leadToken !== '') {
     $expectedTok = substr(hash_hmac('sha256', $leadSessionId, WA_LOOKUP_SECRET), 0, 16);
     if (hash_equals($expectedTok, $leadToken)) {
+        $leadTokenOk = true;
         try {
             $ldb = ardyDB();
             $lstm = $ldb->prepare("SELECT nome, cognome, servizio, mobile, zona FROM clienti WHERE session_id = :sid AND deleted_at IS NULL LIMIT 1");
@@ -175,6 +177,20 @@ if ($outreachRif > 0 && $outreachTok !== '') {
             error_log('ARDY PROXY OUTREACH CONTEXT: ' . $e->getMessage());
         }
     }
+}
+
+// ── Session_id deterministici (wa-/pdf-/imp-/otr-): solo col link firmato ──
+// Il sessionId arriva dal browser e qui vale come identità della scheda CRM
+// (salvataggio lead, codice di accesso, appuntamenti). Quelli generati lato
+// server si ricalcolano dal telefono del cliente: senza questo controllo chi
+// conosce il numero di un cliente WhatsApp ne prenderebbe la scheda (dati
+// sovrascritti, codice di accesso rivelato → dossier). L'unico modo legittimo
+// di arrivare qui con uno di questi id è il link ?lead=&tok= di ardy-lead-contatto.
+if (ardySessioneServerSide($cleanSession)
+    && !($leadTokenOk && strcasecmp($leadSessionId, $cleanSession) === 0)) {
+    error_log('ARDY PROXY: session_id deterministico senza link firmato rifiutato (ip ' . $cleanIp . ')');
+    echo json_encode(['reply' => 'Sessione non valida: ricarica la pagina per iniziare una nuova conversazione.']);
+    exit();
 }
 
 // -----------------------------------------------------------
@@ -404,7 +420,7 @@ $tools = [
     ],
     [
         'name'        => 'sposta_appuntamento',
-        'description' => 'Sposta un sopralluogo GIÀ fissato a una nuova data/ora. Usalo quando un cliente che ha già un appuntamento chiede di spostarlo. Prima verifica la disponibilità del nuovo periodo con ottieni_disponibilita_calendario e fatti confermare dal cliente un orario preciso; poi chiama questo strumento. Identifica il cliente col suo numero di telefono.',
+        'description' => 'Sposta un sopralluogo GIÀ fissato a una nuova data/ora. Usalo quando un cliente che ha già un appuntamento chiede di spostarlo. Prima verifica la disponibilità del nuovo periodo con ottieni_disponibilita_calendario e fatti confermare dal cliente un orario preciso; poi chiama questo strumento. Funziona solo per l\'appuntamento fissato in questa conversazione (o arrivato dal link personale del cliente) e col telefono con cui è registrato: se non lo trova, raccogli la richiesta e di\' che Michela ricontatta il cliente per riorganizzare.',
         'input_schema' => [
             'type'       => 'object',
             'properties' => [
@@ -863,17 +879,22 @@ while ($iteration < $maxIterations) {
                         if ($startDt < new DateTime('now')) {
                             $toolResult = 'La nuova data è nel passato: chiedi al cliente una data futura.';
                         } else {
-                            // Trova il cliente e l'evento collegato tramite le ultime 9 cifre del telefono
+                            // Solo l'appuntamento di QUESTA sessione (la scheda della chat in
+                            // corso), e col telefono che combacia. Il solo numero non basta:
+                            // in webchat chiunque può digitare il telefono di un altro cliente
+                            // e spostargli il sopralluogo. Su WhatsApp invece l'identità è il
+                            // numero del mittente (ardy-wa-agent.php).
                             $db = ardyDB();
                             ardy_ensure_sopralluogo_cols($db);
                             ardyEnsureTelefonoLast9($db);
                             $q = $db->prepare(
                                 "SELECT session_id, nome, cognome, gcal_event_id FROM clienti
-                                  WHERE telefono_last9 = :p
+                                  WHERE session_id = :sid
+                                    AND telefono_last9 = :p
                                     AND gcal_event_id IS NOT NULL AND gcal_event_id <> ''
-                               ORDER BY updated_at DESC, id DESC LIMIT 1"
+                                  LIMIT 1"
                             );
-                            $q->execute([':p' => substr($tel, -9)]);
+                            $q->execute([':sid' => $cleanSession, ':p' => ardyTelefonoLast9($tel)]);
                             $cli = $q->fetch(PDO::FETCH_ASSOC);
 
                             if (!$cli) {
@@ -958,11 +979,17 @@ while ($iteration < $maxIterations) {
             } elseif ($toolName === 'cerca_contatto_outreach') {
                 $telIn  = trim((string) ($toolInput['telefono'] ?? ''));
                 $nomeIn = trim((string) ($toolInput['nome'] ?? ''));
+                // Nome troppo corto = ricerca "a strascico" (LIKE %x%): chi scrive in
+                // webchat pubblica potrebbe far scorrere l'elenco contatti a Sole.
+                if (mb_strlen($nomeIn) < 4) $nomeIn = '';
                 if ($telIn === '' && $nomeIn === '') {
-                    $toolResult = 'Serve almeno un telefono o un nome per cercare.';
+                    $toolResult = 'Serve un telefono o il nome completo dell\'attività per cercare.';
                 } else {
                     try {
                         $found = ardyOutreachCerca(ardyDB(), $telIn, $nomeIn);
+                        // Webchat pubblica: note interne e stato della pipeline non
+                        // escono verso chi scrive (Sole potrebbe ripeterli).
+                        if ($found) unset($found['note'], $found['stato']);
                         if ($found) {
                             $mancano = [];
                             foreach (['referente', 'email', 'sito', 'indirizzo'] as $c) {
