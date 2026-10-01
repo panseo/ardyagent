@@ -770,17 +770,37 @@ while ($iteration < $maxIterations) {
                         } else {
                             $dateStr = $startDt->format('Y-m-d');
                             $timeStr = $startDt->format('H:i');
-                            $free = gcal_is_slot_free($dateStr, $timeStr, 2);
+                            // Durata vera dell'appuntamento (una chiamata da 30' resta da 30'), e
+                            // l'evento stesso escluso dal controllo: spostarlo di poco non è "occupato".
+                            $durMin = gcal_event_duration_min($cli['gcal_event_id']) ?? 120;
+                            $free = gcal_is_slot_free($dateStr, $timeStr, $durMin / 60, $cli['gcal_event_id']);
                             if ($free === false) {
                                 $toolResult = 'Quel nuovo orario è già occupato. Proponi al cliente un altro slot tra quelli liberi (controlla con ottieni_disponibilita_calendario).';
+                            } elseif ($free === null) {
+                                // Calendario illeggibile: NON spostare alla cieca (si rischia di
+                                // sovrapporsi a un altro appuntamento). Avvisa Michela, che decide lei.
+                                $nomeCli = trim(($cli['nome'] ?? '') . ' ' . ($cli['cognome'] ?? '')) ?: 'cliente';
+                                $avviso  = "⚠️ Spostamento NON fatto (calendario non leggibile): " . $nomeCli
+                                         . " (WhatsApp +" . $phone . ") chiede di spostare l'appuntamento a " . ardy_data_ita($startDt)
+                                         . ". Verifica e ricontattalo tu.";
+                                notificaMichela($avviso, 'wa-sposta-ko:' . $cli['gcal_event_id'] . ':' . $startDt->format('YmdHi'));
+                                $toolResult = 'Errore calendario: in questo momento non riesco a verificare il nuovo orario, quindi l\'appuntamento NON è stato spostato e resta quello di prima. Non confermare il nuovo orario al cliente: di\' che hai passato la richiesta a Michela, che lo ricontatta per confermare.';
                             } else {
-                                // free === true (libero) o null (impossibile verificare): procediamo.
-                                $upd = gcal_update_event($cli['gcal_event_id'], $dateStr, $timeStr, 2);
+                                $upd = gcal_update_event($cli['gcal_event_id'], $dateStr, $timeStr, $durMin / 60);
                                 if (!$upd) {
                                     $toolResult = 'Non sono riuscita a spostare l\'appuntamento sul calendario. Riprova o di\' che Michela ricontatta.';
                                 } else {
                                     $db->prepare("UPDATE clienti SET sopralluogo_at = :dt, stato = 'SOPRALLUOGO', updated_at = NOW() WHERE session_id = :sid")
                                        ->execute([':dt' => $startDt->format('Y-m-d H:i:s'), ':sid' => $cli['session_id']]);
+                                    // Anche la riga in `sopralluoghi` (se la dashboard l'ha già creata, con lo
+                                    // stesso evento): altrimenti la lista mostra la data vecchia e il prossimo
+                                    // sopr_mirror() riscrive la data vecchia su clienti.sopralluogo_at.
+                                    try {
+                                        $db->prepare("UPDATE sopralluoghi SET data_ora = :dt, updated_at = NOW() WHERE session_id = :sid AND gcal_event_id = :e")
+                                           ->execute([':dt' => $startDt->format('Y-m-d H:i:s'), ':sid' => $cli['session_id'], ':e' => $cli['gcal_event_id']]);
+                                    } catch (PDOException $e) {
+                                        error_log('ARDY SPOSTA SOPRALLUOGHI SYNC: ' . $e->getMessage());
+                                    }
                                     $rescheduled    = true;
                                     $bookingWhen    = $startDt;               // per la conferma email al cliente
                                     $bookingEventId = $cli['gcal_event_id'];
@@ -963,9 +983,15 @@ while ($iteration < $maxIterations) {
                                 if ($target) {
                                     $dateStr = $startDt->format('Y-m-d');
                                     $timeStr = $startDt->format('H:i');
-                                    $free    = gcal_is_slot_free($dateStr, $timeStr, 2);
+                                    $tEid    = (string) ($target['gcal_event_id'] ?? '');
+                                    $tDur    = $tEid !== '' ? (gcal_event_duration_min($tEid) ?? 120) : 120;
+                                    $free    = gcal_is_slot_free($dateStr, $timeStr, $tDur / 60, $tEid !== '' ? $tEid : null);
                                     if ($free === false) {
                                         $toolResult = 'Quel nuovo orario è già occupato. Proponi un altro slot (controlla con ottieni_disponibilita_calendario).';
+                                    } elseif ($free === null) {
+                                        // Calendario illeggibile: niente spostamento alla cieca. Qui chi
+                                        // scrive è lo staff, quindi basta dirglielo (nessuna notifica).
+                                        $toolResult = 'Non riesco a leggere il calendario in questo momento: NON ho spostato nulla. Dillo chiaramente e proponi di riprovare tra poco o di spostarlo direttamente su Google Calendar.';
                                     } else {
                                         // Preserva il tipo esistente della visita: spostare una consegna/ritiro
                                         // NON deve trasformarla in un sopralluogo (titolo evento + email coerenti).

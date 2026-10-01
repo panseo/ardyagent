@@ -49,6 +49,15 @@ try {
         }
     }
 
+    // Il telefono porta con sé la sua chiave di ricerca (ultime 9 cifre): è su
+    // telefono_last9 che WhatsApp, calendario e notifiche riconoscono il cliente.
+    // Senza, un numero aggiunto o corretto da qui restava invisibile a quei flussi.
+    if (array_key_exists('telefono', $input)) {
+        $last9 = $params['telefono'] !== null ? ardyTelefonoLast9((string) $params['telefono']) : '';
+        $set[] = '`telefono_last9` = :telefono_last9';
+        $params['telefono_last9'] = $last9 !== '' ? $last9 : null;
+    }
+
     if (count($set) === 1) { // solo updated_at, nessun campo reale
         echo json_encode(['success' => false, 'error' => 'Nessun campo da aggiornare']);
         exit();

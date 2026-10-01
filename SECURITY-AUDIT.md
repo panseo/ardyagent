@@ -20,6 +20,9 @@ l'ultimo endpoint distruttivo senza `ardyRequireAuth()` e a rendere quel guard u
 > §9 = quarto giro (2026-08-25): SSRF su `ardy-gbp-check`, stored XSS su `ardy-outreach.html`,
 > `ardyRequireAuth()` con verifica password reale, `ardy-elimina-cliente`/`ardy-places-prova`
 > allineati alla difesa in profondità, header di sicurezza, `composer.lock`, hardening minori.
+> §10 = quinto giro (2026-10-01): session_id deterministici accettati come identità dagli endpoint
+> pubblici (presa di una scheda cliente dal solo telefono), spostamento appuntamenti altrui in webchat,
+> elenco outreach interrogabile dalla webchat.
 
 ---
 
@@ -434,3 +437,71 @@ differenza dei fix sopra, tutti validati con `php -l` e/o test isolato riproduci
   compressa potrebbe causare un picco di memoria (DoS locale). Endpoint autenticato e file limitato
   a 20 MB in ingresso: rischio basso. Consigliato un limite esplicito sulla dimensione decompressa
   prima di leggere l'entry.
+
+---
+
+## 10. Quinto giro (2026-10-01) — identità della sessione sugli endpoint pubblici
+
+**Metodo.** Diff del codice dopo il quarto giro (`ardy-gcal.php`, `ardy-proxy.php`, `ardy-wa-agent.php`,
+outreach) + ripasso di **tutti** i `.php` raggiungibili senza login (né nel blocco Basic Auth né nel
+`Deny` di `.htaccess`), guardando cosa ciascuno accetta come identità.
+
+| # | Gravità | Rilievo | Stato |
+|---|---|---|---|
+| 10.1 | 🟥 Alta | Scheda cliente presa dal solo numero di telefono (session_id deterministici) | ✅ corretto |
+| 10.2 | 🟠 Media | Webchat: `sposta_appuntamento` spostava il sopralluogo di chiunque dato il telefono | ✅ corretto |
+| 10.3 | 🟡 Bassa | Webchat: `cerca_contatto_outreach` restituiva note interne/stato e accettava ricerche "a strascico" | ✅ corretto |
+| 10.4 | 🟡 Bassa | `ardy-save-lead.php` pubblico poteva impostare `wp_post_id`/`wp_post_link` | ✅ corretto |
+| 10.5 | 🔵 Info | `ardy-visita.php` accetta qualunque nome pagina (statistiche inquinabili) | ⏳ aperto |
+
+### 10.1 🟥 Scheda cliente presa dal solo numero di telefono
+**Problema.** Le schede create lato server hanno un session_id **deterministico**:
+`'wa-' . substr(md5($telefono), 0, 16)` (WhatsApp), e analoghi `pdf-`/`imp-`/`otr-`. Chi conosce il
+numero di un cliente ricalcola il suo session_id e lo passa a due endpoint pubblici che lo prendono
+come identità:
+- `ardy-save-lead.php` (upsert `ON DUPLICATE KEY UPDATE`): sovrascrive nome, telefono, email, stato,
+  note della scheda — senza passare dal chatbot.
+- `ardy-proxy.php` (webchat, `sessionId` dal browser): `salva_lead_crm` risponde a Sole con il
+  **codice di accesso** già esistente della scheda («Codice di accesso del cliente: ARD-…»), che
+  Sole comunica a chi scrive; con quel codice `cerca_cliente` apre il dossier del cliente. Inoltre la
+  chat dell'attaccante finiva nello storico web e le foto nella cartella upload del cliente.
+
+**Fix.** `ardySessioneServerSide()` in `ardy-db.php` riconosce i prefissi deterministici
+(case-insensitive: la collation MySQL farebbe combaciare `WA-` con `wa-`).
+- `ardy-proxy.php`: un sessionId deterministico è accettato **solo** se coincide col `leadSessionId`
+  del link firmato `?lead=&tok=` (HMAC verificato) — l'unico modo legittimo per arrivarci, e il widget
+  rimanda il token a ogni messaggio. Altrimenti la richiesta è rifiutata prima di ogni side-effect.
+- `ardy-save-lead.php`: le chiamate senza `X-Ardy-Internal` valido ricevono 403 su quei session_id.
+I session_id dei widget (`session_`, `xp_`, `ex_`, `id_`, `lavpage_`, `manuale_`) sono casuali
+generati dal browser: per quelli il comportamento non cambia.
+
+### 10.2 🟠 Spostamento del sopralluogo di un altro cliente (webchat)
+**Problema.** In webchat `sposta_appuntamento` cercava il cliente **solo** per ultime 9 cifre del
+telefono digitato in chat: chiunque poteva spostare il sopralluogo di un altro conoscendone il numero
+(e, se il calendario non era leggibile, lo spostamento procedeva comunque — ora si ferma e avvisa Michela). Su WhatsApp lo stesso tool
+era già legato al numero del mittente.
+**Fix.** La ricerca richiede ora `session_id` = sessione corrente **e** telefono corrispondente. Se non
+trova, Sole raccoglie la richiesta e rimanda a Michela (stesso comportamento di WhatsApp). Aggiornata la
+descrizione del tool.
+
+### 10.3 🟡 Elenco outreach interrogabile dalla webchat
+**Problema.** `cerca_contatto_outreach` è disponibile a ogni visitatore della webchat e restituiva
+`note` (interne) e `stato` (pipeline); la ricerca per nome è un `LIKE %x%`, quindi con una lettera sola
+si poteva far scorrere l'elenco a Sole.
+**Fix.** In `ardy-proxy.php`: `note`/`stato` tolti dal risultato e ricerca per nome solo da 4 caratteri.
+`ardyOutreachCerca()` resta invariata per `ardy-wa-lookup.php`, dove la ricerca è sul numero
+WhatsApp del mittente.
+
+### 10.4 🟡 `wp_post_id` impostabile da `ardy-save-lead.php`
+`wp_post_id` è la chiave della verifica nel widget lavorazione. Nessun chiamante legittimo lo passa a
+`save-lead` (lo imposta la dashboard via `ardy-update-lead.php`, dietro login): ora viene ignorato
+nelle chiamate non interne.
+
+### 10.5 🔵 Aperto
+`ardy-visita.php` registra qualunque `pagina` (solo caratteri filtrati): chiunque può creare righe e
+gonfiare i contatori. Nessun dato esposto; consigliata una whitelist delle pagine note.
+
+**Verifica.** `php -l` sui file toccati + test isolato della guardia (id deterministico senza link →
+rifiutato; link firmato valido → accettato; token falso o link di un'altra sessione → rifiutato;
+sessione web normale → accettata). **Da verificare in produzione** dopo il deploy: lead da link
+WhatsApp (`?lead=&tok=`) che salva e sposta il proprio appuntamento; nuovo cliente da dashboard.

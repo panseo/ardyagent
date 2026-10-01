@@ -135,9 +135,11 @@ $isArdyExpress    = ($origine === 'ardy-express');
 $leadSessionId = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string)($input['leadSessionId'] ?? ''));
 $leadToken     = (string)($input['leadToken'] ?? '');
 $leadContext    = null;
+$leadTokenOk    = false;
 if ($leadSessionId !== '' && $leadToken !== '') {
     $expectedTok = substr(hash_hmac('sha256', $leadSessionId, WA_LOOKUP_SECRET), 0, 16);
     if (hash_equals($expectedTok, $leadToken)) {
+        $leadTokenOk = true;
         try {
             $ldb = ardyDB();
             $lstm = $ldb->prepare("SELECT nome, cognome, servizio, mobile, zona FROM clienti WHERE session_id = :sid AND deleted_at IS NULL LIMIT 1");
@@ -175,6 +177,20 @@ if ($outreachRif > 0 && $outreachTok !== '') {
             error_log('ARDY PROXY OUTREACH CONTEXT: ' . $e->getMessage());
         }
     }
+}
+
+// ── Session_id deterministici (wa-/pdf-/imp-/otr-): solo col link firmato ──
+// Il sessionId arriva dal browser e qui vale come identità della scheda CRM
+// (salvataggio lead, codice di accesso, appuntamenti). Quelli generati lato
+// server si ricalcolano dal telefono del cliente: senza questo controllo chi
+// conosce il numero di un cliente WhatsApp ne prenderebbe la scheda (dati
+// sovrascritti, codice di accesso rivelato → dossier). L'unico modo legittimo
+// di arrivare qui con uno di questi id è il link ?lead=&tok= di ardy-lead-contatto.
+if (ardySessioneServerSide($cleanSession)
+    && !($leadTokenOk && strcasecmp($leadSessionId, $cleanSession) === 0)) {
+    error_log('ARDY PROXY: session_id deterministico senza link firmato rifiutato (ip ' . $cleanIp . ')');
+    echo json_encode(['reply' => 'Sessione non valida: ricarica la pagina per iniziare una nuova conversazione.']);
+    exit();
 }
 
 // -----------------------------------------------------------
@@ -404,7 +420,7 @@ $tools = [
     ],
     [
         'name'        => 'sposta_appuntamento',
-        'description' => 'Sposta un sopralluogo GIÀ fissato a una nuova data/ora. Usalo quando un cliente che ha già un appuntamento chiede di spostarlo. Prima verifica la disponibilità del nuovo periodo con ottieni_disponibilita_calendario e fatti confermare dal cliente un orario preciso; poi chiama questo strumento. Identifica il cliente col suo numero di telefono.',
+        'description' => 'Sposta un sopralluogo GIÀ fissato a una nuova data/ora. Usalo quando un cliente che ha già un appuntamento chiede di spostarlo. Prima verifica la disponibilità del nuovo periodo con ottieni_disponibilita_calendario e fatti confermare dal cliente un orario preciso; poi chiama questo strumento. Funziona solo per l\'appuntamento fissato in questa conversazione (o arrivato dal link personale del cliente) e col telefono con cui è registrato: se non lo trova, raccogli la richiesta e di\' che Michela ricontatta il cliente per riorganizzare.',
         'input_schema' => [
             'type'       => 'object',
             'properties' => [
@@ -863,17 +879,22 @@ while ($iteration < $maxIterations) {
                         if ($startDt < new DateTime('now')) {
                             $toolResult = 'La nuova data è nel passato: chiedi al cliente una data futura.';
                         } else {
-                            // Trova il cliente e l'evento collegato tramite le ultime 9 cifre del telefono
+                            // Solo l'appuntamento di QUESTA sessione (la scheda della chat in
+                            // corso), e col telefono che combacia. Il solo numero non basta:
+                            // in webchat chiunque può digitare il telefono di un altro cliente
+                            // e spostargli il sopralluogo. Su WhatsApp invece l'identità è il
+                            // numero del mittente (ardy-wa-agent.php).
                             $db = ardyDB();
                             ardy_ensure_sopralluogo_cols($db);
                             ardyEnsureTelefonoLast9($db);
                             $q = $db->prepare(
                                 "SELECT session_id, nome, cognome, gcal_event_id FROM clienti
-                                  WHERE telefono_last9 = :p
+                                  WHERE session_id = :sid
+                                    AND telefono_last9 = :p
                                     AND gcal_event_id IS NOT NULL AND gcal_event_id <> ''
-                               ORDER BY updated_at DESC, id DESC LIMIT 1"
+                                  LIMIT 1"
                             );
-                            $q->execute([':p' => substr($tel, -9)]);
+                            $q->execute([':sid' => $cleanSession, ':p' => ardyTelefonoLast9($tel)]);
                             $cli = $q->fetch(PDO::FETCH_ASSOC);
 
                             if (!$cli) {
@@ -881,17 +902,37 @@ while ($iteration < $maxIterations) {
                             } else {
                                 $dateStr = $startDt->format('Y-m-d');
                                 $timeStr = $startDt->format('H:i');
-                                $free = gcal_is_slot_free($dateStr, $timeStr, 2);
+                                // Durata vera dell'appuntamento (una chiamata da 30' resta da 30'), e
+                                // l'evento stesso escluso dal controllo: spostarlo di poco non è "occupato".
+                                $durMin = gcal_event_duration_min($cli['gcal_event_id']) ?? 120;
+                                $free = gcal_is_slot_free($dateStr, $timeStr, $durMin / 60, $cli['gcal_event_id']);
                                 if ($free === false) {
                                     $toolResult = 'Quel nuovo orario è già occupato. Proponi al cliente un altro slot tra quelli liberi.';
+                                } elseif ($free === null) {
+                                    // Calendario illeggibile: NON spostare alla cieca (si rischia di
+                                    // sovrapporsi a un altro appuntamento). Avvisa Michela, che decide lei.
+                                    $nomeCli = trim(($cli['nome'] ?? '') . ' ' . ($cli['cognome'] ?? '')) ?: 'cliente';
+                                    $avviso  = "⚠️ Spostamento NON fatto (calendario non leggibile): " . $nomeCli
+                                             . " (webchat, tel. " . $tel . ") chiede di spostare l'appuntamento a " . ardy_data_ita($startDt)
+                                             . ". Verifica e ricontattalo tu.";
+                                    notificaMichela($avviso, 'sposta-ko:' . $cli['gcal_event_id'] . ':' . $startDt->format('YmdHi'));
+                                    $toolResult = 'Errore calendario: in questo momento non riesco a verificare il nuovo orario, quindi l\'appuntamento NON è stato spostato e resta quello di prima. Non confermare il nuovo orario al cliente: di\' che hai passato la richiesta a Michela, che lo ricontatta per confermare.';
                                 } else {
-                                    // free === true (libero) oppure null (impossibile verificare): procediamo comunque
-                                    $upd = gcal_update_event($cli['gcal_event_id'], $dateStr, $timeStr, 2);
+                                    $upd = gcal_update_event($cli['gcal_event_id'], $dateStr, $timeStr, $durMin / 60);
                                     if (!$upd) {
                                         $toolResult = 'Non sono riuscita a spostare l\'appuntamento sul calendario. Riprova o di\' che Michela ricontatta.';
                                     } else {
                                         $db->prepare("UPDATE clienti SET sopralluogo_at = :dt, stato = 'SOPRALLUOGO', updated_at = NOW() WHERE session_id = :sid")
                                            ->execute([':dt' => $startDt->format('Y-m-d H:i:s'), ':sid' => $cli['session_id']]);
+                                        // Anche la riga in `sopralluoghi` (se la dashboard l'ha già creata, con lo
+                                        // stesso evento): altrimenti la lista mostra la data vecchia e il prossimo
+                                        // sopr_mirror() riscrive la data vecchia su clienti.sopralluogo_at.
+                                        try {
+                                            $db->prepare("UPDATE sopralluoghi SET data_ora = :dt, updated_at = NOW() WHERE session_id = :sid AND gcal_event_id = :e")
+                                               ->execute([':dt' => $startDt->format('Y-m-d H:i:s'), ':sid' => $cli['session_id'], ':e' => $cli['gcal_event_id']]);
+                                        } catch (PDOException $e) {
+                                            error_log('ARDY SPOSTA SOPRALLUOGHI SYNC: ' . $e->getMessage());
+                                        }
                                         $bookingMade = true;
                                         $bookingWhen = $startDt;
                                         $nomeCli = trim(($cli['nome'] ?? '') . ' ' . ($cli['cognome'] ?? '')) ?: 'cliente';
@@ -958,11 +999,17 @@ while ($iteration < $maxIterations) {
             } elseif ($toolName === 'cerca_contatto_outreach') {
                 $telIn  = trim((string) ($toolInput['telefono'] ?? ''));
                 $nomeIn = trim((string) ($toolInput['nome'] ?? ''));
+                // Nome troppo corto = ricerca "a strascico" (LIKE %x%): chi scrive in
+                // webchat pubblica potrebbe far scorrere l'elenco contatti a Sole.
+                if (mb_strlen($nomeIn) < 4) $nomeIn = '';
                 if ($telIn === '' && $nomeIn === '') {
-                    $toolResult = 'Serve almeno un telefono o un nome per cercare.';
+                    $toolResult = 'Serve un telefono o il nome completo dell\'attività per cercare.';
                 } else {
                     try {
                         $found = ardyOutreachCerca(ardyDB(), $telIn, $nomeIn);
+                        // Webchat pubblica: note interne e stato della pipeline non
+                        // escono verso chi scrive (Sole potrebbe ripeterli).
+                        if ($found) unset($found['note'], $found['stato']);
                         if ($found) {
                             $mancano = [];
                             foreach (['referente', 'email', 'sito', 'indirizzo'] as $c) {

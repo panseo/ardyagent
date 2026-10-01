@@ -453,6 +453,8 @@ i dati essenziali (nome, contatto, canale, n° messaggi, stato CRM, ultimo messa
 Una sola notifica per sessione, grazie al dedupe di `notificaMichela()`
 (chiave `chat-chiusa:<canale>:<id>:<ultimo_msg>`). Soglie regolabili con le costanti
 `ARDY_CHIUSURA_IDLE_MIN` (60) e `ARDY_CHIUSURA_LOOKBACK_H` (24) in cima al file.
+Le chat dello **staff** con Sole (numeri `WA_MICHELA_NUMBER`/`WA_ANDREA_NUMBER`) sono escluse; il
+cliente WhatsApp si aggancia al CRM su `clienti.telefono_last9`.
 
 Da CLI salta il controllo del segreto; via HTTP è protetto da `WA_LOOKUP_SECRET`
 (`?secret=` o header `X-Ardy-Secret`). Richiede la config WhatsApp di
@@ -806,7 +808,9 @@ Sui clienti (NON sullo staff) Sole gira con lo **stesso loop agentico del sito**
 - **salvare il lead nel CRM** (`ardy-wa-crea-scheda.php`); se il cliente non lascia il telefono
   usa in automatico il suo **numero WhatsApp**;
 - **spostare un appuntamento già fissato** (tool `sposta_appuntamento`), identificandolo dal numero
-  WhatsApp del mittente (un cliente può spostare **solo il PROPRIO** appuntamento);
+  WhatsApp del mittente (un cliente può spostare **solo il PROPRIO** appuntamento). In webchat vale
+  solo per l'appuntamento della conversazione in corso. La **durata** dell'evento si conserva; se il
+  calendario non è leggibile **non sposta nulla** e avvisa Michela su WhatsApp, che ricontatta il cliente;
 - inviare le **email** come il sito: notifica a Michela, conferma del sopralluogo al cliente,
   email di benvenuto col **codice di accesso** al lead.
 

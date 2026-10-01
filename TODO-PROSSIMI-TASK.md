@@ -8,6 +8,30 @@
 
 ---
 
+## 🔒 Dopo l'audit del 01/10/2026 (5° giro + revisione codice) — da verificare/fare
+
+Dettagli in `SECURITY-AUDIT.md` §10 e nei commit del ramo. **Da deployare** (`./deploy.sh`, leggere
+l'output di `ardy-migrate.php`: la riga *riallineo telefono_last9* dice quante schede ha sanato).
+
+- [ ] **Collaudo dal vivo** dopo il deploy:
+  - lead da link WhatsApp (`/ardy-agent/?lead=…&tok=…`): la chat parte, salva i dati, e se ha un
+    appuntamento lo sposta;
+  - webchat normale: nuovo lead salvato, codice di accesso ricevuto;
+  - spostare un appuntamento da WhatsApp e controllare in dashboard la lista **📅 Sopralluoghi**
+    (deve mostrare la data nuova);
+  - nuovo cliente da dashboard (passa da `ardy-save-lead.php`);
+  - spostare una **chiamata da 30'** (da WhatsApp, webchat o dalla dashboard): in calendario deve
+    restare da 30', e spostarla di 15' non deve risultare "occupato" (l'evento non collide con sé stesso).
+  - (se capita) calendario non leggibile durante uno spostamento: Sole **non** sposta e Michela riceve
+    su WhatsApp "⚠️ Spostamento NON fatto (calendario non leggibile)…".
+- [ ] **`ardy-mcp/`: `npm audit fix`** — 4 dipendenze indirette dell'SDK MCP con advisory (1 alta
+  `fast-uri`, 3 medie `hono`/`ip-address`/`qs`). Rischio basso (il server usa stdio, non HTTP), ma il
+  fix resta nei range di `package.json`: `cd ardy-mcp && npm audit fix && npm run build`, poi commit
+  del `package-lock.json`.
+- [ ] **`ardy-visita.php`**: whitelist delle pagine note (oggi chiunque può creare contatori nuovi).
+
+---
+
 ## 🏨 APERTURA SESSIONE — riprendi da qui (aggiornata 23/08/2026, tutto deployato)
 
 > La sezione 28/07 qui sotto resta valida per i suoi collaudi: è più vecchia, non l'ho toccata.
