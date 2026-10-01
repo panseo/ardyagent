@@ -531,7 +531,9 @@ function gcal_create_simple($date, $startTime, $summary, $description = '', $dur
 // Verifica se uno slot specifico è libero (per spostamenti/conferme)
 // Ritorna true (libero), false (occupato) o null (impossibile verificare)
 // -----------------------------------------------------------
-function gcal_is_slot_free($date, $startTime, $durationHours = 2) {
+// $excludeEventId: l'evento che si sta SPOSTANDO non conta come occupato — senza,
+// spostarlo di mezz'ora (sovrapposto a sé stesso) risultava "orario occupato".
+function gcal_is_slot_free($date, $startTime, $durationHours = 2, $excludeEventId = null) {
     global $GCAL_CALENDAR_ID;
 
     $accessToken = gcal_get_access_token();
@@ -567,6 +569,7 @@ function gcal_is_slot_free($date, $startTime, $durationHours = 2) {
     foreach ($events as $event) {
         if (($event['status'] ?? '') === 'cancelled') continue;
         if (($event['transparency'] ?? '') === 'transparent') continue;
+        if ($excludeEventId && ($event['id'] ?? '') === $excludeEventId) continue;
         $s = $event['start']['dateTime'] ?? ($event['start']['date'] ?? null);
         $e = $event['end']['dateTime']   ?? ($event['end']['date']   ?? null);
         if (!$s || !$e) continue;
@@ -576,7 +579,41 @@ function gcal_is_slot_free($date, $startTime, $durationHours = 2) {
 }
 
 // -----------------------------------------------------------
+// Durata in minuti di un evento esistente, letta da Google Calendar.
+// null se non leggibile (token, rete, evento sparito) o se è un evento
+// "tutto il giorno": chi chiama ripiega sulla durata classica di 2 ore.
+// -----------------------------------------------------------
+function gcal_event_duration_min($eventId) {
+    global $GCAL_CALENDAR_ID;
+
+    $accessToken = gcal_get_access_token();
+    if (!$accessToken || !$eventId) return null;
+
+    $url = 'https://www.googleapis.com/calendar/v3/calendars/' .
+           urlencode($GCAL_CALENDAR_ID) . '/events/' . urlencode($eventId);
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT,        15);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER,     ['Authorization: Bearer ' . $accessToken]);
+    $response = curl_exec($ch);
+    $code     = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err      = curl_error($ch);
+    curl_close($ch);
+    if ($err || $code !== 200) {
+        error_log('ARDY GCAL DURATA ERROR: HTTP ' . $code . ' ' . $err);
+        return null;
+    }
+    $ev = json_decode((string) $response, true);
+    if (empty($ev['start']['dateTime']) || empty($ev['end']['dateTime'])) return null;
+    $min = (int) round((strtotime($ev['end']['dateTime']) - strtotime($ev['start']['dateTime'])) / 60);
+    return ($min >= 15 && $min <= 480) ? $min : null;
+}
+
+// -----------------------------------------------------------
 // Sposta un appuntamento esistente (cambia data/ora dell'evento)
+// $durationHours: durata del nuovo orario; null = CONSERVA quella dell'evento
+// (una chiamata da 30' spostata resta da 30', non diventa un sopralluogo da 2 ore).
 // -----------------------------------------------------------
 function gcal_update_event($eventId, $date, $startTime, $durationHours = 2, $summary = null) {
     global $GCAL_CALENDAR_ID;
@@ -584,9 +621,13 @@ function gcal_update_event($eventId, $date, $startTime, $durationHours = 2, $sum
     $accessToken = gcal_get_access_token();
     if (!$accessToken || !$eventId) return false;
 
+    $durMin = $durationHours === null
+        ? (gcal_event_duration_min($eventId) ?? 120)
+        : (int) round($durationHours * 60);
+
     $startDt = new DateTime($date . ' ' . $startTime, new DateTimeZone('Europe/Rome'));
     $endDt   = clone $startDt;
-    $endDt->modify("+{$durationHours} hours");
+    $endDt->modify('+' . $durMin . ' minutes');
 
     $patch = [
         'start' => ['dateTime' => $startDt->format(DateTime::RFC3339), 'timeZone' => 'Europe/Rome'],

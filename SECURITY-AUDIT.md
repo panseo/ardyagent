@@ -478,7 +478,7 @@ generati dal browser: per quelli il comportamento non cambia.
 ### 10.2 🟠 Spostamento del sopralluogo di un altro cliente (webchat)
 **Problema.** In webchat `sposta_appuntamento` cercava il cliente **solo** per ultime 9 cifre del
 telefono digitato in chat: chiunque poteva spostare il sopralluogo di un altro conoscendone il numero
-(e, se il calendario non era leggibile, lo spostamento procedeva comunque). Su WhatsApp lo stesso tool
+(e, se il calendario non era leggibile, lo spostamento procedeva comunque — comportamento ancora presente, vedi `TODO-PROSSIMI-TASK.md`). Su WhatsApp lo stesso tool
 era già legato al numero del mittente.
 **Fix.** La ricerca richiede ora `session_id` = sessione corrente **e** telefono corrispondente. Se non
 trova, Sole raccoglie la richiesta e rimanda a Michela (stesso comportamento di WhatsApp). Aggiornata la

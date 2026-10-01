@@ -902,12 +902,15 @@ while ($iteration < $maxIterations) {
                             } else {
                                 $dateStr = $startDt->format('Y-m-d');
                                 $timeStr = $startDt->format('H:i');
-                                $free = gcal_is_slot_free($dateStr, $timeStr, 2);
+                                // Durata vera dell'appuntamento (una chiamata da 30' resta da 30'), e
+                                // l'evento stesso escluso dal controllo: spostarlo di poco non è "occupato".
+                                $durMin = gcal_event_duration_min($cli['gcal_event_id']) ?? 120;
+                                $free = gcal_is_slot_free($dateStr, $timeStr, $durMin / 60, $cli['gcal_event_id']);
                                 if ($free === false) {
                                     $toolResult = 'Quel nuovo orario è già occupato. Proponi al cliente un altro slot tra quelli liberi.';
                                 } else {
                                     // free === true (libero) oppure null (impossibile verificare): procediamo comunque
-                                    $upd = gcal_update_event($cli['gcal_event_id'], $dateStr, $timeStr, 2);
+                                    $upd = gcal_update_event($cli['gcal_event_id'], $dateStr, $timeStr, $durMin / 60);
                                     if (!$upd) {
                                         $toolResult = 'Non sono riuscita a spostare l\'appuntamento sul calendario. Riprova o di\' che Michela ricontatta.';
                                     } else {

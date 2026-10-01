@@ -148,7 +148,8 @@ function sopr_salva(PDO $db, string $sid, int $id, string $dataOraNorm, string $
             if (!empty($eid)) {
                 // Passo anche il titolo: se cambia il tipo (sopralluogo/ritiro/consegna)
                 // o l'etichetta, l'evento in calendario si aggiorna di conseguenza.
-                gcal_update_event($eid, $dateStr, $timeStr, 2, $summary);
+                // Durata null = conserva quella dell'evento (non la forza a 2 ore).
+                gcal_update_event($eid, $dateStr, $timeStr, null, $summary);
             } else {
                 $ev = gcal_create_event($dateStr, $timeStr, $nomeCli, (string) ($cli['telefono'] ?? ''), (string) ($cli['email'] ?? ''), '', '', $summary, $kindLabel);
                 if (is_array($ev) && !empty($ev['id'])) $eid = $ev['id'];
