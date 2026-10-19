@@ -803,10 +803,16 @@ Import manuale in blocco dei clienti CRM disponibile anche dal bottone **⬇ IMP
 ### Piano B LIVE — Sole ha strumenti VERI sui clienti
 Sui clienti (NON sullo staff) Sole gira con lo **stesso loop agentico del sito** (file
 `ardy-wa-agent.php`) e può davvero:
-- **leggere la disponibilità** del calendario Google e **fissare il sopralluogo** su conferma
-  (guardia anti-doppione, persiste la scheda, notifica Michela);
 - **salvare il lead nel CRM** (`ardy-wa-crea-scheda.php`); se il cliente non lascia il telefono
   usa in automatico il suo **numero WhatsApp**;
+  > ⚠️ *ott 2026:* per un **nuovo lead** Sole **non fissa più il sopralluogo** (niente
+  > `ottieni_disponibilita_calendario`/`fissa_appuntamento_calendario` in questo flusso):
+  > raccoglie solo contatto e informazioni, salva stato LEAD, e Michela richiama lei per
+  > organizzarlo. I due tool calendario restano usati solo nel flusso **Galleria Diffusa/B&B**.
+  > Lo scenario "Michela/Andrea fissano per un cliente nominato" è un'altra cosa (§ Staff
+  > sotto): prompt e tool `_staff` separati, non questi due. Motivo del cambio: slot che
+  > "scadevano" a metà conversazione e Sole che si contraddiceva col cliente — vedi
+  > `MANUALE-SOLE.md` §2.
 - **spostare un appuntamento già fissato** (tool `sposta_appuntamento`), identificandolo dal numero
   WhatsApp del mittente (un cliente può spostare **solo il PROPRIO** appuntamento). In webchat vale
   solo per l'appuntamento della conversazione in corso. La **durata** dell'evento si conserva; se il
@@ -1076,6 +1082,25 @@ di oggi (coda del log), spazio disco. Ogni check è isolato in try/catch.
 ---
 
 ## 📝 Note sessioni
+
+**Ottobre 2026 — Sole non fissa più il sopralluogo dei nuovi lead**
+- **Il problema**: su un lead del sito (wrapping cucina), Sole ha proposto e "perso" orari più
+  volte nella stessa conversazione (slot indicati come liberi e poi risultati occupati, proposte
+  contraddittorie), fino a far rinunciare la cliente. Il calendario letto a più riprese durante
+  una trattativa lunga cambia sotto i piedi — ed è lì che Sole si è contraddetta.
+- **Decisione di Michela**: per i **nuovi lead** (restauro, Ardy Express, Interior Design) Sole
+  **non usa più** `ottieni_disponibilita_calendario` / `fissa_appuntamento_calendario`. Raccoglie
+  solo **nome, telefono, email** e il resto della qualifica, poi chiude dicendo che Michela la
+  ricontatta per organizzare il sopralluogo — e salva il lead con stato **LEAD** (non più
+  SOPRALLUOGO, riservato a un appuntamento realmente creato sul calendario).
+- **Cosa NON cambia**: il flusso **Galleria Diffusa / partner B&B** (appuntamento con un
+  potenziale partner, non un cliente di restauro) e i tool `_staff` (`fissa_appuntamento_staff` /
+  `sposta_appuntamento_staff`, quando è Michela o Andrea a chiedere a Sole di fissare per un
+  cliente nominato) restano come prima. Resta anche `sposta_appuntamento`, per chi vuole spostare
+  un sopralluogo **già fissato** da Michela.
+- File toccati: `ardy-system.txt` (Passo 7 restauro e Interior Design, sezione GESTIONE
+  CALENDARIO), `ardy-proxy.php` (blocco Ardy Express), `ardy-whatsapp-system.txt` (`mode=lead` e
+  tool calendario), `MANUALE-SOLE.md` §2.
 
 **Agosto 2026 — Outreach: filtro regione/zona, portatori di interesse Salento, aree di testo espandibili**
 - **Regione/zona** (colonna `regione` su `outreach_contatti`, `ardy-migrate.php`): raggruppa più città/comuni

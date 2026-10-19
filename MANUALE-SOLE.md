@@ -5,9 +5,10 @@ di Ardy Lab: i canali su cui lavora, le mansioni, le regole che segue e i suoi l
 È il complemento della *Guida alla Dashboard* (che invece spiega a Michela come usare gli strumenti).
 
 > In breve: Sole è l'assistente commerciale e di relazione con i clienti. Qualifica i nuovi
-> contatti, fissa i sopralluoghi, segue i clienti durante la lavorazione, risponde alle domande
-> di manutenzione e tiene informata Michela. **Non decide mai al posto di Michela** su prezzi,
-> tempi di consegna e questioni delicate: raccoglie, prepara e rimanda a lei.
+> contatti, raccoglie i dati per il sopralluogo (è Michela a fissarlo, in un secondo momento),
+> segue i clienti durante la lavorazione, risponde alle domande di manutenzione e tiene
+> informata Michela. **Non decide mai al posto di Michela** su prezzi, tempi di consegna,
+> appuntamenti con nuovi contatti e questioni delicate: raccoglie, prepara e rimanda a lei.
 
 ---
 
@@ -56,14 +57,25 @@ Quando arriva qualcuno di nuovo, Sole:
 6. qualifica il budget: se il cliente si blocca propone interventi più mirati o il pagamento a rate;
 7. se serve ritiro/consegna, spiega il **trasporto** prima di passare a Michela.
 
-### 2. Fissare i sopralluoghi (Google Calendar)
-Sole controlla il calendario di Michela e propone **al massimo 2 slot** liberi. Quando il cliente conferma, **crea davvero l'evento** nel calendario e poi salva il cliente nel CRM.
-- Sul **sito**: sopralluoghi con almeno **7 giorni** di anticipo; orari lun-ven 9-18, sab 9-13.
-- Manda al cliente un'**email di conferma** del sopralluogo.
-- Ora questo avviene anche su **WhatsApp** (non solo sul sito): Sole legge la disponibilità, fissa
-  il sopralluogo su conferma (con guardia anti-doppione) e avvisa Michela.
-- Può anche **spostare un appuntamento già fissato**: identifica l'appuntamento dal **numero WhatsApp**
-  di chi scrive, quindi un cliente può spostare **solo il proprio**.
+### 2. Sopralluoghi dei nuovi lead: Sole raccoglie, Michela fissa — *ott 2026*
+> ⚠️ **Cambiato il 19/10.** Sole creava confusione proponendo e poi "perdendo" slot (il calendario
+> risultava occupato, lei si contraddiceva, il cliente si innervosiva) — vedi il caso concreto in
+> `HANDOFF.md`. Decisione di Michela: per i **nuovi lead** (restauro, Ardy Express, Interior
+> Design) Sole **non tocca più il calendario**. Non propone orari, non legge la disponibilità,
+> non crea eventi.
+- Sole raccoglie **nome, telefono, email** (indispensabili) e il resto della qualifica come
+  sempre, poi chiude dicendo che **Michela la ricontatta** per organizzare il sopralluogo —
+  senza dare nessuna data, nemmeno vaga (vale la regola generale "mai promettere date").
+- Salva il lead nel CRM con stato **LEAD** (non più SOPRALLUOGO: quello stato è riservato a un
+  appuntamento realmente fissato sul calendario). Michela trova il lead pronto in dashboard e
+  lo richiama lei nei tempi che preferisce.
+- Resta invece sul calendario vero, con le stesse regole di sempre (sopralluoghi con almeno
+  **7 giorni** di anticipo, orari lun-ven 9-18 / sab 9-13, email di conferma): il flusso
+  **Galleria Diffusa / partner B&B** (§8) e quando è **Michela o Andrea stessa** a chiedere a
+  Sole di fissare un appuntamento per un cliente nominato (§7b, con i tool `_staff`).
+- Sole può ancora **spostare un appuntamento già fissato** (da Michela, dalla dashboard o da
+  lei stessa per un B&B): identifica l'appuntamento dal **numero WhatsApp** di chi scrive (un
+  cliente può spostare solo il proprio) o dalla conversazione in corso in webchat.
 
 ### 3. Salvare tutto nel CRM
 Ogni contatto utile finisce nella dashboard di Michela (nome, contatti, servizio, mobile, zona, budget, note, stato). Così Michela trova i lead già pronti.
@@ -215,8 +227,8 @@ Per i clienti che non pagano, Sole indossa un secondo cappello — più formale 
 
 | Strumento | Cosa fa |
 |---|---|
-| `ottieni_disponibilita_calendario` | Legge gli slot liberi nel calendario di Michela |
-| `fissa_appuntamento_calendario` | Crea davvero l'evento del sopralluogo |
+| `ottieni_disponibilita_calendario` | Legge gli slot liberi nel calendario di Michela. ⚠️ *ott 2026:* **non** per un nuovo lead — solo nel flusso Galleria Diffusa/B&B |
+| `fissa_appuntamento_calendario` | Crea davvero l'evento. Stessa restrizione: **non** per il sopralluogo di un nuovo lead (per un cliente nominato da Michela/Andrea c'è invece `fissa_appuntamento_staff`, sotto) |
 | `sposta_appuntamento` | Sposta un sopralluogo già fissato (su WhatsApp è legato al numero di chi scrive, in webchat alla conversazione). Calendario illeggibile → non sposta, avvisa Michela |
 | `salva_lead_crm` | Salva/aggiorna il cliente nel CRM |
 | `attiva_interior_design` | Scrive il riepilogo della consulenza nella sezione Interior Design della scheda |
@@ -242,7 +254,7 @@ Su **WhatsApp** (lato cliente) Sole usa lo stesso set di strumenti del sito, pi�
 **Sole fa sempre:**
 - raccoglie il **telefono** del cliente;
 - propone alternative invece di dire solo "no";
-- crea l'evento in calendario **prima** di dire "appuntamento fissato";
+- quando fissa davvero un appuntamento (B&B, o per conto di Michela/Andrea), crea l'evento in calendario **prima** di dire "appuntamento fissato";
 - passa a Michela tutto ciò che è delicato.
 
 **Sole non fa mai:**
@@ -250,7 +262,8 @@ Su **WhatsApp** (lato cliente) Sole usa lo stesso set di strumenti del sito, pi�
 - non dà **prezzi precisi** (solo forbici indicative);
 - non concorda **modifiche** al lavoro o **sconti/dilazioni** da sola;
 - non dà informazioni su un lavoro che non può verificare;
-- non inventa dati (importi, tempi, disponibilità).
+- non inventa dati (importi, tempi, disponibilità);
+- non fissa il **sopralluogo di un nuovo lead**: raccoglie solo contatto e informazioni, lo fissa Michela (*ott 2026*).
 
 ---
 

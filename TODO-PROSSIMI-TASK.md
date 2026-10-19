@@ -1,10 +1,27 @@
 # Ardy Lab — Task aperti & note utili
 
 > Solo task **aperti** + note operative + verifiche residue. Tutto ciò che è fatto **e deployato**
-> è rimosso (lo storico resta nei commit git). Ultima pulizia: 26/07/2026 · ultimo aggiornamento: 23/08/2026.
+> è rimosso (lo storico resta nei commit git). Ultima pulizia: 26/07/2026 · ultimo aggiornamento: 19/10/2026.
 
 > ⚠️ Promemoria sempre valido: se Sole tace su **tutti** i canali insieme (WhatsApp + webchat),
 > sospetta **credito Anthropic esaurito** (capitato il 21/06; si ricarica da Plans & Billing).
+
+---
+
+## 🗓️ Dopo il cambio "Sole non fissa più il sopralluogo dei nuovi lead" (19/10/2026) — da collaudare
+
+Nessun test automatico sul prompt: è tutto da verificare dal vivo dopo il deploy.
+
+- [ ] **Sito, nuovo lead restauro/wrapping**: arrivare fino alla qualifica completa e controllare
+  che Sole NON proponga mai orari né dica "appuntamento fissato" — deve solo chiudere dicendo che
+  Michela ricontatta, e salvare il lead con stato **LEAD** (non SOPRALLUOGO) in dashboard.
+- [ ] **WhatsApp, `mode=lead`**: stessa verifica — nessuna chiamata a `ottieni_disponibilita_calendario`
+  / `fissa_appuntamento_calendario` durante la qualifica di un nuovo contatto.
+- [ ] **Ardy Express** e **Interior Design** (webchat dedicate): stessa verifica a fine intervista.
+- [ ] **Non regredire**: il flusso **Galleria Diffusa/B&B** deve continuare a proporre e fissare
+  l'incontro come prima; Michela/Andrea devono poter ancora dire *"Sole, fissa ad Alberto il
+  sopralluogo domani alle 10"* (tool `_staff`) e far spostare a un cliente un sopralluogo già
+  fissato (`sposta_appuntamento`).
 
 ---
 
