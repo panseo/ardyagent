@@ -1,14 +1,14 @@
 <?php
 // -----------------------------------------------------------
-// ARDY LAB — Cervello WhatsApp lato cliente (tool calendario)
+// ARDY LAB — Cervello WhatsApp lato cliente
 //
 // PIANO B (un solo cervello, n8n = tubo). Per i canali CLIENTE su WhatsApp
-// (lead / cliente / cliente_lavorazione / lead_portale) Sole ha ora i tool
-// VERI del calendario, con lo stesso loop agentico del sito (ardy-proxy.php):
-//   - ottieni_disponibilita_calendario  → legge gli slot liberi
-//   - fissa_appuntamento_calendario      → fissa il sopralluogo (solo su conferma)
-// Così Sole può proporre 2 slot reali e chiudere l'appuntamento, invece di
-// "recitare" la sintassi di un tool che su WhatsApp non esisteva (caso Alberto).
+// (lead / cliente / cliente_lavorazione / lead_portale) Sole gira con lo
+// stesso loop agentico del sito (ardy-proxy.php): CRM, outreach, promemoria.
+// ⚠️ *ott 2026:* niente più tool calendario lato cliente (rimossi
+// `ottieni_disponibilita_calendario`/`fissa_appuntamento_calendario`/
+// `sposta_appuntamento`): Sole raccoglie solo dati, il calendario lo gestisce
+// sempre Michela — vedi MANUALE-SOLE.md §2.
 //
 // Anche la modalità TITOLARE (staff) passa ora di qui, con un set di tool "_staff"
 // dedicati (ricerca/creazione scheda, calendario per nome, promemoria). Il solo
@@ -299,36 +299,28 @@ function waFormattaSopralluoghi(array $rows): string {
 }
 
 // -----------------------------------------------------------
-// Tool calendario (stesse definizioni del sito — lettura + prenotazione)
+// Tool calendario "vero" (crea/sposta un evento): SOLO per lo staff
+// (ottieni_disponibilita_calendario, riusato sotto in $staffTools).
+// Il cliente non lo riceve più nella lista $tools: Sole, lato cliente,
+// non legge né tocca il calendario — raccoglie dati e basta, un
+// eventuale sopralluogo o spostamento lo gestisce Michela (vedi
+// MANUALE-SOLE.md §2 e ardy-whatsapp-system.txt).
 // -----------------------------------------------------------
+$toolOttieniDisponibilita = [
+    'name'        => 'ottieni_disponibilita_calendario',
+    'description' => 'Controlla la disponibilità del calendario di Ardy Lab. La fascia oraria cercata è quella tra l\'ora di start e l\'ora di end (es. start 17:00 / end 18:00 → solo slot tra le 17 e le 18, su tutti i giorni fino alla data di end). Restituisce orari ESATTI (inizio–fine): proponi allo staff al massimo 2 di quegli orari, senza modificarli.',
+    'input_schema' => [
+        'type'       => 'object',
+        'properties' => [
+            'start' => ['type' => 'string', 'description' => 'Data e ora inizio, ISO 8601. Es: 2026-06-10T09:00:00+02:00'],
+            'end'   => ['type' => 'string', 'description' => 'Data e ora fine, ISO 8601. Es: 2026-06-10T18:00:00+02:00'],
+            'durata_minuti' => ['type' => 'integer', 'description' => 'Durata dell\'appuntamento in minuti (es. 30 per una chiamata, 90 per un sopralluogo B&B, 120 per un sopralluogo restauro). Gli slot restituiti hanno già questa durata: proponili così come sono.'],
+        ],
+        'required' => ['start', 'end'],
+    ],
+];
+
 $tools = [
-    [
-        'name'        => 'ottieni_disponibilita_calendario',
-        'description' => 'Controlla la disponibilità del calendario di Ardy Lab. La fascia oraria cercata è quella tra l\'ora di start e l\'ora di end (es. start 17:00 / end 18:00 → solo slot tra le 17 e le 18, su tutti i giorni fino alla data di end). Restituisce orari ESATTI (inizio–fine): proponi al cliente al massimo 2 di quegli orari, senza modificarli.',
-        'input_schema' => [
-            'type'       => 'object',
-            'properties' => [
-                'start' => ['type' => 'string', 'description' => 'Data e ora inizio, ISO 8601. Es: 2026-06-10T09:00:00+02:00'],
-                'end'   => ['type' => 'string', 'description' => 'Data e ora fine, ISO 8601. Es: 2026-06-10T18:00:00+02:00'],
-                'durata_minuti' => ['type' => 'integer', 'description' => 'Durata dell\'appuntamento in minuti (es. 30 per una chiamata, 90 per un sopralluogo B&B, 120 per un sopralluogo restauro). Gli slot restituiti hanno già questa durata: proponili così come sono.'],
-            ],
-            'required' => ['start', 'end'],
-        ],
-    ],
-    [
-        'name'        => 'fissa_appuntamento_calendario',
-        'description' => 'Crea un evento nel calendario di Ardy Lab. Usalo solo dopo conferma esplicita del cliente.',
-        'input_schema' => [
-            'type'       => 'object',
-            'properties' => [
-                'start'       => ['type' => 'string', 'description' => 'Data e ora inizio, ISO 8601'],
-                'end'         => ['type' => 'string', 'description' => 'Data e ora fine, ISO 8601'],
-                'summary'     => ['type' => 'string', 'description' => 'Titolo evento. Es: Sopralluogo Ardy Lab — Prati / Mario Rossi'],
-                'description' => ['type' => 'string', 'description' => 'Scheda completa: nome, servizio, mobile, condizioni, zona, email, indirizzo, budget, note.'],
-            ],
-            'required' => ['start', 'end', 'summary', 'description'],
-        ],
-    ],
     [
         'name'        => 'salva_lead_crm',
         'description' => 'Salva i dati del cliente nel CRM. Usalo quando un nuovo contatto ti ha fornito i suoi dati (almeno il nome e un recapito) e di cosa ha bisogno, così il contatto non si perde e Michela lo ritrova. Se non ti ha dato il telefono va bene: useremo in automatico il suo numero WhatsApp.',
@@ -351,17 +343,6 @@ $tools = [
         ],
     ],
     [
-        'name'        => 'sposta_appuntamento',
-        'description' => 'Sposta un sopralluogo GIÀ fissato a una nuova data/ora. Usalo quando il cliente con cui stai parlando, che ha già un appuntamento, chiede di spostarlo. Prima verifica la disponibilità del nuovo periodo con ottieni_disponibilita_calendario e fatti confermare un orario preciso; poi chiama questo strumento. L\'appuntamento viene identificato in automatico dal numero WhatsApp del cliente.',
-        'input_schema' => [
-            'type'       => 'object',
-            'properties' => [
-                'start' => ['type' => 'string', 'description' => 'Nuova data e ora di inizio, ISO 8601. Es: 2026-06-20T11:00:00+02:00'],
-            ],
-            'required' => ['start'],
-        ],
-    ],
-    [
         'name'        => 'aggiorna_contatto_outreach',
         'description' => 'Completa un dato mancante su un contatto outreach (B&B/antiquario/altro) già segnalato come "già registrato" nel contesto di questa conversazione — es. il nome del referente, se te lo dà in chat. Passa SEMPRE l\'id indicato nel contesto (blocco CONTATTO OUTREACH GIÀ REGISTRATO). Riempie solo i campi vuoti: non sovrascrive mai un dato già presente.',
         'input_schema' => [
@@ -379,12 +360,12 @@ $tools = [
     ardy_tool_ricorda_a_michela(),
     [
         'name'        => 'avvisa_michela',
-        'description' => 'Invia a Michela una notifica WhatsApp breve, come farebbe una segretaria efficiente. Usalo SOLO quando emerge qualcosa che Michela deve sapere subito e che NON è già coperto dal salvataggio lead/appuntamento: un reclamo o insoddisfazione, un problema di pagamento, una richiesta di modifica a un lavoro già concordato, una richiesta fuori standard (tempi urgenti, lavoro particolare) oppure un\'anomalia del calendario (quello che risulta non torna con l\'appuntamento che hai già confermato al cliente). Non usarlo per conversazioni di routine. Il numero WhatsApp del cliente viene aggiunto in automatico.',
+        'description' => 'Invia a Michela una notifica WhatsApp breve, come farebbe una segretaria efficiente. Usalo quando emerge qualcosa che Michela deve sapere subito e che NON è già coperto dal salvataggio lead: un reclamo o insoddisfazione, un problema di pagamento, una richiesta di modifica a un lavoro già concordato, una richiesta fuori standard (tempi urgenti, lavoro particolare), oppure un cliente che vuole fissare o SPOSTARE un appuntamento/sopralluogo — il calendario lo gestisce sempre Michela, tu passale la richiesta. Non usarlo per conversazioni di routine. Il numero WhatsApp del cliente viene aggiunto in automatico.',
         'input_schema' => [
             'type'       => 'object',
             'properties' => [
-                'messaggio' => ['type' => 'string', 'description' => 'Riepilogo breve, diretto e azionabile per Michela. Includi nome del cliente, di cosa si tratta e cosa serve fare. Es: "Veronica (B&B) — le avevo confermato la chiamata giovedì 1/10 alle 17:00, ora il calendario lo dà occupato. Verifica e confermale tu l\'orario."'],
-                'motivo'    => ['type' => 'string', 'description' => 'Categoria: reclamo | pagamento | modifica | fuori_standard | anomalia_calendario | altro'],
+                'messaggio' => ['type' => 'string', 'description' => 'Riepilogo breve, diretto e azionabile per Michela. Includi nome del cliente, di cosa si tratta e cosa serve fare. Es: "Veronica (B&B) chiede di spostare l\'appuntamento di giovedì 1/10 alle 17:00: vuole un altro giorno, da organizzare con lei."'],
+                'motivo'    => ['type' => 'string', 'description' => 'Categoria: reclamo | pagamento | modifica | fuori_standard | appuntamento | altro'],
             ],
             'required' => ['messaggio'],
         ],
@@ -401,7 +382,7 @@ $tools = [
 // -----------------------------------------------------------
 if ($staff) {
     $tools = [
-        $tools[0],   // ottieni_disponibilita_calendario — identico al canale cliente
+        $toolOttieniDisponibilita,   // qui sì: lo staff gestisce davvero il calendario
         [
             'name'        => 'cerca_scheda_cliente',
             'description' => 'Cerca nel CRM le schede cliente per nome o cognome. Usalo per controllare di star agendo sul cliente giusto, o quando ci sono possibili omonimi. Ritorna le schede trovate con il loro session_id, da riusare con fissa_appuntamento_staff / sposta_appuntamento_staff per disambiguare.',
@@ -595,34 +576,9 @@ while ($iteration < $maxIterations) {
         $toolResult = '';
 
         if ($toolName === 'ottieni_disponibilita_calendario') {
+            // Qui arriva solo dallo STAFF ($staff=true): lato cliente questo tool
+            // non è più nella lista $tools (vedi sopra), quindi Sole non lo chiama mai.
             $toolResult = gcal_tool_disponibilita($toolInput, $ownCalProps);
-
-        } elseif ($toolName === 'fissa_appuntamento_calendario') {
-            // Guardia anti-doppione: se la scheda ha GIÀ un appuntamento, non crearne un secondo.
-            $existingEventId = $bookingEventId;
-            if (empty($existingEventId) && $sessionId !== '') {
-                try {
-                    $db = ardyDB();
-                    waEnsureSopralluogoCols($db);
-                    $qb = $db->prepare("SELECT gcal_event_id FROM clienti WHERE session_id = :sid LIMIT 1");
-                    $qb->execute([':sid' => $sessionId]);
-                    $existingEventId = trim((string) $qb->fetchColumn());
-                } catch (PDOException $e) { $existingEventId = ''; }
-            }
-            if (!empty($existingEventId)) {
-                $toolResult = 'Questo cliente ha GIÀ un appuntamento fissato: NON crearne un altro (creeresti un doppione nel calendario). Conferma l\'appuntamento già esistente; se vuole cambiare data, raccogli la richiesta e di\' che Michela lo riorganizza.';
-            } else try {
-                $fx = gcal_tool_fissa($toolInput, $ownCalProps);
-                $toolResult = $fx['result'];
-                if ($fx['event']) {
-                    $bookingMade    = true;
-                    $bookingWhen    = $fx['when'];
-                    $bookingEventId = $fx['event']['id'] ?? null;
-                }
-            } catch (Exception $e) {
-                error_log('ARDY WA-AGENT BOOKING ERROR: ' . $e->getMessage() . ' input=' . json_encode($toolInput));
-                $toolResult = 'Errore tecnico nella prenotazione: NON è stata fissata. Chiedi al cliente di riprovare.';
-            }
 
         } elseif ($toolName === 'salva_lead_crm') {
             // Telefono: quello fornito da Sole o, in mancanza, il numero WhatsApp del mittente.
@@ -736,87 +692,6 @@ while ($iteration < $maxIterations) {
                 $toolResult = $ok
                     ? 'Michela è stata avvisata su WhatsApp.'
                     : 'Avviso registrato (eventuale invio WhatsApp gestito a parte).';
-            }
-
-        } elseif ($toolName === 'sposta_appuntamento') {
-            // Su WhatsApp il cliente può spostare SOLO il proprio appuntamento:
-            // lo identifichiamo dal suo numero WhatsApp, non da un telefono fornito
-            // (evita che qualcuno sposti l'appuntamento di un altro).
-            $start = $toolInput['start'] ?? '';
-            if ($phone === '') {
-                $toolResult = 'Non riesco a identificare il numero del cliente. Raccogli la richiesta e di\' che Michela ricontatta.';
-            } elseif ($start === '') {
-                $toolResult = 'Errore: manca la nuova data/ora. Chiedi al cliente giorno e ora precisi.';
-            } else {
-                try {
-                    $startDt = new DateTime($start);
-                    if ($startDt < new DateTime('now')) {
-                        $toolResult = 'La nuova data è nel passato: chiedi al cliente una data futura.';
-                    } else {
-                        $db = ardyDB();
-                        waEnsureSopralluogoCols($db);
-                        ardyEnsureTelefonoLast9($db);
-                        $q = $db->prepare(
-                            "SELECT session_id, nome, cognome, email, gcal_event_id FROM clienti
-                              WHERE telefono_last9 = :p
-                                AND gcal_event_id IS NOT NULL AND gcal_event_id <> ''
-                                AND deleted_at IS NULL
-                           ORDER BY updated_at DESC, id DESC LIMIT 1"
-                        );
-                        $q->execute([':p' => substr($phone, -9)]);
-                        $cli = $q->fetch(PDO::FETCH_ASSOC);
-                        if (!$cli) {
-                            $toolResult = 'Non trovo un appuntamento collegato a questo numero. Raccogli la richiesta e di\' che Michela ricontatta il cliente per riorganizzare.';
-                        } else {
-                            $dateStr = $startDt->format('Y-m-d');
-                            $timeStr = $startDt->format('H:i');
-                            // Durata vera dell'appuntamento (una chiamata da 30' resta da 30'), e
-                            // l'evento stesso escluso dal controllo: spostarlo di poco non è "occupato".
-                            $durMin = gcal_event_duration_min($cli['gcal_event_id']) ?? 120;
-                            $free = gcal_is_slot_free($dateStr, $timeStr, $durMin / 60, $cli['gcal_event_id']);
-                            if ($free === false) {
-                                $toolResult = 'Quel nuovo orario è già occupato. Proponi al cliente un altro slot tra quelli liberi (controlla con ottieni_disponibilita_calendario).';
-                            } elseif ($free === null) {
-                                // Calendario illeggibile: NON spostare alla cieca (si rischia di
-                                // sovrapporsi a un altro appuntamento). Avvisa Michela, che decide lei.
-                                $nomeCli = trim(($cli['nome'] ?? '') . ' ' . ($cli['cognome'] ?? '')) ?: 'cliente';
-                                $avviso  = "⚠️ Spostamento NON fatto (calendario non leggibile): " . $nomeCli
-                                         . " (WhatsApp +" . $phone . ") chiede di spostare l'appuntamento a " . ardy_data_ita($startDt)
-                                         . ". Verifica e ricontattalo tu.";
-                                notificaMichela($avviso, 'wa-sposta-ko:' . $cli['gcal_event_id'] . ':' . $startDt->format('YmdHi'));
-                                $toolResult = 'Errore calendario: in questo momento non riesco a verificare il nuovo orario, quindi l\'appuntamento NON è stato spostato e resta quello di prima. Non confermare il nuovo orario al cliente: di\' che hai passato la richiesta a Michela, che lo ricontatta per confermare.';
-                            } else {
-                                $upd = gcal_update_event($cli['gcal_event_id'], $dateStr, $timeStr, $durMin / 60);
-                                if (!$upd) {
-                                    $toolResult = 'Non sono riuscita a spostare l\'appuntamento sul calendario. Riprova o di\' che Michela ricontatta.';
-                                } else {
-                                    $db->prepare("UPDATE clienti SET sopralluogo_at = :dt, stato = 'SOPRALLUOGO', updated_at = NOW() WHERE session_id = :sid")
-                                       ->execute([':dt' => $startDt->format('Y-m-d H:i:s'), ':sid' => $cli['session_id']]);
-                                    // Anche la riga in `sopralluoghi` (se la dashboard l'ha già creata, con lo
-                                    // stesso evento): altrimenti la lista mostra la data vecchia e il prossimo
-                                    // sopr_mirror() riscrive la data vecchia su clienti.sopralluogo_at.
-                                    try {
-                                        $db->prepare("UPDATE sopralluoghi SET data_ora = :dt, updated_at = NOW() WHERE session_id = :sid AND gcal_event_id = :e")
-                                           ->execute([':dt' => $startDt->format('Y-m-d H:i:s'), ':sid' => $cli['session_id'], ':e' => $cli['gcal_event_id']]);
-                                    } catch (PDOException $e) {
-                                        error_log('ARDY SPOSTA SOPRALLUOGHI SYNC: ' . $e->getMessage());
-                                    }
-                                    $rescheduled    = true;
-                                    $bookingWhen    = $startDt;               // per la conferma email al cliente
-                                    $bookingEventId = $cli['gcal_event_id'];
-                                    $nm = trim(($cli['nome'] ?? '') . ' ' . ($cli['cognome'] ?? ''));
-                                    if ($nm !== '') $leadNome = $nm;
-                                    $em = trim((string) ($cli['email'] ?? ''));
-                                    if ($em !== '' && filter_var($em, FILTER_VALIDATE_EMAIL)) $leadEmail = $em;
-                                    $toolResult = 'Appuntamento spostato con successo al nuovo orario nel calendario di Michela.';
-                                }
-                            }
-                        }
-                    }
-                } catch (Exception $e) {
-                    error_log('ARDY WA-AGENT SPOSTA ERROR: ' . $e->getMessage());
-                    $toolResult = 'Errore tecnico nello spostamento. Chiedi al cliente di riprovare.';
-                }
             }
 
         } elseif ($toolName === 'cerca_scheda_cliente') {

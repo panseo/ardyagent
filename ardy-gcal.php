@@ -272,8 +272,9 @@ function gcal_existing_note(array $events) {
 }
 
 // -----------------------------------------------------------
-// Handler condiviso del tool `ottieni_disponibilita_calendario` (sito + WhatsApp).
-// $ownProps: proprietà per riconoscere gli appuntamenti già fissati per questo cliente.
+// Handler del tool `ottieni_disponibilita_calendario`. *ott 2026:* lato cliente questo
+// tool non c'è più (sito e WhatsApp raccolgono solo dati); resta in uso lato STAFF
+// (ardy-wa-agent.php, ramo titolare), che lo passa qui con $ownProps vuoto.
 // -----------------------------------------------------------
 function gcal_tool_disponibilita(array $input, array $ownProps = []) {
     $tz  = new DateTimeZone('Europe/Rome');
@@ -309,59 +310,6 @@ function gcal_tool_disponibilita(array $input, array $ownProps = []) {
 
     if (empty($slots)) return $prefix . 'Nessuno slot disponibile nel periodo richiesto.';
     return $prefix . "Slot liberi (durata {$durata} minuti). Proponi SOLO questi orari esatti, senza spostarli o accorciarli:\n" . json_encode($slots, JSON_UNESCAPED_UNICODE);
-}
-
-// -----------------------------------------------------------
-// Handler condiviso del tool `fissa_appuntamento_calendario` (sito + WhatsApp).
-// Ricontrolla che lo slot sia ancora libero, usa la durata vera (end − start)
-// e marca l'evento con $ownProps per ritrovarlo nei messaggi successivi.
-// Ritorna ['result' => testo per Sole, 'event' => evento creato|null, 'when' => DateTime|null].
-// -----------------------------------------------------------
-function gcal_tool_fissa(array $input, array $ownProps = []) {
-    $tz = new DateTimeZone('Europe/Rome');
-    if (empty($input['start'])) {
-        return ['result' => 'Errore: data/ora mancante. Chiedi al cliente di confermare giorno e ora.', 'event' => null, 'when' => null];
-    }
-    $startDt = (new DateTime($input['start']))->setTimezone($tz);
-    $durMin  = 120;
-    if (!empty($input['end'])) {
-        try {
-            $endDt = (new DateTime($input['end']))->setTimezone($tz);
-            $d = (int) round(($endDt->getTimestamp() - $startDt->getTimestamp()) / 60);
-            if ($d >= 15 && $d <= 480) $durMin = $d;
-        } catch (Exception $e) { /* durata di default */ }
-    }
-    if ($startDt <= new DateTime('now', $tz)) {
-        return ['result' => 'Quell\'orario è nel passato: chiedi al cliente una data futura.', 'event' => null, 'when' => null];
-    }
-
-    $existing = gcal_find_client_events($ownProps);
-    if (!empty($existing)) {
-        return ['result' => gcal_existing_note($existing), 'event' => null, 'when' => null];
-    }
-
-    $dateStr = $startDt->format('Y-m-d');
-    $timeStr = $startDt->format('H:i');
-    $free = gcal_is_slot_free($dateStr, $timeStr, $durMin / 60);
-    if ($free === null) {
-        return ['result' => 'Errore calendario: non riesco a verificare quell\'orario. NON confermare nulla al cliente: scusati e di\' che Michela lo ricontatta per fissare.', 'event' => null, 'when' => null];
-    }
-    if ($free === false) {
-        return ['result' => 'Quell\'orario (' . gcal_label_ita($startDt) . ') risulta OCCUPATO sul calendario: NON confermarlo. Riverifica con ottieni_disponibilita_calendario e proponi un altro slot.', 'event' => null, 'when' => null];
-    }
-
-    $summary = $input['summary']     ?? 'Sopralluogo Ardy Lab';
-    $desc    = $input['description'] ?? '';
-    $r = gcal_create_event($dateStr, $timeStr, $summary, '', '', '', $desc, null, 'Sopralluogo', $durMin, $ownProps);
-    if (!$r) {
-        return ['result' => 'Errore nella creazione dell\'appuntamento: NON è stato fissato. Non dire al cliente che è confermato; riprova una volta o di\' che Michela ricontatta.', 'event' => null, 'when' => null];
-    }
-    $endLbl = (clone $startDt)->modify("+{$durMin} minutes")->format('H:i');
-    return [
-        'result' => 'Appuntamento creato con successo nel calendario di Michela: ' . gcal_label_ita($startDt) . '–' . $endLbl . '. Conferma al cliente ESATTAMENTE questa data e ora.',
-        'event'  => $r,
-        'when'   => $startDt,
-    ];
 }
 
 // -----------------------------------------------------------

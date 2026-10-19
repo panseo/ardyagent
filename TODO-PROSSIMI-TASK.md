@@ -8,20 +8,39 @@
 
 ---
 
-## 🗓️ Dopo il cambio "Sole non fissa più il sopralluogo dei nuovi lead" (19/10/2026) — da collaudare
+## 🗓️ Dopo il cambio "Sole non tocca più il calendario lato cliente" (19/10/2026) — da collaudare
 
-Nessun test automatico sul prompt: è tutto da verificare dal vivo dopo il deploy.
+Nessun test automatico sul prompt né sui tool: è tutto da verificare dal vivo dopo il deploy.
+I tool `ottieni_disponibilita_calendario`/`fissa_appuntamento_calendario`/`sposta_appuntamento`
+sono stati tolti dal codice lato cliente (non solo dalle istruzioni), quindi un errore qui si
+vedrebbe come un tool mancante/non chiamato, non come testo recitato — ma va verificato lo stesso.
 
 - [ ] **Sito, nuovo lead restauro/wrapping**: arrivare fino alla qualifica completa e controllare
   che Sole NON proponga mai orari né dica "appuntamento fissato" — deve solo chiudere dicendo che
   Michela ricontatta, e salvare il lead con stato **LEAD** (non SOPRALLUOGO) in dashboard.
-- [ ] **WhatsApp, `mode=lead`**: stessa verifica — nessuna chiamata a `ottieni_disponibilita_calendario`
-  / `fissa_appuntamento_calendario` durante la qualifica di un nuovo contatto.
+- [ ] **WhatsApp, `mode=lead`/`mode=cliente`**: stessa verifica sulla qualifica di un nuovo
+  contatto o di un nuovo lavoro per un cliente esistente.
 - [ ] **Ardy Express** e **Interior Design** (webchat dedicate): stessa verifica a fine intervista.
-- [ ] **Non regredire**: il flusso **Galleria Diffusa/B&B** deve continuare a proporre e fissare
-  l'incontro come prima; Michela/Andrea devono poter ancora dire *"Sole, fissa ad Alberto il
-  sopralluogo domani alle 10"* (tool `_staff`) e far spostare a un cliente un sopralluogo già
-  fissato (`sposta_appuntamento`).
+- [ ] **Galleria Diffusa/B&B** (pagina dedicata e da outreach): verificare che Sole raccolga i
+  dati del partner e NON proponga/fissi più alcun orario (chiamata, laboratorio o sopralluogo in
+  struttura) — chiude dicendo che Michela lo ricontatta.
+- [ ] **Spostamento di un appuntamento già fissato** (sito o WhatsApp, cliente con sopralluogo
+  esistente): verificare che Sole NON lo sposti più da sola — deve chiamare `avvisa_michela`
+  (motivo `appuntamento`) e dire al cliente che ha passato la richiesta a Michela.
+- [ ] **Non regredire — lato staff**: Michela/Andrea devono poter ancora dire *"Sole, fissa ad
+  Alberto il sopralluogo domani alle 10"* o *"sposta il sopralluogo di Alberto"* su WhatsApp
+  (`mode=titolare`, tool `fissa_appuntamento_staff`/`sposta_appuntamento_staff`/
+  `ottieni_disponibilita_calendario`) — flusso separato, non toccato da questo cambio.
+
+⚠️ **Nota di processo per Michela — l'email di conferma sopralluogo al cliente.** Prima, quando
+Sole fissava l'appuntamento (ora non più), partiva in automatico l'email "Conferma del
+sopralluogo" al cliente. Quell'email NON parte se inserisci l'appuntamento **solo dalla
+dashboard** (`ardy-sopralluoghi-api.php` non manda email, mai l'ha fatto). Parte ancora
+automaticamente SOLO se detti l'appuntamento a Sole su WhatsApp con *"Sole, fissa a [nome] il
+sopralluogo [giorno] alle [ora]"* (tool `fissa_appuntamento_staff`): quel percorso manda la
+mail come sempre. Se vuoi che il cliente riceva comunque la mail di conferma, usa questa via
+invece di inserire solo da dashboard — altrimenti valutare (follow-up) se aggiungere l'invio
+email anche al salvataggio da dashboard.
 
 ---
 

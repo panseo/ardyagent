@@ -300,7 +300,7 @@ $system .= "\n\n## ARDY EXPRESS — INTERVISTA GUIDATA E SALVATAGGIO (webchat de
     . "- Chiedi SEMPRE, prima di stimare: quali mobili e quanti (elenco pezzo per pezzo), se sono per interno o esterno/giardino, la zona/indirizzo di Roma, e invita a mandare qualche foto (aiuta Michela a valutare meglio, ma non è obbligatorio per dare una stima di massima).\n"
     . "- Usa la griglia del listino SOLO per dare un'idea di massima basata sul numero di pezzi. Se il cliente supera i 10 pezzi o descrive un caso complesso/fuori standard (mobili molto rovinati, grandi dimensioni, interventi di gommalacca estesi), NON forzare la griglia: di' che serve valutare dal vivo e proponi direttamente il sopralluogo.\n"
     . "- **Resta sempre sul generico**: qualunque cifra tu dia in chat è UNA STIMA PROVVISORIA, mai un prezzo definitivo. Dillo esplicitamente ogni volta che comunichi un numero, con naturalezza (non come un disclaimer legale): il costo reale si conferma sempre con un sopralluogo, perché lo stato di ogni mobile è diverso.\n"
-    . "- Non promettere date e non fissare tu il sopralluogo: niente `ottieni_disponibilita_calendario` né `fissa_appuntamento_calendario` qui. Raccogli nome/telefono/email/zona e chiudi dicendo che Michela ricontatta per organizzare il sopralluogo (vedi Passo 7 e GESTIONE CALENDARIO nel documento condiviso).\n"
+    . "- Non promettere date e non fissare tu il sopralluogo: non hai tool per il calendario qui. Raccogli nome/telefono/email/zona e chiudi dicendo che Michela ricontatta per organizzare il sopralluogo (vedi Passo 7 e CALENDARIO: NON LO TOCCHI PIÙ nel documento condiviso).\n"
     . "- A fine conversazione (o quando hai raccolto nome/contatto), chiama `salva_lead_crm` con `servizio` = \"Ardy Express (manutenzione a domicilio)\", `mobile` = l'elenco dei pezzi come te li ha dati il cliente, `zona` = la zona/indirizzo, e in `note` riassumi: numero di pezzi, se ha mandato foto, e la stima provvisoria che gli hai dato (specificando che è da confermare col sopralluogo).\n";
 
 // Contesto di pagina: idem, ma per Ardy Express — evita che Sole tratti da
@@ -369,37 +369,16 @@ if ($appresa !== '') {
 // -----------------------------------------------------------
 // STRUMENTI PER CLAUDE
 // -----------------------------------------------------------
+// Niente tool calendario qui: il chatbot pubblico (restauro, Ardy Express,
+// Interior Design, Galleria Diffusa/B&B) raccoglie solo dati — Sole non
+// legge né tocca il calendario di Michela. Un sopralluogo, un incontro o lo
+// spostamento di un appuntamento li organizza sempre Michela (vedi
+// MANUALE-SOLE.md §2): per lo spostamento, Sole avvisa Michela col tool
+// avvisa_michela, non più uno strumento calendario.
 $tools = [
     [
-        'name'        => 'ottieni_disponibilita_calendario',
-        'description' => 'Controlla la disponibilità del calendario di Ardy Lab. La fascia oraria cercata è quella tra l\'ora di start e l\'ora di end (es. start 17:00 / end 18:00 → solo slot tra le 17 e le 18, su tutti i giorni fino alla data di end). Restituisce orari ESATTI (inizio–fine): proponi al cliente al massimo 2 di quegli orari, senza modificarli.',
-        'input_schema' => [
-            'type'       => 'object',
-            'properties' => [
-                'start' => ['type' => 'string', 'description' => 'Data e ora inizio, ISO 8601. Es: 2026-06-10T09:00:00+02:00'],
-                'end'   => ['type' => 'string', 'description' => 'Data e ora fine, ISO 8601. Es: 2026-06-10T18:00:00+02:00'],
-                'durata_minuti' => ['type' => 'integer', 'description' => 'Durata dell\'appuntamento in minuti (es. 30 per una chiamata, 90 per un sopralluogo B&B, 120 per un sopralluogo restauro). Gli slot restituiti hanno già questa durata: proponili così come sono.'],
-            ],
-            'required' => ['start', 'end']
-        ]
-    ],
-    [
-        'name'        => 'fissa_appuntamento_calendario',
-        'description' => 'Crea un evento nel calendario di Ardy Lab. Usalo solo dopo conferma del cliente.',
-        'input_schema' => [
-            'type'       => 'object',
-            'properties' => [
-                'start'       => ['type' => 'string', 'description' => 'Data e ora inizio, ISO 8601'],
-                'end'         => ['type' => 'string', 'description' => 'Data e ora fine, ISO 8601'],
-                'summary'     => ['type' => 'string', 'description' => 'Titolo evento. Es: Sopralluogo Ardy Lab — Prati / Mario Rossi'],
-                'description' => ['type' => 'string', 'description' => 'Scheda completa: nome, servizio, mobile, condizioni, zona, email, indirizzo, budget, note.']
-            ],
-            'required' => ['start', 'end', 'summary', 'description']
-        ]
-    ],
-    [
         'name'        => 'salva_lead_crm',
-        'description' => 'Salva i dati del cliente nel CRM. Usalo SEMPRE dopo aver fissato un appuntamento o quando il cliente ha fornito contatti e info sul progetto.',
+        'description' => 'Salva i dati del cliente nel CRM. Usalo SEMPRE quando il cliente ha fornito contatti e info sul progetto, anche a fine qualifica senza un appuntamento fissato.',
         'input_schema' => [
             'type'       => 'object',
             'properties' => [
@@ -419,25 +398,13 @@ $tools = [
         ]
     ],
     [
-        'name'        => 'sposta_appuntamento',
-        'description' => 'Sposta un sopralluogo GIÀ fissato a una nuova data/ora. Usalo quando un cliente che ha già un appuntamento chiede di spostarlo. Prima verifica la disponibilità del nuovo periodo con ottieni_disponibilita_calendario e fatti confermare dal cliente un orario preciso; poi chiama questo strumento. Funziona solo per l\'appuntamento fissato in questa conversazione (o arrivato dal link personale del cliente) e col telefono con cui è registrato: se non lo trova, raccogli la richiesta e di\' che Michela ricontatta il cliente per riorganizzare.',
-        'input_schema' => [
-            'type'       => 'object',
-            'properties' => [
-                'telefono' => ['type' => 'string', 'description' => 'Numero di telefono con cui il cliente è registrato (serve a ritrovare il suo appuntamento)'],
-                'start'    => ['type' => 'string', 'description' => 'Nuova data e ora di inizio, ISO 8601. Es: 2026-06-20T11:00:00+02:00']
-            ],
-            'required' => ['telefono', 'start']
-        ]
-    ],
-    [
         'name'        => 'avvisa_michela',
-        'description' => 'Invia a Michela una notifica WhatsApp breve, come farebbe una segretaria efficiente. Usalo SOLO quando emerge qualcosa che Michela deve sapere subito e che NON è già coperto dal salvataggio lead/appuntamento: un reclamo o insoddisfazione, un problema di pagamento, una richiesta di modifica a un lavoro già concordato, una richiesta fuori standard (tempi urgenti, lavoro particolare) oppure un\'anomalia del calendario (quello che risulta non torna con l\'appuntamento che hai già confermato al cliente). Non usarlo per conversazioni di routine.',
+        'description' => 'Invia a Michela una notifica WhatsApp breve, come farebbe una segretaria efficiente. Usalo quando emerge qualcosa che Michela deve sapere subito e che NON è già coperto dal salvataggio lead: un reclamo o insoddisfazione, un problema di pagamento, una richiesta di modifica a un lavoro già concordato, una richiesta fuori standard (tempi urgenti, lavoro particolare), oppure un cliente che vuole fissare o SPOSTARE un appuntamento/sopralluogo — il calendario lo gestisce sempre Michela, tu passale la richiesta. Non usarlo per conversazioni di routine.',
         'input_schema' => [
             'type'       => 'object',
             'properties' => [
                 'messaggio' => ['type' => 'string', 'description' => 'Riepilogo breve, diretto e azionabile per Michela. Includi nome del cliente, di cosa si tratta e cosa serve fare. Es: "Mario Rossi (Prati) si lamenta: dice che il preventivo era diverso da quanto concordato. Vuole essere richiamato."'],
-                'motivo'    => ['type' => 'string', 'description' => 'Categoria: reclamo | pagamento | modifica | fuori_standard | anomalia_calendario | altro']
+                'motivo'    => ['type' => 'string', 'description' => 'Categoria: reclamo | pagamento | modifica | fuori_standard | appuntamento | altro']
             ],
             'required' => ['messaggio']
         ]
@@ -719,39 +686,7 @@ while ($iteration < $maxIterations) {
             $toolId    = $block['id'];
             $toolResult = '';
 
-            if ($toolName === 'ottieni_disponibilita_calendario') {
-                $toolResult = gcal_tool_disponibilita($toolInput, ['ardy_session' => $cleanSession]);
-
-            } elseif ($toolName === 'fissa_appuntamento_calendario') {
-                // Guard anti-doppione: se la scheda ha GIÀ un appuntamento (in questo
-                // giro o sul CRM), non crearne un secondo. Reindirizza allo spostamento.
-                $existingEventId = $bookingEventId;
-                if (empty($existingEventId)) {
-                    try {
-                        $db = ardyDB();
-                        ardy_ensure_sopralluogo_cols($db);
-                        $qb = $db->prepare("SELECT gcal_event_id FROM clienti WHERE session_id = :sid LIMIT 1");
-                        $qb->execute([':sid' => $cleanSession]);
-                        $existingEventId = trim((string) $qb->fetchColumn());
-                    } catch (PDOException $e) { $existingEventId = ''; }
-                }
-                if (!empty($existingEventId)) {
-                    $toolResult = 'Questo cliente ha GIÀ un appuntamento fissato: NON crearne un altro (creeresti un doppione nel calendario). Se vuole cambiare data usa sposta_appuntamento; altrimenti conferma l\'appuntamento già esistente.';
-                } else try {
-                    $fx = gcal_tool_fissa($toolInput, ['ardy_session' => $cleanSession]);
-                    $toolResult = $fx['result'];
-                    if ($fx['event']) {
-                        $bookingMade = true;
-                        $bookingWhen = $fx['when'];
-                        // tieni l'id dell'evento per poterlo spostare in futuro
-                        $bookingEventId = $fx['event']['id'] ?? null;
-                    }
-                } catch (Exception $e) {
-                    error_log('ARDY BOOKING ERROR: ' . $e->getMessage() . ' input=' . json_encode($toolInput));
-                    $toolResult = 'Errore tecnico nella prenotazione: NON è stata fissata. Chiedi al cliente di riprovare.';
-                }
-
-            } elseif ($toolName === 'salva_lead_crm') {
+            if ($toolName === 'salva_lead_crm') {
                 $ch = curl_init('https://ardyagent.ardy-lab.it/ardy-save-lead.php');
                 curl_setopt($ch, CURLOPT_POST,           true);
                 curl_setopt($ch, CURLOPT_POSTFIELDS,     json_encode([
@@ -866,86 +801,6 @@ while ($iteration < $maxIterations) {
                     }
                 } else {
                     $toolResult = 'Errore CRM: ' . json_encode($r);
-                }
-
-            } elseif ($toolName === 'sposta_appuntamento') {
-                $tel   = preg_replace('/\D+/', '', (string)($toolInput['telefono'] ?? ''));
-                $start = $toolInput['start'] ?? '';
-                if ($tel === '' || $start === '') {
-                    $toolResult = 'Errore: servono il telefono del cliente e la nuova data/ora.';
-                } else {
-                    try {
-                        $startDt = new DateTime($start);
-                        if ($startDt < new DateTime('now')) {
-                            $toolResult = 'La nuova data è nel passato: chiedi al cliente una data futura.';
-                        } else {
-                            // Solo l'appuntamento di QUESTA sessione (la scheda della chat in
-                            // corso), e col telefono che combacia. Il solo numero non basta:
-                            // in webchat chiunque può digitare il telefono di un altro cliente
-                            // e spostargli il sopralluogo. Su WhatsApp invece l'identità è il
-                            // numero del mittente (ardy-wa-agent.php).
-                            $db = ardyDB();
-                            ardy_ensure_sopralluogo_cols($db);
-                            ardyEnsureTelefonoLast9($db);
-                            $q = $db->prepare(
-                                "SELECT session_id, nome, cognome, gcal_event_id FROM clienti
-                                  WHERE session_id = :sid
-                                    AND telefono_last9 = :p
-                                    AND gcal_event_id IS NOT NULL AND gcal_event_id <> ''
-                                  LIMIT 1"
-                            );
-                            $q->execute([':sid' => $cleanSession, ':p' => ardyTelefonoLast9($tel)]);
-                            $cli = $q->fetch(PDO::FETCH_ASSOC);
-
-                            if (!$cli) {
-                                $toolResult = 'Non trovo un appuntamento collegato a questo numero. Raccogli la richiesta e di\' che Michela ricontatta il cliente per riorganizzare.';
-                            } else {
-                                $dateStr = $startDt->format('Y-m-d');
-                                $timeStr = $startDt->format('H:i');
-                                // Durata vera dell'appuntamento (una chiamata da 30' resta da 30'), e
-                                // l'evento stesso escluso dal controllo: spostarlo di poco non è "occupato".
-                                $durMin = gcal_event_duration_min($cli['gcal_event_id']) ?? 120;
-                                $free = gcal_is_slot_free($dateStr, $timeStr, $durMin / 60, $cli['gcal_event_id']);
-                                if ($free === false) {
-                                    $toolResult = 'Quel nuovo orario è già occupato. Proponi al cliente un altro slot tra quelli liberi.';
-                                } elseif ($free === null) {
-                                    // Calendario illeggibile: NON spostare alla cieca (si rischia di
-                                    // sovrapporsi a un altro appuntamento). Avvisa Michela, che decide lei.
-                                    $nomeCli = trim(($cli['nome'] ?? '') . ' ' . ($cli['cognome'] ?? '')) ?: 'cliente';
-                                    $avviso  = "⚠️ Spostamento NON fatto (calendario non leggibile): " . $nomeCli
-                                             . " (webchat, tel. " . $tel . ") chiede di spostare l'appuntamento a " . ardy_data_ita($startDt)
-                                             . ". Verifica e ricontattalo tu.";
-                                    notificaMichela($avviso, 'sposta-ko:' . $cli['gcal_event_id'] . ':' . $startDt->format('YmdHi'));
-                                    $toolResult = 'Errore calendario: in questo momento non riesco a verificare il nuovo orario, quindi l\'appuntamento NON è stato spostato e resta quello di prima. Non confermare il nuovo orario al cliente: di\' che hai passato la richiesta a Michela, che lo ricontatta per confermare.';
-                                } else {
-                                    $upd = gcal_update_event($cli['gcal_event_id'], $dateStr, $timeStr, $durMin / 60);
-                                    if (!$upd) {
-                                        $toolResult = 'Non sono riuscita a spostare l\'appuntamento sul calendario. Riprova o di\' che Michela ricontatta.';
-                                    } else {
-                                        $db->prepare("UPDATE clienti SET sopralluogo_at = :dt, stato = 'SOPRALLUOGO', updated_at = NOW() WHERE session_id = :sid")
-                                           ->execute([':dt' => $startDt->format('Y-m-d H:i:s'), ':sid' => $cli['session_id']]);
-                                        // Anche la riga in `sopralluoghi` (se la dashboard l'ha già creata, con lo
-                                        // stesso evento): altrimenti la lista mostra la data vecchia e il prossimo
-                                        // sopr_mirror() riscrive la data vecchia su clienti.sopralluogo_at.
-                                        try {
-                                            $db->prepare("UPDATE sopralluoghi SET data_ora = :dt, updated_at = NOW() WHERE session_id = :sid AND gcal_event_id = :e")
-                                               ->execute([':dt' => $startDt->format('Y-m-d H:i:s'), ':sid' => $cli['session_id'], ':e' => $cli['gcal_event_id']]);
-                                        } catch (PDOException $e) {
-                                            error_log('ARDY SPOSTA SOPRALLUOGHI SYNC: ' . $e->getMessage());
-                                        }
-                                        $bookingMade = true;
-                                        $bookingWhen = $startDt;
-                                        $nomeCli = trim(($cli['nome'] ?? '') . ' ' . ($cli['cognome'] ?? '')) ?: 'cliente';
-                                        $rescheduleNote = "📅 Sopralluogo SPOSTATO: " . $nomeCli . " → " . ardy_data_ita($startDt);
-                                        $toolResult = 'Appuntamento spostato con successo al nuovo orario nel calendario di Michela.';
-                                    }
-                                }
-                            }
-                        }
-                    } catch (Exception $e) {
-                        error_log('ARDY SPOSTA APPUNTAMENTO ERROR: ' . $e->getMessage());
-                        $toolResult = 'Errore tecnico nello spostamento. Chiedi al cliente di riprovare.';
-                    }
                 }
 
             } elseif ($toolName === 'avvisa_michela') {
