@@ -994,7 +994,14 @@ if (preg_match('/(\+39)?\s?3\d{2}[\s\-]?\d{6,7}/', $fullConversation, $m)) {
     $userPhone = $m[0];
 }
 
-if ($userEmail || $userPhone) {
+// Una sola email per conversazione: senza questo marker, la mail ripartiva a OGNI
+// turno (il regex ritrova email/telefono nell'intero $fullConversation, che include
+// anche i turni precedenti) — bug segnalato da Michela il 19/10 (9 mail in 8 minuti
+// per lo stesso lead). Stesso pattern dei marker per-sessione già usati sopra in
+// questo file (es. $cooldownFile).
+$leadMailMarker = ARDY_RATE_LIMIT_DIR . 'leadmail_' . $cleanSession . '.txt';
+
+if (($userEmail || $userPhone) && !file_exists($leadMailMarker)) {
     $subject = '📋 Nuovo lead da Sole AI — ' . date('d/m/Y H:i');
     $body    = "Nuovo contatto dal widget AI di Ardy Lab\n";
     $body   .= str_repeat('─', 40) . "\n\n";
@@ -1029,6 +1036,7 @@ if ($userEmail || $userPhone) {
             }
         }
         $mail->send();
+        @file_put_contents($leadMailMarker, (string) time());
     } catch (Exception $e) {
         error_log('ARDY MAIL ERROR: ' . $mail->ErrorInfo);
     }

@@ -1083,6 +1083,20 @@ di oggi (coda del log), spazio disco. Ogni check è isolato in try/catch.
 
 ## 📝 Note sessioni
 
+**Ottobre 2026 — Webchat: una sola email di notifica lead, non una a ogni turno**
+- **Il problema**: appena un lead del sito lasciava email o telefono, la casella di Michela
+  riceveva una mail "📋 Nuovo lead da Sole AI" **a ogni messaggio successivo** (9 mail in 8
+  minuti per lo stesso contatto). Causa: il blocco "RILEVAMENTO CONTATTI" in `ardy-proxy.php`
+  cerca email/telefono con una regex su `$fullConversation` (l'intera trascrizione, non solo il
+  turno corrente) e mandava la mail ogni volta che la trovava — senza nessun deduplicatore,
+  quindi la rimandava a ogni turno successivo perché il contatto restava nel testo.
+- **Fix**: aggiunto un marker per-sessione (`ARDY_RATE_LIMIT_DIR . 'leadmail_<sessione>.txt'`,
+  stesso pattern dei marker già usati nel file per cooldown/tentativi) — la mail parte una sola
+  volta per conversazione, al primo turno in cui compare un contatto.
+- Resta **invariato** tutto il resto: la notifica WhatsApp consolidata a lead salvato/appuntamento
+  (`notificaMichela`, già deduplicata di suo) e il riassunto orario di chat conclusa
+  (`ardy-chiusura-sessioni.php`).
+
 **Ottobre 2026 — Sole non tocca più il calendario lato cliente (nessun servizio, nessun canale)**
 - **Il problema**: su un lead del sito (wrapping cucina), Sole ha proposto e "perso" orari più
   volte nella stessa conversazione (slot indicati come liberi e poi risultati occupati, proposte
