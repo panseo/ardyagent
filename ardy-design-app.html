@@ -358,7 +358,7 @@ const UNITA_DEF = { filamento:'g', stampa:'h', manodopera:'h' };
 let stato = { lista:[], sel:null, dettaglio:null, costoOrario:50, faseForm:null, congelaForm:null, articoloTesto:'', articoloProgId:null, dirty:false };
 
 const eur = n => (n===null||n===undefined||n==='') ? '—' : Number(n).toLocaleString('it-IT',{style:'currency',currency:'EUR'});
-const esc = s => (s??'').toString().replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const esc = s => (s??'').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 // ── Micro-layer di rendering ────────────────────────────────
 // html`...` costruisce HTML facendo l'escape dei valori interpolati PER DEFAULT

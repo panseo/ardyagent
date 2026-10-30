@@ -135,9 +135,11 @@ $isArdyExpress    = ($origine === 'ardy-express');
 $leadSessionId = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string)($input['leadSessionId'] ?? ''));
 $leadToken     = (string)($input['leadToken'] ?? '');
 $leadContext    = null;
+$leadTokenOk    = false;
 if ($leadSessionId !== '' && $leadToken !== '') {
     $expectedTok = substr(hash_hmac('sha256', $leadSessionId, WA_LOOKUP_SECRET), 0, 16);
     if (hash_equals($expectedTok, $leadToken)) {
+        $leadTokenOk = true;
         try {
             $ldb = ardyDB();
             $lstm = $ldb->prepare("SELECT nome, cognome, servizio, mobile, zona FROM clienti WHERE session_id = :sid AND deleted_at IS NULL LIMIT 1");
@@ -147,6 +149,48 @@ if ($leadSessionId !== '' && $leadToken !== '') {
             error_log('ARDY PROXY LEAD CONTEXT: ' . $e->getMessage());
         }
     }
+}
+
+// ── Contatto Outreach da campagna email: link firmato ?rif=<id>&tok=<hmac16> ──
+// Stesso schema del lead da portale qui sopra, ma sorgente e tabella diverse:
+// qui il link parte dalla mail di campagna Outreach (ardy-outreach-api.php,
+// brevoSend) verso la pagina Galleria Diffusa, e la scheda è in
+// outreach_contatti (potenziale partner), non ancora in clienti.
+$outreachRif = (int)($input['outreachRif'] ?? 0);
+$outreachTok = (string)($input['outreachTok'] ?? '');
+$outreachContext = null;
+if ($outreachRif > 0 && $outreachTok !== '') {
+    $expectedOutreachTok = substr(hash_hmac('sha256', (string)$outreachRif, WA_LOOKUP_SECRET), 0, 16);
+    if (hash_equals($expectedOutreachTok, $outreachTok)) {
+        try {
+            $odb  = ardyDB();
+            $ostm = $odb->prepare("SELECT id, nome, categoria, referente, indirizzo, regione, note FROM outreach_contatti WHERE id = :id LIMIT 1");
+            $ostm->execute([':id' => $outreachRif]);
+            $outreachContext = $ostm->fetch(PDO::FETCH_ASSOC) ?: null;
+            if ($outreachContext) {
+                // Segna l'ingaggio in pipeline: solo un avanzamento (mai un
+                // downgrade), così un contatto già promosso/scartato non torna indietro.
+                $odb->prepare("UPDATE outreach_contatti SET stato = IF(stato IN ('da_contattare','inviato'), 'risposto', stato), updated_at = NOW() WHERE id = :id")
+                    ->execute([':id' => $outreachRif]);
+            }
+        } catch (PDOException $e) {
+            error_log('ARDY PROXY OUTREACH CONTEXT: ' . $e->getMessage());
+        }
+    }
+}
+
+// ── Session_id deterministici (wa-/pdf-/imp-/otr-): solo col link firmato ──
+// Il sessionId arriva dal browser e qui vale come identità della scheda CRM
+// (salvataggio lead, codice di accesso, appuntamenti). Quelli generati lato
+// server si ricalcolano dal telefono del cliente: senza questo controllo chi
+// conosce il numero di un cliente WhatsApp ne prenderebbe la scheda (dati
+// sovrascritti, codice di accesso rivelato → dossier). L'unico modo legittimo
+// di arrivare qui con uno di questi id è il link ?lead=&tok= di ardy-lead-contatto.
+if (ardySessioneServerSide($cleanSession)
+    && !($leadTokenOk && strcasecmp($leadSessionId, $cleanSession) === 0)) {
+    error_log('ARDY PROXY: session_id deterministico senza link firmato rifiutato (ip ' . $cleanIp . ')');
+    echo json_encode(['reply' => 'Sessione non valida: ricarica la pagina per iniziare una nuova conversazione.']);
+    exit();
 }
 
 // -----------------------------------------------------------
@@ -256,7 +300,7 @@ $system .= "\n\n## ARDY EXPRESS — INTERVISTA GUIDATA E SALVATAGGIO (webchat de
     . "- Chiedi SEMPRE, prima di stimare: quali mobili e quanti (elenco pezzo per pezzo), se sono per interno o esterno/giardino, la zona/indirizzo di Roma, e invita a mandare qualche foto (aiuta Michela a valutare meglio, ma non è obbligatorio per dare una stima di massima).\n"
     . "- Usa la griglia del listino SOLO per dare un'idea di massima basata sul numero di pezzi. Se il cliente supera i 10 pezzi o descrive un caso complesso/fuori standard (mobili molto rovinati, grandi dimensioni, interventi di gommalacca estesi), NON forzare la griglia: di' che serve valutare dal vivo e proponi direttamente il sopralluogo.\n"
     . "- **Resta sempre sul generico**: qualunque cifra tu dia in chat è UNA STIMA PROVVISORIA, mai un prezzo definitivo. Dillo esplicitamente ogni volta che comunichi un numero, con naturalezza (non come un disclaimer legale): il costo reale si conferma sempre con un sopralluogo, perché lo stato di ogni mobile è diverso.\n"
-    . "- Non promettere date: per fissare il sopralluogo puoi usare `ottieni_disponibilita_calendario` e `fissa_appuntamento_calendario` come per gli altri servizi.\n"
+    . "- Non promettere date e non fissare tu il sopralluogo: non hai tool per il calendario qui. Raccogli nome/telefono/email/zona e chiudi dicendo che Michela ricontatta per organizzare il sopralluogo (vedi Passo 7 e CALENDARIO: NON LO TOCCHI PIÙ nel documento condiviso).\n"
     . "- A fine conversazione (o quando hai raccolto nome/contatto), chiama `salva_lead_crm` con `servizio` = \"Ardy Express (manutenzione a domicilio)\", `mobile` = l'elenco dei pezzi come te li ha dati il cliente, `zona` = la zona/indirizzo, e in `note` riassumi: numero di pezzi, se ha mandato foto, e la stima provvisoria che gli hai dato (specificando che è da confermare col sopralluogo).\n";
 
 // Contesto di pagina: idem, ma per Ardy Express — evita che Sole tratti da
@@ -285,6 +329,27 @@ if ($leadContext) {
     $system .= "Parti con un saluto caldo che mostra che lo conosci già, MA è comunque il primo messaggio di questa sessione webchat: mantieni la dichiarazione AI (regola \"Trasparenza AI\" sopra), es: \"Ciao {$ln}! Sono Sole, l'assistente virtuale (AI) di Ardy Lab — ho visto la tua richiesta per {$ls}. Raccontami di più, così posso darti un'idea...\" e prosegui la qualifica da dove serve (foto, misure, sopralluogo).\n";
 }
 
+// ── Contesto contatto Outreach (link firmato dalla mail di campagna) ──
+// Chi clicca il link nella mail NON è un lead anonimo: è già una riga nel
+// nostro elenco Outreach (spesso un potenziale partner B&B). Sole lo sa dal
+// primo messaggio e non deve rifare domande su chi è.
+if ($outreachContext) {
+    $on = trim((string)($outreachContext['nome']      ?? ''));
+    $or = trim((string)($outreachContext['referente'] ?? ''));
+    $oc = trim((string)($outreachContext['categoria'] ?? ''));
+    $oz = trim((string)($outreachContext['regione']   ?? ''));
+    $oi = trim((string)($outreachContext['indirizzo'] ?? ''));
+    $system .= "\n\n## CONTATTO OUTREACH RICONOSCIUTO — CONTESTO PRECARICATO\n"
+        . "Questa persona ha cliccato il link nella nostra email di outreach: è GIÀ un contatto nel nostro elenco (non un lead anonimo che scrive dal nulla). NON chiedere da capo chi è o il nome della sua attività: saluta mostrando che la conosci già e vai dritto al punto (Galleria Diffusa, dubbi, appuntamento).\n";
+    if ($on) $system .= "- Attività: {$on}\n";
+    if ($or) $system .= "- Referente: {$or}\n";
+    if ($oc) $system .= "- Categoria: {$oc}\n";
+    if ($oz) $system .= "- Zona: {$oz}\n";
+    if ($oi) $system .= "- Indirizzo: {$oi}\n";
+    $system .= "Parti con un saluto caldo che mostra che la conosci già, MA è comunque il primo messaggio di questa sessione webchat: mantieni la dichiarazione AI (regola \"Trasparenza AI\" sopra), es: \"Ciao! Sono Sole, l'assistente virtuale (AI) di Ardy Lab — ho visto che siete {$on}, grazie per aver aperto il link sulla Galleria Diffusa. Ti va che ti racconto come funziona, o preferisci partire da un dubbio preciso?\"\n"
+        . "Quando (e se) chiami `salva_lead_crm`, aggiungi in `note` che il contatto arriva dalla campagna Outreach (contatto #{$outreachContext['id']}), così Michela vede il collegamento.\n";
+}
+
 // Conoscenza di bottega (legno/restauro/cura): arricchisce il linguaggio e la competenza
 // di Sole. Sta in un file a sé (sapere ≠ regole) e resta DENTRO il blocco system cacheato
 // → costo token trascurabile dal 2° messaggio in poi.
@@ -304,36 +369,16 @@ if ($appresa !== '') {
 // -----------------------------------------------------------
 // STRUMENTI PER CLAUDE
 // -----------------------------------------------------------
+// Niente tool calendario qui: il chatbot pubblico (restauro, Ardy Express,
+// Interior Design, Galleria Diffusa/B&B) raccoglie solo dati — Sole non
+// legge né tocca il calendario di Michela. Un sopralluogo, un incontro o lo
+// spostamento di un appuntamento li organizza sempre Michela (vedi
+// MANUALE-SOLE.md §2): per lo spostamento, Sole avvisa Michela col tool
+// avvisa_michela, non più uno strumento calendario.
 $tools = [
     [
-        'name'        => 'ottieni_disponibilita_calendario',
-        'description' => 'Controlla la disponibilità del calendario di Ardy Lab in una finestra temporale. Usalo per proporre al cliente 2 finestre orarie disponibili per un sopralluogo o appuntamento.',
-        'input_schema' => [
-            'type'       => 'object',
-            'properties' => [
-                'start' => ['type' => 'string', 'description' => 'Data e ora inizio, ISO 8601. Es: 2026-06-10T09:00:00+02:00'],
-                'end'   => ['type' => 'string', 'description' => 'Data e ora fine, ISO 8601. Es: 2026-06-10T18:00:00+02:00']
-            ],
-            'required' => ['start', 'end']
-        ]
-    ],
-    [
-        'name'        => 'fissa_appuntamento_calendario',
-        'description' => 'Crea un evento nel calendario di Ardy Lab. Usalo solo dopo conferma del cliente.',
-        'input_schema' => [
-            'type'       => 'object',
-            'properties' => [
-                'start'       => ['type' => 'string', 'description' => 'Data e ora inizio, ISO 8601'],
-                'end'         => ['type' => 'string', 'description' => 'Data e ora fine, ISO 8601'],
-                'summary'     => ['type' => 'string', 'description' => 'Titolo evento. Es: Sopralluogo Ardy Lab — Prati / Mario Rossi'],
-                'description' => ['type' => 'string', 'description' => 'Scheda completa: nome, servizio, mobile, condizioni, zona, email, indirizzo, budget, note.']
-            ],
-            'required' => ['start', 'end', 'summary', 'description']
-        ]
-    ],
-    [
         'name'        => 'salva_lead_crm',
-        'description' => 'Salva i dati del cliente nel CRM. Usalo SEMPRE dopo aver fissato un appuntamento o quando il cliente ha fornito contatti e info sul progetto.',
+        'description' => 'Salva i dati del cliente nel CRM. Usalo SEMPRE quando il cliente ha fornito contatti e info sul progetto, anche a fine qualifica senza un appuntamento fissato.',
         'input_schema' => [
             'type'       => 'object',
             'properties' => [
@@ -353,25 +398,13 @@ $tools = [
         ]
     ],
     [
-        'name'        => 'sposta_appuntamento',
-        'description' => 'Sposta un sopralluogo GIÀ fissato a una nuova data/ora. Usalo quando un cliente che ha già un appuntamento chiede di spostarlo. Prima verifica la disponibilità del nuovo periodo con ottieni_disponibilita_calendario e fatti confermare dal cliente un orario preciso; poi chiama questo strumento. Identifica il cliente col suo numero di telefono.',
-        'input_schema' => [
-            'type'       => 'object',
-            'properties' => [
-                'telefono' => ['type' => 'string', 'description' => 'Numero di telefono con cui il cliente è registrato (serve a ritrovare il suo appuntamento)'],
-                'start'    => ['type' => 'string', 'description' => 'Nuova data e ora di inizio, ISO 8601. Es: 2026-06-20T11:00:00+02:00']
-            ],
-            'required' => ['telefono', 'start']
-        ]
-    ],
-    [
         'name'        => 'avvisa_michela',
-        'description' => 'Invia a Michela una notifica WhatsApp breve, come farebbe una segretaria efficiente. Usalo SOLO quando emerge qualcosa che Michela deve sapere subito e che NON è già coperto dal salvataggio lead/appuntamento: un reclamo o insoddisfazione, un problema di pagamento, una richiesta di modifica a un lavoro già concordato, oppure una richiesta fuori standard (tempi urgenti, lavoro particolare). Non usarlo per conversazioni di routine.',
+        'description' => 'Invia a Michela una notifica WhatsApp breve, come farebbe una segretaria efficiente. Usalo quando emerge qualcosa che Michela deve sapere subito e che NON è già coperto dal salvataggio lead: un reclamo o insoddisfazione, un problema di pagamento, una richiesta di modifica a un lavoro già concordato, una richiesta fuori standard (tempi urgenti, lavoro particolare), oppure un cliente che vuole fissare o SPOSTARE un appuntamento/sopralluogo — il calendario lo gestisce sempre Michela, tu passale la richiesta. Non usarlo per conversazioni di routine.',
         'input_schema' => [
             'type'       => 'object',
             'properties' => [
                 'messaggio' => ['type' => 'string', 'description' => 'Riepilogo breve, diretto e azionabile per Michela. Includi nome del cliente, di cosa si tratta e cosa serve fare. Es: "Mario Rossi (Prati) si lamenta: dice che il preventivo era diverso da quanto concordato. Vuole essere richiamato."'],
-                'motivo'    => ['type' => 'string', 'description' => 'Categoria: reclamo | pagamento | modifica | fuori_standard | altro']
+                'motivo'    => ['type' => 'string', 'description' => 'Categoria: reclamo | pagamento | modifica | fuori_standard | appuntamento | altro']
             ],
             'required' => ['messaggio']
         ]
@@ -385,6 +418,32 @@ $tools = [
                 'riepilogo' => ['type' => 'string', 'description' => 'Il racconto della conversazione, in poche righe discorsive, come lo diresti a voce a Michela: quali ambienti vuole sistemare, che stile e che colori gli piacciono, com\'è la luce, che budget ha in mente, cosa ha mandato in foto, vincoli o esigenze particolari, e le sensazioni che ha espresso. Scrivi quello che sai davvero: se l\'intervista è rimasta a metà dillo, senza inventare le parti mancanti.']
             ],
             'required' => ['riepilogo']
+        ]
+    ],
+    [
+        'name'        => 'cerca_contatto_outreach',
+        'description' => 'Cerca un\'attività (B&B, antiquario, interior designer...) nell\'elenco contatti outreach di Ardy Lab, per telefono e/o nome. Usalo nel flusso GALLERIA DIFFUSA / PARTNER B&B non appena hai il nome dell\'attività o un numero di telefono, PRIMA di fissare l\'incontro o salvare la scheda con salva_lead_crm: se l\'attività risulta già nel nostro elenco (perché le abbiamo scritto o ci ha già scritto), riconoscilo nella conversazione invece di trattarla come del tutto sconosciuta. Il risultato ti dice anche quali campi (es. il referente) mancano ancora: se il contatto te li dà durante la chat, salvali con aggiorna_contatto_outreach.',
+        'input_schema' => [
+            'type'       => 'object',
+            'properties' => [
+                'telefono' => ['type' => 'string', 'description' => 'Numero di telefono dell\'attività, se lo conosci'],
+                'nome'     => ['type' => 'string', 'description' => 'Nome dell\'attività/struttura, se lo conosci']
+            ]
+        ]
+    ],
+    [
+        'name'        => 'aggiorna_contatto_outreach',
+        'description' => 'Completa un dato mancante su un contatto outreach già trovato con cerca_contatto_outreach (es. il nome del referente, quando il tool ti ha detto che mancava e il contatto te lo dà in chat). Passa SEMPRE l\'id restituito da cerca_contatto_outreach. Riempie solo i campi vuoti: non sovrascrive mai un dato già presente.',
+        'input_schema' => [
+            'type'       => 'object',
+            'properties' => [
+                'id'        => ['type' => 'integer', 'description' => 'id del contatto outreach, restituito da cerca_contatto_outreach'],
+                'referente' => ['type' => 'string', 'description' => 'Nome della persona di riferimento, se te lo ha dato'],
+                'email'     => ['type' => 'string', 'description' => 'Email, se te la ha data e mancava'],
+                'sito'      => ['type' => 'string', 'description' => 'Sito web, se te lo ha dato e mancava'],
+                'indirizzo' => ['type' => 'string', 'description' => 'Indirizzo, se te lo ha dato e mancava']
+            ],
+            'required' => ['id']
         ]
     ],
     [
@@ -627,64 +686,7 @@ while ($iteration < $maxIterations) {
             $toolId    = $block['id'];
             $toolResult = '';
 
-            if ($toolName === 'ottieni_disponibilita_calendario') {
-                // Usa la data di inizio richiesta da Claude se presente
-                $fromDate = null;
-                if (!empty($toolInput['start'])) {
-                    try { $fromDate = new DateTime($toolInput['start']); if ($fromDate < new DateTime('now')) { $fromDate = new DateTime("+7 days"); } } catch (Exception $e) { $fromDate = new DateTime("+7 days"); }
-                }
-                $slots = gcal_get_free_slots(14, 9, 18, $fromDate);
-                if ($slots === null) {
-                    $toolResult = 'Errore calendario: impossibile leggere la disponibilità.';
-                } elseif (empty($slots)) {
-                    $toolResult = 'Nessuno slot disponibile nel periodo richiesto.';
-                } else {
-                    $toolResult = json_encode($slots);
-                    error_log('ARDY SLOTS: ' . $toolResult);
-                }
-
-            } elseif ($toolName === 'fissa_appuntamento_calendario') {
-                // Guard anti-doppione: se la scheda ha GIÀ un appuntamento (in questo
-                // giro o sul CRM), non crearne un secondo. Reindirizza allo spostamento.
-                $existingEventId = $bookingEventId;
-                if (empty($existingEventId)) {
-                    try {
-                        $db = ardyDB();
-                        ardy_ensure_sopralluogo_cols($db);
-                        $qb = $db->prepare("SELECT gcal_event_id FROM clienti WHERE session_id = :sid LIMIT 1");
-                        $qb->execute([':sid' => $cleanSession]);
-                        $existingEventId = trim((string) $qb->fetchColumn());
-                    } catch (PDOException $e) { $existingEventId = ''; }
-                }
-                if (!empty($existingEventId)) {
-                    $toolResult = 'Questo cliente ha GIÀ un appuntamento fissato: NON crearne un altro (creeresti un doppione nel calendario). Se vuole cambiare data usa sposta_appuntamento; altrimenti conferma l\'appuntamento già esistente.';
-                } else try {
-                    if (empty($toolInput['start'])) {
-                        $toolResult = 'Errore: data/ora mancante. Chiedi al cliente di confermare giorno e ora.';
-                    } else {
-                        $startDt  = new DateTime($toolInput['start']);
-                        $dateStr  = $startDt->format('Y-m-d');
-                        $timeStr  = $startDt->format('H:i');
-                        // Usa summary e description direttamente come li fornisce Claude
-                        $summary  = $toolInput['summary']     ?? 'Sopralluogo Ardy Lab';
-                        $desc     = $toolInput['description'] ?? '';
-                        $r = gcal_create_event($dateStr, $timeStr, $summary, '', '', '', $desc);
-                        if ($r) {
-                            $bookingMade = true;
-                            $bookingWhen = $startDt;
-                            // gcal_create_event ritorna l'evento completo: tieni l'id per poterlo spostare in futuro
-                            $bookingEventId = is_array($r) ? ($r['id'] ?? null) : null;
-                        }
-                        $toolResult = $r
-                            ? 'Appuntamento creato con successo nel calendario di Michela.'
-                            : 'Errore nella creazione dell\'appuntamento. Riprova.';
-                    }
-                } catch (Exception $e) {
-                    error_log('ARDY BOOKING ERROR: ' . $e->getMessage() . ' input=' . json_encode($toolInput));
-                    $toolResult = 'Errore tecnico nella prenotazione. Chiedi al cliente di riprovare.';
-                }
-
-            } elseif ($toolName === 'salva_lead_crm') {
+            if ($toolName === 'salva_lead_crm') {
                 $ch = curl_init('https://ardyagent.ardy-lab.it/ardy-save-lead.php');
                 curl_setopt($ch, CURLOPT_POST,           true);
                 curl_setopt($ch, CURLOPT_POSTFIELDS,     json_encode([
@@ -801,61 +803,6 @@ while ($iteration < $maxIterations) {
                     $toolResult = 'Errore CRM: ' . json_encode($r);
                 }
 
-            } elseif ($toolName === 'sposta_appuntamento') {
-                $tel   = preg_replace('/\D+/', '', (string)($toolInput['telefono'] ?? ''));
-                $start = $toolInput['start'] ?? '';
-                if ($tel === '' || $start === '') {
-                    $toolResult = 'Errore: servono il telefono del cliente e la nuova data/ora.';
-                } else {
-                    try {
-                        $startDt = new DateTime($start);
-                        if ($startDt < new DateTime('now')) {
-                            $toolResult = 'La nuova data è nel passato: chiedi al cliente una data futura.';
-                        } else {
-                            // Trova il cliente e l'evento collegato tramite le ultime 9 cifre del telefono
-                            $db = ardyDB();
-                            ardy_ensure_sopralluogo_cols($db);
-                            ardyEnsureTelefonoLast9($db);
-                            $q = $db->prepare(
-                                "SELECT session_id, nome, cognome, gcal_event_id FROM clienti
-                                  WHERE telefono_last9 = :p
-                                    AND gcal_event_id IS NOT NULL AND gcal_event_id <> ''
-                               ORDER BY updated_at DESC, id DESC LIMIT 1"
-                            );
-                            $q->execute([':p' => substr($tel, -9)]);
-                            $cli = $q->fetch(PDO::FETCH_ASSOC);
-
-                            if (!$cli) {
-                                $toolResult = 'Non trovo un appuntamento collegato a questo numero. Raccogli la richiesta e di\' che Michela ricontatta il cliente per riorganizzare.';
-                            } else {
-                                $dateStr = $startDt->format('Y-m-d');
-                                $timeStr = $startDt->format('H:i');
-                                $free = gcal_is_slot_free($dateStr, $timeStr, 2);
-                                if ($free === false) {
-                                    $toolResult = 'Quel nuovo orario è già occupato. Proponi al cliente un altro slot tra quelli liberi.';
-                                } else {
-                                    // free === true (libero) oppure null (impossibile verificare): procediamo comunque
-                                    $upd = gcal_update_event($cli['gcal_event_id'], $dateStr, $timeStr, 2);
-                                    if (!$upd) {
-                                        $toolResult = 'Non sono riuscita a spostare l\'appuntamento sul calendario. Riprova o di\' che Michela ricontatta.';
-                                    } else {
-                                        $db->prepare("UPDATE clienti SET sopralluogo_at = :dt, stato = 'SOPRALLUOGO', updated_at = NOW() WHERE session_id = :sid")
-                                           ->execute([':dt' => $startDt->format('Y-m-d H:i:s'), ':sid' => $cli['session_id']]);
-                                        $bookingMade = true;
-                                        $bookingWhen = $startDt;
-                                        $nomeCli = trim(($cli['nome'] ?? '') . ' ' . ($cli['cognome'] ?? '')) ?: 'cliente';
-                                        $rescheduleNote = "📅 Sopralluogo SPOSTATO: " . $nomeCli . " → " . ardy_data_ita($startDt);
-                                        $toolResult = 'Appuntamento spostato con successo al nuovo orario nel calendario di Michela.';
-                                    }
-                                }
-                            }
-                        }
-                    } catch (Exception $e) {
-                        error_log('ARDY SPOSTA APPUNTAMENTO ERROR: ' . $e->getMessage());
-                        $toolResult = 'Errore tecnico nello spostamento. Chiedi al cliente di riprovare.';
-                    }
-                }
-
             } elseif ($toolName === 'avvisa_michela') {
                 $msg = trim((string) ($toolInput['messaggio'] ?? ''));
                 if ($msg === '') {
@@ -902,6 +849,54 @@ while ($iteration < $maxIterations) {
                 } catch (PDOException $e) {
                     error_log('ARDY ATTIVA INTERIOR DESIGN ERROR: ' . $e->getMessage());
                     $toolResult = 'Errore tecnico nell\'attivazione della sezione Interior Design. Riprova.';
+                }
+
+            } elseif ($toolName === 'cerca_contatto_outreach') {
+                $telIn  = trim((string) ($toolInput['telefono'] ?? ''));
+                $nomeIn = trim((string) ($toolInput['nome'] ?? ''));
+                // Nome troppo corto = ricerca "a strascico" (LIKE %x%): chi scrive in
+                // webchat pubblica potrebbe far scorrere l'elenco contatti a Sole.
+                if (mb_strlen($nomeIn) < 4) $nomeIn = '';
+                if ($telIn === '' && $nomeIn === '') {
+                    $toolResult = 'Serve un telefono o il nome completo dell\'attività per cercare.';
+                } else {
+                    try {
+                        $found = ardyOutreachCerca(ardyDB(), $telIn, $nomeIn);
+                        // Webchat pubblica: note interne e stato della pipeline non
+                        // escono verso chi scrive (Sole potrebbe ripeterli).
+                        if ($found) unset($found['note'], $found['stato']);
+                        if ($found) {
+                            $mancano = [];
+                            foreach (['referente', 'email', 'sito', 'indirizzo'] as $c) {
+                                if (empty($found[$c])) $mancano[] = $c;
+                            }
+                            $toolResult = 'Attività GIÀ presente nel nostro elenco contatti outreach (non ancora cliente/partner attivo). '
+                                . 'Riconoscila con naturalezza, senza ripetere domande su dati che già hai qui. '
+                                . ($mancano ? 'Campi ancora mancanti: ' . implode(', ', $mancano) . ' — se il contatto te li dà in chat, salvali con aggiorna_contatto_outreach. ' : '')
+                                . 'Dati: ' . json_encode($found, JSON_UNESCAPED_UNICODE);
+                        } else {
+                            $toolResult = 'Nessun contatto trovato nel nostro elenco outreach con questi dati: trattala come nuovo contatto.';
+                        }
+                    } catch (PDOException $e) {
+                        error_log('ARDY CERCA CONTATTO OUTREACH ERROR: ' . $e->getMessage());
+                        $toolResult = 'Errore tecnico nella ricerca. Prosegui normalmente, senza bloccarti su questo.';
+                    }
+                }
+
+            } elseif ($toolName === 'aggiorna_contatto_outreach') {
+                $idIn = (int) ($toolInput['id'] ?? 0);
+                if ($idIn <= 0) {
+                    $toolResult = 'Errore: manca l\'id del contatto (usa quello restituito da cerca_contatto_outreach).';
+                } else {
+                    try {
+                        $r = ardyOutreachAggiorna(ardyDB(), $idIn, $toolInput);
+                        $toolResult = $r['ok']
+                            ? 'Salvato. Campi aggiornati: ' . implode(', ', $r['aggiornati'])
+                            : 'Nessun campo da aggiornare (nessun dato nuovo passato).';
+                    } catch (PDOException $e) {
+                        error_log('ARDY AGGIORNA CONTATTO OUTREACH ERROR: ' . $e->getMessage());
+                        $toolResult = 'Errore tecnico nel salvataggio. Prosegui la conversazione normalmente.';
+                    }
                 }
 
             } elseif ($toolName === 'cerca_cliente') {
@@ -999,7 +994,14 @@ if (preg_match('/(\+39)?\s?3\d{2}[\s\-]?\d{6,7}/', $fullConversation, $m)) {
     $userPhone = $m[0];
 }
 
-if ($userEmail || $userPhone) {
+// Una sola email per conversazione: senza questo marker, la mail ripartiva a OGNI
+// turno (il regex ritrova email/telefono nell'intero $fullConversation, che include
+// anche i turni precedenti) — bug segnalato da Michela il 19/10 (9 mail in 8 minuti
+// per lo stesso lead). Stesso pattern dei marker per-sessione già usati sopra in
+// questo file (es. $cooldownFile).
+$leadMailMarker = ARDY_RATE_LIMIT_DIR . 'leadmail_' . $cleanSession . '.txt';
+
+if (($userEmail || $userPhone) && !file_exists($leadMailMarker)) {
     $subject = '📋 Nuovo lead da Sole AI — ' . date('d/m/Y H:i');
     $body    = "Nuovo contatto dal widget AI di Ardy Lab\n";
     $body   .= str_repeat('─', 40) . "\n\n";
@@ -1034,6 +1036,7 @@ if ($userEmail || $userPhone) {
             }
         }
         $mail->send();
+        @file_put_contents($leadMailMarker, (string) time());
     } catch (Exception $e) {
         error_log('ARDY MAIL ERROR: ' . $mail->ErrorInfo);
     }

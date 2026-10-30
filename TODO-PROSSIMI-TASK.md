@@ -1,29 +1,97 @@
 # Ardy Lab — Task aperti & note utili
 
 > Solo task **aperti** + note operative + verifiche residue. Tutto ciò che è fatto **e deployato**
-> è rimosso (lo storico resta nei commit git). Ultima pulizia: 26/07/2026 · ultimo aggiornamento: 16/08/2026.
+> è rimosso (lo storico resta nei commit git). Ultima pulizia: 26/07/2026 · ultimo aggiornamento: 19/10/2026.
 
 > ⚠️ Promemoria sempre valido: se Sole tace su **tutti** i canali insieme (WhatsApp + webchat),
 > sospetta **credito Anthropic esaurito** (capitato il 21/06; si ricarica da Plans & Billing).
 
 ---
 
-## 🏨 APERTURA SESSIONE — riprendi da qui (fine sessione 16/08/2026, tutto deployato)
+## 🗓️ Dopo il cambio "Sole non tocca più il calendario lato cliente" (19/10/2026) — da collaudare
+
+Nessun test automatico sul prompt né sui tool: è tutto da verificare dal vivo dopo il deploy.
+I tool `ottieni_disponibilita_calendario`/`fissa_appuntamento_calendario`/`sposta_appuntamento`
+sono stati tolti dal codice lato cliente (non solo dalle istruzioni), quindi un errore qui si
+vedrebbe come un tool mancante/non chiamato, non come testo recitato — ma va verificato lo stesso.
+
+- [ ] **Sito, nuovo lead restauro/wrapping**: arrivare fino alla qualifica completa e controllare
+  che Sole NON proponga mai orari né dica "appuntamento fissato" — deve solo chiudere dicendo che
+  Michela ricontatta, e salvare il lead con stato **LEAD** (non SOPRALLUOGO) in dashboard.
+- [ ] **WhatsApp, `mode=lead`/`mode=cliente`**: stessa verifica sulla qualifica di un nuovo
+  contatto o di un nuovo lavoro per un cliente esistente.
+- [ ] **Ardy Express** e **Interior Design** (webchat dedicate): stessa verifica a fine intervista.
+- [ ] **Galleria Diffusa/B&B** (pagina dedicata e da outreach): verificare che Sole raccolga i
+  dati del partner e NON proponga/fissi più alcun orario (chiamata, laboratorio o sopralluogo in
+  struttura) — chiude dicendo che Michela lo ricontatta.
+- [ ] **Spostamento di un appuntamento già fissato** (sito o WhatsApp, cliente con sopralluogo
+  esistente): verificare che Sole NON lo sposti più da sola — deve chiamare `avvisa_michela`
+  (motivo `appuntamento`) e dire al cliente che ha passato la richiesta a Michela.
+- [ ] **Non regredire — lato staff**: Michela/Andrea devono poter ancora dire *"Sole, fissa ad
+  Alberto il sopralluogo domani alle 10"* o *"sposta il sopralluogo di Alberto"* su WhatsApp
+  (`mode=titolare`, tool `fissa_appuntamento_staff`/`sposta_appuntamento_staff`/
+  `ottieni_disponibilita_calendario`) — flusso separato, non toccato da questo cambio.
+
+⚠️ **Nota di processo per Michela — l'email di conferma sopralluogo al cliente.** Prima, quando
+Sole fissava l'appuntamento (ora non più), partiva in automatico l'email "Conferma del
+sopralluogo" al cliente. Quell'email NON parte se inserisci l'appuntamento **solo dalla
+dashboard** (`ardy-sopralluoghi-api.php` non manda email, mai l'ha fatto). Parte ancora
+automaticamente SOLO se detti l'appuntamento a Sole su WhatsApp con *"Sole, fissa a [nome] il
+sopralluogo [giorno] alle [ora]"* (tool `fissa_appuntamento_staff`): quel percorso manda la
+mail come sempre. Se vuoi che il cliente riceva comunque la mail di conferma, usa questa via
+invece di inserire solo da dashboard — altrimenti valutare (follow-up) se aggiungere l'invio
+email anche al salvataggio da dashboard.
+
+---
+
+## 🔒 Dopo l'audit del 01/10/2026 (5° giro + revisione codice) — da verificare/fare
+
+Dettagli in `SECURITY-AUDIT.md` §10 e nei commit del ramo. **Da deployare** (`./deploy.sh`, leggere
+l'output di `ardy-migrate.php`: la riga *riallineo telefono_last9* dice quante schede ha sanato).
+
+- [ ] **Collaudo dal vivo** dopo il deploy:
+  - lead da link WhatsApp (`/ardy-agent/?lead=…&tok=…`): la chat parte, salva i dati, e se ha un
+    appuntamento lo sposta;
+  - webchat normale: nuovo lead salvato, codice di accesso ricevuto;
+  - spostare un appuntamento da WhatsApp e controllare in dashboard la lista **📅 Sopralluoghi**
+    (deve mostrare la data nuova);
+  - nuovo cliente da dashboard (passa da `ardy-save-lead.php`);
+  - spostare una **chiamata da 30'** (da WhatsApp, webchat o dalla dashboard): in calendario deve
+    restare da 30', e spostarla di 15' non deve risultare "occupato" (l'evento non collide con sé stesso).
+  - (se capita) calendario non leggibile durante uno spostamento: Sole **non** sposta e Michela riceve
+    su WhatsApp "⚠️ Spostamento NON fatto (calendario non leggibile)…".
+- [ ] **`ardy-mcp/`: `npm audit fix`** — 4 dipendenze indirette dell'SDK MCP con advisory (1 alta
+  `fast-uri`, 3 medie `hono`/`ip-address`/`qs`). Rischio basso (il server usa stdio, non HTTP), ma il
+  fix resta nei range di `package.json`: `cd ardy-mcp && npm audit fix && npm run build`, poi commit
+  del `package-lock.json`.
+- [ ] **`ardy-visita.php`**: whitelist delle pagine note (oggi chiunque può creare contatori nuovi).
+
+---
+
+## 🏨 APERTURA SESSIONE — riprendi da qui (aggiornata 23/08/2026, tutto deployato)
 
 > La sezione 28/07 qui sotto resta valida per i suoi collaudi: è più vecchia, non l'ho toccata.
 
-**Dove siamo.** Importate da `bed-and-breakfast.it` le **715 strutture della Puglia** (712 taggate
-"Puglia"; in totale i contatti categoria `bb` sono 901 con quelli di prima). Prova di copertura
-Google: **20 su 20 col telefono, 18 col sito** — copertura piena, molto meglio del previsto.
-Fatto un primo giro **🌐 SOLO GOOGLE** su ~41 contatti: telefono, sito e in parecchi casi anche
-email e social, tutto salvato.
+**Dove siamo (23/08).** Importate da `bed-and-breakfast.it` le **715 strutture della Puglia** (712
+taggate "Puglia"; i contatti categoria `bb` sono ~901 con quelli di prima). Prova di copertura Google:
+**20 su 20 col telefono, 18 col sito** — copertura piena. Arricchimento **🌐 SOLO GOOGLE** avviato e
+portato avanti a lotti: telefono, sito e in parecchi casi anche email e social, tutto salvato.
+
+**⚠️ Il numero da guardare prima di ripartire: il budget Google del mese.** Al 23/08 il contatore
+locale dice **543 chiamate usate su 1.000 gratis** (57 il 14/08, 109 il 16, 150 il 17, 227 il 23).
+Restano **~457 gratuite**, e i contatti ancora senza telefono erano **~724**.
+
+> Quindi finire la Puglia questo mese sfora di ~270 chiamate ≈ **9 dollari**. Decisione ancora aperta:
+> **(a)** fare ~450 contatti ora e riprendere il **1° settembre** quando il gratuito si azzera, oppure
+> **(b)** spendere i ~9 dollari e chiudere subito. In ogni caso servono più giorni: il tetto
+> giornaliero è 500. Il contatore ora si vede in dash, sotto la barra dell'arricchimento in blocco.
 
 **I prossimi passi, in quest'ordine (dal gratis al caro):**
 
 1. **🌐 SOLO GOOGLE sul resto.** In *Filtri & Azioni Dati*: settore `bb`, "dati mancanti" =
    telefono con **"ne manca almeno uno"**, poi il bottone. Non chiama l'agente a pagamento.
-   ⚠️ Le chiamate Google gratis sono **1.000 al mese**: le ~900 della Puglia ci stanno, ma
-   un'altra regione nello stesso mese si paga (vedi Nota costi).
+   Conviene procedere **a lotti** col pulsante "Seleziona un blocco di N", tenendo d'occhio il
+   contatore del mese nella finestra (vedi il budget qui sopra).
 2. **`php ardy-email-finder.php`** (da CLI, gratis) sui rimasti senza email ma col sito.
 3. **✨ ARRICCHISCI I FILTRATI** solo su chi resta **senza email**: è l'unico passo a pagamento,
    e a quel punto agisce su poche centinaia invece che su 900.
@@ -52,6 +120,14 @@ email e social, tutto salvato.
   FILTRATI**. Leggere sempre il numero nella richiesta di conferma prima di dire sì.
 - **I numeri sui chip** ora sono relativi agli altri filtri accesi: se un chip dice 40, cliccandolo
   vedi 40 righe. Prima erano calcolati su tutti i contatti e contraddicevano la lista.
+- **Controllare il consumo Google da server** (il dettaglio giorno per giorno, utile se il numero in
+  dash non torna). I contatori stanno in `ardy-rate-limit/`, che `deploy.sh` non tocca:
+  ```
+  cd /home/micoperibg/public_html/ardyagent.ardy-lab.it/ardy-rate-limit/
+  for f in places_2026*.txt; do echo "$f = $(cat "$f")"; done
+  ```
+  Il conto che fa fede per la fattura resta comunque la **console Google**: il nostro contatore vede
+  solo le chiamate passate da questo codice.
 
 ---
 

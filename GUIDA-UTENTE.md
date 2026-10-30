@@ -14,7 +14,7 @@ passo passo e tiene aggiornata Michela. Qui trovi tutto quello che ti serve per 
 Sole è l'**assistente di Ardy Lab basata su intelligenza artificiale**. Ti aiuta a:
 - capire quale servizio fa per te (restauro, laccatura, doratura, riparazioni, ecc.);
 - ricevere una **stima di massima** dei costi;
-- fissare un **sopralluogo**;
+- raccogliere i tuoi dati per organizzare un **sopralluogo** (è Michela a richiamarti e fissarlo);
 - **seguire l'avanzamento** del tuo lavoro;
 - avere consigli su **come curare e mantenere** il mobile dopo la consegna.
 
@@ -50,9 +50,9 @@ e usa il tuo **codice personale** (vedi sotto).
 2. **Manda una o due foto** del pezzo: aiutano a darti una stima più precisa.
 3. **Lascia i tuoi dati** — nome, telefono, email, indirizzo. Il telefono è importante:
    è così che, in seguito, Sole ti riconosce e ti aggiorna.
-4. Sole ti dà una **forbice di prezzo indicativa** e, se ti va, ti propone **due orari**
-   per un sopralluogo. Quando confermi, fissa davvero l'appuntamento e ti manda
-   un'**email di conferma**.
+4. Sole ti dà una **forbice di prezzo indicativa**. Se ti va un sopralluogo gratuito,
+   raccoglie i tuoi dati e **Michela ti richiama** per trovare insieme il giorno e
+   l'ora: non è Sole a fissarlo.
 
 > Le cifre che dà Sole sono **indicative**. Il prezzo vero arriva con un **preventivo
 > scritto** che ti prepariamo dopo aver visto il pezzo.
@@ -89,16 +89,16 @@ Puoi anche chiedere a Sole, in qualsiasi momento, *"a che punto siamo?"*: con il
 codice ti riepiloga la situazione. Per **prenotare una visita in laboratorio** te la
 fissa lei (di norma entro pochi giorni).
 
-📅 **Il sopralluogo lo gestisci anche da WhatsApp.** Sole può **fissare** il sopralluogo e, se ti
-serve, **spostarlo** a un altro giorno: scrivile e ci pensa lei (puoi spostare solo il tuo
-appuntamento).
+📅 **Il sopralluogo lo organizzi anche da WhatsApp.** Scrivi a Sole: lei raccoglie la richiesta
+(anche per spostare un appuntamento già fissato) e **Michela** ti richiama per occuparsene —
+è sempre lei a decidere giorno e ora.
 
 ---
 
 ## Le email che ricevi da noi
 
 - **Benvenuto** + il tuo codice personale.
-- **Conferma del sopralluogo** (data e ora).
+- **Conferma del sopralluogo** (data e ora), quando l'appuntamento è fissato da Michela.
 - **Aggiornamento di lavorazione** a ogni fase importante.
 - **Grazie alla consegna**, con l'invito (facoltativo) a lasciare una recensione.
 

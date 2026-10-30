@@ -39,3 +39,72 @@ function ardyTelefonoLast9(string $tel): string {
 function ardyEnsureTelefonoLast9(PDO $db): void {
     // no-op: DDL centralizzato in ardy-migrate.php
 }
+
+/**
+ * True se il session_id è di quelli generati LATO SERVER in modo deterministico
+ * (wa-/pdf-/imp-/otr- + md5 di telefono o nome: ardy-wa-crea-scheda,
+ * ardy-wa-agent, ardy-import-scheda-pdf, ardy-import-preventivi, outreach).
+ * Chi conosce il telefono di un cliente può ricalcolarli: per questo non vanno
+ * MAI accettati come identità da un endpoint pubblico (chatbot, save-lead)
+ * senza una prova in più (link firmato HMAC o segreto interno). I session_id
+ * dei widget web sono invece casuali generati dal browser, quindi non indovinabili.
+ * Case-insensitive: la collation MySQL farebbe combaciare "WA-..." con "wa-...".
+ */
+function ardySessioneServerSide(string $sessionId): bool {
+    return (bool) preg_match('/^(wa|pdf|imp|otr)-/i', $sessionId);
+}
+
+/**
+ * Cerca un'attività nell'elenco contatti outreach (import B&B/antiquari/altre
+ * campagne), per telefono e/o nome — usata da WhatsApp e webchat per riconoscere
+ * un'attività già nel nostro elenco prima di trattarla come sconosciuta.
+ * outreach_contatti non ha una colonna last9 indicizzata (tabella piccola,
+ * niente migrazione dedicata): confronto le ultime 9 cifre al volo in SQL.
+ */
+function ardyOutreachCerca(PDO $db, string $telefono = '', string $nome = ''): ?array {
+    $found = null;
+    $last9 = $telefono !== '' ? ardyTelefonoLast9($telefono) : '';
+    if ($last9 !== '') {
+        $q = $db->prepare(
+            "SELECT id, nome, categoria, referente, sito, indirizzo, stato, note
+               FROM outreach_contatti
+              WHERE telefono IS NOT NULL AND telefono <> ''
+                AND RIGHT(REPLACE(REPLACE(REPLACE(telefono,' ',''),'-',''),'+',''), 9) = :p
+           ORDER BY updated_at DESC LIMIT 1"
+        );
+        $q->execute([':p' => $last9]);
+        $found = $q->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+    if (!$found && trim($nome) !== '') {
+        $q = $db->prepare(
+            "SELECT id, nome, categoria, referente, sito, indirizzo, stato, note
+               FROM outreach_contatti
+              WHERE nome LIKE :n
+           ORDER BY updated_at DESC LIMIT 1"
+        );
+        $q->execute([':n' => '%' . trim($nome) . '%']);
+        $found = $q->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+    return $found;
+}
+
+/**
+ * Completa SOLO i campi vuoti di un contatto outreach (mai sovrascrive un dato
+ * già presente — stessa regola dell'arricchimento in blocco). Usata da Sole per
+ * registrare un dato mancante (es. il referente) appena il contatto lo dà.
+ */
+function ardyOutreachAggiorna(PDO $db, int $id, array $campi): array {
+    $consentiti = ['referente', 'email', 'sito', 'indirizzo', 'note'];
+    $set    = [];
+    $params = [':id' => $id];
+    foreach ($consentiti as $c) {
+        if (!empty($campi[$c])) {
+            $set[]         = "{$c} = CASE WHEN ({$c} IS NULL OR {$c} = '') THEN :{$c} ELSE {$c} END";
+            $params[":{$c}"] = trim((string) $campi[$c]);
+        }
+    }
+    if (!$set) return ['ok' => false, 'aggiornati' => []];
+    $set[] = 'updated_at = NOW()';
+    $db->prepare('UPDATE outreach_contatti SET ' . implode(', ', $set) . ' WHERE id = :id')->execute($params);
+    return ['ok' => true, 'aggiornati' => array_values(array_intersect($consentiti, array_keys($campi)))];
+}

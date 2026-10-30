@@ -144,12 +144,23 @@ try {
                    AND cnt_user >= 1";
         $rows = $db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 
-        // Aggancio il cliente in CRM dalle ultime 9 cifre del telefono.
+        // Aggancio il cliente in CRM dalle ultime 9 cifre del telefono: colonna
+        // canonica telefono_last9 (ardyTelefonoLast9 toglie TUTTI i non-numeri;
+        // il vecchio REPLACE di spazi e "+" mancava i numeri scritti con "-" o "/").
         $cliSt = $db->prepare("SELECT nome, cognome, telefono, email, stato FROM clienti
-                                WHERE RIGHT(REPLACE(REPLACE(telefono,' ',''),'+',''), 9) = :p9 LIMIT 1");
+                                WHERE telefono_last9 = :p9 AND deleted_at IS NULL
+                             ORDER BY updated_at DESC LIMIT 1");
+        // Le chat dello staff con Sole (modalità titolare) passano dallo stesso
+        // webhook e finiscono in wa_messaggi: non sono chat di clienti, niente
+        // "Chat conclusa — (non in CRM)" a Michela sulle sue stesse conversazioni.
+        $staffP9 = [];
+        foreach (['WA_MICHELA_NUMBER', 'WA_ANDREA_NUMBER'] as $k) {
+            if (defined($k) && ($d = ardy_chiusura_p9((string) constant($k))) !== '') $staffP9[] = $d;
+        }
         foreach ($rows as $r) {
-            $esaminate++;
             $p9 = ardy_chiusura_p9((string) $r['phone']);
+            if ($p9 !== '' && in_array($p9, $staffP9, true)) continue;
+            $esaminate++;
             $cli = null;
             if ($p9 !== '') {
                 $cliSt->execute([':p9' => $p9]);

@@ -453,6 +453,8 @@ i dati essenziali (nome, contatto, canale, n° messaggi, stato CRM, ultimo messa
 Una sola notifica per sessione, grazie al dedupe di `notificaMichela()`
 (chiave `chat-chiusa:<canale>:<id>:<ultimo_msg>`). Soglie regolabili con le costanti
 `ARDY_CHIUSURA_IDLE_MIN` (60) e `ARDY_CHIUSURA_LOOKBACK_H` (24) in cima al file.
+Le chat dello **staff** con Sole (numeri `WA_MICHELA_NUMBER`/`WA_ANDREA_NUMBER`) sono escluse; il
+cliente WhatsApp si aggancia al CRM su `clienti.telefono_last9`.
 
 Da CLI salta il controllo del segreto; via HTTP è protetto da `WA_LOOKUP_SECRET`
 (`?secret=` o header `X-Ardy-Secret`). Richiede la config WhatsApp di
@@ -690,7 +692,19 @@ stesso login). API: `ardy-outreach-api.php` (routing per `action`); tabelle `out
     schermo, chiede conferma col numero di chiamate e mostra copertura, proiezione sull'elenco intero
     e consumo rispetto al tetto giornaliero.
   - **Da CLI** (`php ardy-places-prova.php puglia 20`): si legge da sé l'elenco dal portale, utile
-    per misurare una regione **prima** di importarla. Stampa anche la proiezione di spesa.
+    per misurare una regione **prima** di importarla. La proiezione di spesa parte dalle chiamate
+    gratuite **rimaste** nel mese, non dalle 1.000 teoriche.
+- **📊 Contatori Places** (`ardyPlacesStato()` in `ardy-places.php`): il **giorno**
+  (`ardyPlacesCountToday()`, contro `ARDY_PLACES_DAILY_CAP`, default 500 — rete di sicurezza contro i
+  loop, **non** un limite di spesa) e il **mese** (`ardyPlacesCountMonth()`, somma dei contatori
+  giornalieri di `ARDY_RATE_LIMIT_DIR`, contro `ardyPlacesFreeMonth()`, default 1.000 — **questo** è il
+  numero che decide la spesa). Lo stato viaggia allegato alle risposte di `enrich_contact` e
+  `places_prova`: sono file locali, quindi leggerlo **non costa una chiamata**. In dash compare sotto la
+  barra dell'arricchimento in blocco (`oggi 227/500 · mese 543/1000 gratis`) e diventa arancione quando
+  il gratuito sta per finire o è finito.
+  > Il totale mensile è un **minimo attendibile**, non la verità: conta solo le chiamate passate da
+  > questo codice, e la pulizia dei file rate-limit in `ardy-proxy.php` può portarsi via i giorni
+  > vecchi. La fonte autorevole resta la console Google.
 - **📱 Canali social** (colonne `instagram`/`facebook`/`linkedin` su `outreach_contatti`): servono a
   raggiungere chi **non pubblica un'email** — molti antiquari e B&B stanno solo su Instagram. Vedi sotto.
 - **📝 Template email** generati/riscritti con AI (`genera_template`), salvati in `outreach_template`
@@ -789,14 +803,22 @@ Import manuale in blocco dei clienti CRM disponibile anche dal bottone **⬇ IMP
 ### Piano B LIVE — Sole ha strumenti VERI sui clienti
 Sui clienti (NON sullo staff) Sole gira con lo **stesso loop agentico del sito** (file
 `ardy-wa-agent.php`) e può davvero:
-- **leggere la disponibilità** del calendario Google e **fissare il sopralluogo** su conferma
-  (guardia anti-doppione, persiste la scheda, notifica Michela);
 - **salvare il lead nel CRM** (`ardy-wa-crea-scheda.php`); se il cliente non lascia il telefono
   usa in automatico il suo **numero WhatsApp**;
-- **spostare un appuntamento già fissato** (tool `sposta_appuntamento`), identificandolo dal numero
-  WhatsApp del mittente (un cliente può spostare **solo il PROPRIO** appuntamento);
-- inviare le **email** come il sito: notifica a Michela, conferma del sopralluogo al cliente,
-  email di benvenuto col **codice di accesso** al lead.
+- inviare le **email** come il sito: notifica a Michela, email di benvenuto col **codice di
+  accesso** al lead.
+
+> ⚠️ *ott 2026 — lato cliente il calendario non lo tocca più Sole, per niente.* `ottieni_
+> disponibilita_calendario`, `fissa_appuntamento_calendario` e `sposta_appuntamento` sono stati
+> **rimossi dal codice** (non solo dal prompt) sia qui sia in `ardy-proxy.php`: Sole non può più
+> chiamarli. Un nuovo sopralluogo/incontro (restauro, Ardy Express, Interior Design, Galleria
+> Diffusa/B&B) → raccoglie solo contatto e informazioni, salva stato LEAD, Michela richiama lei
+> per organizzare. Un cliente che vuole spostare o cancellare un appuntamento già fissato →
+> Sole chiama `avvisa_michela` (motivo `appuntamento`): è Michela a gestire il calendario vero,
+> non c'è più un tool che lo fa in automatico lato cliente. Lo scenario "Michela/Andrea fissano
+> per un cliente nominato" è un'altra cosa (§ Staff sotto): prompt e tool `_staff` separati, non
+> toccati da questo cambio. Motivo: slot che "scadevano" a metà conversazione e Sole che si
+> contraddiceva col cliente — vedi `MANUALE-SOLE.md` §2.
 
 Una **rete di sicurezza** (`ardy-sanitize.php`) ripulisce eventuale sintassi tool che trapelasse come testo.
 
@@ -1060,6 +1082,47 @@ di oggi (coda del log), spazio disco. Ogni check è isolato in try/catch.
 ---
 
 ## 📝 Note sessioni
+
+**Ottobre 2026 — Webchat: una sola email di notifica lead, non una a ogni turno**
+- **Il problema**: appena un lead del sito lasciava email o telefono, la casella di Michela
+  riceveva una mail "📋 Nuovo lead da Sole AI" **a ogni messaggio successivo** (9 mail in 8
+  minuti per lo stesso contatto). Causa: il blocco "RILEVAMENTO CONTATTI" in `ardy-proxy.php`
+  cerca email/telefono con una regex su `$fullConversation` (l'intera trascrizione, non solo il
+  turno corrente) e mandava la mail ogni volta che la trovava — senza nessun deduplicatore,
+  quindi la rimandava a ogni turno successivo perché il contatto restava nel testo.
+- **Fix**: aggiunto un marker per-sessione (`ARDY_RATE_LIMIT_DIR . 'leadmail_<sessione>.txt'`,
+  stesso pattern dei marker già usati nel file per cooldown/tentativi) — la mail parte una sola
+  volta per conversazione, al primo turno in cui compare un contatto.
+- Resta **invariato** tutto il resto: la notifica WhatsApp consolidata a lead salvato/appuntamento
+  (`notificaMichela`, già deduplicata di suo) e il riassunto orario di chat conclusa
+  (`ardy-chiusura-sessioni.php`).
+
+**Ottobre 2026 — Sole non tocca più il calendario lato cliente (nessun servizio, nessun canale)**
+- **Il problema**: su un lead del sito (wrapping cucina), Sole ha proposto e "perso" orari più
+  volte nella stessa conversazione (slot indicati come liberi e poi risultati occupati, proposte
+  contraddittorie), fino a far rinunciare la cliente. Il calendario letto a più riprese durante
+  una trattativa lunga cambia sotto i piedi — ed è lì che Sole si è contraddetta.
+- **Decisione di Michela (in due passi nella stessa giornata)**: prima ristretto ai nuovi lead
+  di restauro/Ardy Express/Interior Design, poi **estesa a tutto**: Galleria Diffusa/B&B e lo
+  spostamento di un appuntamento già fissato. Lato cliente (sito + WhatsApp) Sole raccoglie
+  **solo dati** — nome, telefono, email, e per un appuntamento già fissato la richiesta di
+  spostarlo/cancellarlo — e chiude dicendo che è **Michela** a organizzare o riorganizzare.
+  Salva sempre con stato **LEAD** (mai più SOPRALLUOGO lato cliente: quello stato resta solo per
+  un appuntamento realmente creato da Michela). Per lo spostamento, Sole chiama `avvisa_michela`
+  (motivo `appuntamento`) invece di un tool calendario.
+- **Rimosso dal codice, non solo dal prompt**: `ottieni_disponibilita_calendario`,
+  `fissa_appuntamento_calendario` e `sposta_appuntamento` sono stati **tolti dalla lista `$tools`**
+  sia in `ardy-proxy.php` (webchat: restauro/Express/Interior Design/Galleria Diffusa) sia nel
+  ramo cliente di `ardy-wa-agent.php` (WhatsApp) — insieme ai loro handler, ormai irraggiungibili.
+  Sole non può più chiamarli nemmeno per errore di prompt. `ottieni_disponibilita_calendario`
+  resta disponibile SOLO lato staff (riusato da `fissa_appuntamento_staff`/
+  `sposta_appuntamento_staff` quando Michela/Andrea dettano un appuntamento per un cliente
+  nominato — flusso diverso, non toccato).
+- File toccati: `ardy-system.txt` (Passo 7 restauro/Interior Design, Galleria Diffusa, nuova
+  sezione "CALENDARIO: NON LO TOCCHI PIÙ" al posto di GESTIONE CALENDARIO), `ardy-proxy.php`
+  (tool array + handler), `ardy-wa-agent.php` (tool array + handler, `ottieni_disponibilita_
+  calendario` isolato in `$toolOttieniDisponibilita` per il solo ramo staff), `ardy-wa-lookup.php`
+  (nota per lo staff aggiornata), `ardy-whatsapp-system.txt`, `MANUALE-SOLE.md` §2.
 
 **Agosto 2026 — Outreach: filtro regione/zona, portatori di interesse Salento, aree di testo espandibili**
 - **Regione/zona** (colonna `regione` su `outreach_contatti`, `ardy-migrate.php`): raggruppa più città/comuni

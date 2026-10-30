@@ -33,6 +33,20 @@
   var chatStarted = false;
   var sessionId   = 'xp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
 
+  // ── Contatto Outreach riconosciuto: link firmato ?rif=<id>&tok=<hmac16> ──
+  // Quando un contatto Outreach clicca il link nella mail di campagna, la
+  // chat lo riconosce: il proxy verifica la firma e precarica nome/categoria,
+  // così Sole non riparte da zero (stesso schema del "lead da portale" di
+  // ardy-chat-site.js, qui applicato ai contatti di ardy-outreach-api.php).
+  var outreachRif = null;
+  var outreachTok = null;
+  (function checkOutreachLink() {
+    var params = new URLSearchParams(window.location.search);
+    var r = params.get('rif');
+    var t = params.get('tok');
+    if (r && t) { outreachRif = r; outreachTok = t; }
+  })();
+
   // ── Si attiva solo sulla pagina Galleria Diffusa ──
   function shouldRun() {
     if (window.ARDY_XP === true) return true;
@@ -194,6 +208,18 @@
   function startChat() {
     if (chatStarted) return;
     chatStarted = true;
+
+    // Contatto riconosciuto dal link della mail: niente saluto pre-scritto e
+    // generico. Un messaggio automatico fa partire subito la risposta VERA di
+    // Sole, che il proxy scrive già sapendo chi è (vedi outreachRif/outreachTok
+    // in sendMessage). Stesso schema del "lead da portale" in ardy-chat-site.js.
+    if (outreachRif && outreachTok) {
+      var input = document.getElementById('ardy-xp-input');
+      input.value = 'Ciao, ho aperto il link della vostra email sulla Galleria Diffusa';
+      sendMessage();
+      return;
+    }
+
     // La chat parte con un saluto di Sole già "incorniciato" su Galleria Diffusa/B&B.
     // Mettendolo anche nella history, il modello mantiene il contesto partner per
     // tutte le risposte successive (anche con il system prompt dedicato).
@@ -350,7 +376,10 @@
       var res = await fetch(PROXY_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history: history, images: [], sessionId: sessionId })
+        body: JSON.stringify({
+          message: text, history: history, images: [], sessionId: sessionId,
+          outreachRif: outreachRif || undefined, outreachTok: outreachTok || undefined
+        })
       });
       var data = await res.json();
       hideTyping();

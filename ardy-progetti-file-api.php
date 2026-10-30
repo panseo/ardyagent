@@ -51,6 +51,23 @@ const FILE_EXT_MAP = [
 const FILE_MAX_BYTE = 150 * 1024 * 1024; // 150 MB per file (oltre il limite PHP fa fede ini)
 const DOC_MAX_BYTE  = 20 * 1024 * 1024;  // 20 MB per i documenti: vanno letti, non stampati
 
+// A differenza degli altri upload del progetto (foto/video/PDF preventivo),
+// qui l'insieme di formati ammessi è troppo eterogeneo per un controllo MIME
+// via finfo (STL ASCII, G-code, STEP/CAD sono testo semplice senza firma).
+// Verifichiamo comunque la firma binaria per le estensioni che ne hanno una
+// affidabile (PDF, i formati basati su ZIP, RTF) — un mismatch qui è il
+// segnale più concreto di un file rinominato per aggirare il filtro. Non è
+// un controllo di sicurezza sostitutivo: il file resta comunque salvato con
+// nome rigenerato in una cartella che ardyHardenUploadDir() rende non
+// eseguibile, come per tutti gli altri upload del progetto.
+function ardyFileSignatureOk(string $tmpPath, string $ext): bool {
+    $sig = ['pdf' => '%PDF-', 'zip' => "PK\x03\x04", '3mf' => "PK\x03\x04",
+            'docx' => "PK\x03\x04", 'odt' => "PK\x03\x04", 'rtf' => '{\rtf'];
+    if (!isset($sig[$ext])) return true; // nessuna firma affidabile per questo formato
+    $head = @file_get_contents($tmpPath, false, null, 0, 8);
+    return $head !== false && str_starts_with($head, $sig[$ext]);
+}
+
 // Cartella archivio file di UN progetto.
 function progettoFileDir(int $progettoId): string {
     return rtrim(ARDY_UPLOAD_DIR, '/') . '/progetti/' . $progettoId . '/file/';
@@ -143,6 +160,10 @@ try {
                 ? 'Il vecchio formato .doc non è leggibile: salvalo come PDF o DOCX.'
                 : 'Ammessi: STL, OBJ, 3MF, G-code, STEP/CAD, ZIP e documenti PDF, DOCX, ODT, RTF, TXT, MD';
             echo json_encode(['success' => false, 'error' => 'Tipo non ammesso (.' . $ext . '). ' . $hint]);
+            exit();
+        }
+        if (!ardyFileSignatureOk($f['tmp_name'], $ext)) {
+            echo json_encode(['success' => false, 'error' => 'Il contenuto del file non corrisponde all\'estensione .' . $ext . '.']);
             exit();
         }
 

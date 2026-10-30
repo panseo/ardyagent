@@ -388,7 +388,7 @@ try {
                     'nome' => 'B&B — Galleria Diffusa',
                     'categoria' => 'bb',
                     'oggetto' => 'E se l\'arredo del tuo B&B diventasse un guadagno?',
-                    'corpo' => "Gentile {{nome}},\n\na Roma ci sono ormai decine di migliaia di strutture extralberghiere: la vera sfida non è riempire le camere, è farsi ricordare. E se potessi distinguerti trasformando una delle tue voci di costo più pesanti — l'arredo — in una fonte di guadagno?\n\nTi presentiamo la Galleria Diffusa di Ardy Lab: la prima galleria d'arte diffusa nei B&B di Roma.\n\nUna formula pensata per le strutture di pregio:\n\n🛋️ Arredo d'autore a costo zero. Sostituiamo il design anonimo con pezzi unici di modernariato rigenerato e artigianato locale, ad alto impatto visivo. Gli oggetti restano di nostra proprietà: tu non spendi nulla.\n\n💶 Un nuovo canale di guadagno. Ogni pezzo esposto è acquistabile dai tuoi ospiti: su ogni vendita ricevi una commissione diretta.\n\n⭐ Più recensioni a 5 stelle. Regali ai tuoi ospiti uno storytelling unico — ogni oggetto racconta la sua storia, basta inquadrare un QR code — e un'atmosfera autentica che migliora il posizionamento sui portali e le recensioni.\n\nLogistica, spedizioni (anche internazionali) e rotazione dei pezzi le gestiamo noi: per te nessun pensiero, solo vantaggi.\n\nCurioso di scoprire come funziona? Sulla pagina qui sotto trovi tutti i dettagli e puoi parlare subito con Sole, la nostra assistente: ti risponde a ogni dubbio e ti fissa una chiamata conoscitiva di 10 minuti o un sopralluogo gratuito nella tua struttura.\n\n👉 Scopri la Galleria Diffusa: https://ardy-lab.it/galleria-diffusa\n\nPreferisci due parole a voce? Scrivimi o chiamami direttamente: sono Michela, +39 379 375 6437.\n\nSii tra i primi B&B di Roma a entrare nella Galleria Diffusa.\n\nA presto,\nMichela — Ardy Lab\nRoma · Restauro, design e ospitalità sostenibile · ardy-lab.it"
+                    'corpo' => "Gentile {{nome}},\n\na Roma ci sono ormai decine di migliaia di strutture extralberghiere: la vera sfida non è riempire le camere, è farsi ricordare. E se potessi distinguerti trasformando una delle tue voci di costo più pesanti — l'arredo — in una fonte di guadagno?\n\nTi presentiamo la Galleria Diffusa di Ardy Lab: la prima galleria d'arte diffusa nei B&B di Roma.\n\nUna formula pensata per le strutture di pregio:\n\n🛋️ Arredo d'autore a costo zero. Sostituiamo il design anonimo con pezzi unici di modernariato rigenerato e artigianato locale, ad alto impatto visivo. Gli oggetti restano di nostra proprietà: tu non spendi nulla.\n\n💶 Un nuovo canale di guadagno. Ogni pezzo esposto è acquistabile dai tuoi ospiti: su ogni vendita ricevi una commissione diretta.\n\n⭐ Più recensioni a 5 stelle. Regali ai tuoi ospiti uno storytelling unico — ogni oggetto racconta la sua storia, basta inquadrare un QR code — e un'atmosfera autentica che migliora il posizionamento sui portali e le recensioni.\n\nLogistica, spedizioni (anche internazionali) e rotazione dei pezzi le gestiamo noi: per te nessun pensiero, solo vantaggi.\n\nCurioso di scoprire come funziona? Sulla pagina qui sotto trovi tutti i dettagli e puoi parlare subito con Sole, la nostra assistente: ti risponde a ogni dubbio e ti fissa una chiamata conoscitiva di 10 minuti (o, se la zona lo consente, un sopralluogo gratuito nella tua struttura).\n\n👉 Scopri la Galleria Diffusa: https://ardy-lab.it/galleria-diffusa\n\nPreferisci due parole a voce? Scrivimi o chiamami direttamente: sono Michela, +39 379 375 6437.\n\nSii tra i primi B&B di Roma a entrare nella Galleria Diffusa.\n\nA presto,\nMichela — Ardy Lab\nRoma · Restauro, design e ospitalità sostenibile · ardy-lab.it"
                 ],
             ];
             $stmt = $db->prepare("INSERT INTO outreach_template (nome,categoria,oggetto,corpo) VALUES (:nome,:cat,:ogg,:corpo)");
@@ -428,7 +428,7 @@ try {
             $nome  = $contact['referente'] ?: $contact['nome'];
             $corpo = str_replace(['{{nome}}','{{azienda}}'], [$nome, $contact['nome']], $corpo);
 
-            $result = brevoSend($contact['email'], $nome, $oggetto, $corpo);
+            $result = brevoSend($contact['email'], $nome, $oggetto, $corpo, (int) $contact['id']);
             if ($result['ok']) {
                 $db->prepare("UPDATE outreach_contatti SET stato='inviato', data_contatto=CURDATE(), updated_at=NOW() WHERE id=:id")->execute([':id' => $cid]);
                 echo json_encode(['success' => true]);
@@ -459,7 +459,7 @@ try {
             foreach ($contacts as $c) {
                 $nome  = $c['referente'] ?: $c['nome'];
                 $corpo = str_replace(['{{nome}}','{{azienda}}'], [$nome, $c['nome']], $t['corpo']);
-                $res   = brevoSend($c['email'], $nome, $t['oggetto'], $corpo);
+                $res   = brevoSend($c['email'], $nome, $t['oggetto'], $corpo, (int) $c['id']);
                 if ($res['ok']) {
                     $db->prepare("UPDATE outreach_contatti SET stato='inviato', data_contatto=CURDATE(), updated_at=NOW() WHERE id=:id")->execute([':id' => $c['id']]);
                     $sent++;
@@ -615,6 +615,7 @@ try {
                 'cap_hit'    => $m['capHit'],
                 'usate_oggi' => ardyPlacesCountToday(),
                 'tetto'      => ardyPlacesDailyCap(),
+                'places'     => ardyPlacesStato(),
             ]);
             break;
 
@@ -678,8 +679,8 @@ try {
             // Modello scelto dalla dash, con whitelist (default Haiku, economico).
             $modelliOk = ['claude-haiku-4-5', 'claude-sonnet-4-6'];
             $model = in_array(($input['model'] ?? ''), $modelliOk, true) ? $input['model'] : 'claude-haiku-4-5';
-            // 'social' = cerca SOLO i canali (bottone dedicato nel pannello Canali social).
-            // 'social' = solo canali; 'google' = solo passi gratuiti/Places, niente agente.
+            // 'social' = solo i canali (bottone dedicato nel pannello Canali social);
+            // 'google' = solo i passi gratuiti (sito + Places), senza agente a pagamento.
             $scope = in_array(($input['scope'] ?? ''), ['social', 'google'], true) ? $input['scope'] : 'tutto';
             $res = ardyEnrichContact($contact, $apiKey, $model, $scope);
 
@@ -689,37 +690,49 @@ try {
                 $info['attuale'] = $contact[$campo] ?? '';
                 $proposte[$campo] = $info;
             }
-            echo json_encode(['success' => true, 'id' => $id, 'campi' => $proposte, 'log' => $res['log']]);
+            // Contatore Places allegato a ogni risposta: costa zero (è un file locale)
+            // e permette alla dash di mostrare il consumo mentre il blocco gira,
+            // senza doverlo chiedere con una chiamata a pagamento.
+            echo json_encode(['success' => true, 'id' => $id, 'campi' => $proposte, 'log' => $res['log'],
+                'places' => ardyPlacesStato()]);
             break;
 
         // --------------------------------------------------------
-        // MESSAGGIO PER UN CANALE SOCIAL — bozza breve da DM.
+        // MESSAGGIO PER UN CANALE SOCIAL (o WhatsApp) — bozza breve da DM.
         // Genera SOLO il testo: l'invio non è automatico. Instagram, Facebook
         // e LinkedIn non permettono DM a freddo via API (vedi ardy-guida-outreach.html),
-        // quindi Michela apre il profilo e incolla — è una persona a scrivere
-        // a una persona, come vuole il codice etico.
+        // quindi Michela apre il profilo e incolla. WhatsApp non ha questa
+        // restrizione (wa.me apre la chat con il testo già scritto verso
+        // chiunque), ma l'invio resta comunque un tap suo — è una persona a
+        // scrivere a una persona, come vuole il codice etico.
         // --------------------------------------------------------
         case 'genera_messaggio_social':
             $apiKey = defined('ARDY_API_KEY') ? ARDY_API_KEY : '';
             if ($apiKey === '') { echo json_encode(['success' => false, 'error' => 'AI non configurata']); break; }
 
             $cid    = (int)($input['contact_id'] ?? 0);
-            $canale = in_array(($input['canale'] ?? ''), ['instagram', 'facebook', 'linkedin'], true) ? $input['canale'] : '';
+            $canale = in_array(($input['canale'] ?? ''), ['instagram', 'facebook', 'linkedin', 'whatsapp'], true) ? $input['canale'] : '';
             if (!$cid || $canale === '') { echo json_encode(['success' => false, 'error' => 'Contatto o canale mancante']); break; }
 
             $c = $db->prepare("SELECT * FROM outreach_contatti WHERE id=:id");
             $c->execute([':id' => $cid]);
             $contact = $c->fetch();
             if (!$contact) { echo json_encode(['success' => false, 'error' => 'Contatto non trovato']); break; }
-            if (trim((string)($contact[$canale] ?? '')) === '') {
-                echo json_encode(['success' => false, 'error' => 'Il contatto non ha un profilo ' . $canale]); break;
+            // WhatsApp non ha un campo profilo suo: dipende dal TELEFONO in scheda.
+            $campoCheck = $canale === 'whatsapp' ? 'telefono' : $canale;
+            if (trim((string)($contact[$campoCheck] ?? '')) === '') {
+                echo json_encode(['success' => false, 'error' => $canale === 'whatsapp'
+                    ? 'Il contatto non ha un numero di telefono' : 'Il contatto non ha un profilo ' . $canale]); break;
             }
 
             // Tono per canale: LinkedIn è professionale, Instagram/Facebook più
-            // diretti e informali (là si scrive come si parla).
+            // diretti e informali (là si scrive come si parla), WhatsApp ancora
+            // più diretto — è il canale più "da persona a persona" di tutti.
             $tonoCanale = $canale === 'linkedin'
                 ? "LinkedIn: registro professionale, si dà del Lei, niente emoji."
-                : ucfirst($canale) . ": registro cordiale e diretto, si può dare del tu se il profilo è informale, al massimo una emoji.";
+                : ($canale === 'whatsapp'
+                    ? "WhatsApp: registro diretto e informale come un messaggio scritto a voce, si dà del tu, al massimo una emoji, mai da 'azienda' — deve sembrare scritto da una persona."
+                    : ucfirst($canale) . ": registro cordiale e diretto, si può dare del tu se il profilo è informale, al massimo una emoji.");
 
             $targetMapS = [
                 'antiquari'         => "antiquari e gallerie d'antiquariato",
@@ -832,7 +845,11 @@ try {
             echo json_encode(['error' => 'Azione non riconosciuta: ' . $action]);
     }
 
-} catch (PDOException $e) {
+} catch (Throwable $e) {
+    // Throwable (non solo PDOException): qualunque errore non previsto qui
+    // deve comunque chiudersi con una risposta JSON valida, altrimenti il
+    // frontend riceve un body non-JSON (o vuoto) e la Promise si rifiuta in
+    // silenzio — bottone che resta bloccato, nessun errore visibile.
     error_log('ARDY OUTREACH API ERROR: ' . $e->getMessage());
     http_response_code(500);
     echo json_encode(['error' => 'Errore interno']);
@@ -841,20 +858,31 @@ try {
 // ============================================================
 // FUNZIONE INVIO BREVO
 // ============================================================
-function brevoSend(string $toEmail, string $toName, string $oggetto, string $corpo): array {
+function brevoSend(string $toEmail, string $toName, string $oggetto, string $corpo, int $contactId = 0): array {
+    // Senza la chiave configurata, ARDY_BREVO_API_KEY più sotto è una costante
+    // indefinita: in PHP 8 questo lancia un Error non catturabile dal
+    // catch(PDOException) dell'endpoint, e la richiesta muore senza rispondere
+    // in JSON (il frontend resta "appeso" senza errore visibile).
+    if (!defined('ARDY_BREVO_API_KEY') || ARDY_BREVO_API_KEY === '') {
+        return ['ok' => false, 'error' => 'Email (Brevo) non configurata sul server'];
+    }
     $unsubSecret = defined('ARDY_UNSUB_SECRET') ? ARDY_UNSUB_SECRET : (defined('ARDY_API_KEY') ? ARDY_API_KEY : '');
     $unsubToken  = substr(hash_hmac('sha256', strtolower(trim($toEmail)), $unsubSecret), 0, 20);
     $unsubLink   = 'https://ardy-lab.it/ardy-unsubscribe.php?email=' . urlencode($toEmail) . '&t=' . $unsubToken;
     $corpoHtml  = nl2br(htmlspecialchars($corpo));
-    // CTA WhatsApp: invita a risticontattare Sole. È il destinatario a iniziare
-    // la conversazione (wa.me verso il numero di Sole, con testo precompilato) →
-    // compliant con WhatsApp (niente outbound a freddo) e con la privacy.
-    $waNum  = function_exists('ardy_email_wa_number') ? ardy_email_wa_number() : '393793756437';
-    $waText = rawurlencode('Salve, ho ricevuto la vostra email di Ardy Lab e vorrei saperne di più.');
+
+    // Link con riferimento firmato al contatto Outreach: se clicca, la webchat
+    // Galleria Diffusa lo riconosce da subito (stesso schema HMAC del link
+    // "lead da portale" già usato per i clienti in ardy-lead-contatto.php).
+    $gdLink = 'https://ardy-lab.it/galleria-diffusa/';
+    if ($contactId > 0 && defined('WA_LOOKUP_SECRET') && WA_LOOKUP_SECRET !== '') {
+        $rifTok  = substr(hash_hmac('sha256', (string) $contactId, WA_LOOKUP_SECRET), 0, 16);
+        $gdLink .= '?rif=' . $contactId . '&tok=' . $rifTok;
+    }
     $waCta  = '
   <div style="margin-top:30px;text-align:center;">
-    <a href="https://wa.me/' . $waNum . '?text=' . $waText . '" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;font-family:sans-serif;font-size:15px;font-weight:600;padding:13px 28px;border-radius:8px;">💬 Scrivici su WhatsApp</a>
-    <p style="font-family:sans-serif;font-size:12px;color:#999;margin:10px 0 0;">Rispondi a questa email o scrivici su WhatsApp, come preferisci.</p>
+    <a href="' . htmlspecialchars($gdLink) . '" style="display:inline-block;background:#c8a96e;color:#ffffff;text-decoration:none;font-family:sans-serif;font-size:15px;font-weight:600;padding:13px 28px;border-radius:8px;">🖼️ Scopri la Galleria Diffusa</a>
+    <p style="font-family:sans-serif;font-size:12px;color:#999;margin:10px 0 0;">Oppure rispondi direttamente a questa email.</p>
   </div>';
     $htmlEmail  = '<!DOCTYPE html><html><body style="font-family:Georgia,serif;background:#f5f5f5;margin:0;padding:20px;">
 <div style="max-width:600px;margin:0 auto;background:#fff;padding:40px;border-radius:4px;">
@@ -912,9 +940,17 @@ function osmHttpGet(string $url, int $timeout = 45): ?string {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_TIMEOUT,        $timeout);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_MAXREDIRS,      3);
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Accept: application/json']);
     // Nominatim/Overpass richiedono uno User-Agent identificativo
     curl_setopt($ch, CURLOPT_USERAGENT, 'ArdyLabOutreach/1.0 (https://ardy-lab.it)');
+    // Host sempre hardcoded (Nominatim / mirror Overpass), non da ardySafeHttpGet
+    // per non violare la loro policy sullo User-Agent identificativo — qui
+    // restringiamo comunque schema/redirect a difesa in profondità.
+    if (defined('CURLOPT_PROTOCOLS')) {
+        curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
+        curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
+    }
     $res  = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);

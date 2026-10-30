@@ -16,6 +16,8 @@
 # l'error_log di PHP scritto nella cartella del repo finirebbe in public_html.
 # Stessa ragione per ardy-mcp/: è il server MCP che gira sul desktop, non
 # contenuto web — e con node_modules dentro sarebbero migliaia di file esposti.
+# n8n/ è il codice dei nodi da incollare in n8n: servito da public_html sarebbe
+# leggibile da chiunque (i .js non sono bloccati da .htaccess come .json/.md).
 
 set -euo pipefail
 
@@ -48,6 +50,8 @@ rsync -av \
   --exclude='ardy-wa-log.json' \
   --exclude='wordpress-snippets/' \
   --exclude='ardy-mcp/' \
+  --exclude='n8n/' \
+  --exclude='CLAUDE.md' \
   --exclude='error_log' \
   --exclude='*.log' \
   --exclude='*.tmp' \

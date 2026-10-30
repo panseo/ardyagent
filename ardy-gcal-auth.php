@@ -42,7 +42,9 @@ if (isset($_GET['code'])) {
         file_put_contents($TOKEN_FILE, json_encode($token, JSON_PRETTY_PRINT));
         echo '<h2 style="color:green;font-family:sans-serif">Token rinnovato!</h2>';
     } else {
-        echo '<h2 style="color:red">Errore</h2><pre>' . json_encode($token, JSON_PRETTY_PRINT) . '</pre>';
+        echo '<h2 style="color:red">Errore</h2><pre>'
+           . htmlspecialchars((string) json_encode($token, JSON_PRETTY_PRINT), ENT_QUOTES, 'UTF-8')
+           . '</pre>';
     }
     exit();
 }

@@ -67,6 +67,49 @@ function ardyPlacesCountToday(): int {
 }
 
 /**
+ * Chiamate del mese corrente, sommando i contatori giornalieri rimasti.
+ *
+ * È il numero che conta per la SPESA: il gratuito di Google è mensile, mentre
+ * il tetto in ardy-config.php è giornaliero ed è solo una rete di sicurezza.
+ *
+ * Due avvertenze, entrambe verso il basso: conta solo le chiamate passate da
+ * questo codice, e la pulizia dei file rate-limit (ardy-proxy.php) può portarsi
+ * via i giorni vecchi. Quindi è un minimo attendibile, non la verità assoluta:
+ * la fonte autorevole resta la console Google.
+ */
+function ardyPlacesCountMonth(): int {
+    $dir = dirname(ardyPlacesCounterFile());
+    $tot = 0;
+    foreach (glob($dir . '/places_' . date('Ym') . '*.txt') ?: [] as $f) {
+        $tot += (int) @file_get_contents($f);
+    }
+    return $tot;
+}
+
+/**
+ * Chiamate gratuite al mese sulla fascia che usiamo (Enterprise: chiediamo
+ * telefono e sito). Verificata a listino ad agosto 2026; sovrascrivibile in
+ * ardy-config.php con ARDY_PLACES_FREE_MONTH se Google cambia le carte.
+ */
+function ardyPlacesFreeMonth(): int {
+    return defined('ARDY_PLACES_FREE_MONTH') ? max(0, (int) constant('ARDY_PLACES_FREE_MONTH')) : 1000;
+}
+
+/**
+ * Stato dei contatori, pronto da mandare alla dash. Costa zero: sono file
+ * locali, quindi lo alleghiamo alle risposte che la dash già riceve invece di
+ * farle chiedere il dato con una chiamata a pagamento.
+ */
+function ardyPlacesStato(): array {
+    return [
+        'usate_oggi' => ardyPlacesCountToday(),
+        'tetto'      => ardyPlacesDailyCap(),
+        'mese'       => ardyPlacesCountMonth(),
+        'gratis_mese'=> ardyPlacesFreeMonth(),
+    ];
+}
+
+/**
  * Prova a "prenotare" una chiamata: incrementa il contatore in modo atomico e
  * ritorna true se siamo ancora sotto il tetto, false se il tetto è raggiunto
  * (in tal caso NON incrementa e segnala il cap-hit).

@@ -601,6 +601,31 @@ foreach ($clientiCols as $col => $sql) {
     }
 }
 
+// Riallineamento di telefono_last9 a OGNI deploy (idempotente). Il backfill qui
+// sopra gira solo alla creazione della colonna; da allora i telefoni corretti dalla
+// dashboard (ardy-update-lead.php, fino a ott 2026) non aggiornavano la colonna, e
+// quei clienti non venivano riconosciuti su WhatsApp. Stessa regola di
+// ardyTelefonoLast9() (toglie TUTTI i non-numeri), calcolata in PHP per non
+// dipendere da REGEXP_REPLACE della versione di MySQL/MariaDB.
+try {
+    $rows = $pdo->query("SELECT id, telefono, telefono_last9 FROM clienti
+                          WHERE (telefono IS NOT NULL AND telefono <> '') OR telefono_last9 IS NOT NULL")
+                ->fetchAll(PDO::FETCH_ASSOC);
+    $upd  = $pdo->prepare("UPDATE clienti SET telefono_last9 = :l WHERE id = :id");
+    $fix  = 0;
+    foreach ($rows as $r) {
+        $l = substr(preg_replace('/\D+/', '', (string) $r['telefono']), -9);
+        $l = ($l === '' || $l === false) ? null : $l;
+        if ($l !== $r['telefono_last9']) {
+            $upd->execute([':l' => $l, ':id' => $r['id']]);
+            $fix++;
+        }
+    }
+    echo "  OK   riallineo telefono_last9 ($fix righe corrette)\n";
+} catch (PDOException $e) {
+    echo "  ERR  riallineo telefono_last9 — " . $e->getMessage() . "\n";
+}
+
 // ── COLONNE fasi ─────────────────────────────────────────────────────────────
 
 $fasiCols = [
