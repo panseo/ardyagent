@@ -359,20 +359,7 @@ Fix già deployato (`ardy-outreach-api.php`): riconosce il `remark` di timeout, 
 La sessione 25/06 ha deployato briefing mattutino + rollover nota (vedi sotto). Michela ha **impostato i cron
 di corsa** ma NON ha fatto in tempo a verificarli. **Primo task: confermare che siano attivi e che girino.**
 
-I due cron previsti (server, fuso Europe/Rome; `<SEGRETO>` = `WA_LOOKUP_SECRET`):
-```
-0 6 * * 1   curl -s -H "X-Ardy-Secret: <SEGRETO>" https://ardyagent.ardy-lab.it/ardy-rollover-nota.php   >/dev/null 2>&1
-0 9 * * 1-5 curl -s -H "X-Ardy-Secret: <SEGRETO>" https://ardyagent.ardy-lab.it/ardy-briefing-mattino.php >/dev/null 2>&1
-```
-**Come verificarlo:**
-- **Diretto** (serve accesso server): `crontab -l` dell'utente giusto, oppure la UI **cPanel → Cron Jobs**.
-  ⚠️ Attenzione all'utente: l'app gira come `micoperibg` ma il cron potrebbe essere su un altro utente/root —
-  controllare dove è stato messo. Il comando deve avere l'header `X-Ardy-Secret` col valore reale.
-- **Indiretto** (anche dalla sessione web, senza SSH): (a) il **briefing**: Michela ha ricevuto l'email delle
-  ~9:00 in un giorno feriale? (b) il **rollover**: lunedì dopo le 06:00 dev'esserci in `note_staff` una riga
-  nuova con `settimana` = ISO della settimana corrente e `created_at` ~06:00 (lo si vede dalla nota in dashboard:
-  data "agg." aggiornata al lunedì). Se manca, il cron del rollover non è partito.
-- **Test manuale** (sempre ok per provare l'endpoint a mano): aggiungere `?force=1&secret=<SEGRETO>` all'URL.
+30/10/2026 — Cron briefing/rollover: mai stati creati, ora creati. Verificato via SSH (crontab di tutti gli utenti + /etc/cron.d): i due cron ardy-rollover-nota e ardy-briefing-mattino NON esistevano su nessun utente — esisteva solo ardy-chiusura-sessioni (oraria, utente micoperibg). Creati il 30/10 nel crontab di micoperibg via crontab -e (runuser da root): rollover 0 6 * * 1, briefing 0 9 * * 1-5, entrambi via curl con header X-Ardy-Secret col valore attuale di WA_LOOKUP_SECRET. Verifica dal vivo lunedì 3/11: (a) dopo le 6:00, riga nuova in note_staff con settimana ISO corrente; (b) verso le 9:00, email briefing a Michela. Se qualcosa non arriva → grep ardy /var/log/cron* e confronto header. Non testare a mano (fanno il lavoro vero fuori orario).
 
 ### ⚠️ Segreto ruotato ≠ aggiornato ovunque — da tenere d'occhio (13/07/2026)
 Scoperto risolvendo il workflow n8n **"Lead Monitor"**: andava in **403 ogni ora** (visibile nelle sue
