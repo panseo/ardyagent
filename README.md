@@ -975,6 +975,10 @@ in repo (`ardy-config.php`, `ardy-gcal-token.json`, `ardy-uploads/`, `preventivi
 `reels/`, `vendor/`, `ardy-rate-limit/`) restano intatti. In alternativa, `.cpanel.yml`
 permette il deploy push-button da cPanel (richiede Jailed Shell).
 
+**Migrazione verso un nuovo VPS senza cPanel:** piano e stato in `PIANO-MIGRAZIONE.md`;
+gli artefatti tecnici (Caddyfile, provisioning, n8n) sono in `infra/` (non deployata,
+non ancora eseguita su un server reale).
+
 **Migrazioni schema DB:** dopo l'rsync, `deploy.sh` esegue **`ardy-migrate.php`** — l'**unico**
 posto dove si creano/alterano tabelle e colonne. Prima ogni endpoint faceva DDL
 (`SHOW COLUMNS`/`ALTER`/`CREATE TABLE IF NOT EXISTS`) ad ogni request HTTP; ora gira tutto una

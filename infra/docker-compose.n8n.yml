@@ -1,0 +1,36 @@
+# n8n sul nuovo VPS (PIANO-MIGRAZIONE.md, Fase 1-2) — stesso ruolo che ha oggi
+# sull'infra attuale: riceve i webhook Meta/WhatsApp e li passa a
+# ardy-wa-lookup.php (vedi TODO-PROSSIMI-TASK.md "NOTE OPERATIVE").
+#
+# Esposto SOLO su localhost: Caddy fa reverse proxy pubblico + TLS
+# (vedi infra/Caddyfile, blocco n8n.ardy-lab.it) — il container non deve essere
+# raggiungibile direttamente da fuori.
+#
+# Uso:
+#   cp infra/n8n.env.example infra/n8n.env   # poi riempire i valori veri
+#   docker compose -f infra/docker-compose.n8n.yml up -d
+#
+# infra/n8n.env NON va mai committato (contiene N8N_ENCRYPTION_KEY e le
+# credenziali dei nodi) — vedi .gitignore.
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      - N8N_HOST=n8n.ardy-lab.it
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://n8n.ardy-lab.it/
+      - GENERIC_TIMEZONE=Europe/Rome
+      # Richiesto dai workflow Ardy che leggono variabili d'ambiente nei nodi
+      # Function/Code (vedi TODO-PROSSIMI-TASK.md "ordine env → restart → nodo").
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+    env_file:
+      - n8n.env
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+volumes:
+  n8n_data:

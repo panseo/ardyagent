@@ -137,6 +137,17 @@ Bloccato solo sul punto 1 (credenziali Gmail).
 
 ---
 
+## 🖥️ Migrazione nuovo VPS (no-cPanel) — artefatti Fase 1-2 pronti, da eseguire
+
+`PIANO-MIGRAZIONE.md` ripreso (08/11): cartella `infra/` con `setup-vps.sh` (provisioning
+Caddy+PHP-FPM 8.3+MariaDB+Docker+FFmpeg), `Caddyfile` (traduzione di `.htaccess` — Basic Auth,
+librerie interne bloccate, header sicurezza), `docker-compose.n8n.yml` + `deploy-vps.sh`. **Non
+eseguito/collaudato**: nessun accesso al VPS da questa sessione, va validato sul server reale.
+Dettagli in `infra/README.md`. Restano aperti: scelta provider VPS, `ardy-config.php` da
+scrivere a mano sul nuovo server, hash Basic Auth vero, poi Fase 3 (dati) e Fase 4 (cutover DNS).
+
+---
+
 ## ☁️ Media su Backblaze B2 — off-load disco (PIANIFICATO, semilavorato)
 
 Obiettivo: togliere i media dal disco (oggi si intasa) + pre-staggiarli su B2 per la migrazione VPS
