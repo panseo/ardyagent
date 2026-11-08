@@ -217,21 +217,35 @@ diventa prioritario con più utenti o se compaiono 504. Refactor: job in backgro
 
 ## ⏳ DA VERIFICARE DAL VIVO / AZIONI MANUALI
 
-- **🛡️ Chiusura rilievi sicurezza 9.12/9.13/9.14/10.5 (08/11, da deployare).** Dettagli in
-`SECURITY-AUDIT.md` §11. Dopo il deploy verificare: (1) un **preventivo PDF** completo (logo,
-copertina, foto prima/dopo, QR) identico a prima — mPDF ora non esce più in rete; (2) una
-**pubblicazione fase** normale; (3) un **"arricchisci tutti"** breve in Outreach; (4) nel log
-nessuna riga `ARDY VISITA: pagina non in elenco` per pagine legittime (il widget che chiama
-`ardy-visita.php` non è nel repo: se usa nomi diversi da `chat-lead` vanno aggiunti in
-`ARDY_VISITA_PAGINE`); (5) nelle prime settimane cercare `ARDY COSTCAP` nel log: se compare durante
-l'uso normale, alzare la soglia in `ARDY_COST_CAPS`. **8.6**: fase 1 FATTA l'08/11 — `ardy-config.php` vero
-in `/home/micoperibg/ardy-private/` (700/600), in `public_html` il ponte; provato (`ardy-visita` ok,
-dashboard ok); copia di sicurezza in `/root/ardy-config.php.bak`. Il backup non va toccato: in
-produzione è il **backup integrato cPanel** (attivo, giornaliero, account `micoperibg` incluso) che
-salva tutta la home, `ardy-private/` compresa; gli script `~/bin/ardy-*.sh` della guida non sono
-installati. **Fase 2 da fare dopo il merge della PR #142**: token Google in `ardy-private/` + costanti
-`GCAL_TOKEN_FILE`/`GBP_TOKEN_FILE`/`GBP_LOCATION_CACHE` nel config vero (README).
-Ancora aperto: **8.7** (policy di retention).
+- **🛡️ Rilievi sicurezza 9.12/9.13/9.14/10.5 (08/11, DEPLOYATI).** Dettagli in `SECURITY-AUDIT.md`
+§11. Da verificare dal vivo: (1) un **preventivo PDF** completo (logo, copertina, foto prima/dopo, QR)
+identico a prima — mPDF ora non esce più in rete; (2) una **pubblicazione fase** normale; (3) un
+**"arricchisci tutti"** breve in Outreach; (4) nel log nessuna riga `ARDY VISITA: pagina non in
+elenco` per pagine legittime (il widget che chiama `ardy-visita.php` non è nel repo: se usa nomi
+diversi da `chat-lead` vanno aggiunti in `ARDY_VISITA_PAGINE`); (5) nelle prime settimane cercare
+`ARDY COSTCAP` nel log: se compare durante l'uso normale, alzare la soglia in `ARDY_COST_CAPS`.
+
+- **🔑 8.6 chiuso l'08/11 — config e token Google fuori da `public_html`.** Tutto in
+`/home/micoperibg/ardy-private/` (700/600): `ardy-config.php` vero (in `public_html` resta il ponte),
+`ardy-gcal-token.json`, `ardy-gbp-token.json`, `ardy-gbp-location.json`, con le costanti nel config.
+Il backup integrato cPanel (attivo, giornaliero, account incluso) salva tutta la home, quindi anche
+`ardy-private/`. Restano da fare:
+  - [ ] **Calendario/Gmail erano ROTTI dal 23/10 all'08/11**: il refresh token Google risultava
+    `invalid_grant` ("expired or revoked"), scoperto durante lo spostamento e risolto ri-autorizzando
+    da `ardy-gcal-auth.php`. Controllare con Michela i **sopralluoghi fissati in quel periodo** (da
+    dashboard o da Sole su WhatsApp): potrebbero non essere finiti nel Google Calendar, e le email via
+    Gmail di quei giorni potrebbero non essere partite.
+  - [ ] **Capire perché il token è scaduto**, o si ripeterà: se nella Google Cloud Console la
+    "schermata consenso OAuth" del progetto è in stato **Testing**, Google invalida i refresh token
+    dopo **7 giorni**; va portata a **"In produzione"**. Altre cause: password dell'account cambiata,
+    accesso revocato a mano. Nel frattempo, il segnale è la data di `ardy-gcal-token.json` in
+    `ardy-private/` (si aggiorna a ogni rinnovo) o `ardy-health.php`.
+  - [ ] Copie di sicurezza in `/root/ardy-config.php.bak` e `/root/token-vecchi/` (la gcal lì è quella
+    scaduta): cancellarle tra qualche settimana se tutto va.
+  - [ ] **`ardy-wa-log.json` è ancora in `public_html`**: registro WhatsApp, probabile PII, protetto
+    solo dalla regola `.htaccess` sui `.json` — stesso single-point-of-failure di 8.6. Valutare di
+    spostarlo in `ardy-private/` (va trovato chi lo scrive e reso configurabile come i token).
+  - Ancora aperto: **8.7** (policy di retention).
 
 - **🛋️ Consulenza Interior Design (25/07, DEPLOYATO, test sul campo NON ancora fatto).** Webchat
 dedicata su `ardy-lab.it/interior-design` + sezione 🛋️ in scheda. Intervista guidata (permesso →

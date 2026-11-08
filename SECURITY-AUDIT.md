@@ -208,7 +208,7 @@ questo giro non erano bug grossolani ma **incoerenze** nell'applicazione delle d
 | 8.3 | 🟠 Media | `ardy-migrate.php` eseguibile pubblicamente (DDL + errori DB in chiaro) | ✅ risolto |
 | 8.4 | 🟡 Bassa | `getMessage()` esposto al client (`archivia-persi`, `chiusura-sessioni`) | ✅ risolto |
 | 8.5 | 🟡 Bassa | `verify-client`: match sulle ultime 7 cifre + rate-limit su `REMOTE_ADDR` | ✅ risolto |
-| 8.6 | 🔵 Info | Token OAuth Google + `ardy-config.php` nella web-root | 🔧 config spostato (2026-11-08); token dopo il deploy — §11.5 |
+| 8.6 | 🔵 Info | Token OAuth Google + `ardy-config.php` nella web-root | ✅ risolto (2026-11-08, §11.5) |
 | 8.7 | 🔵 Info | Nessuna policy di retention/GDPR esplicita | ⏳ aperto (operativo) |
 
 ### 8.1 🟠 Difesa in profondità estesa a TUTTI gli endpoint riservati
@@ -593,4 +593,12 @@ Procedura e backup: README ("Config fuori da `public_html`") e `GUIDA-BACKUP-RES
 cPanel (attivo, giornaliero, account incluso) copre già `~/ardy-private/`.
 **Verifica:** `php -l` sui 3 file. Lo stato passa a ✅ quando lo spostamento è fatto e
 `ardy-health.php` mostra i due token "ok" dal nuovo percorso.
+**Fatto il 2026-11-08 (fase 2, dopo il deploy della PR #142):** token copiati in `ardy-private/`
+(600), costanti aggiunte al config vero (`php -l` ok), originali spostati in `/root/token-vecchi/`.
+Prova con `gcal_get_access_token()`/`gbp_get_access_token()` eseguite come `micoperibg`: entrambe OK
+dal nuovo percorso. **Scoperto durante la prova:** il refresh token Calendar/Gmail era già invalido
+(`invalid_grant`, ultimo rinnovo riuscito il 23/10), indipendentemente dallo spostamento; ri-autorizzato
+da `ardy-gcal-auth.php`, che ha scritto il token nuovo direttamente in `ardy-private/`. Seguiti in
+`TODO-PROSSIMI-TASK.md` (causa della scadenza, sopralluoghi 23/10–08/11, `ardy-wa-log.json` ancora
+nella web root).
 
