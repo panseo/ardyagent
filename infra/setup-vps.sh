@@ -35,10 +35,10 @@ apt-get update
 apt-get install -y caddy
 
 echo "== PHP-FPM 8.3 + estensioni (pdo_mysql, gd, curl, mbstring, zip, intl) =="
-# Debian/Ubuntu LTS "stabili" spesso hanno un PHP di default più vecchio del
-# 8.3 usato in produzione (vedi .htaccess: "ea-php83"): se il repo di sistema
-# non offre 8.3, aggiungere il repo Sury (Debian) o Ondrej (Ubuntu) PRIMA di
-# questo blocco — verificare `apt-cache policy php8.3-fpm` prima di procedere.
+# Debian 13 (Trixie) ha PHP 8.3 nativo nei repo di sistema — nessun repo di
+# terze parti necessario (a differenza di Debian 12/Bookworm, che ha 8.2 di
+# default e richiederebbe Sury). Se si finisce comunque su una base diversa,
+# verificare prima `apt-cache policy php8.3-fpm`.
 apt-get install -y php8.3-fpm php8.3-cli php8.3-mysql php8.3-gd php8.3-curl \
   php8.3-mbstring php8.3-zip php8.3-intl php8.3-xml php8.3-bcmath
 
