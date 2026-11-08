@@ -270,6 +270,11 @@ if (PHP_SAPI !== 'cli'
                                  WHERE trasporto_data = :d AND stato <> 'CONSEGNATO'");
             $sel->execute([':d' => $data]);
             $ids = $sel->fetchAll(PDO::FETCH_COLUMN);
+            // Tetto sulle email in uscita (SECURITY-AUDIT §9.12): pesa quanto i
+            // clienti avvisabili, anche quelli già avvisati (stima per eccesso,
+            // innocua con le soglie attuali e più semplice di un conteggio a valle).
+            require_once __DIR__ . '/ardy-costcap.php';
+            ardyCostCap('email', count($ids));
             $inviate = 0; $gia = 0;
             foreach ($ids as $sid) {
                 $r = ardy_invia_avviso_trasporto($db, (string) $sid);

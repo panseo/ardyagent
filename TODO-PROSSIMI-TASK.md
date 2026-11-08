@@ -217,6 +217,16 @@ diventa prioritario con più utenti o se compaiono 504. Refactor: job in backgro
 
 ## ⏳ DA VERIFICARE DAL VIVO / AZIONI MANUALI
 
+- **🛡️ Chiusura rilievi sicurezza 9.12/9.13/9.14/10.5 (08/11, da deployare).** Dettagli in
+`SECURITY-AUDIT.md` §11. Dopo il deploy verificare: (1) un **preventivo PDF** completo (logo,
+copertina, foto prima/dopo, QR) identico a prima — mPDF ora non esce più in rete; (2) una
+**pubblicazione fase** normale; (3) un **"arricchisci tutti"** breve in Outreach; (4) nel log
+nessuna riga `ARDY VISITA: pagina non in elenco` per pagine legittime (il widget che chiama
+`ardy-visita.php` non è nel repo: se usa nomi diversi da `chat-lead` vanno aggiunti in
+`ARDY_VISITA_PAGINE`); (5) nelle prime settimane cercare `ARDY COSTCAP` nel log: se compare durante
+l'uso normale, alzare la soglia in `ARDY_COST_CAPS`. Rilievi di sicurezza ancora aperti: **8.6**
+(spostare `ardy-config.php` e il token Google sopra `public_html`) e **8.7** (policy di retention).
+
 - **🛋️ Consulenza Interior Design (25/07, DEPLOYATO, test sul campo NON ancora fatto).** Webchat
 dedicata su `ardy-lab.it/interior-design` + sezione 🛋️ in scheda. Intervista guidata (permesso →
 cinque domande una alla volta → invito foto → dati anagrafici solo alla fine) → **💬 Riepilogo di

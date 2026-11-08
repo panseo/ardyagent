@@ -1697,6 +1697,9 @@ async function runBulkEnrich(candidati, scope = 'tutto') {
     try { r = await api('enrich_contact', { id: c.id, model: getEnrichModel(), scope }); }
     catch(e) { r = { success:false, error:'rete' }; }
     if (r && r.places) mostraPlaces(r.places);
+    // Tetto di spesa del server raggiunto: inutile proseguire, ogni contatto
+    // successivo verrebbe rifiutato allo stesso modo.
+    if (r && r.limite) { log(`■ ${r.error}`, 'var(--red,#c33)'); break; }
     if (!r || !r.success) { log(`✗ ${c.nome}: ${r&&r.error||'errore'}`, 'var(--orange,#e90)'); continue; }
 
     // Applica solo i campi nuovi a confidenza alta/media (mai sovrascrittura: il

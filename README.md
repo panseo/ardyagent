@@ -43,6 +43,7 @@ ardyagent.ardy-lab.it/
 ├── ardy-sopralluoghi-api.php  # API sopralluoghi MULTIPLI per cliente (lista/salva/elimina) — dashboard
 ├── ardy-sopralluoghi-lib.php  # Logica condivisa sopralluoghi (calendario + "mirror") usata da API e da Sole WhatsApp
 ├── ardy-db.php                # Connessione DB condivisa
+├── ardy-costcap.php           # Libreria: tetto di spesa orario/giornaliero sugli endpoint AI/email della dashboard (429 se sforato)
 ├── ardy-config.php            # ⚠️ NON in repo — credenziali DB
 ├── ardy-crm-api.php           # API CRM interna
 ├── ardy-dossier.php           # Dossier cliente in Markdown (clienti+preventivi+fasi+chat WA+chat web) per Sole/Michela
@@ -937,6 +938,28 @@ define('ARDY_INTERNAL_SECRET', '...'); // stringa casuale lunga
 > marca la richiesta come interna ed esente dal rate-limit pubblico dell'endpoint
 > (15/ora, 50/giorno per IP). Senza il secret il salvataggio funziona comunque, ma le
 > chiamate del proxy ricadono sotto lo stesso limite per IP.
+
+### Tetto di spesa sugli endpoint della dashboard (opzionale, in `ardy-config.php`)
+```php
+// [per ora, per giorno] — si indicano solo i secchi da cambiare
+define('ARDY_COST_CAPS', ['ai' => [60, 300], 'ai-enrich' => [200, 1000], 'email' => [150, 300]]);
+```
+> `ardy-costcap.php` conta le operazioni costose della dashboard (generazioni AI, arricchimento
+> contatti, email in uscita: per le email l'unità è il destinatario) su finestre mobili di 1 h e 24 h,
+> con un contatore **unico** per tipo (non per IP). Sopra soglia l'endpoint risponde **429** prima di
+> spendere: è la rete di sicurezza nel caso le credenziali della dashboard trapelassero e qualcuno le
+> usasse in un ciclo automatico. I valori sopra sono i default; la CLI (cron) è esente. Se Michela vede
+> "Limite di sicurezza raggiunto" durante un uso normale, si alza la soglia qui. Dettagli e mappa
+> endpoint → secchio: `SECURITY-AUDIT.md` §11.1.
+
+### Pagine contate da `ardy-visita.php` (opzionale, in `ardy-config.php`)
+```php
+define('ARDY_VISITA_PAGINE', ['chat-lead']);   // default: solo 'chat-lead'
+```
+> Il contatore visite è pubblico: accetta solo i nomi in elenco, così nessuno può riempire
+> `visite_pagina` di righe inventate. Una pagina nuova col contatore va aggiunta qui (e in `$labels`
+> di `ardy-stats.php` per un'etichetta leggibile); quelle fuori elenco finiscono nel log come
+> `ARDY VISITA: pagina non in elenco`.
 
 ### File da creare manualmente sul server (NON in repo)
 - `ardy-config.php` — credenziali DB + API keys

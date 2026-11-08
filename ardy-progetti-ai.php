@@ -75,6 +75,7 @@ function progettoAiClaude(string $system, $userMsg, int $maxTokens = 900): strin
 // si leggono in locale (nessuna chiamata al modello); solo il PDF costa una chiamata,
 // una per documento, mai ripetuta se non la si chiede di nuovo.
 const DOC_TESTO_MAX = 12000;   // caratteri salvati per documento
+const DOC_XML_MAX   = 8 * 1024 * 1024;   // byte decompressi letti da una entry DOCX/ODT (anti zip-bomb, §9.14)
 const DOC_CTX_MAX   = 8000;    // caratteri totali di documenti messi nel prompt
 
 /** Byte di un file di progetto (disco o B2), o null. */
@@ -109,7 +110,17 @@ function progettoTestoDaZipXml(string $bytes, string $entry): string {
     $xml = '';
     $zip = new ZipArchive();
     if ($zip->open($tmp) === true) {
-        $xml = (string) $zip->getFromName($entry);
+        // Anti zip-bomb (SECURITY-AUDIT §9.14): un DOCX/ODT da pochi MB può contenere
+        // una entry che decompressa vale gigabyte. Il secondo argomento di
+        // getFromName() legge al massimo DOC_XML_MAX byte decompressi, qualunque
+        // cosa dichiari l'archivio (la dimensione dichiarata in statName() si può
+        // falsificare, per questo serve solo a lasciare traccia nel log). Troncare
+        // non toglie nulla: il testo viene comunque tagliato a DOC_TESTO_MAX.
+        $st = $zip->statName($entry);
+        if (is_array($st) && ($st['size'] ?? 0) > DOC_XML_MAX) {
+            error_log("ARDY PROGETTI AI: entry $entry dichiara {$st['size']} byte decompressi, letti solo i primi " . DOC_XML_MAX);
+        }
+        $xml = (string) $zip->getFromName($entry, DOC_XML_MAX);
         $zip->close();
     }
     @unlink($tmp);
@@ -206,6 +217,10 @@ try {
         echo json_encode(progettoLeggiDoc(ardyDB(), $fileId));
         exit();
     }
+
+    // Tetto di spesa AI (SECURITY-AUDIT §9.12): da qui in poi ogni mode chiama Claude.
+    require_once __DIR__ . '/ardy-costcap.php';
+    ardyCostCap('ai');
 
     $progettoId = (int) ($in['progetto_id'] ?? 0);
     $faseNome   = trim((string) ($in['fase_nome'] ?? ''));
