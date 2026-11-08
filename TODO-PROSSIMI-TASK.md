@@ -224,9 +224,13 @@ copertina, foto prima/dopo, QR) identico a prima — mPDF ora non esce più in r
 nessuna riga `ARDY VISITA: pagina non in elenco` per pagine legittime (il widget che chiama
 `ardy-visita.php` non è nel repo: se usa nomi diversi da `chat-lead` vanno aggiunti in
 `ARDY_VISITA_PAGINE`); (5) nelle prime settimane cercare `ARDY COSTCAP` nel log: se compare durante
-l'uso normale, alzare la soglia in `ARDY_COST_CAPS`. **8.6**: codice pronto, spostare config e token in
-`~/ardy-private/` sul server (README, "Config fuori da `public_html`") e aggiornare
-`~/bin/ardy-backup.sh`/`ardy-restore.sh` e `~/.ardy-backup.env` come da `GUIDA-BACKUP-RESTORE.md`.
+l'uso normale, alzare la soglia in `ARDY_COST_CAPS`. **8.6**: fase 1 FATTA l'08/11 — `ardy-config.php` vero
+in `/home/micoperibg/ardy-private/` (700/600), in `public_html` il ponte; provato (`ardy-visita` ok,
+dashboard ok); copia di sicurezza in `/root/ardy-config.php.bak`. Il backup non va toccato: in
+produzione è il **backup integrato cPanel** (attivo, giornaliero, account `micoperibg` incluso) che
+salva tutta la home, `ardy-private/` compresa; gli script `~/bin/ardy-*.sh` della guida non sono
+installati. **Fase 2 da fare dopo il merge della PR #142**: token Google in `ardy-private/` + costanti
+`GCAL_TOKEN_FILE`/`GBP_TOKEN_FILE`/`GBP_LOCATION_CACHE` nel config vero (README).
 Ancora aperto: **8.7** (policy di retention).
 
 - **🛋️ Consulenza Interior Design (25/07, DEPLOYATO, test sul campo NON ancora fatto).** Webchat

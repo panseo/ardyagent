@@ -22,6 +22,11 @@ copia **off-site** (sicurezza #4). Tutto gira sul server attuale (cPanel, utente
 | **n8n** | container `n8n_app` (volume Docker) | ✅ (da root) | workflow/credenziali automazioni |
 | **WordPress** | DB + `wp-content/uploads` del sito | ➖ opzionale | se vuoi coprire anche il sito (vedi §8) |
 
+> ⚠️ **Stato reale (08/11/2026):** in produzione gli script `~/bin/ardy-backup.sh`/`ardy-restore.sh`
+> descritti sotto **non sono installati**: il backup è quello **integrato di cPanel** verso B2 (vedi
+> `TODO-PROSSIMI-TASK.md`), che salva tutta la home di `micoperibg`, quindi anche `~/ardy-private/`.
+> Questa guida resta valida come alternativa o per il VPS senza cPanel.
+
 Percorsi reali (utente `micoperibg`):
 
 ```
