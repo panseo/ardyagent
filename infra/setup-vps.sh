@@ -15,12 +15,21 @@
 # (contiene segreti, va scritto a mano sul server — vedi infra/README.md), non
 # tocca DNS/Cloudflare, non importa il dump del DB (Fase 3), non configura n8n
 # stesso (vedi infra/docker-compose.n8n.yml).
+#
+# Isolamento (sessione "sicurezza" dell'08/11, vedi TODO-PROSSIMI-TASK.md
+# "Controllo protezioni VPS"): sul server attuale pigmentombg.com e
+# omnialga.com girano con lo stesso utente cPanel del gestionale — un
+# WordPress compromesso potrebbe leggere ardy-private/. Qui si crea un utente
+# e un pool PHP-FPM dedicati SOLO al gestionale: ogni altro sito/web app che
+# finisce su questo VPS va fatto con lo stesso schema (utente + pool propri),
+# mai aggiunto a quello di ardy.
 
 set -euo pipefail
 
 APP_USER="ardy"
 APP_DOMAIN="ardyagent.ardy-lab.it"
 WEBROOT="/var/www/${APP_DOMAIN}"
+PRIVATE_DIR="/home/${APP_USER}/ardy-private"
 
 echo "== Aggiornamento sistema =="
 apt-get update && apt-get -y upgrade
@@ -81,13 +90,45 @@ for d in ardy-uploads preventivi_pdf reels ardy-rate-limit; do
   chmod 755 "${WEBROOT}/${d}"
 done
 chown -R "${APP_USER}:${APP_USER}" "$WEBROOT"
-# Caddy e PHP-FPM devono poter leggere/scrivere: su Debian il gruppo di www-data
-# per PHP-FPM è tipicamente "www-data" — verificare `grep '^group' /etc/php/8.3/fpm/pool.d/www.conf`
-# e aggiungere l'utente/gruppo corretto in ACL o chgrp, invece di allargare a 777.
+
+# Cartella privata fuori web-root per ardy-config.php vero + token Google —
+# stesso schema già in uso sul server attuale (README.md "Config e token
+# fuori da public_html", SECURITY-AUDIT.md §8.6): in $WEBROOT/ardy-config.php
+# resta solo un "ponte" di una riga che fa require_once verso qui.
+mkdir -p "$PRIVATE_DIR"
+chmod 700 "$PRIVATE_DIR"
+chown "${APP_USER}:${APP_USER}" "$PRIVATE_DIR"
+
+echo "== Pool PHP-FPM dedicato (non quello 'www' di default) =="
+# Gira come $APP_USER, non come www-data: ardy-rate-limit/ (rate-limit +
+# tetto di spesa ardy-costcap.php) e ardy-private/ restano leggibili/scrivibili
+# solo da questo utente, senza allargare permessi a www-data. socket.group è
+# "caddy" (l'utente con cui gira il pacchetto Caddy su Debian) così Caddy può
+# connettersi senza condividere l'utente.
+cat > /etc/php/8.3/fpm/pool.d/ardyagent.conf <<EOF
+[ardyagent]
+user = ${APP_USER}
+group = ${APP_USER}
+listen = /run/php/php8.3-fpm-ardyagent.sock
+listen.owner = ${APP_USER}
+listen.group = caddy
+listen.mode = 0660
+pm = dynamic
+pm.max_children = 10
+pm.start_servers = 2
+pm.min_spare_servers = 1
+pm.max_spare_servers = 4
+EOF
+systemctl restart php8.3-fpm
 
 echo "== Fatto. Prossimi passi manuali: =="
 echo "  1. mysql_secure_installation + creazione DB/utente (vedi sopra)"
 echo "  2. git clone del repo in ${WEBROOT} (come utente ${APP_USER})"
-echo "  3. Scrivere ardy-config.php a mano (vedi infra/README.md e SECURITY-AUDIT.md §4)"
+echo "  3. Scrivere il vero ardy-config.php in ${PRIVATE_DIR}/ (vedi SECURITY-AUDIT.md §4 e §8.6,"
+echo "     README.md 'Config e token fuori da public_html') + il ponte di una riga in"
+echo "     ${WEBROOT}/ardy-config.php. In Fase 3 i file si prendono da ~/ardy-private/ sul"
+echo "     server attuale, NON da public_html (lì c'è solo il ponte)."
 echo "  4. Copiare infra/Caddyfile in /etc/caddy/Caddyfile e 'caddy validate' + 'systemctl reload caddy'"
 echo "  5. docker compose -f infra/docker-compose.n8n.yml up -d (dopo aver scritto infra/n8n.env)"
+echo "  6. Qualunque altro sito/web app su questo VPS: utente + pool PHP-FPM propri, MAI quello"
+echo "     di ${APP_USER} — vedi nota isolamento in testa allo script."

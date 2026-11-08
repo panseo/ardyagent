@@ -118,6 +118,9 @@ Google Calendar: `ARDY_GCAL_CLIENT_ID` `ARDY_GCAL_CLIENT_SECRET` (calendario = `
 Google Business Profile: `GBP_PARENT`
 Percorsi: `ARDY_UPLOAD_DIR` `ARDY_PDF_DIR` `ARDY_RATE_LIMIT_DIR`
 Rate-limit/limiti (con default nel codice): `ARDY_IP_MAX_REQUESTS_HOUR` `ARDY_IP_RATE_LIMIT_SECONDS` `ARDY_SESSION_RATE_SECONDS` `ARDY_RATE_LIMIT_TTL_HOURS` `ARDY_MAX_HISTORY_ITEMS` `ARDY_MAX_IMAGES_PER_MSG` `ARDY_MAX_MESSAGE_LENGTH`
+Tetto di spesa (facoltativa, default nel codice — §11.1): `ARDY_COST_CAPS`
+Pagine contate da `ardy-visita.php` (facoltativa, default `['chat-lead']`): `ARDY_VISITA_PAGINE`
+Percorso token fuori da `public_html` (facoltative, default `__DIR__` — §8.6): `GCAL_TOKEN_FILE` `GBP_TOKEN_FILE` `GBP_LOCATION_CACHE`
 
 ---
 

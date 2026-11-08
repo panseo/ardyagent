@@ -111,14 +111,29 @@ Confronto: dedicato €40–250/mese senza vantaggi reali per il tuo carico. cPa
 
 ### Fase 2 — App
 - [ ] `git clone` del repo nella docroot (poi `infra/deploy-vps.sh` per i deploy successivi).
-- [ ] Ricreare **`ardy-config.php`** (non versionato) con tutte le costanti (vedi `SECURITY-AUDIT.md` §4).
+- [ ] Scrivere il vero **`ardy-config.php`** (non versionato, tutte le costanti in
+  `SECURITY-AUDIT.md` §4) in `~ardy/ardy-private/` — **non** in docroot. Nella docroot resta solo
+  il "ponte" di una riga (`require_once '/home/ardy/ardy-private/ardy-config.php';`), stesso
+  schema già in uso sul server attuale (README.md "Config e token fuori da public_html",
+  `SECURITY-AUDIT.md` §8.6). `infra/setup-vps.sh` crea la cartella (700); il contenuto va scritto
+  a mano. In Fase 3 i file si prendono da **`~/ardy-private/` sul server attuale**, non da
+  `public_html` (lì ormai c'è solo il ponte).
 - [ ] Permessi cartelle upload + `ardyHardenUploadDir` (no esecuzione script). ⚠️ **Attenzione**:
   `ardyHardenUploadDir()` scrive un `.htaccess` nelle cartelle upload, che **Caddy non legge** —
   su Caddy quella funzione non protegge più nulla da sola. `infra/Caddyfile` replica la stessa
   protezione a livello di config (blocco `@uploads_exec`): va tenuto in sync a mano se cambiano
   cartelle/estensioni in `ardyHardenUploadDir()`.
+- [ ] Pool PHP-FPM **dedicato** al gestionale (non quello "www" di default) — gira come utente
+  `ardy`, non `www-data`: `ardy-private/` e `ardy-rate-limit/` (rate-limit + tetto di spesa
+  `ardy-costcap.php`) restano leggibili/scrivibili solo da questo utente. Coperto da
+  `infra/setup-vps.sh`. **Vale anche per il futuro**: qualunque altro sito/web app che finisce su
+  questo VPS (i due WordPress attuali si stanno già migrando altrove, vedi
+  `TODO-PROSSIMI-TASK.md` "Controllo protezioni VPS") va con un utente/pool proprio, mai quello
+  del gestionale — è il rischio trovato sul server attuale (stesso utente cPanel per tutto).
 - [ ] Copiare `infra/Caddyfile` in `/etc/caddy/Caddyfile`, generare l'hash Basic Auth vero
-  (`caddy hash-password`) e validare (`caddy validate`) prima di qualunque test live.
+  (`caddy hash-password`) e validare (`caddy validate`) prima di qualunque test live. L'elenco
+  librerie interne bloccate (`@internal`) e il socket PHP-FPM sono già allineati alla sessione
+  sicurezza dell'08/11 (`ardy-costcap`/`ardy-enrich` inclusi, pool dedicato).
 - [ ] n8n: `infra/docker-compose.n8n.yml` + `infra/n8n.env` (da `n8n.env.example`, non versionato)
   — segreti come variabili d'ambiente, esposto solo su localhost dietro Caddy.
 
