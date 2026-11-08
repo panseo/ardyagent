@@ -208,7 +208,7 @@ questo giro non erano bug grossolani ma **incoerenze** nell'applicazione delle d
 | 8.3 | 🟠 Media | `ardy-migrate.php` eseguibile pubblicamente (DDL + errori DB in chiaro) | ✅ risolto |
 | 8.4 | 🟡 Bassa | `getMessage()` esposto al client (`archivia-persi`, `chiusura-sessioni`) | ✅ risolto |
 | 8.5 | 🟡 Bassa | `verify-client`: match sulle ultime 7 cifre + rate-limit su `REMOTE_ADDR` | ✅ risolto |
-| 8.6 | 🔵 Info | Token OAuth Google + `ardy-config.php` nella web-root | ⏳ aperto (infra) |
+| 8.6 | 🔵 Info | Token OAuth Google + `ardy-config.php` nella web-root | 🔧 codice pronto (2026-11-08), spostamento sul server da fare — §11.5 |
 | 8.7 | 🔵 Info | Nessuna policy di retention/GDPR esplicita | ⏳ aperto (operativo) |
 
 ### 8.1 🟠 Difesa in profondità estesa a TUTTI gli endpoint riservati
@@ -579,4 +579,15 @@ riproducibili:
 
 **Da verificare in produzione** dopo il deploy: un preventivo PDF completo (logo, copertina, foto
 prima/dopo, QR) identico a prima; una pubblicazione fase; un "arricchisci tutti" breve.
+
+### 11.5 Config e token fuori dalla web root (8.6)
+**Codice.** `ardy-gcal.php`, `ardy-gcal-auth.php` e `ardy-gbp-auth.php` ora leggono/scrivono il token
+nel percorso indicato da `GCAL_TOKEN_FILE`/`GBP_TOKEN_FILE` se definite in `ardy-config.php`
+(`ardy-gbp.php` e `ardy-health.php` lo facevano già); senza costante il comportamento è quello di
+prima, quindi il deploy del codice non rompe nulla da solo.
+**Server.** Config, token e cache GBP in `/home/micoperibg/ardy-private/` (700/600, utente
+`micoperibg`); in `public_html` resta un `ardy-config.php` "ponte" di una riga senza segreti.
+Procedura e backup: README ("Config fuori da `public_html`") e `GUIDA-BACKUP-RESTORE.md`.
+**Verifica:** `php -l` sui 3 file. Lo stato passa a ✅ quando lo spostamento è fatto e
+`ardy-health.php` mostra i due token "ok" dal nuovo percorso.
 

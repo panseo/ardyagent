@@ -224,8 +224,10 @@ copertina, foto prima/dopo, QR) identico a prima — mPDF ora non esce più in r
 nessuna riga `ARDY VISITA: pagina non in elenco` per pagine legittime (il widget che chiama
 `ardy-visita.php` non è nel repo: se usa nomi diversi da `chat-lead` vanno aggiunti in
 `ARDY_VISITA_PAGINE`); (5) nelle prime settimane cercare `ARDY COSTCAP` nel log: se compare durante
-l'uso normale, alzare la soglia in `ARDY_COST_CAPS`. Rilievi di sicurezza ancora aperti: **8.6**
-(spostare `ardy-config.php` e il token Google sopra `public_html`) e **8.7** (policy di retention).
+l'uso normale, alzare la soglia in `ARDY_COST_CAPS`. **8.6**: codice pronto, spostare config e token in
+`~/ardy-private/` sul server (README, "Config fuori da `public_html`") e aggiornare
+`~/bin/ardy-backup.sh`/`ardy-restore.sh` e `~/.ardy-backup.env` come da `GUIDA-BACKUP-RESTORE.md`.
+Ancora aperto: **8.7** (policy di retention).
 
 - **🛋️ Consulenza Interior Design (25/07, DEPLOYATO, test sul campo NON ancora fatto).** Webchat
 dedicata su `ardy-lab.it/interior-design` + sezione 🛋️ in scheda. Intervista guidata (permesso →

@@ -18,7 +18,7 @@ copia **off-site** (sicurezza #4). Tutto gira sul server attuale (cPanel, utente
 | **Codice app** | repo Git | ❌ | è già su GitHub, si ripristina con `git clone` + `deploy.sh` |
 | **Database** | MySQL `micoperibg_ardyagent` | ✅ | il cuore: clienti, preventivi, fasi, chat, sopralluoghi… |
 | **Media/upload** | `ardy-uploads/`, `preventivi_pdf/`, `reels/` (sotto docroot) | ✅ | foto/video/reel/PDF generati, NON in git |
-| **Config & token** | `ardy-config.php`, `ardy-gcal-token.json`, `ardy-gbp-location.json` | ✅ | credenziali e token NON in git, irripetibili |
+| **Config & token** | `ardy-config.php`, `ardy-gcal-token.json`, `ardy-gbp-token.json`, `ardy-gbp-location.json` — in `~/ardy-private/`, **fuori** dalla web root (SECURITY-AUDIT §8.6) | ✅ | credenziali e token NON in git, irripetibili |
 | **n8n** | container `n8n_app` (volume Docker) | ✅ (da root) | workflow/credenziali automazioni |
 | **WordPress** | DB + `wp-content/uploads` del sito | ➖ opzionale | se vuoi coprire anche il sito (vedi §8) |
 
@@ -27,7 +27,9 @@ Percorsi reali (utente `micoperibg`):
 ```
 DOCROOT = /home/micoperibg/public_html/ardyagent.ardy-lab.it
 DATI    = $DOCROOT/ardy-uploads  $DOCROOT/preventivi_pdf  $DOCROOT/reels
-CONFIG  = $DOCROOT/ardy-config.php  $DOCROOT/ardy-gcal-token.json  $DOCROOT/ardy-gbp-location.json
+PRIVDIR = /home/micoperibg/ardy-private   (fuori da public_html)
+CONFIG  = $PRIVDIR/ardy-config.php  $PRIVDIR/ardy-gcal-token.json  $PRIVDIR/ardy-gbp-token.json  $PRIVDIR/ardy-gbp-location.json
+          (in $DOCROOT/ardy-config.php resta solo un "ponte" di una riga che include quello vero)
 DB      = micoperibg_ardyagent   (host localhost; credenziali dentro ardy-config.php)
 ```
 
@@ -104,6 +106,7 @@ ARDY_ENV="srv-prod"
 
 # Percorsi
 DOCROOT="/home/micoperibg/public_html/ardyagent.ardy-lab.it"
+PRIVDIR="/home/micoperibg/ardy-private"   # config e token, fuori dalla web root
 
 # Database (gli stessi valori che stanno in ardy-config.php)
 DB_HOST="localhost"
@@ -166,8 +169,10 @@ log "Upload dump ..."
 
 # 2) CONFIG & TOKEN (file singoli, fuori dal repo)
 log "Backup config/token ..."
-for f in ardy-config.php ardy-gcal-token.json ardy-gbp-location.json; do
-  [ -f "$DOCROOT/$f" ] && "$RCLONE" copy "$DOCROOT/$f" "$DEST/config/" --no-traverse || true
+# Da PRIVDIR (fuori web root). Il ponte in $DOCROOT/ardy-config.php NON va salvato:
+# contiene solo un require, sovrascriverebbe la copia vera in config/.
+for f in ardy-config.php ardy-gcal-token.json ardy-gbp-token.json ardy-gbp-location.json; do
+  [ -f "$PRIVDIR/$f" ] && "$RCLONE" copy "$PRIVDIR/$f" "$DEST/config/" --no-traverse || true
 done
 
 # 3) MEDIA (sync: efficiente, trasferisce solo le differenze; versioni tenute da B2)
@@ -267,10 +272,13 @@ case "$WHAT" in
     log "Media ripristinati"
     ;;
   config)
-    echo ">>> Ripristino config/token in $DOCROOT (SOVRASCRIVE i file esistenti)"
+    echo ">>> Ripristino config/token in $PRIVDIR (SOVRASCRIVE i file esistenti)"
     read -r -p ">>> Scrivi 'SI' per procedere: " ok; [ "$ok" = "SI" ] || exit 1
-    $RCLONE copy "$SRC/config/" "$DOCROOT/" --include "ardy-config.php" \
-      --include "ardy-gcal-token.json" --include "ardy-gbp-location.json"
+    mkdir -p "$PRIVDIR" && chmod 700 "$PRIVDIR"
+    $RCLONE copy "$SRC/config/" "$PRIVDIR/" --include "ardy-config.php" \
+      --include "ardy-gcal-token.json" --include "ardy-gbp-token.json" --include "ardy-gbp-location.json"
+    # Server nuovo: ricrea il ponte nella web root (vedi README, "Config fuori da public_html")
+    [ -f "$DOCROOT/ardy-config.php" ] || printf '<?php\nrequire_once \x27%s/ardy-config.php\x27;\n' "$PRIVDIR" > "$DOCROOT/ardy-config.php"
     log "Config/token ripristinati"
     ;;
   *)

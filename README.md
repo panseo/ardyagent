@@ -962,10 +962,29 @@ define('ARDY_VISITA_PAGINE', ['chat-lead']);   // default: solo 'chat-lead'
 > `ARDY VISITA: pagina non in elenco`.
 
 ### File da creare manualmente sul server (NON in repo)
-- `ardy-config.php` — credenziali DB + API keys
-- `ardy-gcal-token.json` — token Google Calendar
+- `ardy-config.php` — credenziali DB + API keys (in `~/ardy-private/`, vedi sotto)
+- `ardy-gcal-token.json` — token Google Calendar (in `~/ardy-private/`, vedi sotto)
 - Cartella `preventivi_pdf/` con permessi 755
 - Cartella `ardy-uploads/` con permessi 755
+
+### Config e token fuori da `public_html` (SECURITY-AUDIT §8.6)
+Credenziali e token Google stanno in `/home/micoperibg/ardy-private/` (cartella 700, file 600,
+proprietario `micoperibg`), **fuori dalla web root**: se un giorno `.htaccess` non venisse applicato
+(cambio server, regola rotta) non sarebbero comunque scaricabili.
+- `public_html/.../ardy-config.php` è solo un **ponte** di una riga, così i ~50 file che fanno
+  `require_once __DIR__ . '/ardy-config.php'` non cambiano:
+  ```php
+  <?php
+  require_once '/home/micoperibg/ardy-private/ardy-config.php';
+  ```
+- Il config vero dichiara dove stanno i token (letti da `ardy-gcal.php`, `ardy-gcal-auth.php`,
+  `ardy-gbp.php`, `ardy-gbp-auth.php`, `ardy-health.php`; senza costante si ricade su `__DIR__`):
+  ```php
+  define('GCAL_TOKEN_FILE',    '/home/micoperibg/ardy-private/ardy-gcal-token.json');
+  define('GBP_TOKEN_FILE',     '/home/micoperibg/ardy-private/ardy-gbp-token.json');
+  define('GBP_LOCATION_CACHE', '/home/micoperibg/ardy-private/ardy-gbp-location.json');
+  ```
+- Backup/ripristino leggono e scrivono in `PRIVDIR` (vedi `GUIDA-BACKUP-RESTORE.md`).
 
 ---
 
