@@ -98,15 +98,23 @@ Confronto: dedicato €40–250/mese senza vantaggi reali per il tuo carico. cPa
 
 ### Fase 1 — Nuovo server (nulla in produzione ancora)
 - [x] **Artefatti pronti in `infra/`** (bozza, non eseguita/collaudata — serve il VPS reale):
-  `setup-vps.sh` (provisioning), `Caddyfile` (traduzione di `.htaccess`), `docker-compose.n8n.yml`.
-  Dettagli e cosa manca ancora in `infra/README.md`.
+  `setup-vps.sh` (provisioning, incluso hardening SSH/fail2ban/unattended-upgrades),
+  `Caddyfile` (traduzione di `.htaccess`), `docker-compose.n8n.yml`, `backup-b2.sh` (backup
+  off-site). Dettagli e cosa manca ancora in `infra/README.md`.
 - [ ] Provisioning VPS (Debian/Ubuntu LTS o AlmaLinux) — `infra/setup-vps.sh`, da leggere ed
   eseguire a pezzi, non alla cieca.
-- [ ] Firewall host (csf come ora, oppure nftables/ufw) — porte 22/80/443; SSH a chiave.
-  `infra/setup-vps.sh` copre la parte ufw.
+- [ ] Firewall host + SSH a chiave. `infra/setup-vps.sh` copre: `ufw` (porte 22/80/443, SSH
+  rate-limitata), hardening `sshd` (solo chiave, niente root via password — con controllo che
+  si rifiuta di procedere senza una chiave già presente, per non restare chiusi fuori) e
+  **fail2ban** (ban automatico su brute-force SSH — sostituisce il ruolo di csf+lfd del server
+  attuale, che qui non c'è).
 - [ ] Installare Caddy + PHP-FPM 8.3 (con estensioni: pdo_mysql, gd, curl, mbstring, finfo, zip) + MariaDB + Docker.
-  Coperto da `infra/setup-vps.sh`.
+  Coperto da `infra/setup-vps.sh` (MariaDB con `bind-address 127.0.0.1` esplicito, come sul
+  server attuale).
 - [ ] FFmpeg (serve a `ardy-crea-reel.php`). Coperto da `infra/setup-vps.sh`.
+- [ ] **Aggiornamenti di sicurezza automatici** (`unattended-upgrades`, senza riavvio
+  automatico) — su cPanel in parte se ne occupa il pannello, qui va abilitato a mano. Coperto
+  da `infra/setup-vps.sh`.
 - [ ] Scegliere provider VPS (Hetzner vs Aruba/Serverplan) — ancora aperto, vedi §1.
 
 ### Fase 2 — App
@@ -156,8 +164,11 @@ Confronto: dedicato €40–250/mese senza vantaggi reali per il tuo carico. cPa
   gemelli**, **bucket isolati per server** (Server 1 → `UGLmico`/prefisso `srv1`; Server 2 → `micoper`, chiave
   ristretta), lifecycle 30 gg + SSE-B2, destinazioni validate/abilitate. **n8n** (Server 2): volume
   `/opt/n8n/n8n_data` via rclone → `micoper/n8n/` (cron 04:00). Guida/script su repo `ardy-infra`
-  (`claude/modest-cori-hc1w1l`). ⚠️ Sul **nuovo** VPS (no-panel) il backup andrà **rifatto** in chiave no-cPanel
-  (dump DB cron + sync media), riusando lo stesso account/bucket B2. Dettagli e pending in `TODO-PROSSIMI-TASK.md`.
+  (`claude/modest-cori-hc1w1l`). Sul **nuovo** VPS (no-panel), **rifatto in chiave no-cPanel
+  (08/11)**: `infra/backup-b2.sh` (dump DB + `ardy-private/`, cron 04:00, stesso orario del
+  backup n8n) — **pronto ma non testato** (serve il remoto `rclone` verso B2 e un utente MySQL
+  dedicato, da scrivere a mano sul server, vedi `infra/README.md`). Dettagli e pending in
+  `TODO-PROSSIMI-TASK.md`.
 - [ ] **Email/MX**: sostituire l'MX attuale (`mx.ardy-lab.it` → vecchio server) con **Cloudflare Email Routing** (inoltro su Proton) o rimuoverlo. ✅ Invio Brevo già autenticato (DKIM/DMARC verificati) → non serve toccarlo.
 - [ ] Spegnere/dismettere il vecchio VPS.
 
