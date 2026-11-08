@@ -1,6 +1,8 @@
 # Piano di migrazione — infrastruttura Ardy
 
-**Data:** 2026-06-20 · **Stato:** bozza per la call con Edmondo (lun)
+**Data:** 2026-06-20 (bozza iniziale) · **Riprese 2026-11-08:** preparati gli artefatti tecnici
+di Fase 1-2 in `infra/` (Caddyfile, setup VPS, n8n) — vedi checklist sotto. Ancora da fare:
+scegliere il provider VPS e procedere con il provisioning reale (nessun accesso server da qui).
 **Decisioni prese:** VPS (non dedicato) · **senza cPanel** · email solo-invio via Brevo ·
 gestione server da terminale · Cloudflare confermato · **Backblaze B2** per media + backup.
 
@@ -82,16 +84,30 @@ Confronto: dedicato €40–250/mese senza vantaggi reali per il tuo carico. cPa
 - [ ] Decidere chi amministra il server nel quotidiano.
 
 ### Fase 1 — Nuovo server (nulla in produzione ancora)
-- [ ] Provisioning VPS (Debian/Ubuntu LTS o AlmaLinux).
+- [x] **Artefatti pronti in `infra/`** (bozza, non eseguita/collaudata — serve il VPS reale):
+  `setup-vps.sh` (provisioning), `Caddyfile` (traduzione di `.htaccess`), `docker-compose.n8n.yml`.
+  Dettagli e cosa manca ancora in `infra/README.md`.
+- [ ] Provisioning VPS (Debian/Ubuntu LTS o AlmaLinux) — `infra/setup-vps.sh`, da leggere ed
+  eseguire a pezzi, non alla cieca.
 - [ ] Firewall host (csf come ora, oppure nftables/ufw) — porte 22/80/443; SSH a chiave.
+  `infra/setup-vps.sh` copre la parte ufw.
 - [ ] Installare Caddy + PHP-FPM 8.3 (con estensioni: pdo_mysql, gd, curl, mbstring, finfo, zip) + MariaDB + Docker.
-- [ ] FFmpeg (serve a `ardy-crea-reel.php`).
+  Coperto da `infra/setup-vps.sh`.
+- [ ] FFmpeg (serve a `ardy-crea-reel.php`). Coperto da `infra/setup-vps.sh`.
+- [ ] Scegliere provider VPS (Hetzner vs Aruba/Serverplan) — ancora aperto, vedi §1.
 
 ### Fase 2 — App
-- [ ] `git clone` del repo nella docroot.
+- [ ] `git clone` del repo nella docroot (poi `infra/deploy-vps.sh` per i deploy successivi).
 - [ ] Ricreare **`ardy-config.php`** (non versionato) con tutte le costanti (vedi `SECURITY-AUDIT.md` §4).
-- [ ] Permessi cartelle upload + `ardyHardenUploadDir` (no esecuzione script).
-- [ ] n8n: portare `docker-compose.yml` con le env (vedi TODO §n8n) — segreti come variabili d'ambiente.
+- [ ] Permessi cartelle upload + `ardyHardenUploadDir` (no esecuzione script). ⚠️ **Attenzione**:
+  `ardyHardenUploadDir()` scrive un `.htaccess` nelle cartelle upload, che **Caddy non legge** —
+  su Caddy quella funzione non protegge più nulla da sola. `infra/Caddyfile` replica la stessa
+  protezione a livello di config (blocco `@uploads_exec`): va tenuto in sync a mano se cambiano
+  cartelle/estensioni in `ardyHardenUploadDir()`.
+- [ ] Copiare `infra/Caddyfile` in `/etc/caddy/Caddyfile`, generare l'hash Basic Auth vero
+  (`caddy hash-password`) e validare (`caddy validate`) prima di qualunque test live.
+- [ ] n8n: `infra/docker-compose.n8n.yml` + `infra/n8n.env` (da `n8n.env.example`, non versionato)
+  — segreti come variabili d'ambiente, esposto solo su localhost dietro Caddy.
 
 ### Fase 3 — Dati
 - [ ] Dump MySQL dal vecchio server → import in MariaDB nuova.

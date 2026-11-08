@@ -1,0 +1,93 @@
+# Caddyfile — equivalente no-cPanel dell'attuale .htaccess, per il nuovo VPS
+# (PIANO-MIGRAZIONE.md, Fase 1-2). Sostituisce Apache+.htaccess con Caddy+PHP-FPM.
+#
+# ⚠️ NON TESTATO su un Caddy reale (questa sessione non ha accesso al VPS): prima
+# di andare live, validare con `caddy validate --config infra/Caddyfile` sul
+# server e collaudare ogni blocco (auth, deny, rewrite) come da Fase 3 del piano.
+#
+# Differenza strutturale da tenere a mente: .htaccess viene letto da Apache ad
+# ogni richiesta e può essere aggiunto "al volo" da PHP (ardyHardenUploadDir() in
+# ardy-net.php scrive un .htaccess dentro le cartelle upload per bloccare
+# l'esecuzione di script). Caddy NON legge .htaccess: quella protezione va quindi
+# duplicata qui a livello di web server (vedi blocco "uploads_exec" sotto) — senza
+# questo blocco, un file caricato con estensione .php finirebbe eseguibile.
+
+{
+	# email per Let's Encrypt (cambiare con quella reale prima del deploy)
+	email admin@ardy-lab.it
+}
+
+ardyagent.ardy-lab.it {
+	root * /var/www/ardyagent.ardy-lab.it
+	encode gzip
+
+	# "DirectoryIndex ardy-michela-app.html" — riscrittura interna, l'URL resta "/"
+	rewrite / /ardy-michela-app.html
+
+	# ardy-config.php: mai servito (equivalente <Files "ardy-config.php"> Deny)
+	@configfile path /ardy-config.php
+	respond @configfile 403
+
+	# estensioni sensibili: log/txt/json/md/sql (equivalente FilesMatch riga 8 .htaccess)
+	@sensitive path_regexp sensitive \.(log|txt|json|md|sql)$
+	respond @sensitive 403
+
+	# librerie interne non richiamabili da web (equivalente FilesMatch riga 14 .htaccess)
+	@internal path_regexp internal ^/(ardy-db|ardy-auth|ardy-net|ardy-storage|ardy-img|ardy-web-memoria|ardy-wa-store|ardy-email|ardy-outreach-lib|ardy-briefing-lib|ardy-gbp|ardy-object-lib|ardy-b2-rimpatrio)\.php$
+	respond @internal 403
+
+	# niente esecuzione script nelle cartelle di upload — qui perché Caddy non
+	# legge gli .htaccess che ardyHardenUploadDir() scrive dentro queste cartelle
+	@uploads_exec path_regexp uploads_exec ^/(ardy-uploads|reels|preventivi_pdf|ardy-rate-limit)/.*\.(php[0-9]?|phtml|phar|cgi|pl|py|sh|asp|aspx|jsp)$
+	respond @uploads_exec 403
+
+	# directory listing: mai (equivalente "Options -Indexes")
+	file_server {
+		browse off
+	}
+
+	# URL "pulito" foto vendita per WooCommerce (equivalente RewriteRule .htaccess)
+	rewrite /object-img/([0-9]+)-([0-9]+)\.(jpe?g|png|webp|gif)$ /ardy-object-img.php?pid={re.1}&gid={re.2}
+
+	# MIME corretto per il manifest PWA
+	@webmanifest path *.webmanifest
+	header @webmanifest Content-Type "application/manifest+json"
+
+	# header di sicurezza globali (stessi di .htaccess)
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Content-Security-Policy "frame-ancestors 'self'; object-src 'none'"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	}
+
+	# cache: CSS/JS corti e rivalidabili, immagini/font lunghi
+	@shortcache path *.css *.js
+	header @shortcache Cache-Control "public, max-age=3600, must-revalidate"
+	@longcache path *.png *.jpg *.jpeg *.webp *.svg *.ico *.woff *.woff2
+	header @longcache Cache-Control "public, max-age=2592000"
+
+	# Basic Auth sull'area riservata — stesso elenco file di .htaccess (riga 107).
+	# Generare l'hash con: caddy hash-password --plaintext '<password-vera>'
+	# e sostituire qui sotto (NON committare la password in chiaro).
+	@protected path_regexp protected ^/(ardy-michela-app\.html|ardy-crm-api\.php|ardy-update-lead\.php|ardy-preventivo\.php|ardy-get-fasi\.php|ardy-pubblica-lavorazione\.php|ardy-pubblica-social\.php|ardy-crea-reel\.php|ardy-pubblica-reel\.php|ardy-lista-musica\.php|ardy-reel-template-api\.php|ardy-libreria-api\.php|ardy-lead-foto\.php|ardy-upload-video\.php|ardy-stats\.php|ardy-solleciti\.php|ardy-trasporti\.php|ardy-outreach\.html|ardy-outreach-api\.php|ardy-email-finder\.php|ardy-gcal\.php|ardy-gcal-auth\.php|ardy-import-preventivi\.php|ardy-import-scheda-pdf\.php|ardy-dossier\.php|ardy-grazie-consegna\.php|ardy-social-bozze\.php|ardy-social-foto\.php|ardy-genera-social\.php|ardy-conoscenza-appresa\.php|ardy-template-scheda-cliente\.html|ardy-elimina-cliente\.php|ardy-conversazioni\.php|ardy-email-cliente-api\.php|ardy-crea-faq\.php|ardy-fasi-bozza-api\.php|ardy-allega-preventivo\.php|ardy-estrai-preventivo-pdf\.php|ardy-archivia-persi\.php|ardy-sopralluoghi-api\.php|ardy-nota-settimanale-api\.php|ardy-todo-datati-api\.php|ardy-design-app\.html|ardy-progetti-api\.php|ardy-progetti-fasi-api\.php|ardy-progetti-file-api\.php|ardy-progetti-galleria-api\.php|ardy-pubblica-progetto\.php|ardy-pubblica-fase-progetto\.php|ardy-progetti-ai\.php|ardy-archivia-b2\.php|ardy-object-push\.php|ardy-object-foto-api\.php|ardy-guida-michela\.html|ardy-guida-design\.html|ardy-guida-outreach\.html|ardy-gbp-post\.php|ardy-gbp-check\.php|ardy-gbp-auth\.php|ardy-health\.php|ardy-places-prova\.php)$
+	basicauth @protected {
+		michela JDJhJDE0JHJlcGxhY2UtbWUtaGFzaC1wbGFjZWhvbGRlcg==
+	}
+
+	php_fastcgi unix//run/php/php8.3-fpm.sock
+	file_server
+}
+
+# n8n (già attivo sull'infra attuale, da riportare identico sul nuovo VPS).
+# Il container resta su localhost (vedi infra/docker-compose.n8n.yml): Caddy fa
+# da reverse proxy pubblico + TLS automatico, stessa forma del diagramma in
+# PIANO-MIGRAZIONE.md.
+n8n.ardy-lab.it {
+	reverse_proxy 127.0.0.1:5678
+}
+
+# dash.ardy-lab.it — Fase 5 del piano (dashboard dietro Cloudflare Access), non
+# ancora attivo: lasciato qui come promemoria, da scrivere quando si arriva a
+# quella fase (serve capire prima cosa sposta su questo host rispetto a
+# ardyagent.ardy-lab.it).
