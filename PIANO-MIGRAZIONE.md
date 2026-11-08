@@ -74,7 +74,16 @@ Confronto: dedicato €40–250/mese senza vantaggi reali per il tuo carico. cPa
 ## 4. Checklist di migrazione (per fasi, a basso rischio)
 
 ### Fase 0 — Preparazione (call con Edmondo)
-- [ ] Scegliere provider VPS (Hetzner = miglior prezzo/UE; Aruba/Serverplan = IT).
+- [ ] Scegliere provider VPS (Hetzner = miglior prezzo/UE; Aruba/Serverplan = IT). **In corso
+  (08/11):** configurazione su **Contabo** (Cloud VPS 6 — 6 vCPU/12GB/200GB SSD, ~€7,78/mese a
+  12 mesi) — non ancora acquistato.
+- [x] **Sistema operativo: Debian 12** (deciso 08/11, non più AlmaLinux). Il server attuale è
+  AlmaLinux 9 — l'idea iniziale era restare sulla stessa famiglia, ma quella continuità aveva
+  senso **grazie a cPanel** (gestisce SELinux, repo, versioni PHP). Tolto cPanel (è il punto di
+  questa migrazione), AlmaLinux "nudo" richiede gestire SELinux a mano + tre repo di terze parti
+  (Remi per PHP 8.3, RPMFusion per FFmpeg, COPR per Caddy). Lo stack scelto (Caddy + PHP-FPM +
+  Docker) è invece l'ecosistema dove Debian/Ubuntu sono i più supportati — niente SELinux da
+  debuggare, repo ufficiali diretti. `infra/setup-vps.sh` è scritto per Debian/Ubuntu.
 - [x] Aprire account **Backblaze B2** = FATTO. ⚠️ I bucket di backup già esistono **per server**:
   `UGLmico` (Server 1) e `micoper` (Server 2). Per il nuovo VPS resta da creare il bucket **media**
   (`ardy-media`) con chiave app dedicata; per i dump DB del nuovo server si può riusare l'account B2.
