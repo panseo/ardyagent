@@ -16,9 +16,17 @@ prima del cutover (Fase 3 del piano), non solo rivisto a occhio.
   Basic Auth, stesse librerie interne bloccate, stessi header di sicurezza, stessa rewrite
   per le immagini vendita WooCommerce. Da validare con `caddy validate` sul VPS.
 - **`setup-vps.sh`** — provisioning di un Debian 13 pulito: Caddy, PHP-FPM 8.3 + estensioni,
-  MariaDB, Docker, FFmpeg, firewall base, utente applicativo **con pool PHP-FPM dedicato**
-  (non quello "www" di default) e cartella `ardy-private/` (700) fuori web-root per config e
-  token. Da leggere ed eseguire a pezzi, non alla cieca.
+  MariaDB (bind-address esplicito su localhost), Docker, FFmpeg, utente applicativo **con pool
+  PHP-FPM dedicato** (non quello "www" di default) e cartella `ardy-private/` (700) fuori
+  web-root per config e token. Più la parte "perimetro": firewall (`ufw`, con rate-limit su
+  SSH), **hardening SSH** (solo chiave, niente root via password — con controllo di sicurezza
+  che si rifiuta di procedere se non trova già una chiave), **fail2ban** (ban automatico su
+  brute-force SSH) e **unattended-upgrades** (patch di sicurezza Debian automatiche, senza
+  riavvio automatico). Da leggere ed eseguire a pezzi, non alla cieca.
+- **`backup-b2.sh`** + **`ardy-backup.env.example`** — backup off-site su Backblaze B2 (dump DB
+  + `ardy-private/`), installato da `setup-vps.sh` come cron giornaliero. Richiede un remoto
+  `rclone` configurato e `/root/.ardy-backup.env` scritti a mano sul server (mai in questo
+  repo). Copre lo stesso ruolo del backup integrato cPanel che c'è oggi (che qui non esiste).
 - **`docker-compose.n8n.yml`** + **`n8n.env.example`** — n8n sul nuovo VPS, esposto solo su
   localhost (Caddy fa reverse proxy pubblico). Copiare `n8n.env.example` → `n8n.env`
   (non versionato) prima di avviarlo.
@@ -44,6 +52,10 @@ prima del cutover (Fase 3 del piano), non solo rivisto a occhio.
    Qualunque altro sito/web app che finisca su questo VPS in futuro va con lo stesso schema
    (utente + pool propri) — è il rischio trovato sul server attuale, dove due WordPress girano
    con lo stesso utente cPanel del gestionale (in migrazione altrove, non in questo repo).
+7. **Backup B2**: `backup-b2.sh` è pronto ma non testato — serve il remoto `rclone` verso B2 e
+   un utente MySQL dedicato a permessi ridotti (vedi il file stesso e `ardy-backup.env.example`).
+   Da lanciare a mano almeno una volta per verificare che il file arrivi davvero su B2, prima di
+   fidarsi del cron.
 
 ## Un rischio emerso scrivendo il Caddyfile
 
