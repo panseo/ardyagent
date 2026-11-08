@@ -247,6 +247,17 @@ Il backup integrato cPanel (attivo, giornaliero, account incluso) salva tutta la
     spostarlo in `ardy-private/` (va trovato chi lo scrive e reso configurabile come i token).
   - Ancora aperto: **8.7** (policy di retention).
 
+- **🖥️ Controllo protezioni VPS (08/11).** Confermato dal vivo: csf **v16.34** attivo + `lfd` active,
+MariaDB solo su `127.0.0.1:3306`, SSH root solo a chiave (`permitrootlogin without-password`,
+`passwordauthentication no`). Oggi i due siti WordPress `pigmentombg.com` e `omnialga.com` girano con
+lo **stesso utente cPanel `micoperibg`** del gestionale: la loro migrazione (insieme alle web app per i
+clienti di Ardy) è **già in corso in un'altra sessione**, non va gestita da qui. **Requisito da portare
+nella migrazione:** un utente di sistema / pool PHP-FPM **per ogni sito e web app**, e `ardy-private/`
+(password DB, API key, token Google) leggibile **solo** dall'utente del gestionale — così un WordPress
+compromesso non arriva ai dati dei clienti.
+  - Follow-up firewall ancora aperti da `ANALISI-FIREWALL-HOST.md` §7: egress tightening, `RESTRICT_SYSLOG`.
+  - Mai fatta una **prova di ripristino** del backup (vedi sezione Backup off-site).
+
 - **🛋️ Consulenza Interior Design (25/07, DEPLOYATO, test sul campo NON ancora fatto).** Webchat
 dedicata su `ardy-lab.it/interior-design` + sezione 🛋️ in scheda. Intervista guidata (permesso →
 cinque domande una alla volta → invito foto → dati anagrafici solo alla fine) → **💬 Riepilogo di
