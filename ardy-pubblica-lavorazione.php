@@ -35,6 +35,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // applicato, questo guard rifiuta comunque le richieste non autenticate.
 require_once __DIR__ . '/ardy-auth.php';
 ardyRequireAuth();
+// Tetto di spesa (SECURITY-AUDIT §9.12): ogni pubblicazione fa 2-3 chiamate Claude
+// e un'email al cliente. Si controlla qui all'ingresso e non accanto alle
+// chiamate, perché a quel punto le foto sono già caricate su WordPress e
+// fermarsi lascerebbe media orfani.
+require_once __DIR__ . '/ardy-costcap.php';
+ardyCostCap('ai');
 
 // -----------------------------------------------------------
 // 3. INPUT

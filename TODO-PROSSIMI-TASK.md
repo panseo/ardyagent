@@ -217,6 +217,22 @@ diventa prioritario con più utenti o se compaiono 504. Refactor: job in backgro
 
 ## ⏳ DA VERIFICARE DAL VIVO / AZIONI MANUALI
 
+- **🛡️ Chiusura rilievi sicurezza 9.12/9.13/9.14/10.5 (08/11, da deployare).** Dettagli in
+`SECURITY-AUDIT.md` §11. Dopo il deploy verificare: (1) un **preventivo PDF** completo (logo,
+copertina, foto prima/dopo, QR) identico a prima — mPDF ora non esce più in rete; (2) una
+**pubblicazione fase** normale; (3) un **"arricchisci tutti"** breve in Outreach; (4) nel log
+nessuna riga `ARDY VISITA: pagina non in elenco` per pagine legittime (il widget che chiama
+`ardy-visita.php` non è nel repo: se usa nomi diversi da `chat-lead` vanno aggiunti in
+`ARDY_VISITA_PAGINE`); (5) nelle prime settimane cercare `ARDY COSTCAP` nel log: se compare durante
+l'uso normale, alzare la soglia in `ARDY_COST_CAPS`. **8.6**: fase 1 FATTA l'08/11 — `ardy-config.php` vero
+in `/home/micoperibg/ardy-private/` (700/600), in `public_html` il ponte; provato (`ardy-visita` ok,
+dashboard ok); copia di sicurezza in `/root/ardy-config.php.bak`. Il backup non va toccato: in
+produzione è il **backup integrato cPanel** (attivo, giornaliero, account `micoperibg` incluso) che
+salva tutta la home, `ardy-private/` compresa; gli script `~/bin/ardy-*.sh` della guida non sono
+installati. **Fase 2 da fare dopo il merge della PR #142**: token Google in `ardy-private/` + costanti
+`GCAL_TOKEN_FILE`/`GBP_TOKEN_FILE`/`GBP_LOCATION_CACHE` nel config vero (README).
+Ancora aperto: **8.7** (policy di retention).
+
 - **🛋️ Consulenza Interior Design (25/07, DEPLOYATO, test sul campo NON ancora fatto).** Webchat
 dedicata su `ardy-lab.it/interior-design` + sezione 🛋️ in scheda. Intervista guidata (permesso →
 cinque domande una alla volta → invito foto → dati anagrafici solo alla fine) → **💬 Riepilogo di

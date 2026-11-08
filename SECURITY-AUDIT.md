@@ -208,7 +208,7 @@ questo giro non erano bug grossolani ma **incoerenze** nell'applicazione delle d
 | 8.3 | 🟠 Media | `ardy-migrate.php` eseguibile pubblicamente (DDL + errori DB in chiaro) | ✅ risolto |
 | 8.4 | 🟡 Bassa | `getMessage()` esposto al client (`archivia-persi`, `chiusura-sessioni`) | ✅ risolto |
 | 8.5 | 🟡 Bassa | `verify-client`: match sulle ultime 7 cifre + rate-limit su `REMOTE_ADDR` | ✅ risolto |
-| 8.6 | 🔵 Info | Token OAuth Google + `ardy-config.php` nella web-root | ⏳ aperto (infra) |
+| 8.6 | 🔵 Info | Token OAuth Google + `ardy-config.php` nella web-root | 🔧 config spostato (2026-11-08); token dopo il deploy — §11.5 |
 | 8.7 | 🔵 Info | Nessuna policy di retention/GDPR esplicita | ⏳ aperto (operativo) |
 
 ### 8.1 🟠 Difesa in profondità estesa a TUTTI gli endpoint riservati
@@ -290,9 +290,9 @@ precedenti; §2 di questo documento andrà aggiornato dopo).
 | 9.9 | 🟡 Bassa | `ardy-gcal-auth.php`: token OAuth stampato senza `htmlspecialchars` | ✅ risolto |
 | 9.10 | 🔵 Info | `osmHttpGet()` in `ardy-outreach-api.php`: redirect non limitati/ristretti a http(s) | ✅ risolto |
 | 9.11 | 🔵 Info | `composer.lock` non versionato → build mPDF non riproducibile | ✅ risolto |
-| 9.12 | 🟡 Bassa | Nessun rate-limit sugli endpoint AI/email costosi ma autenticati | ⏳ aperto (vedi nota) |
-| 9.13 | 🔵 Info | mPDF senza hardening esplicito anti-fetch remoto (oggi non sfruttabile) | ⏳ aperto (vedi nota) |
-| 9.14 | 🔵 Info | `ZipArchive` su DOCX/ODT (`ardy-progetti-ai.php`): rischio zip-bomb minimo, autenticato | ⏳ aperto (vedi nota) |
+| 9.12 | 🟡 Bassa | Nessun rate-limit sugli endpoint AI/email costosi ma autenticati | ✅ risolto (2026-11-08, §11) |
+| 9.13 | 🔵 Info | mPDF senza hardening esplicito anti-fetch remoto (oggi non sfruttabile) | ✅ risolto (2026-11-08, §11) |
+| 9.14 | 🔵 Info | `ZipArchive` su DOCX/ODT (`ardy-progetti-ai.php`): rischio zip-bomb minimo, autenticato | ✅ risolto (2026-11-08, §11) |
 
 ### Verifica live in produzione (2026-09-14)
 
@@ -416,7 +416,7 @@ inline, una CSP che lo blocchi richiede un refactor dedicato, fuori scope di un 
   audit. **Fix.** Generato (`mpdf/mpdf v8.3.1` — nessun advisory di sicurezza noto, verificato con
   `composer audit`), tolto da `.gitignore` e versionato; `vendor/` resta ignorato.
 
-### 9.12 – 9.14 🔵 Aperti (raccomandati, non applicati in questo giro)
+### 9.12 – 9.14 🔵 Aperti in questo giro — chiusi il 2026-11-08, vedi §11
 Lasciati intenzionalmente fuori scope perché toccano flussi live (alcuni innescati da cron/n8n) che
 non è prudente modificare alla cieca senza poter verificare il comportamento in produzione — a
 differenza dei fix sopra, tutti validati con `php -l` e/o test isolato riproducibile.
@@ -452,7 +452,7 @@ outreach) + ripasso di **tutti** i `.php` raggiungibili senza login (né nel blo
 | 10.2 | 🟠 Media | Webchat: `sposta_appuntamento` spostava il sopralluogo di chiunque dato il telefono | ✅ corretto |
 | 10.3 | 🟡 Bassa | Webchat: `cerca_contatto_outreach` restituiva note interne/stato e accettava ricerche "a strascico" | ✅ corretto |
 | 10.4 | 🟡 Bassa | `ardy-save-lead.php` pubblico poteva impostare `wp_post_id`/`wp_post_link` | ✅ corretto |
-| 10.5 | 🔵 Info | `ardy-visita.php` accetta qualunque nome pagina (statistiche inquinabili) | ⏳ aperto |
+| 10.5 | 🔵 Info | `ardy-visita.php` accetta qualunque nome pagina (statistiche inquinabili) | ✅ risolto (2026-11-08, §11) |
 
 ### 10.1 🟥 Scheda cliente presa dal solo numero di telefono
 **Problema.** Le schede create lato server hanno un session_id **deterministico**:
@@ -497,7 +497,7 @@ WhatsApp del mittente.
 `save-lead` (lo imposta la dashboard via `ardy-update-lead.php`, dietro login): ora viene ignorato
 nelle chiamate non interne.
 
-### 10.5 🔵 Aperto
+### 10.5 🔵 Aperto — chiuso il 2026-11-08, vedi §11
 `ardy-visita.php` registra qualunque `pagina` (solo caratteri filtrati): chiunque può creare righe e
 gonfiare i contatori. Nessun dato esposto; consigliata una whitelist delle pagine note.
 
@@ -505,3 +505,92 @@ gonfiare i contatori. Nessun dato esposto; consigliata una whitelist delle pagin
 rifiutato; link firmato valido → accettato; token falso o link di un'altra sessione → rifiutato;
 sessione web normale → accettata). **Da verificare in produzione** dopo il deploy: lead da link
 WhatsApp (`?lead=&tok=`) che salva e sposta il proprio appuntamento; nuovo cliente da dashboard.
+
+---
+
+## 11. Chiusura dei rilievi residui (2026-11-08) — 9.12, 9.13, 9.14, 10.5
+
+**Contesto.** Con gli agenti AI chi tenta un attacco non clicca: lancia cicli automatici e prova
+in serie i percorsi noti. Per questo i quattro rilievi "a bassa priorità" lasciati aperti nel quarto
+e nel quinto giro valeva la pena chiuderli. Restano aperti solo 8.6 (file sensibili nella web root:
+serve un intervento sul filesystem) e 8.7 (policy di retention: è una decisione operativa).
+
+| # | Fix | File |
+|---|---|---|
+| 9.12 | Tetto di spesa globale per tipo di operazione (`ardyCostCap()`), 429 prima della chiamata costosa | `ardy-costcap.php` (nuovo) + 15 endpoint |
+| 9.13 | mPDF senza rete: niente stream `http(s)`, e un client HTTP che rifiuta tutto | `ardy-preventivo.php` |
+| 9.14 | Lettura di `document.xml`/`content.xml` limitata a 8 MB decompressi | `ardy-progetti-ai.php` |
+| 10.5 | Elenco chiuso delle pagine contabili, estendibile da config | `ardy-visita.php` |
+
+Di passaggio: `ardy-enrich.php` (libreria, inclusa solo da `ardy-outreach-api.php`) mancava dal
+`FilesMatch` "Deny" dell'`.htaccess`, contro l'invariante delle librerie interne. Chiamato da web non
+faceva nulla (definisce solo funzioni), ma ora è negato come le altre, insieme al nuovo `ardy-costcap.php`.
+
+### 11.1 Tetto di spesa (9.12)
+`ardy-costcap.php` (libreria, nel `FilesMatch` "Deny") espone `ardyCostCap($secchio, $unità)`: due
+finestre mobili (1 h e 24 h) per secchio, contatore **globale** e non per IP (chi ha credenziali
+rubate cambia IP; lo scopo è limitare la spesa), file JSON con `flock` in `ARDY_RATE_LIMIT_DIR`.
+Se scatta: HTTP 429, `{success:false, ok:false, limite:true, error}` e `Retry-After`.
+
+| Secchio | Ora / giorno | Dove |
+|---|---|---|
+| `ai` | 60 / 300 | crea-faq (genera), estrai-preventivo-pdf, genera-social, import-scheda-pdf (extract), progetti-ai (tutti tranne `leggi_doc`), pubblica-lavorazione, pubblica-progetto (`crea`), crea-reel, preventivo (`mode=ai`), solleciti (`genera`), conoscenza-appresa (`distilla`), outreach `genera_template` |
+| `ai-enrich` | 200 / 1000 | outreach `enrich_contact` (non con `scope=google`, che è gratuito e ha già il tetto Places) |
+| `email` | 150 / 300 (unità = destinatari) | outreach `send_email`/`send_campaign`, email-cliente-api (`invia`), solleciti (`invia` con email), trasporti (`conferma`), grazie-consegna (solo da dashboard) |
+
+Scelte da non "correggere":
+- **Prima** dell'operazione, non dopo: in pubblica-lavorazione/pubblica-progetto il controllo è
+  all'ingresso perché più avanti le foto sono già su WordPress e fermarsi lascerebbe media orfani;
+  in solleciti è prima del WhatsApp, altrimenti partirebbe il WhatsApp ma non la registrazione.
+- Una **campagna** che sforerebbe non parte affatto (meglio che a metà).
+- **CLI esente** (cron/test sul server); `grazie-consegna` col segreto interno esente (flusso automatico).
+- **Fail-open** su errori di filesystem (si logga): un problema di permessi non deve fermare il lavoro.
+- Il batch "arricchisci tutti" di `ardy-outreach.html` si ferma al primo `limite:true`; il client
+  `ardy-mcp` trasforma il 429 in un errore esplicito "non ritentare".
+- Soglie ritoccabili in `ardy-config.php`: `define('ARDY_COST_CAPS', ['ai' => [100, 500]]);`.
+
+### 11.2 mPDF senza rete (9.13)
+`'whitelistStreamWrappers' => ['file']` (un `src`/`url()` http/https/ftp viene rifiutato prima del
+fetch) più `ArdyMpdfNoRemoteHttp` iniettato come `httpClient` nel container di mPDF (secondo livello:
+ogni richiesta lancia `InvalidArgumentException`, che mPDF intercetta → risorsa vuota + riga di log).
+Logo (file locale) e immagini `data:` non passano dalla rete e restano intatte.
+
+### 11.3 Zip-bomb (9.14)
+`getFromName($entry, DOC_XML_MAX)` legge al massimo 8 MB decompressi **qualunque cosa dichiari
+l'archivio** (la dimensione in `statName()` si può falsificare: serve solo al log). Troncare non
+perde nulla: il testo viene comunque tagliato a `DOC_TESTO_MAX` (12 000 caratteri).
+
+### 11.4 Pagine di `ardy-visita.php` (10.5)
+Elenco chiuso (`chat-lead`, l'unica etichettata in `ardy-stats.php`), estendibile con
+`define('ARDY_VISITA_PAGINE', [...])`. Una pagina fuori elenco riceve 200 `{success:false}` (il
+widget non deve mostrare errori) e il nome finisce troncato nel log, così una pagina legittima
+dimenticata si nota.
+
+**Verifica.** `php -l` su tutti i `.php` toccati; `npm run build` di `ardy-mcp`. Test isolati,
+riproducibili:
+- *tetto*: con soglia 3/ora la 4ª richiesta riceve 429; una "campagna" da 11 con soglia 10 viene
+  rifiutata per intero, una da 10 passa; **20 richieste parallele** con soglia 10 → esattamente 10
+  passano e 10 ricevono 429 (il `flock` regge);
+- *mPDF*: stesso HTML con `<img src="http://…">` e `background-image:url(http://…)` verso un server
+  locale → **2 richieste** con la configurazione vecchia, **0** con quella nuova, PDF generato in
+  entrambi i casi;
+- *zip-bomb*: DOCX da 305 KB che decompresso vale 300 MB → col codice vecchio memoria esaurita
+  (limite 256 MB), col nuovo picco di **26 MB** e testo estratto correttamente.
+
+**Da verificare in produzione** dopo il deploy: un preventivo PDF completo (logo, copertina, foto
+prima/dopo, QR) identico a prima; una pubblicazione fase; un "arricchisci tutti" breve.
+
+### 11.5 Config e token fuori dalla web root (8.6)
+**Codice.** `ardy-gcal.php`, `ardy-gcal-auth.php` e `ardy-gbp-auth.php` ora leggono/scrivono il token
+nel percorso indicato da `GCAL_TOKEN_FILE`/`GBP_TOKEN_FILE` se definite in `ardy-config.php`
+(`ardy-gbp.php` e `ardy-health.php` lo facevano già); senza costante il comportamento è quello di
+prima, quindi il deploy del codice non rompe nulla da solo.
+**Server.** Config, token e cache GBP in `/home/micoperibg/ardy-private/` (700/600, utente
+`micoperibg`); in `public_html` resta un `ardy-config.php` "ponte" di una riga senza segreti.
+Procedura e backup: README ("Config fuori da `public_html`") e `GUIDA-BACKUP-RESTORE.md`.
+**Fatto il 2026-11-08 (fase 1):** config vero spostato, ponte in `public_html`, provato con
+`ardy-visita.php` (`{"success":true}`, quindi DB raggiungibile) e con la dashboard. Il backup integrato
+cPanel (attivo, giornaliero, account incluso) copre già `~/ardy-private/`.
+**Verifica:** `php -l` sui 3 file. Lo stato passa a ✅ quando lo spostamento è fatto e
+`ardy-health.php` mostra i due token "ok" dal nuovo percorso.
+

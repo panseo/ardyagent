@@ -199,6 +199,9 @@ try {
                 echo json_encode(['success' => false, 'error' => 'Indirizzo email del cliente mancante']);
                 exit();
             }
+            // Tetto sulle email in uscita (SECURITY-AUDIT §9.12).
+            require_once __DIR__ . '/ardy-costcap.php';
+            ardyCostCap('email');
             $st = $db->prepare("SELECT nome, cognome, codice_accesso FROM clienti WHERE session_id = ? LIMIT 1");
             $st->execute([$sessionId]);
             $cli    = $st->fetch();

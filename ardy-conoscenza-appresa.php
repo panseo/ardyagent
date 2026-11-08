@@ -240,6 +240,9 @@ if (PHP_SAPI !== 'cli'
             $ids = $in['fase_ids'] ?? [];
             $ids = array_values(array_unique(array_filter(array_map('intval', (array)$ids))));
             if (!$ids) { echo json_encode(['success' => false, 'error' => 'Seleziona almeno una fase.']); exit(); }
+            // Tetto di spesa AI (SECURITY-AUDIT §9.12): la distillazione chiama Claude.
+            require_once __DIR__ . '/ardy-costcap.php';
+            ardyCostCap('ai');
 
             $place = implode(',', array_fill(0, count($ids), '?'));
             $st = $db->prepare("SELECT fase_nome, testo_breve, testo_generato FROM fasi WHERE id IN ($place)");

@@ -75,6 +75,9 @@ $mobile   = trim((string)($cliente['mobile']   ?? ''));
 $servizio = trim((string)($cliente['servizio'] ?? ''));
 
 if ($action === 'genera') {
+    // Tetto di spesa AI (SECURITY-AUDIT §9.12): solo l'azione che chiama Claude.
+    require_once __DIR__ . '/ardy-costcap.php';
+    ardyCostCap('ai');
     echo json_encode(azioneGenera($db, $sessionId, $mobile, $servizio));
     exit();
 }

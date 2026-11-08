@@ -62,6 +62,9 @@ try {
         ? $fase['testo_breve']
         : (string)($fase['testo_generato'] ?? '');
 
+    // Tetto di spesa AI (SECURITY-AUDIT §9.12): conta solo quando si genera davvero.
+    require_once __DIR__ . '/ardy-costcap.php';
+    ardyCostCap('ai');
     $testoSocial = generaCaptionSocial($note, (string)($fase['fase_nome'] ?? ''));
     if ($testoSocial === '') {
         http_response_code(502);

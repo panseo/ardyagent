@@ -43,6 +43,7 @@ ardyagent.ardy-lab.it/
 ├── ardy-sopralluoghi-api.php  # API sopralluoghi MULTIPLI per cliente (lista/salva/elimina) — dashboard
 ├── ardy-sopralluoghi-lib.php  # Logica condivisa sopralluoghi (calendario + "mirror") usata da API e da Sole WhatsApp
 ├── ardy-db.php                # Connessione DB condivisa
+├── ardy-costcap.php           # Libreria: tetto di spesa orario/giornaliero sugli endpoint AI/email della dashboard (429 se sforato)
 ├── ardy-config.php            # ⚠️ NON in repo — credenziali DB
 ├── ardy-crm-api.php           # API CRM interna
 ├── ardy-dossier.php           # Dossier cliente in Markdown (clienti+preventivi+fasi+chat WA+chat web) per Sole/Michela
@@ -938,11 +939,52 @@ define('ARDY_INTERNAL_SECRET', '...'); // stringa casuale lunga
 > (15/ora, 50/giorno per IP). Senza il secret il salvataggio funziona comunque, ma le
 > chiamate del proxy ricadono sotto lo stesso limite per IP.
 
+### Tetto di spesa sugli endpoint della dashboard (opzionale, in `ardy-config.php`)
+```php
+// [per ora, per giorno] — si indicano solo i secchi da cambiare
+define('ARDY_COST_CAPS', ['ai' => [60, 300], 'ai-enrich' => [200, 1000], 'email' => [150, 300]]);
+```
+> `ardy-costcap.php` conta le operazioni costose della dashboard (generazioni AI, arricchimento
+> contatti, email in uscita: per le email l'unità è il destinatario) su finestre mobili di 1 h e 24 h,
+> con un contatore **unico** per tipo (non per IP). Sopra soglia l'endpoint risponde **429** prima di
+> spendere: è la rete di sicurezza nel caso le credenziali della dashboard trapelassero e qualcuno le
+> usasse in un ciclo automatico. I valori sopra sono i default; la CLI (cron) è esente. Se Michela vede
+> "Limite di sicurezza raggiunto" durante un uso normale, si alza la soglia qui. Dettagli e mappa
+> endpoint → secchio: `SECURITY-AUDIT.md` §11.1.
+
+### Pagine contate da `ardy-visita.php` (opzionale, in `ardy-config.php`)
+```php
+define('ARDY_VISITA_PAGINE', ['chat-lead']);   // default: solo 'chat-lead'
+```
+> Il contatore visite è pubblico: accetta solo i nomi in elenco, così nessuno può riempire
+> `visite_pagina` di righe inventate. Una pagina nuova col contatore va aggiunta qui (e in `$labels`
+> di `ardy-stats.php` per un'etichetta leggibile); quelle fuori elenco finiscono nel log come
+> `ARDY VISITA: pagina non in elenco`.
+
 ### File da creare manualmente sul server (NON in repo)
-- `ardy-config.php` — credenziali DB + API keys
-- `ardy-gcal-token.json` — token Google Calendar
+- `ardy-config.php` — credenziali DB + API keys (in `~/ardy-private/`, vedi sotto)
+- `ardy-gcal-token.json` — token Google Calendar (in `~/ardy-private/`, vedi sotto)
 - Cartella `preventivi_pdf/` con permessi 755
 - Cartella `ardy-uploads/` con permessi 755
+
+### Config e token fuori da `public_html` (SECURITY-AUDIT §8.6)
+Credenziali e token Google stanno in `/home/micoperibg/ardy-private/` (cartella 700, file 600,
+proprietario `micoperibg`), **fuori dalla web root**: se un giorno `.htaccess` non venisse applicato
+(cambio server, regola rotta) non sarebbero comunque scaricabili.
+- `public_html/.../ardy-config.php` è solo un **ponte** di una riga, così i ~50 file che fanno
+  `require_once __DIR__ . '/ardy-config.php'` non cambiano:
+  ```php
+  <?php
+  require_once '/home/micoperibg/ardy-private/ardy-config.php';
+  ```
+- Il config vero dichiara dove stanno i token (letti da `ardy-gcal.php`, `ardy-gcal-auth.php`,
+  `ardy-gbp.php`, `ardy-gbp-auth.php`, `ardy-health.php`; senza costante si ricade su `__DIR__`):
+  ```php
+  define('GCAL_TOKEN_FILE',    '/home/micoperibg/ardy-private/ardy-gcal-token.json');
+  define('GBP_TOKEN_FILE',     '/home/micoperibg/ardy-private/ardy-gbp-token.json');
+  define('GBP_LOCATION_CACHE', '/home/micoperibg/ardy-private/ardy-gbp-location.json');
+  ```
+- Backup/ripristino leggono e scrivono in `PRIVDIR` (vedi `GUIDA-BACKUP-RESTORE.md`).
 
 ---
 
