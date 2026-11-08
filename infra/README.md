@@ -15,9 +15,10 @@ prima del cutover (Fase 3 del piano), non solo rivisto a occhio.
 - **`Caddyfile`** — traduzione 1:1 di `.htaccess` per Caddy: stesso elenco di file sotto
   Basic Auth, stesse librerie interne bloccate, stessi header di sicurezza, stessa rewrite
   per le immagini vendita WooCommerce. Da validare con `caddy validate` sul VPS.
-- **`setup-vps.sh`** — provisioning di un Debian/Ubuntu pulito: Caddy, PHP-FPM 8.3 +
-  estensioni, MariaDB, Docker, FFmpeg, firewall base, utente applicativo. Da leggere ed
-  eseguire a pezzi, non alla cieca.
+- **`setup-vps.sh`** — provisioning di un Debian 13 pulito: Caddy, PHP-FPM 8.3 + estensioni,
+  MariaDB, Docker, FFmpeg, firewall base, utente applicativo **con pool PHP-FPM dedicato**
+  (non quello "www" di default) e cartella `ardy-private/` (700) fuori web-root per config e
+  token. Da leggere ed eseguire a pezzi, non alla cieca.
 - **`docker-compose.n8n.yml`** + **`n8n.env.example`** — n8n sul nuovo VPS, esposto solo su
   localhost (Caddy fa reverse proxy pubblico). Copiare `n8n.env.example` → `n8n.env`
   (non versionato) prima di avviarlo.
@@ -27,15 +28,22 @@ prima del cutover (Fase 3 del piano), non solo rivisto a occhio.
 
 ## Cosa manca per andare live (non automatizzabile da qui)
 
-1. **Scegliere il provider VPS** (Fase 0 del piano — Hetzner vs Aruba/Serverplan, ancora aperto).
-2. **Scrivere `ardy-config.php`** sul nuovo server — non versionato, contiene segreti: elenco
-   costanti in `SECURITY-AUDIT.md` §4. Nessun valore va copiato in `infra/`.
+1. **Provider VPS**: in corso su Contabo (Cloud VPS 6, Debian 13) — vedi `PIANO-MIGRAZIONE.md` §4 Fase 0.
+2. **Scrivere `ardy-config.php`** vero in `~ardy/ardy-private/` sul nuovo server (non in
+   docroot) — non versionato, contiene segreti: elenco costanti in `SECURITY-AUDIT.md` §4.
+   Nessun valore va copiato in `infra/`. In docroot resta solo il "ponte" di una riga (stesso
+   schema del server attuale, vedi README.md "Config e token fuori da public_html"). I file
+   sorgente per la Fase 3 sono in `~/ardy-private/` sul server attuale, non in `public_html`.
 3. **Hash della password Basic Auth** nel `Caddyfile` (`caddy hash-password --plaintext '...'`),
    al posto del placeholder che c'è ora.
 4. **DNS/Cloudflare**: TTL, puntamento IP, MX (vedi §4 Fase 4 e nota email del piano) — fuori
    dalla portata di questa sessione.
 5. **Dati** (Fase 3 del piano): dump MySQL dal vecchio server, media su B2 — vedi task "Media
    su Backblaze B2" in `TODO-PROSSIMI-TASK.md`.
+6. **Isolamento multi-sito**: `setup-vps.sh` crea un pool PHP-FPM dedicato per il gestionale.
+   Qualunque altro sito/web app che finisca su questo VPS in futuro va con lo stesso schema
+   (utente + pool propri) — è il rischio trovato sul server attuale, dove due WordPress girano
+   con lo stesso utente cPanel del gestionale (in migrazione altrove, non in questo repo).
 
 ## Un rischio emerso scrivendo il Caddyfile
 
