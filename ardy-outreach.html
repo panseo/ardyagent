@@ -492,7 +492,7 @@
               <button class="chip" onclick="selectBatchCamp(50)">50</button>
               <button class="chip" onclick="selectBatchCamp(100)">100</button>
               <button class="chip" onclick="selectBatchCamp(200)">200</button>
-              <button class="chip" onclick="selectBatchCamp(300)" title="Limite mensile Brevo">300 (max)</button>
+              <button class="chip" onclick="selectBatchCamp(300)" title="Limite Brevo; occhio al tetto orario in ardy-costcap.php">300 (max)</button>
             </div>
           </div>
           <div class="contact-check-list" id="campContactList">
@@ -2253,13 +2253,21 @@ function toggleSelectAll() {
   updateCampCount();
 }
 
-// Seleziona i primi N destinatari del filtro corrente (sostituisce la selezione
-// esistente): utile per restare sotto il limite di invii mensile di Brevo (300).
+// Seleziona i primi N destinatari NON ANCORA CONTATTATI (stato 'da_contattare') del
+// filtro corrente, sostituendo la selezione esistente. Chi manda a lotti (es. 50/giorno)
+// ripreme lo stesso pulsante il giorno dopo: i destinatari di ieri sono ormai 'inviato'
+// (aggiornato da send_campaign) e vengono saltati in automatico, si riparte dai prossimi
+// in elenco (ordine stabile, ORDER BY nome in get_contacts) senza riselezionare a mano.
 function selectBatchCamp(n) {
   const checks = [...document.querySelectorAll('.camp-check:not(:disabled)')];
-  checks.forEach((c, i) => c.checked = i < n);
+  const daContattare = checks.filter(c => {
+    const contatto = (campContacts || []).find(x => String(x.id) === c.value);
+    return contatto && contatto.stato === 'da_contattare';
+  });
+  const scelti = new Set(daContattare.slice(0, n));
+  checks.forEach(c => c.checked = scelti.has(c));
   updateCampCount();
-  toast(`✓ Selezionati i primi ${Math.min(n, checks.length)} destinatari del filtro`, 'ok');
+  toast(`✓ Selezionati i primi ${Math.min(n, daContattare.length)} non ancora contattati`, 'ok');
 }
 
 function updateCampCount() {
