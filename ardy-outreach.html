@@ -486,8 +486,14 @@
             <button class="chip" id="campChipEmail" onclick="toggleCampEmail()">✉ SOLO CON EMAIL</button>
             <button class="chip" id="campChipTodo" onclick="toggleCampTodo()">● SOLO DA CONTATTARE</button>
           </div>
-          <div class="select-all-row">
+          <div class="select-all-row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
             <button class="btn-select-all" onclick="toggleSelectAll()">Seleziona/deseleziona tutti</button>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button class="chip" onclick="selectBatchCamp(50)">50</button>
+              <button class="chip" onclick="selectBatchCamp(100)">100</button>
+              <button class="chip" onclick="selectBatchCamp(200)">200</button>
+              <button class="chip" onclick="selectBatchCamp(300)" title="Limite mensile Brevo">300 (max)</button>
+            </div>
           </div>
           <div class="contact-check-list" id="campContactList">
             <div style="padding:16px;color:var(--text-dim);font-size:13px;">Seleziona un filtro per vedere i contatti</div>
@@ -2245,6 +2251,15 @@ function toggleSelectAll() {
   const allChecked = [...checks].every(c => c.checked);
   checks.forEach(c => c.checked = !allChecked);
   updateCampCount();
+}
+
+// Seleziona i primi N destinatari del filtro corrente (sostituisce la selezione
+// esistente): utile per restare sotto il limite di invii mensile di Brevo (300).
+function selectBatchCamp(n) {
+  const checks = [...document.querySelectorAll('.camp-check:not(:disabled)')];
+  checks.forEach((c, i) => c.checked = i < n);
+  updateCampCount();
+  toast(`✓ Selezionati i primi ${Math.min(n, checks.length)} destinatari del filtro`, 'ok');
 }
 
 function updateCampCount() {

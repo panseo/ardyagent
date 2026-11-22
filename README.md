@@ -711,7 +711,10 @@ stesso login). API: `ardy-outreach-api.php` (routing per `action`); tabelle `out
 - **📝 Template email** generati/riscritti con AI (`genera_template`), salvati in `outreach_template`
   (`save_template` / `init_templates`).
 - **✉ Invio**: singola email (`send_email`) o **campagna** di massa (`send_campaign`) via Brevo, con
-  **unsubscribe** (`unsubscribe`) e link di disiscrizione (`ardy-unsubscribe.php`).
+  **unsubscribe** (`unsubscribe`) e link di disiscrizione (`ardy-unsubscribe.php`). Nella tab Campagna,
+  oltre a "Seleziona/deseleziona tutti", dei pulsanti **50/100/200/300** selezionano i primi N destinatari
+  del filtro corrente (sostituendo la selezione) — comodo per restare sotto il limite di invii mensile
+  del piano Brevo (300) senza doverli spuntare a mano.
 - **🤝 Promozione stato**: un contatto può diventare **partner** (`promote_partner`) o **cliente**
   (`promote_client`).
 
