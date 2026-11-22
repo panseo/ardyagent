@@ -77,6 +77,25 @@ headless on-demand. File: `ardy-enrich.php` (`ardyEnrichScrapeSite`, `ardyEnrich
 
 ---
 
+## 📤 Campagne outreach — pulsanti 50/100/200/300 vs tetto orario email
+
+Aggiunti in tab Campagna (`ardy-outreach.html`) pulsanti che selezionano i primi N destinatari
+**non ancora contattati** (stato `da_contattare`) del filtro corrente — così chi invia a lotti (es.
+50/giorno) può ripremere lo stesso pulsante il giorno dopo e ripartire da dove aveva lasciato, senza
+riselezionare a mano: chi ha già ricevuto l'email passa a `inviato` e viene saltato in automatico.
+
+- [ ] **Conflitto noto, lasciato così per ora (deciso con Michela)**: il tetto di sicurezza orario
+del secchio `email` in `ardy-costcap.php` è **150/ora** (giornaliero 300) — un invio da 300 in un
+colpo solo supera subito la soglia oraria e viene bloccato con 429, anche se rientra in quella
+giornaliera. Per spedire 300 destinatari servono due invii da ≤150 a più di un'ora di distanza,
+oppure va alzato l'orario del secchio `email` in `ardy-config.php` sul server (non versionato):
+`define('ARDY_COST_CAPS', ['email' => [300, 300]]);`
+- [ ] **Da chiarire**: il commento in `ardy-costcap.php` assume piano Brevo **300/giorno**, Michela
+invece parla di limite **mensile**. Da questo dipende se "300 (max)" va usato una volta al mese o
+ripetibile ogni giorno — non toccare le soglie finché non è chiaro.
+
+---
+
 ## 🗺️ STANDBY — Ricerca OSM: timeout Overpass su raggi ampi
 
 Con raggio 1 km funziona; su raggi ampi Overpass va in timeout. **Google funziona bene.** Fix deployato

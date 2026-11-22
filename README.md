@@ -713,8 +713,11 @@ stesso login). API: `ardy-outreach-api.php` (routing per `action`); tabelle `out
 - **✉ Invio**: singola email (`send_email`) o **campagna** di massa (`send_campaign`) via Brevo, con
   **unsubscribe** (`unsubscribe`) e link di disiscrizione (`ardy-unsubscribe.php`). Nella tab Campagna,
   oltre a "Seleziona/deseleziona tutti", dei pulsanti **50/100/200/300** selezionano i primi N destinatari
-  del filtro corrente (sostituendo la selezione) — comodo per restare sotto il limite di invii mensile
-  del piano Brevo (300) senza doverli spuntare a mano.
+  **non ancora contattati** (stato `da_contattare`) del filtro corrente (sostituendo la selezione),
+  in ordine stabile (`ORDER BY nome` in `get_contacts`) — comodo per inviare a lotti (es. 50/giorno):
+  chi ha già ricevuto l'email passa a `inviato` e viene saltato, si riprende sempre dai prossimi in
+  elenco. ⚠️ Il tetto orario di `ardy-costcap.php` sul secchio `email` (150/ora) blocca comunque un
+  invio da 300 in un colpo solo — vedi TODO.
 - **🤝 Promozione stato**: un contatto può diventare **partner** (`promote_partner`) o **cliente**
   (`promote_client`).
 
