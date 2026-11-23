@@ -646,7 +646,9 @@ separati). Le pagine dei clienti in `lavori-in-corso` restano come sono e conviv
 introduzione + scheda (marcatori `<!--ardy-pezzo-intro-->`, riscritto a ogni pubblicazione) e un
 blocco per capitolo (`<!-- ardy-fase-ID -->`, stesso stile delle fasi cliente). Prima foto =
 immagine in evidenza. I blocchi dei capitoli eliminati spariscono alla pubblicazione successiva.
-Titolo del post = titolo del pezzo.
+Titolo del post = titolo del pezzo. **Commenti chiusi** (per le domande c'è Sole). L'immagine in evidenza
+resta impostata (anteprime, condivisioni, og:image) ma **nella pagina è nascosta** con una regola CSS nel
+blocco introduzione, perché Divi la ripeterebbe uguale alla prima foto del primo capitolo.
 
 ### Sole sulla pagina del pezzo
 Il widget (`ardy-widget-lavorazione.js`) legge i tag del post: con `storia-pezzo` salta la scelta
@@ -661,7 +663,11 @@ che dal 23/11 agisce solo sulle pagine col tag `storia-pezzo`.
 "Bottega" (23/11, disegnato prima sul canvas Claude Design "Racconta — nuovo aspetto"): chiaro e caldo
 perché si usa in laboratorio con tanta luce; carta, noce e ottone (token in `:root`), titoli Fraunces,
 metro da falegname sotto l'intestazione, stati come timbri, capitoli come tappe lungo un filo, foto
-come stampe sul banco, icone SVG a tratto invece delle emoji. In ingresso la **foto della bottega**:
+come stampe sul banco, icone SVG a tratto invece delle emoji. Logo di Ardy (`assets/logo.png`) accanto a
+"Racconta", colorato noce con una maschera CSS. Nel pezzo il riquadro **"Scheda, introduzione e Google"**
+sta subito sotto il titolo, con un timbro che dice se la pagina è pronta per Google. Su **desktop**
+(≥900px) il capitolo va su due colonne: a sinistra la foto grande con le miniature sotto (si sceglie
+cliccando), a destra nota, Sole e testo; sul telefono resta una colonna con le foto-stampa. In ingresso la **foto della bottega**:
 file `assets/racconta-bottega.jpg` (oggi una foto del laboratorio presa da Instagram, 866×566: da
 sostituire con uno scatto ~1600px con lo stesso nome); se il file manca, al suo posto c'è un disegno a
 tratto del banco.
