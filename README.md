@@ -726,6 +726,10 @@ Sempre **manuale**: niente esce da solo, ogni canale ha il suo bottone e "Salva 
 - **Storico** in `pezzi_social` (una riga per capitolo e canale; `fase_id` NULL = reel): prima di
   pubblicare si salva sempre la bozza (`ardy-pezzi-api.php`, `mode:'social_salva'`, che ritorna anche
   gli avvisi anonimato), poi si registra l'esito. Timbri sulle card ("Facebook 23/11", "Google in attesa").
+- **Anteprima prima di ogni pubblicazione** (al posto della conferma "Pubblico?"): finestra con la card del
+  canale come apparirà, a grandi linee (Facebook con griglia foto e link, Instagram con foto 4:5 e testo
+  tagliato a 125 caratteri, Google con foto e "Scopri di più", reel in cornice 9:16 col video che gira e
+  il testo completo sotto). "Torna a modificare" non pubblica nulla; "Pubblica adesso" invia.
 - Instagram accetta foto tra 4:5 e 1.91:1: le foto molto verticali del telefono possono essere rifiutate.
 
 ---

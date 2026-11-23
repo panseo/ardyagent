@@ -153,6 +153,36 @@
   .faq-voce textarea { min-height: 70px; }
   .scelta { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 15px; color: var(--inchiostro); }
   .scelta input { width: 22px; height: 22px; accent-color: var(--noce); }
+  /* Anteprima prima di pubblicare: come apparirà il post su ogni canale. Indicativa:
+     l'impaginazione finale la decide la piattaforma. */
+  .anteprima { position: fixed; inset: 0; z-index: 30; background: rgba(43,30,22,.55); display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 16px; }
+  .anteprima-foglio { width: 100%; max-width: 460px; background: var(--carta); border-radius: 18px; padding: 16px; margin: auto 0; box-shadow: 0 10px 40px rgba(0,0,0,.3); }
+  .anteprima-foglio h2 { font: 500 20px/1.2 'Fraunces', serif; color: var(--noce-scuro); margin: 2px 0 4px; }
+  .anteprima-canale { margin: 16px 0 6px; }
+  .mock { background: #fff; color: #1c1e21; border: 1px solid #dddfe2; border-radius: 10px; overflow: hidden; font: 14px/1.4 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  .mock-testa { display: flex; align-items: center; gap: 8px; padding: 10px 12px; }
+  .mock-avatar { width: 36px; height: 36px; border-radius: 50%; background: #0e0e0e; display: flex; align-items: center; justify-content: center; flex: none; }
+  .mock-avatar span { width: 14px; height: 21px; background: #c8a96e; -webkit-mask: url(assets/logo.png) center / contain no-repeat; mask: url(assets/logo.png) center / contain no-repeat; }
+  .mock-nome { font-weight: 600; font-size: 14px; } .mock-sotto { font-size: 12px; color: #65676b; }
+  .mock-testo { padding: 0 12px 10px; white-space: pre-wrap; word-wrap: break-word; }
+  .mock-testo .altro { color: #65676b; font-weight: 600; }
+  .mock-foto { display: grid; gap: 2px; }
+  .mock-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .mock-foto.n1 img { aspect-ratio: 4 / 3; }
+  .mock-foto.n2 { grid-template-columns: 1fr 1fr; } .mock-foto.n2 img { aspect-ratio: 1; }
+  .mock-foto.n3 { grid-template-columns: 1fr 1fr; } .mock-foto.n3 img:first-child { grid-column: 1 / 3; aspect-ratio: 2 / 1; } .mock-foto.n3 img { aspect-ratio: 1; }
+  .mock-foto.n4 { grid-template-columns: 1fr 1fr; } .mock-foto.n4 img { aspect-ratio: 1; }
+  .mock-link { padding: 8px 12px; background: #f0f2f5; font-size: 12px; color: #65676b; border-top: 1px solid #dddfe2; }
+  .mock-azioni { display: flex; justify-content: space-around; padding: 8px; border-top: 1px solid #dddfe2; color: #65676b; font-size: 13px; font-weight: 600; }
+  .mock-ig img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; display: block; }
+  .mock-ig .mock-testo { padding-top: 8px; }
+  .mock-google .mock-foto img { aspect-ratio: 4 / 3; }
+  .mock-bottone { margin: 4px 12px 12px; display: inline-block; padding: 8px 14px; border: 1px solid #dadce0; border-radius: 18px; color: #1a73e8; font-weight: 600; font-size: 13px; }
+  .mock-reel { position: relative; width: 100%; max-width: 260px; margin: 0 auto; aspect-ratio: 9 / 16; background: #000; border-radius: 14px; overflow: hidden; }
+  .mock-reel video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .mock-reel-testo { position: absolute; left: 0; right: 0; bottom: 0; padding: 40px 12px 14px; color: #fff; font: 13px/1.35 -apple-system, sans-serif;
+                     background: linear-gradient(transparent, rgba(0,0,0,.65)); }
+  .anteprima-nota { font-size: 13px; color: var(--testo-dim); margin: 10px 2px 14px; }
   .toast { position: fixed; left: 16px; right: 16px; bottom: max(20px, env(safe-area-inset-bottom)); z-index: 20;
     background: var(--noce-scuro); color: #fbf6ec; border-radius: 14px; padding: 14px; font-size: 15px;
     display: none; max-width: 600px; margin: 0 auto; box-shadow: 0 6px 20px rgba(43,30,22,.25); }
@@ -355,6 +385,19 @@
     </div>
   </section>
 </main>
+
+<div class="anteprima" id="anteprima" hidden role="dialog" aria-modal="true" aria-labelledby="anteprimaTitolo">
+  <div class="anteprima-foglio">
+    <div class="etichetta">Anteprima</div>
+    <h2 id="anteprimaTitolo"></h2>
+    <div id="anteprimaCorpo"></div>
+    <p class="anteprima-nota">È un'anteprima indicativa: l'aspetto finale lo decide la piattaforma (tagli delle foto, "altro…" nei testi lunghi).</p>
+    <div class="riga">
+      <button class="btn" type="button" id="anteprimaNo">Torna a modificare</button>
+      <button class="btn btn-noce" type="button" id="anteprimaSi">Pubblica adesso</button>
+    </div>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -562,7 +605,7 @@ async function generaSocial() {
   var j = await api(AI, { mode: 'social', pezzo_id: pezzo.id, fase_id: socialFase.id });
   $('sGenera').hidden = true;
   if (!j.success) return;
-  $('fbTesto').value = j.facebook; $('gTesto').value = j.google;
+  $('fbTesto').value = j.facebook || ''; $('gTesto').value = j.google || '';
   if (j.avvisi && j.avvisi.length) toast('⚠ Controlla: ' + escHtml(j.avvisi.join('; ')), 6000);
 }
 $('btnRigeneraSocial').onclick = async function () {
@@ -589,7 +632,10 @@ document.querySelector('#vSocial').addEventListener('click', async function (e) 
   if (!pubblicaOra) { b.disabled = false; toast('Salvato per dopo'); await caricaPezzo(pezzo.id); apriSocial(socialFase.id); return; }
   if (bz.avvisi && bz.avvisi.length && !confirm('Attenzione, nel testo ' + bz.avvisi.join('; ') + '.\n\nPubblico lo stesso?')) { b.disabled = false; return; }
   var dove = canale === 'facebook' ? (opz.instagram ? 'Facebook e Instagram' : 'Facebook') : 'Google';
-  if (!confirm('Pubblico adesso su ' + dove + '?')) { b.disabled = false; return; }
+  var anteprima = canale === 'facebook'
+    ? anteprimaFacebook(testo, foto, pezzo.wp_post_link) + (opz.instagram ? anteprimaInstagram(testo, foto) : '')
+    : anteprimaGoogle(testo, foto);
+  if (!await mostraAnteprima('Così uscirà su ' + dove, anteprima)) { b.disabled = false; return; }
   var etichetta = b.querySelector('span'); var prima = etichetta.textContent; etichetta.textContent = 'Pubblico…';
   var j = canale === 'facebook'
     ? await api(SOCIAL, { testo_social: testo, immagini: foto, post_link: pezzo.wp_post_link || '', mobile: pezzo.titolo, fase: socialFase.titolo,
@@ -603,6 +649,62 @@ document.querySelector('#vSocial').addEventListener('click', async function (e) 
   toast(esito === 'pubblicato' ? 'Pubblicato su ' + dove : 'Inviato a ' + dove + ': controlla che sia uscito', 6000);
   await caricaPezzo(pezzo.id); apriSocial(socialFase.id);
 });
+
+// ── Anteprime ──
+// Prima di ogni pubblicazione si vede come apparirà il post: è la conferma, al posto
+// della domanda "Pubblico?". Riproduce a grandi linee le card di ogni canale; i testi
+// lunghi si tagliano dove li taglia la piattaforma ("altro…").
+var NOMI = { facebook: 'Ardy', instagram: 'ardy.lab', google: 'Ardy di Michela Panella' };
+function mostraAnteprima(titolo, html, etichettaSi) {
+  $('anteprimaTitolo').textContent = titolo;
+  $('anteprimaCorpo').innerHTML = html;
+  $('anteprimaSi').textContent = etichettaSi || 'Pubblica adesso';
+  $('anteprima').hidden = false;
+  document.body.style.overflow = 'hidden';
+  return new Promise(function (ok) {
+    function chiudi(esito) {
+      $('anteprima').hidden = true; document.body.style.overflow = '';
+      $('anteprimaCorpo').querySelectorAll('video').forEach(function (v) { v.pause(); });
+      $('anteprimaSi').onclick = $('anteprimaNo').onclick = null; ok(esito);
+    }
+    $('anteprimaSi').onclick = function () { chiudi(true); };
+    $('anteprimaNo').onclick = function () { chiudi(false); };
+  });
+}
+function testoTagliato(t, max) {
+  t = String(t || '');
+  return t.length > max ? escHtml(t.slice(0, max).replace(/\s+\S*$/, '')) + '… <span class="altro">altro</span>' : escHtml(t);
+}
+function testaMock(canale, sotto) {
+  return '<div class="mock-testa"><div class="mock-avatar"><span></span></div><div><div class="mock-nome">' + escHtml(NOMI[canale]) + '</div>'
+    + '<div class="mock-sotto">' + escHtml(sotto) + '</div></div></div>';
+}
+function anteprimaFacebook(testo, foto, link) {
+  var n = Math.min(foto.length, 4);
+  return '<div class="anteprima-canale etichetta">Facebook</div><div class="mock">' + testaMock('facebook', 'Adesso · Pubblico')
+    + '<div class="mock-testo">' + testoTagliato(testo, 480) + '</div>'
+    + (n ? '<div class="mock-foto n' + n + '">' + foto.slice(0, n).map(function (u) { return '<img src="' + escHtml(u) + '" alt="">'; }).join('') + '</div>' : '')
+    + (link ? '<div class="mock-link">' + escHtml(link.replace(/^https?:\/\//, '').replace(/\/$/, '')) + '</div>' : '')
+    + '<div class="mock-azioni"><span>Mi piace</span><span>Commenta</span><span>Condividi</span></div></div>';
+}
+function anteprimaInstagram(testo, foto) {
+  return '<div class="anteprima-canale etichetta">Instagram</div><div class="mock mock-ig">' + testaMock('instagram', 'Roma')
+    + (foto[0] ? '<img src="' + escHtml(foto[0]) + '" alt="">' : '')
+    + '<div class="mock-testo"><strong>' + escHtml(NOMI.instagram) + '</strong> ' + testoTagliato(testo, 125) + '</div></div>';
+}
+function anteprimaGoogle(testo, foto) {
+  return '<div class="anteprima-canale etichetta">Google Business</div><div class="mock mock-google">' + testaMock('google', 'Aggiornamento · adesso')
+    + (foto[0] ? '<div class="mock-foto n1"><img src="' + escHtml(foto[0]) + '" alt=""></div>' : '')
+    + '<div class="mock-testo" style="padding-top:10px">' + testoTagliato(testo, 280) + '</div>'
+    + '<span class="mock-bottone">Scopri di più</span></div>';
+}
+function anteprimaReel(video, testo) {
+  return '<div class="anteprima-canale etichetta">Reel Instagram</div><div class="mock-reel">'
+    + '<video src="' + escHtml(video) + '" autoplay muted loop playsinline></video>'
+    + '<div class="mock-reel-testo"><strong>' + escHtml(NOMI.instagram) + '</strong> ' + testoTagliato(testo, 90) + '</div></div>'
+    + '<div class="anteprima-canale etichetta" style="margin-top:14px">Testo completo</div>'
+    + '<div class="mock"><div class="mock-testo" style="padding-top:10px">' + escHtml(testo) + '</div></div>';
+}
 
 // ── Reel per Instagram ──
 // Uno per pezzo, montato sul server (FFmpeg) dalle foto dei capitoli già sul sito.
@@ -648,7 +750,7 @@ $('btnReelPubblica').onclick = async function () {
   var bz = await salvaSocial('reel', 'bozza', testo, r.media, r.opzioni, null);
   if (!bz.success) return;
   if (bz.avvisi && bz.avvisi.length && !confirm('Attenzione, nel testo ' + bz.avvisi.join('; ') + '.\n\nPubblico lo stesso?')) return;
-  if (!confirm('Pubblico adesso il reel su Instagram?')) return;
+  if (!await mostraAnteprima('Così uscirà il reel', anteprimaReel(r.media[0], testo))) return;
   var btn = this, et = btn.querySelector('span'); btn.disabled = true; et.textContent = 'Pubblico…';
   var j = await api(REEL_PUB, { reel_url: r.media[0], caption: testo, mobile: pezzo.titolo });
   btn.disabled = false; et.textContent = 'Pubblica su Instagram';
