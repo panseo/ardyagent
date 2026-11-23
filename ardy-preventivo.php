@@ -40,6 +40,19 @@ if (!file_exists(MPDF_VENDOR)) {
 }
 require_once MPDF_VENDOR;
 
+/**
+ * Client HTTP per mPDF che rifiuta ogni richiesta (SECURITY-AUDIT §9.13).
+ * Lancia InvalidArgumentException perché è quella che AssetFetcher intercetta:
+ * la risorsa remota risulta semplicemente vuota (immagine mancante) invece di
+ * far fallire l'intero PDF, e il tentativo resta nel log.
+ */
+class ArdyMpdfNoRemoteHttp implements \Mpdf\Http\ClientInterface {
+    public function sendRequest(\Psr\Http\Message\RequestInterface $request) {
+        error_log('ARDY PREVENTIVO: mPDF ha tentato un fetch remoto, bloccato: ' . $request->getUri());
+        throw new \InvalidArgumentException('Fetch remoto disabilitato');
+    }
+}
+
 $mode = $_GET['mode'] ?? 'download';
 
 // ─── Cambio stato preventivo (MUTAZIONE) ────────────────────────────────────────
@@ -200,6 +213,9 @@ if ($mode === 'ai') {
         echo json_encode(['error' => 'Chiave API non configurata sul server.']);
         exit;
     }
+    // Tetto di spesa AI (SECURITY-AUDIT §9.12).
+    require_once __DIR__ . '/ardy-costcap.php';
+    ardyCostCap('ai');
     $prompt  = trim($_POST['prompt']    ?? '');
     $oggetto = trim($_POST['oggetto']   ?? '');
     $vociTxt = trim($_POST['voci_desc'] ?? '');
@@ -412,7 +428,19 @@ if (!$pdfCached) {
                 ],
             ],
             'default_font'      => 'playfairdisplay',
-        ]);
+            // Niente fetch remoto (SECURITY-AUDIT §9.13). Ogni immagine del
+            // preventivo è un file locale (logo) o un data: URI già validato da
+            // parseImgDataUris(): mPDF non ha motivo di uscire in rete. Oggi
+            // nessun input utente arriva a WriteHTML() come URL, ma senza questo
+            // blocco un futuro <img src="http://..."> o url() costruito da input
+            // farebbe fare a mPDF richieste verso host arbitrari (SSRF, anche
+            // verso la rete interna del server). Due livelli: niente stream
+            // http/https/ftp accettati come sorgente, e comunque un client HTTP
+            // che rifiuta ogni richiesta (vedi ArdyMpdfNoRemoteHttp).
+            'whitelistStreamWrappers' => ['file'],
+        ], new \Mpdf\Container\SimpleContainer([
+            'httpClient' => new ArdyMpdfNoRemoteHttp(),
+        ]));
 
         // CSS comune a tutte le pagine
         $css = buildCss();

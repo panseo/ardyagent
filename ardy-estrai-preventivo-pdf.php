@@ -29,6 +29,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit();
 }
 
+// Tetto di spesa AI (SECURITY-AUDIT §9.12): ogni richiesta è una chiamata Claude.
+require_once __DIR__ . '/ardy-costcap.php';
+ardyCostCap('ai');
+
 try {
     echo json_encode(estraiPreventivo());
 } catch (Throwable $e) {

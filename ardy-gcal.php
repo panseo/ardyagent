@@ -5,7 +5,10 @@
 
 $GCAL_CLIENT_ID     = ARDY_GCAL_CLIENT_ID;
 $GCAL_CLIENT_SECRET = ARDY_GCAL_CLIENT_SECRET;
-$GCAL_TOKEN_FILE    = __DIR__ . '/ardy-gcal-token.json';
+// Percorso sovrascrivibile da ardy-config.php (GCAL_TOKEN_FILE): il token con
+// refresh_token Google (Calendar + Gmail) va tenuto FUORI dalla web root
+// (SECURITY-AUDIT §8.6). Il default resta qui per i server non ancora migrati.
+$GCAL_TOKEN_FILE    = defined('GCAL_TOKEN_FILE') ? GCAL_TOKEN_FILE : __DIR__ . '/ardy-gcal-token.json';
 $GCAL_CALENDAR_ID   = 'primary';
 
 // -----------------------------------------------------------

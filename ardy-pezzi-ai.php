@@ -30,6 +30,9 @@ require_once __DIR__ . '/ardy-auth.php';
 ardyRequireAuth();
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo json_encode(['success' => false, 'error' => 'Metodo non valido']); exit(); }
 set_time_limit(120);
+// Tetto di spesa AI (SECURITY-AUDIT §9.12): entrambi i mode chiamano Claude.
+require_once __DIR__ . '/ardy-costcap.php';
+ardyCostCap('ai');
 
 const PEZZI_AI_MAX_FOTO = 4;   // bastano a capire il pezzo; oltre si paga senza guadagno
 

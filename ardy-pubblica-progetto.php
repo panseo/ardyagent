@@ -39,6 +39,12 @@ $progettoId = (int) ($in['progetto_id'] ?? 0);
 $testo      = trim((string) ($in['testo'] ?? ''));
 if ($progettoId <= 0) { echo json_encode(['success' => false, 'error' => 'progetto mancante']); exit(); }
 if ($mode === 'crea' && $testo === '') { echo json_encode(['success' => false, 'error' => 'Testo dell\'articolo mancante']); exit(); }
+// Tetto di spesa AI (SECURITY-AUDIT §9.12): 'crea' genera il titolo con Claude.
+// All'ingresso e non accanto alla chiamata: a quel punto le immagini sono già su WP.
+if ($mode === 'crea') {
+    require_once __DIR__ . '/ardy-costcap.php';
+    ardyCostCap('ai');
+}
 
 // Blocco immagini delimitato: così «aggiorna immagini» lo sostituisce senza toccare
 // né l'introduzione né le fasi-racconto già accodate all'articolo.

@@ -32,5 +32,8 @@ Guida-Dashboard-Ardy-Michela.pdf
 # Sistema
 cgi-bin/
 
+# Segreti infra VPS (vedi infra/n8n.env.example per il template)
+infra/n8n.env
+
 # Stato locale Claude Code (worktree temporanee dei sub-agent, ecc.)
 .claude/

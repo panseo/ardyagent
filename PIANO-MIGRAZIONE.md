@@ -1,6 +1,8 @@
 # Piano di migrazione — infrastruttura Ardy
 
-**Data:** 2026-06-20 · **Stato:** bozza per la call con Edmondo (lun)
+**Data:** 2026-06-20 (bozza iniziale) · **Riprese 2026-11-08:** preparati gli artefatti tecnici
+di Fase 1-2 in `infra/` (Caddyfile, setup VPS, n8n) — vedi checklist sotto. Ancora da fare:
+scegliere il provider VPS e procedere con il provisioning reale (nessun accesso server da qui).
 **Decisioni prese:** VPS (non dedicato) · **senza cPanel** · email solo-invio via Brevo ·
 gestione server da terminale · Cloudflare confermato · **Backblaze B2** per media + backup.
 
@@ -72,7 +74,20 @@ Confronto: dedicato €40–250/mese senza vantaggi reali per il tuo carico. cPa
 ## 4. Checklist di migrazione (per fasi, a basso rischio)
 
 ### Fase 0 — Preparazione (call con Edmondo)
-- [ ] Scegliere provider VPS (Hetzner = miglior prezzo/UE; Aruba/Serverplan = IT).
+- [ ] Scegliere provider VPS (Hetzner = miglior prezzo/UE; Aruba/Serverplan = IT). **In corso
+  (08/11):** configurazione su **Contabo** (Cloud VPS 6 — 6 vCPU/12GB/200GB SSD, ~€7,78/mese a
+  12 mesi) — non ancora acquistato.
+- [x] **Sistema operativo: Debian 13** (deciso 08/11, non più AlmaLinux; Debian 12 scartato a
+  sua volta — vedi nota sotto). Il server attuale è
+  AlmaLinux 9 — l'idea iniziale era restare sulla stessa famiglia, ma quella continuità aveva
+  senso **grazie a cPanel** (gestisce SELinux, repo, versioni PHP). Tolto cPanel (è il punto di
+  questa migrazione), AlmaLinux "nudo" richiede gestire SELinux a mano + tre repo di terze parti
+  (Remi per PHP 8.3, RPMFusion per FFmpeg, COPR per Caddy). Lo stack scelto (Caddy + PHP-FPM +
+  Docker) è invece l'ecosistema dove Debian/Ubuntu sono i più supportati — niente SELinux da
+  debuggare, repo ufficiali diretti. **Perché 13 e non 12**: Debian 13 (Trixie) ha PHP 8.3
+  nativo nei repo di sistema, Debian 12 (Bookworm) ha 8.2 di default e servirebbe comunque un
+  repo di terze parti (Sury) — stesso ragionamento che ha escluso AlmaLinux. `infra/setup-vps.sh`
+  è scritto per Debian/Ubuntu.
 - [x] Aprire account **Backblaze B2** = FATTO. ⚠️ I bucket di backup già esistono **per server**:
   `UGLmico` (Server 1) e `micoper` (Server 2). Per il nuovo VPS resta da creare il bucket **media**
   (`ardy-media`) con chiave app dedicata; per i dump DB del nuovo server si può riusare l'account B2.
@@ -82,16 +97,53 @@ Confronto: dedicato €40–250/mese senza vantaggi reali per il tuo carico. cPa
 - [ ] Decidere chi amministra il server nel quotidiano.
 
 ### Fase 1 — Nuovo server (nulla in produzione ancora)
-- [ ] Provisioning VPS (Debian/Ubuntu LTS o AlmaLinux).
-- [ ] Firewall host (csf come ora, oppure nftables/ufw) — porte 22/80/443; SSH a chiave.
+- [x] **Artefatti pronti in `infra/`** (bozza, non eseguita/collaudata — serve il VPS reale):
+  `setup-vps.sh` (provisioning, incluso hardening SSH/fail2ban/unattended-upgrades),
+  `Caddyfile` (traduzione di `.htaccess`), `docker-compose.n8n.yml`, `backup-b2.sh` (backup
+  off-site). Dettagli e cosa manca ancora in `infra/README.md`.
+- [ ] Provisioning VPS (Debian/Ubuntu LTS o AlmaLinux) — `infra/setup-vps.sh`, da leggere ed
+  eseguire a pezzi, non alla cieca.
+- [ ] Firewall host + SSH a chiave. `infra/setup-vps.sh` copre: `ufw` (porte 22/80/443, SSH
+  rate-limitata), hardening `sshd` (solo chiave, niente root via password — con controllo che
+  si rifiuta di procedere senza una chiave già presente, per non restare chiusi fuori) e
+  **fail2ban** (ban automatico su brute-force SSH — sostituisce il ruolo di csf+lfd del server
+  attuale, che qui non c'è).
 - [ ] Installare Caddy + PHP-FPM 8.3 (con estensioni: pdo_mysql, gd, curl, mbstring, finfo, zip) + MariaDB + Docker.
-- [ ] FFmpeg (serve a `ardy-crea-reel.php`).
+  Coperto da `infra/setup-vps.sh` (MariaDB con `bind-address 127.0.0.1` esplicito, come sul
+  server attuale).
+- [ ] FFmpeg (serve a `ardy-crea-reel.php`). Coperto da `infra/setup-vps.sh`.
+- [ ] **Aggiornamenti di sicurezza automatici** (`unattended-upgrades`, senza riavvio
+  automatico) — su cPanel in parte se ne occupa il pannello, qui va abilitato a mano. Coperto
+  da `infra/setup-vps.sh`.
+- [ ] Scegliere provider VPS (Hetzner vs Aruba/Serverplan) — ancora aperto, vedi §1.
 
 ### Fase 2 — App
-- [ ] `git clone` del repo nella docroot.
-- [ ] Ricreare **`ardy-config.php`** (non versionato) con tutte le costanti (vedi `SECURITY-AUDIT.md` §4).
-- [ ] Permessi cartelle upload + `ardyHardenUploadDir` (no esecuzione script).
-- [ ] n8n: portare `docker-compose.yml` con le env (vedi TODO §n8n) — segreti come variabili d'ambiente.
+- [ ] `git clone` del repo nella docroot (poi `infra/deploy-vps.sh` per i deploy successivi).
+- [ ] Scrivere il vero **`ardy-config.php`** (non versionato, tutte le costanti in
+  `SECURITY-AUDIT.md` §4) in `~ardy/ardy-private/` — **non** in docroot. Nella docroot resta solo
+  il "ponte" di una riga (`require_once '/home/ardy/ardy-private/ardy-config.php';`), stesso
+  schema già in uso sul server attuale (README.md "Config e token fuori da public_html",
+  `SECURITY-AUDIT.md` §8.6). `infra/setup-vps.sh` crea la cartella (700); il contenuto va scritto
+  a mano. In Fase 3 i file si prendono da **`~/ardy-private/` sul server attuale**, non da
+  `public_html` (lì ormai c'è solo il ponte).
+- [ ] Permessi cartelle upload + `ardyHardenUploadDir` (no esecuzione script). ⚠️ **Attenzione**:
+  `ardyHardenUploadDir()` scrive un `.htaccess` nelle cartelle upload, che **Caddy non legge** —
+  su Caddy quella funzione non protegge più nulla da sola. `infra/Caddyfile` replica la stessa
+  protezione a livello di config (blocco `@uploads_exec`): va tenuto in sync a mano se cambiano
+  cartelle/estensioni in `ardyHardenUploadDir()`.
+- [ ] Pool PHP-FPM **dedicato** al gestionale (non quello "www" di default) — gira come utente
+  `ardy`, non `www-data`: `ardy-private/` e `ardy-rate-limit/` (rate-limit + tetto di spesa
+  `ardy-costcap.php`) restano leggibili/scrivibili solo da questo utente. Coperto da
+  `infra/setup-vps.sh`. **Vale anche per il futuro**: qualunque altro sito/web app che finisce su
+  questo VPS (i due WordPress attuali si stanno già migrando altrove, vedi
+  `TODO-PROSSIMI-TASK.md` "Controllo protezioni VPS") va con un utente/pool proprio, mai quello
+  del gestionale — è il rischio trovato sul server attuale (stesso utente cPanel per tutto).
+- [ ] Copiare `infra/Caddyfile` in `/etc/caddy/Caddyfile`, generare l'hash Basic Auth vero
+  (`caddy hash-password`) e validare (`caddy validate`) prima di qualunque test live. L'elenco
+  librerie interne bloccate (`@internal`) e il socket PHP-FPM sono già allineati alla sessione
+  sicurezza dell'08/11 (`ardy-costcap`/`ardy-enrich` inclusi, pool dedicato).
+- [ ] n8n: `infra/docker-compose.n8n.yml` + `infra/n8n.env` (da `n8n.env.example`, non versionato)
+  — segreti come variabili d'ambiente, esposto solo su localhost dietro Caddy.
 
 ### Fase 3 — Dati
 - [ ] Dump MySQL dal vecchio server → import in MariaDB nuova.
@@ -112,8 +164,11 @@ Confronto: dedicato €40–250/mese senza vantaggi reali per il tuo carico. cPa
   gemelli**, **bucket isolati per server** (Server 1 → `UGLmico`/prefisso `srv1`; Server 2 → `micoper`, chiave
   ristretta), lifecycle 30 gg + SSE-B2, destinazioni validate/abilitate. **n8n** (Server 2): volume
   `/opt/n8n/n8n_data` via rclone → `micoper/n8n/` (cron 04:00). Guida/script su repo `ardy-infra`
-  (`claude/modest-cori-hc1w1l`). ⚠️ Sul **nuovo** VPS (no-panel) il backup andrà **rifatto** in chiave no-cPanel
-  (dump DB cron + sync media), riusando lo stesso account/bucket B2. Dettagli e pending in `TODO-PROSSIMI-TASK.md`.
+  (`claude/modest-cori-hc1w1l`). Sul **nuovo** VPS (no-panel), **rifatto in chiave no-cPanel
+  (08/11)**: `infra/backup-b2.sh` (dump DB + `ardy-private/`, cron 04:00, stesso orario del
+  backup n8n) — **pronto ma non testato** (serve il remoto `rclone` verso B2 e un utente MySQL
+  dedicato, da scrivere a mano sul server, vedi `infra/README.md`). Dettagli e pending in
+  `TODO-PROSSIMI-TASK.md`.
 - [ ] **Email/MX**: sostituire l'MX attuale (`mx.ardy-lab.it` → vecchio server) con **Cloudflare Email Routing** (inoltro su Proton) o rimuoverlo. ✅ Invio Brevo già autenticato (DKIM/DMARC verificati) → non serve toccarlo.
 - [ ] Spegnere/dismettere il vecchio VPS.
 

@@ -12,7 +12,7 @@ $CLIENT_ID     = ARDY_GCAL_CLIENT_ID;
 $CLIENT_SECRET = ARDY_GCAL_CLIENT_SECRET;
 
 $REDIRECT_URI  = 'https://ardyagent.ardy-lab.it/ardy-gcal-auth.php';
-$TOKEN_FILE    = __DIR__ . '/ardy-gcal-token.json';
+$TOKEN_FILE    = defined('GCAL_TOKEN_FILE') ? GCAL_TOKEN_FILE : __DIR__ . '/ardy-gcal-token.json';   // vedi ardy-gcal.php (§8.6)
 
 if (isset($_GET['code'])) {
     // Verifica state anti-CSRF

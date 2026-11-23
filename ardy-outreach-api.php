@@ -6,6 +6,7 @@
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-auth.php';
+require_once __DIR__ . '/ardy-costcap.php';
 require_once __DIR__ . '/ardy-email.php';
 require_once __DIR__ . '/ardy-enrich.php';
 require_once __DIR__ . '/ardy-places.php';
@@ -178,6 +179,7 @@ try {
         case 'genera_template':
             $apiKey = defined('ARDY_API_KEY') ? ARDY_API_KEY : '';
             if ($apiKey === '') { echo json_encode(['success' => false, 'error' => 'AI non configurata']); break; }
+            ardyCostCap('ai');   // SECURITY-AUDIT §9.12
             $categoria = $input['categoria'] ?? 'antiquari';
             $obiettivo = trim($input['obiettivo'] ?? 'prima presentazione');
             $tono      = trim($input['tono']      ?? 'professionale');
@@ -428,6 +430,7 @@ try {
             $nome  = $contact['referente'] ?: $contact['nome'];
             $corpo = str_replace(['{{nome}}','{{azienda}}'], [$nome, $contact['nome']], $corpo);
 
+            ardyCostCap('email');   // SECURITY-AUDIT §9.12
             $result = brevoSend($contact['email'], $nome, $oggetto, $corpo, (int) $contact['id']);
             if ($result['ok']) {
                 $db->prepare("UPDATE outreach_contatti SET stato='inviato', data_contatto=CURDATE(), updated_at=NOW() WHERE id=:id")->execute([':id' => $cid]);
@@ -454,6 +457,10 @@ try {
             $stmt = $db->prepare("SELECT * FROM outreach_contatti WHERE id IN ($placeholders) AND email IS NOT NULL AND email != ''");
             $stmt->execute($ids);
             $contacts = $stmt->fetchAll();
+
+            // Tetto sulle email (SECURITY-AUDIT §9.12): la campagna pesa quanto i suoi
+            // destinatari e, se sforerebbe, non parte affatto — meglio che a metà.
+            ardyCostCap('email', count($contacts));
 
             $sent = 0; $failed = 0; $errors = [];
             foreach ($contacts as $c) {
@@ -682,6 +689,9 @@ try {
             // 'social' = solo i canali (bottone dedicato nel pannello Canali social);
             // 'google' = solo i passi gratuiti (sito + Places), senza agente a pagamento.
             $scope = in_array(($input['scope'] ?? ''), ['social', 'google'], true) ? $input['scope'] : 'tutto';
+            // Tetto di spesa (SECURITY-AUDIT §9.12): 'google' usa solo i passi gratuiti
+            // (sito + Places, che ha già il suo tetto giornaliero in ardy-places.php).
+            if ($scope !== 'google') ardyCostCap('ai-enrich');
             $res = ardyEnrichContact($contact, $apiKey, $model, $scope);
 
             // Per ogni campo proposto, allega anche il valore attuale (per il diff in UI).

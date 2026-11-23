@@ -18,6 +18,8 @@
 # contenuto web — e con node_modules dentro sarebbero migliaia di file esposti.
 # n8n/ è il codice dei nodi da incollare in n8n: servito da public_html sarebbe
 # leggibile da chiunque (i .js non sono bloccati da .htaccess come .json/.md).
+# infra/ è materiale per il nuovo VPS (Caddyfile, setup script...), non per
+# questo server cPanel — vedi infra/README.md e PIANO-MIGRAZIONE.md.
 
 set -euo pipefail
 
@@ -41,6 +43,7 @@ rsync -av \
   --exclude='.cpanel.yml' \
   --exclude='ardy-config.php' \
   --exclude='ardy-gcal-token.json' \
+  --exclude='ardy-gbp-token.json' \
   --exclude='ardy-gbp-location.json' \
   --exclude='ardy-uploads/' \
   --exclude='preventivi_pdf/' \
@@ -51,6 +54,7 @@ rsync -av \
   --exclude='wordpress-snippets/' \
   --exclude='ardy-mcp/' \
   --exclude='n8n/' \
+  --exclude='infra/' \
   --exclude='CLAUDE.md' \
   --exclude='error_log' \
   --exclude='*.log' \

@@ -38,6 +38,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 try {
     if ($mode === 'extract') {
+        // Tetto di spesa AI (SECURITY-AUDIT §9.12): solo l'estrazione chiama Claude.
+        require_once __DIR__ . '/ardy-costcap.php';
+        ardyCostCap('ai');
         echo json_encode(estraiDaPdf());
         exit;
     }

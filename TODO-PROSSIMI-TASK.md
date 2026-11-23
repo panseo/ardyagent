@@ -106,6 +106,25 @@ headless on-demand. File: `ardy-enrich.php` (`ardyEnrichScrapeSite`, `ardyEnrich
 
 ---
 
+## 📤 Campagne outreach — pulsanti 50/100/200/300 vs tetto orario email
+
+Aggiunti in tab Campagna (`ardy-outreach.html`) pulsanti che selezionano i primi N destinatari
+**non ancora contattati** (stato `da_contattare`) del filtro corrente — così chi invia a lotti (es.
+50/giorno) può ripremere lo stesso pulsante il giorno dopo e ripartire da dove aveva lasciato, senza
+riselezionare a mano: chi ha già ricevuto l'email passa a `inviato` e viene saltato in automatico.
+
+- [ ] **Conflitto noto, lasciato così per ora (deciso con Michela)**: il tetto di sicurezza orario
+del secchio `email` in `ardy-costcap.php` è **150/ora** (giornaliero 300) — un invio da 300 in un
+colpo solo supera subito la soglia oraria e viene bloccato con 429, anche se rientra in quella
+giornaliera. Per spedire 300 destinatari servono due invii da ≤150 a più di un'ora di distanza,
+oppure va alzato l'orario del secchio `email` in `ardy-config.php` sul server (non versionato):
+`define('ARDY_COST_CAPS', ['email' => [300, 300]]);`
+- [ ] **Da chiarire**: il commento in `ardy-costcap.php` assume piano Brevo **300/giorno**, Michela
+invece parla di limite **mensile**. Da questo dipende se "300 (max)" va usato una volta al mese o
+ripetibile ogni giorno — non toccare le soglie finché non è chiaro.
+
+---
+
 ## 🗺️ STANDBY — Ricerca OSM: timeout Overpass su raggi ampi
 
 Con raggio 1 km funziona; su raggi ampi Overpass va in timeout. **Google funziona bene.** Fix deployato
@@ -163,6 +182,17 @@ Reply-To). Piano pronto, tolto dal merge in attesa delle credenziali:
 5. Cron ogni 5 minuti.
 
 Bloccato solo sul punto 1 (credenziali Gmail).
+
+---
+
+## 🖥️ Migrazione nuovo VPS (no-cPanel) — artefatti Fase 1-2 pronti, da eseguire
+
+`PIANO-MIGRAZIONE.md` ripreso (08/11): cartella `infra/` con `setup-vps.sh` (provisioning
+Caddy+PHP-FPM 8.3+MariaDB+Docker+FFmpeg), `Caddyfile` (traduzione di `.htaccess` — Basic Auth,
+librerie interne bloccate, header sicurezza), `docker-compose.n8n.yml` + `deploy-vps.sh`. **Non
+eseguito/collaudato**: nessun accesso al VPS da questa sessione, va validato sul server reale.
+Dettagli in `infra/README.md`. Restano aperti: scelta provider VPS, `ardy-config.php` da
+scrivere a mano sul nuovo server, hash Basic Auth vero, poi Fase 3 (dati) e Fase 4 (cutover DNS).
 
 ---
 
@@ -234,6 +264,47 @@ diventa prioritario con più utenti o se compaiono 504. Refactor: job in backgro
 ---
 
 ## ⏳ DA VERIFICARE DAL VIVO / AZIONI MANUALI
+
+- **🛡️ Rilievi sicurezza 9.12/9.13/9.14/10.5 (08/11, DEPLOYATI).** Dettagli in `SECURITY-AUDIT.md`
+§11. Da verificare dal vivo: (1) un **preventivo PDF** completo (logo, copertina, foto prima/dopo, QR)
+identico a prima — mPDF ora non esce più in rete; (2) una **pubblicazione fase** normale; (3) un
+**"arricchisci tutti"** breve in Outreach; (4) nel log nessuna riga `ARDY VISITA: pagina non in
+elenco` per pagine legittime (il widget che chiama `ardy-visita.php` non è nel repo: se usa nomi
+diversi da `chat-lead` vanno aggiunti in `ARDY_VISITA_PAGINE`); (5) nelle prime settimane cercare
+`ARDY COSTCAP` nel log: se compare durante l'uso normale, alzare la soglia in `ARDY_COST_CAPS`.
+
+- **🔑 8.6 chiuso l'08/11 — config e token Google fuori da `public_html`.** Tutto in
+`/home/micoperibg/ardy-private/` (700/600): `ardy-config.php` vero (in `public_html` resta il ponte),
+`ardy-gcal-token.json`, `ardy-gbp-token.json`, `ardy-gbp-location.json`, con le costanti nel config.
+Il backup integrato cPanel (attivo, giornaliero, account incluso) salva tutta la home, quindi anche
+`ardy-private/`. Restano da fare:
+  - [ ] **Calendario/Gmail erano ROTTI dal 23/10 all'08/11**: il refresh token Google risultava
+    `invalid_grant` ("expired or revoked"), scoperto durante lo spostamento e risolto ri-autorizzando
+    da `ardy-gcal-auth.php`. Controllare con Michela i **sopralluoghi fissati in quel periodo** (da
+    dashboard o da Sole su WhatsApp): potrebbero non essere finiti nel Google Calendar, e le email via
+    Gmail di quei giorni potrebbero non essere partite.
+  - [ ] **Capire perché il token è scaduto**, o si ripeterà: se nella Google Cloud Console la
+    "schermata consenso OAuth" del progetto è in stato **Testing**, Google invalida i refresh token
+    dopo **7 giorni**; va portata a **"In produzione"**. Altre cause: password dell'account cambiata,
+    accesso revocato a mano. Nel frattempo, il segnale è la data di `ardy-gcal-token.json` in
+    `ardy-private/` (si aggiorna a ogni rinnovo) o `ardy-health.php`.
+  - [ ] Copie di sicurezza in `/root/ardy-config.php.bak` e `/root/token-vecchi/` (la gcal lì è quella
+    scaduta): cancellarle tra qualche settimana se tutto va.
+  - [ ] **`ardy-wa-log.json` è ancora in `public_html`**: registro WhatsApp, probabile PII, protetto
+    solo dalla regola `.htaccess` sui `.json` — stesso single-point-of-failure di 8.6. Valutare di
+    spostarlo in `ardy-private/` (va trovato chi lo scrive e reso configurabile come i token).
+  - Ancora aperto: **8.7** (policy di retention).
+
+- **🖥️ Controllo protezioni VPS (08/11).** Confermato dal vivo: csf **v16.34** attivo + `lfd` active,
+MariaDB solo su `127.0.0.1:3306`, SSH root solo a chiave (`permitrootlogin without-password`,
+`passwordauthentication no`). Oggi i due siti WordPress `pigmentombg.com` e `omnialga.com` girano con
+lo **stesso utente cPanel `micoperibg`** del gestionale: la loro migrazione (insieme alle web app per i
+clienti di Ardy) è **già in corso in un'altra sessione**, non va gestita da qui. **Requisito da portare
+nella migrazione:** un utente di sistema / pool PHP-FPM **per ogni sito e web app**, e `ardy-private/`
+(password DB, API key, token Google) leggibile **solo** dall'utente del gestionale — così un WordPress
+compromesso non arriva ai dati dei clienti.
+  - Follow-up firewall ancora aperti da `ANALISI-FIREWALL-HOST.md` §7: egress tightening, `RESTRICT_SYSLOG`.
+  - Mai fatta una **prova di ripristino** del backup (vedi sezione Backup off-site).
 
 - **🛋️ Consulenza Interior Design (25/07, DEPLOYATO, test sul campo NON ancora fatto).** Webchat
 dedicata su `ardy-lab.it/interior-design` + sezione 🛋️ in scheda. Intervista guidata (permesso →

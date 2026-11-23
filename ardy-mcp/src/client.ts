@@ -128,6 +128,15 @@ export async function apiCall<T>(action: string, payload: Record<string, unknown
   if (res.status === 401) {
     throw new ArdyError('Autenticazione rifiutata (401). Controlla ARDY_USER e ARDY_PASS.');
   }
+  if (res.status === 429) {
+    // Tetto di spesa lato server (ardy-costcap.php): il messaggio dice quale
+    // soglia e come alzarla; l'agente deve fermarsi, non ritentare in loop.
+    let msg = '';
+    try { msg = String((JSON.parse(await res.text()) as { error?: unknown }).error ?? ''); } catch { /* non JSON */ }
+    throw new ArdyError(
+      `Limite di sicurezza raggiunto sull'azione '${action}' (429). ${msg} Non ritentare: riprova più tardi.`.trim(),
+    );
+  }
   if (!res.ok) {
     throw new ArdyError(`L'API di Ardy ha risposto ${res.status} sull'azione '${action}'.`);
   }

@@ -486,8 +486,14 @@
             <button class="chip" id="campChipEmail" onclick="toggleCampEmail()">✉ SOLO CON EMAIL</button>
             <button class="chip" id="campChipTodo" onclick="toggleCampTodo()">● SOLO DA CONTATTARE</button>
           </div>
-          <div class="select-all-row">
+          <div class="select-all-row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
             <button class="btn-select-all" onclick="toggleSelectAll()">Seleziona/deseleziona tutti</button>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button class="chip" onclick="selectBatchCamp(50)">50</button>
+              <button class="chip" onclick="selectBatchCamp(100)">100</button>
+              <button class="chip" onclick="selectBatchCamp(200)">200</button>
+              <button class="chip" onclick="selectBatchCamp(300)" title="Limite Brevo; occhio al tetto orario in ardy-costcap.php">300 (max)</button>
+            </div>
           </div>
           <div class="contact-check-list" id="campContactList">
             <div style="padding:16px;color:var(--text-dim);font-size:13px;">Seleziona un filtro per vedere i contatti</div>
@@ -1697,6 +1703,9 @@ async function runBulkEnrich(candidati, scope = 'tutto') {
     try { r = await api('enrich_contact', { id: c.id, model: getEnrichModel(), scope }); }
     catch(e) { r = { success:false, error:'rete' }; }
     if (r && r.places) mostraPlaces(r.places);
+    // Tetto di spesa del server raggiunto: inutile proseguire, ogni contatto
+    // successivo verrebbe rifiutato allo stesso modo.
+    if (r && r.limite) { log(`■ ${r.error}`, 'var(--red,#c33)'); break; }
     if (!r || !r.success) { log(`✗ ${c.nome}: ${r&&r.error||'errore'}`, 'var(--orange,#e90)'); continue; }
 
     // Applica solo i campi nuovi a confidenza alta/media (mai sovrascrittura: il
@@ -2242,6 +2251,23 @@ function toggleSelectAll() {
   const allChecked = [...checks].every(c => c.checked);
   checks.forEach(c => c.checked = !allChecked);
   updateCampCount();
+}
+
+// Seleziona i primi N destinatari NON ANCORA CONTATTATI (stato 'da_contattare') del
+// filtro corrente, sostituendo la selezione esistente. Chi manda a lotti (es. 50/giorno)
+// ripreme lo stesso pulsante il giorno dopo: i destinatari di ieri sono ormai 'inviato'
+// (aggiornato da send_campaign) e vengono saltati in automatico, si riparte dai prossimi
+// in elenco (ordine stabile, ORDER BY nome in get_contacts) senza riselezionare a mano.
+function selectBatchCamp(n) {
+  const checks = [...document.querySelectorAll('.camp-check:not(:disabled)')];
+  const daContattare = checks.filter(c => {
+    const contatto = (campContacts || []).find(x => String(x.id) === c.value);
+    return contatto && contatto.stato === 'da_contattare';
+  });
+  const scelti = new Set(daContattare.slice(0, n));
+  checks.forEach(c => c.checked = scelti.has(c));
+  updateCampCount();
+  toast(`✓ Selezionati i primi ${Math.min(n, daContattare.length)} non ancora contattati`, 'ok');
 }
 
 function updateCampCount() {

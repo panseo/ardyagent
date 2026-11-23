@@ -529,6 +529,9 @@ try {
                 break;
             }
 
+            // Tetto di spesa AI (SECURITY-AUDIT §9.12).
+            require_once __DIR__ . '/ardy-costcap.php';
+            ardyCostCap('ai');
             $g = genera_messaggio($db, $caso, $livello);
             if (!$g['ok']) { http_response_code(502); echo json_encode(['success' => false, 'error' => $g['error']]); break; }
             echo json_encode(['success' => true, 'testo' => $g['testo'], 'livello' => $livello, 'avvisi' => $v['avvisi']]);
@@ -559,6 +562,14 @@ try {
                     'message' => 'Bozza diffida registrata. Inviala manualmente (raccomandata A/R o PEC). Stato → DIFFIDA.',
                 ]);
                 break;
+            }
+
+            // Tetto sulle email in uscita (SECURITY-AUDIT §9.12). Prima del WhatsApp:
+            // se scattasse dopo, il WhatsApp partirebbe ma il sollecito non verrebbe
+            // registrato (numero/data/stato), e un nuovo tentativo lo duplicherebbe.
+            if (in_array('email', $canali, true)) {
+                require_once __DIR__ . '/ardy-costcap.php';
+                ardyCostCap('email');
             }
 
             if (in_array('whatsapp', $canali, true)) {

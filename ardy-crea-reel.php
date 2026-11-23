@@ -95,6 +95,12 @@ $musica     = $input['musica'] ?? '';   // nome file, 'casuale' oppure '' / 'nes
 $mobile     = trim($input['mobile'] ?? '');
 $templateId = preg_replace('/[^a-zA-Z0-9_\-]/', '', $input['template_id'] ?? '');
 
+// Tetto di spesa (SECURITY-AUDIT §9.12): ogni reel è un render ffmpeg pesante più
+// una didascalia Claude. All'ingresso, prima di occupare CPU e disco. La CLI di
+// test resta esente (vedi ardyCostCap).
+require_once __DIR__ . '/ardy-costcap.php';
+ardyCostCap('ai');
+
 // Il reel nasce O da un cliente (session_id) O da un progetto di design (progetto_id).
 if ($sessionId === '' && $progettoId <= 0) fail('session_id o progetto_id mancante');
 

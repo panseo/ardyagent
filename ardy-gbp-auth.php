@@ -29,7 +29,7 @@ $CLIENT_ID     = defined('ARDY_GBP_CLIENT_ID')     ? ARDY_GBP_CLIENT_ID     : AR
 $CLIENT_SECRET = defined('ARDY_GBP_CLIENT_SECRET') ? ARDY_GBP_CLIENT_SECRET : ARDY_GCAL_CLIENT_SECRET;
 
 $REDIRECT_URI  = 'https://ardyagent.ardy-lab.it/ardy-gbp-auth.php';
-$TOKEN_FILE    = __DIR__ . '/ardy-gbp-token.json';
+$TOKEN_FILE    = defined('GBP_TOKEN_FILE') ? GBP_TOKEN_FILE : __DIR__ . '/ardy-gbp-token.json';   // stesso default di ardy-gbp.php (§8.6)
 
 if (isset($_GET['code'])) {
     // Verifica state anti-CSRF

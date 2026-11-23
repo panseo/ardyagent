@@ -217,6 +217,11 @@ if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === realpath(__FILE__)) {
     if (!$internalOk) {
         require_once __DIR__ . '/ardy-auth.php';
         ardyRequireAuth();
+        // Tetto sulle email in uscita (SECURITY-AUDIT §9.12), solo per le chiamate
+        // da dashboard: quelle server-to-server col segreto interno sono il flusso
+        // automatico e non il rischio "credenziali dashboard trapelate".
+        require_once __DIR__ . '/ardy-costcap.php';
+        ardyCostCap('email');
     }
 
     $body      = json_decode(file_get_contents('php://input'), true) ?: [];
