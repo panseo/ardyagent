@@ -353,6 +353,12 @@ id (VARCHAR, 'sp_...'), session_id, payload (JSON: testo, immagini[], piattaform
 
 Chat contestuale integrata nelle pagine di avanzamento lavoro su WordPress.
 
+> **Dal 23/11/2026 il loader in Divi carica il widget solo sulle pagine-pezzo** (tag `storia-pezzo`,
+> vedi 📸 Racconta). Sulle pagine dei clienti non c'è più né box né chat: le domande vanno su
+> WhatsApp, il lavoro si segue nell'area `/lavoro/`. Il ramo cliente del widget (verifica +
+> `ardy-proxy-lavorazione.php` + `ardy-verify-client.php`) resta nel codice ma non viene più caricato:
+> si toglie nel passo 4 di `ANALISI-AREA-CLIENTE.md`. La descrizione qui sotto è quella storica.
+
 ### File
 - `ardy-widget-lavorazione.js` — widget frontend (bottone, verifica, chat)
 - `ardy-proxy-lavorazione.php` — proxy Claude con tool calendario
@@ -648,7 +654,8 @@ Il widget (`ardy-widget-lavorazione.js`) legge i tag del post: con `storia-pezzo
 lato server l'istantanea pubblica (`pezziProiezionePubblica`) e la aggiunge al prompt: Sole risponde
 su materiali e lavorazioni, non parla del proprietario, e **raccoglie il contatto come sempre**
 (`salva_lead_crm`, con la pagina d'origine nelle note). Il box informativo in cima alla pagina viene
-dal loader nelle **Integrazioni di Divi** (non WPCode; copia in `wpcode-snippet-lavorazione.html`, va incollata a mano sul sito).
+dal loader nelle **Integrazioni di Divi** (non WPCode; copia in `wpcode-snippet-lavorazione.html`, va incollata a mano sul sito),
+che dal 23/11 agisce solo sulle pagine col tag `storia-pezzo`.
 
 ### Voce
 Bottone 🎤 con la dettatura del browser (Web Speech API, `it-IT`): bene su Chrome Android, incerta su

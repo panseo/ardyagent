@@ -6,9 +6,11 @@ Mini-app `ardy-racconta.html` + `ardy-pezzi-*.php` + `ardy-pubblica-pezzo.php`, 
 (widget + `ardy-proxy.php`). Piano in `PIANO-RACCONTA.md`. Nessun test automatico: tutto da provare
 dopo il deploy (che gira anche `ardy-migrate.php`: tabella `pezzi`, colonna `fasi.pezzo_id`).
 
-- [ ] **Sostituire il loader della pagina lavorazione** con `wpcode-snippet-lavorazione.html` (non è in WPCode: sta in
-  Divi → Opzioni del tema → Integrazione, riquadro del codice in fondo ai post; sostituire il contenuto, non aggiungere un secondo snippet). Box informativo
-  diverso sulle pagine con tag `storia-pezzo`. Senza, la pagina del pezzo dice "se sei il cliente…".
+- [ ] **Sostituire il loader in Divi** (Opzioni del tema → Integrazione, codice in fondo ai post) con
+  `wpcode-snippet-lavorazione.html`, riscritto il 23/11: agisce **solo** sulle pagine col tag `storia-pezzo`
+  (box + Sole). La versione che c'era (filtro sulla categoria 102) toglie: le pagine cliente non hanno
+  più box né chat, le domande vanno su WhatsApp. Dopo: aprire una pagina cliente (nessun bottone 🪑)
+  e una pagina-pezzo (box + Sole che si apre senza chiedere "sei il cliente?").
 - [ ] **Giro completo dal telefono di Andrea (Android)**: nuovo pezzo → 2-3 foto → nota dettata col 🎤
   della pagina → Sole scrive → correzione a voce → Salva e pubblica → pagina su ardy-lab.it.
 - [ ] **Stesso giro dall'iPhone di Michela**: il 🎤 della pagina funziona in Safari? Se no, il bottone
@@ -35,6 +37,10 @@ dopo il deploy (che gira anche `ardy-migrate.php`: tabella `pezzi`, colonna `fas
   - [x] **Codice d'accesso in dash** (23/11): scheda cliente → 🪵 Lavorazione → riquadro "🔑 Area
     cliente" con codice, Copia link, Copia codice, Apri, e "Genera codice" per chi non l'ha ancora.
   - [ ] Passo 2: la pubblicazione delle fasi va nell'area (foto su disco, link nell'area in email/WA/Sole/dossier).
+    **Da fare prima che il prossimo cliente arrivi a "Avvia la pagina lavorazione"**: oggi quel bottone
+    creerebbe di nuovo un articolo WP in `lavori-in-corso`. Il 23/11 gli articoli cliente su WP sono stati
+    cancellati (tutti clienti di prova o consegnati, nessuno in lavorazione): le foto restano nella libreria
+    media (caricate senza articolo) e l'area `/lavoro/` le mostra ancora. **Non svuotare la libreria media**.
   - [ ] Passo 3: redirect dei vecchi post cliente su WordPress, poi ritiro. Passo 4: pulizia.
 
 ---
