@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Ardy — Racconta</title>
+<!-- Niente manifest e niente apple-mobile-web-app-capable, di proposito: aperta
+     dall'icona sulla home in modalità "app", Safari iPhone spegne la dettatura del
+     browser. Così l'icona apre una normale scheda di Safari. -->
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta name="theme-color" content="#0e0e0e">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+  /* Pensata per il telefono in bottega: testo ≥16px (sotto, iOS zooma sui campi),
+     bersagli grandi, una cosa alla volta. Palette della dash principale. */
+  :root {
+    --bg: #0e0e0e; --surface: #161616; --surface2: #1e1e1e; --border: #2a2a2a;
+    --accent: #c8a96e; --accent2: #8b6f3e; --text: #e8e2d9; --text-dim: #8a847e; --text-mid: #b0a89e;
+    --green: #3fbf74; --orange: #e8913a; --red: #d9534f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }   /* altrimenti .btn { display:block } lo scavalca */
+  body { background: var(--bg); color: var(--text); font: 16px/1.5 'DM Sans', sans-serif; padding-bottom: 40px; }
+  header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px;
+           padding: 12px 16px; padding-top: max(12px, env(safe-area-inset-top));
+           background: var(--bg); border-bottom: 1px solid var(--border); }
+  header h1 { font: 26px/1 'Bebas Neue', sans-serif; letter-spacing: 1px; color: var(--accent); flex: 1; }
+  header a, .link { color: var(--text-mid); text-decoration: none; font-size: 15px; background: none; border: none; cursor: pointer; font-family: inherit; }
+  main { max-width: 640px; margin: 0 auto; padding: 16px; }
+  .vista { display: none; } .vista.on { display: block; }
+
+  button { font-family: inherit; }
+  .btn { display: block; width: 100%; padding: 15px; border-radius: 12px; border: 1px solid var(--border);
+         background: var(--surface2); color: var(--text); font-size: 17px; font-weight: 600; cursor: pointer; }
+  .btn:disabled { opacity: .5; }
+  .btn-oro { background: linear-gradient(135deg, #c8a96e, #a8864a); color: #1a1408; border: none; }
+  .btn-piccolo { display: inline-block; width: auto; padding: 9px 14px; font-size: 15px; border-radius: 10px; }
+  .btn-pericolo { color: var(--red); border-color: #4a2523; background: transparent; }
+  .riga { display: flex; gap: 10px; } .riga > * { flex: 1; }
+  .spazio { height: 14px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+  .pezzo-card { display: flex; gap: 14px; align-items: center; cursor: pointer; }
+  .pezzo-card img, .thumb-vuota { width: 76px; height: 76px; border-radius: 10px; object-fit: cover; flex: none; background: var(--surface2); }
+  .thumb-vuota { display: flex; align-items: center; justify-content: center; font-size: 30px; }
+  .titolo-card { font-size: 18px; font-weight: 600; }
+  .meta { font-size: 14px; color: var(--text-dim); }
+  .badge { display: inline-block; font-size: 13px; padding: 2px 9px; border-radius: 20px; margin-top: 4px; }
+  .b-bozza { background: #2a2418; color: var(--accent); }
+  .b-ok { background: #15301f; color: var(--green); }
+  .b-mod { background: #33230f; color: var(--orange); }
+
+  label { display: block; font-size: 14px; color: var(--text-mid); margin: 14px 0 6px; }
+  input[type=text], textarea, select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text); font: 16px/1.5 'DM Sans', sans-serif; }
+  textarea { min-height: 120px; resize: vertical; }
+  .titolo-pezzo { font-size: 20px; font-weight: 600; }
+
+  .foto-griglia { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+  .foto-griglia div { position: relative; aspect-ratio: 1; }
+  .foto-griglia img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
+  .foto-griglia button { position: absolute; top: 4px; right: 4px; width: 30px; height: 30px; border-radius: 50%;
+    border: none; background: rgba(0,0,0,.7); color: #fff; font-size: 18px; cursor: pointer; }
+
+  .campo-voce { position: relative; }
+  .campo-voce textarea, .campo-voce input { padding-right: 64px; }
+  .mic { position: absolute; right: 8px; top: 8px; width: 48px; height: 48px; border-radius: 50%; border: none;
+         background: var(--accent2); color: #fff; font-size: 22px; cursor: pointer; }
+  .mic.on { background: var(--red); animation: pulsa 1.2s infinite; }
+  @keyframes pulsa { 50% { box-shadow: 0 0 0 10px rgba(217,83,79,.2); } }
+  .suggerimento { font-size: 14px; color: var(--text-dim); margin-top: 6px; }
+
+  .box { border-radius: 12px; padding: 12px 14px; margin: 14px 0; font-size: 15px; }
+  .box-sole { background: #1d1a12; border: 1px solid #3d3320; }
+  .box-avviso { background: #2e1f0e; border: 1px solid #5a3a14; color: #f0c48a; }
+  .box h3 { font-size: 15px; color: var(--accent); margin-bottom: 6px; }
+  .box ul { padding-left: 18px; }
+  .scheda-diff div { margin: 3px 0; } .scheda-diff b { color: var(--text-mid); font-weight: 500; }
+
+  details summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+  .toast { position: fixed; left: 16px; right: 16px; bottom: max(20px, env(safe-area-inset-bottom)); z-index: 20;
+    background: #222; border: 1px solid var(--accent2); border-radius: 12px; padding: 14px; font-size: 15px;
+    display: none; max-width: 600px; margin: 0 auto; }
+  .toast a { color: var(--accent); }
+  .carico { text-align: center; color: var(--text-dim); padding: 30px 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="link" id="btnIndietro" hidden>← Indietro</button>
+  <h1>📸 Racconta</h1>
+  <a href="ardy-michela-app.html">Dash</a>
+</header>
+
+<main>
+  <!-- ═══ LISTA PEZZI ═══ -->
+  <section class="vista" id="vLista">
+    <button class="btn btn-oro" id="btnNuovo">＋ Nuovo pezzo</button>
+    <p class="suggerimento" style="margin:8px 2px 18px;">Scatta le foto e racconta a voce: Sole scrive la storia, tu decidi cosa pubblicare.</p>
+    <div id="listaPezzi"><div class="carico">Carico…</div></div>
+  </section>
+
+  <!-- ═══ PEZZO ═══ -->
+  <section class="vista" id="vPezzo">
+    <input type="text" class="titolo-pezzo" id="pTitolo" placeholder="Titolo del pezzo">
+    <p class="meta" id="pMeta" style="margin:8px 2px 16px;"></p>
+    <button class="btn btn-oro" id="btnNuovoCap">＋ Aggiungi un capitolo</button>
+    <div class="spazio"></div>
+    <div id="listaCapitoli"></div>
+
+    <details class="card" id="schedaBox">
+      <summary>Scheda e introduzione</summary>
+      <div id="schedaCampi"></div>
+      <label for="pStoria">Introduzione (in cima alla pagina)</label>
+      <textarea id="pStoria"></textarea>
+      <label for="pStato">Stato</label>
+      <select id="pStato"><option value="in_corso">In lavorazione</option><option value="finito">Finito</option></select>
+      <div class="spazio"></div>
+      <div class="riga">
+        <button class="btn btn-piccolo" id="btnSalvaScheda">💾 Salva</button>
+        <button class="btn btn-piccolo" id="btnAggiornaPagina">🌐 Aggiorna la pagina</button>
+      </div>
+    </details>
+    <div class="spazio"></div>
+    <button class="btn btn-pericolo" id="btnEliminaPezzo">Elimina pezzo</button>
+    <p class="suggerimento">Lo toglie da qui. Se la pagina è già sul sito, resta online finché non la togli da WordPress.</p>
+  </section>
+
+  <!-- ═══ CAPITOLO ═══ -->
+  <section class="vista" id="vCapitolo">
+    <p class="meta" id="cPezzoNome" style="margin-bottom:12px;"></p>
+    <div class="foto-griglia" id="fotoGriglia"></div>
+    <div class="riga">
+      <button class="btn" id="btnScatta">📷 Scatta</button>
+      <button class="btn" id="btnGalleria">🖼 Galleria</button>
+    </div>
+    <input type="file" id="inScatta" accept="image/*" capture="environment" hidden>
+    <input type="file" id="inGalleria" accept="image/*" multiple hidden>
+
+    <label for="cNota">Cosa state facendo? Raccontalo a voce o scrivilo</label>
+    <div class="campo-voce">
+      <textarea id="cNota" placeholder="Es. credenza umbertina in noce, tarli sul fianco sinistro, oggi consolidamento con resina…"></textarea>
+      <button class="mic" data-mic="cNota" aria-label="Detta">🎤</button>
+    </div>
+    <p class="suggerimento" data-hint-mic hidden>Per dettare usa il 🎤 della tastiera del telefono.</p>
+    <p class="suggerimento">Non serve nominare il cliente: anche se lo fai, Sole lo toglie.</p>
+    <div class="spazio"></div>
+    <button class="btn btn-oro" id="btnSole">✨ Sole, scrivi il capitolo</button>
+
+    <div id="cRisultato" hidden>
+      <div id="cDomande"></div>
+      <label for="cTitolo">Titolo del capitolo</label>
+      <input type="text" id="cTitolo">
+      <label for="cTesto">Testo per il sito</label>
+      <textarea id="cTesto" style="min-height:220px;"></textarea>
+      <label for="cCorreggi">Vuoi cambiare qualcosa? Dillo a Sole</label>
+      <div class="campo-voce">
+        <input type="text" id="cCorreggi" placeholder="Es. più corto, togli la parte sul colore">
+        <button class="mic" data-mic="cCorreggi" aria-label="Detta">🎤</button>
+      </div>
+      <div class="spazio"></div>
+      <button class="btn btn-piccolo" id="btnCorreggi">✎ Correggi il testo</button>
+      <div id="cProposta"></div>
+      <div id="cAvvisi"></div>
+    </div>
+
+    <div class="spazio"></div>
+    <div class="riga">
+      <button class="btn" id="btnSalvaCap">💾 Salva bozza</button>
+      <button class="btn btn-oro" id="btnSalvaPubblica">🌐 Salva e pubblica</button>
+    </div>
+    <div class="spazio"></div>
+    <button class="btn btn-pericolo" id="btnEliminaCap" hidden>Elimina capitolo</button>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+var API = 'ardy-pezzi-api.php', AI = 'ardy-pezzi-ai.php', PUBBLICA = 'ardy-pubblica-pezzo.php';
+
+var pezzo = null;    // pezzo aperto (con capitoli)
+var campi = {};      // chiave → etichetta dei campi scheda (dal server)
+var cap = null;      // capitolo in modifica: {id, foto:[{nome}|{b64,url}], proposta}
+var capSporco = false;
+
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function $(id) { return document.getElementById(id); }
+
+var toastTimer = null;
+function toast(html, ms) {
+  var t = $('toast'); t.innerHTML = html; t.style.display = 'block';
+  clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.style.display = 'none'; }, ms || 3500);
+}
+
+async function api(url, body) {
+  try {
+    var r = await fetch(url, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {});
+    var j = await r.json();
+    if (!j.success && !j.serve_conferma) toast('⚠ ' + escHtml(j.error || 'Qualcosa non è andato'), 5000);
+    return j;
+  } catch (e) {
+    toast('⚠ Connessione assente o risposta non valida. Riprova.', 5000);
+    return { success: false };
+  }
+}
+
+function fotoUrl(pezzoId, faseId, file) {
+  return API + '?file=' + encodeURIComponent(file) + '&pezzo_id=' + pezzoId + '&fase_id=' + faseId;
+}
+
+// ── Navigazione con l'hash: il tasto "indietro" di Android torna alla vista prima ──
+function vai(hash) { if (location.hash === hash) router(); else location.hash = hash; }
+window.addEventListener('hashchange', router);
+async function router() {
+  var m = location.hash.match(/^#\/p\/(\d+)(?:\/c\/(\w+))?/);
+  document.querySelectorAll('.vista').forEach(function (v) { v.classList.remove('on'); });
+  $('btnIndietro').hidden = !m;
+  if (!m) { $('vLista').classList.add('on'); caricaLista(); return; }
+  var id = parseInt(m[1], 10);
+  if (!pezzo || pezzo.id !== id || !m[2]) await caricaPezzo(id);
+  if (!pezzo) { vai('#/'); return; }
+  if (m[2]) { apriCapitolo(m[2] === 'nuovo' ? 0 : parseInt(m[2], 10)); $('vCapitolo').classList.add('on'); }
+  else { $('vPezzo').classList.add('on'); }
+  window.scrollTo(0, 0);
+}
+$('btnIndietro').onclick = function () {
+  if ($('vCapitolo').classList.contains('on') && capSporco && !confirm('Ci sono modifiche non salvate. Esco lo stesso?')) return;
+  capSporco = false;
+  vai($('vCapitolo').classList.contains('on') ? '#/p/' + pezzo.id : '#/');
+};
+
+// ── Lista ──
+async function caricaLista() {
+  var j = await api(API + '?mode=lista');
+  if (!j.success) return;
+  var box = $('listaPezzi');
+  if (!j.pezzi.length) { box.innerHTML = '<p class="carico">Ancora nessun pezzo. Inizia dal primo!</p>'; return; }
+  box.innerHTML = j.pezzi.map(function (p) {
+    var img = p.copertina
+      ? '<img src="' + escHtml(fotoUrl(p.id, p.copertina.fase_id, p.copertina.file)) + '" alt="">'
+      : '<div class="thumb-vuota">🪑</div>';
+    var stato = p.wp_post_link ? (p.da_pubblicare ? '<span class="badge b-mod">' + p.da_pubblicare + ' da pubblicare</span>' : '<span class="badge b-ok">sul sito ✓</span>')
+                               : '<span class="badge b-bozza">non ancora sul sito</span>';
+    return '<div class="card pezzo-card" data-pezzo="' + p.id + '">' + img + '<div><div class="titolo-card">' + escHtml(p.titolo) + '</div>'
+      + '<div class="meta">' + p.capitoli + (p.capitoli === 1 ? ' capitolo' : ' capitoli') + (p.stato === 'finito' ? ' · finito' : '') + '</div>' + stato + '</div></div>';
+  }).join('');
+}
+$('listaPezzi').onclick = function (e) {
+  var c = e.target.closest('[data-pezzo]'); if (c) vai('#/p/' + c.dataset.pezzo);
+};
+$('btnNuovo').onclick = async function () {
+  // Si parte subito dal primo capitolo: il titolo lo propone Sole dalle foto.
+  var j = await api(API, { mode: 'crea' });
+  if (j.success) { pezzo = null; vai('#/p/' + j.id + '/c/nuovo'); }
+};
+
+// ── Pezzo ──
+async function caricaPezzo(id) {
+  var j = await api(API + '?mode=dettaglio&id=' + id);
+  pezzo = j.success ? j.pezzo : null;
+  if (!pezzo) return;
+  campi = j.campi;
+  $('pTitolo').value = pezzo.titolo;
+  $('pMeta').innerHTML = pezzo.wp_post_link
+    ? '<a class="link" style="color:var(--accent)" href="' + escHtml(pezzo.wp_post_link) + '" target="_blank" rel="noopener">Apri la pagina sul sito ↗</a>'
+    : 'Non ancora sul sito';
+  $('schedaCampi').innerHTML = Object.keys(campi).map(function (k) {
+    return '<label for="s_' + k + '">' + escHtml(campi[k]) + '</label><input type="text" id="s_' + k + '" value="' + escHtml(pezzo.scheda[k]) + '">';
+  }).join('');
+  $('pStoria').value = pezzo.storia || '';
+  $('pStato').value = pezzo.stato;
+  $('btnAggiornaPagina').hidden = !pezzo.wp_post_link;
+  disegnaCapitoli();
+}
+
+function badgeCapitolo(c) {
+  if (c.stato !== 'pubblicata') return '<span class="badge b-bozza">bozza</span>';
+  return c.wp_pubblicata_at ? '<span class="badge b-ok">sul sito ✓</span>' : '<span class="badge b-mod">modificato, da ripubblicare</span>';
+}
+function disegnaCapitoli() {
+  var box = $('listaCapitoli');
+  if (!pezzo.capitoli.length) { box.innerHTML = '<p class="carico">Nessun capitolo ancora.</p>'; return; }
+  box.innerHTML = pezzo.capitoli.map(function (c) {
+    var img = c.foto.length ? '<img src="' + escHtml(fotoUrl(pezzo.id, c.id, c.foto[0])) + '" alt="">' : '<div class="thumb-vuota">📝</div>';
+    var daPubblicare = !c.wp_pubblicata_at;
+    return '<div class="card"><div class="pezzo-card" data-cap="' + c.id + '">' + img + '<div>'
+      + '<div class="titolo-card">' + escHtml(c.titolo || 'Capitolo senza titolo') + '</div>'
+      + '<div class="meta">' + escHtml((c.created_at || '').slice(0, 10).split('-').reverse().join('/')) + ' · ' + c.foto.length + ' foto</div>'
+      + badgeCapitolo(c) + '</div></div>'
+      + (daPubblicare ? '<div class="spazio"></div><button class="btn btn-piccolo" data-pubblica="' + c.id + '">🌐 Pubblica sul sito</button>' : '')
+      + '</div>';
+  }).join('');
+}
+$('listaCapitoli').onclick = function (e) {
+  var p = e.target.closest('[data-pubblica]');
+  if (p) { pubblica(parseInt(p.dataset.pubblica, 10), p); return; }
+  var c = e.target.closest('[data-cap]'); if (c) vai('#/p/' + pezzo.id + '/c/' + c.dataset.cap);
+};
+$('btnNuovoCap').onclick = function () { vai('#/p/' + pezzo.id + '/c/nuovo'); };
+
+function leggiScheda() {
+  var s = {}; Object.keys(campi).forEach(function (k) { s[k] = $('s_' + k).value; }); return s;
+}
+$('btnSalvaScheda').onclick = async function () {
+  var j = await api(API, { mode: 'salva', id: pezzo.id, titolo: $('pTitolo').value, scheda: leggiScheda(), storia: $('pStoria').value, stato: $('pStato').value });
+  if (j.success) { toast('Salvato ✓'); await caricaPezzo(pezzo.id); }
+};
+$('pTitolo').onchange = function () { api(API, { mode: 'salva', id: pezzo.id, titolo: $('pTitolo').value }); };
+$('btnAggiornaPagina').onclick = async function () {
+  await $('btnSalvaScheda').onclick();
+  pubblica(0, this);
+};
+$('btnEliminaPezzo').onclick = async function () {
+  if (!confirm('Eliminare "' + pezzo.titolo + '" dalla lista?')) return;
+  var j = await api(API, { mode: 'elimina', id: pezzo.id });
+  if (j.success) { pezzo = null; vai('#/'); }
+};
+
+// ── Pubblicazione sul sito (con la seconda rete sull'anonimato) ──
+async function pubblica(faseId, btn, conferma) {
+  if (btn) { btn.disabled = true; btn.dataset.testo = btn.dataset.testo || btn.textContent; btn.textContent = 'Pubblico…'; }
+  var j = await api(PUBBLICA, { pezzo_id: pezzo.id, fase_id: faseId || 0, conferma: !!conferma });
+  if (btn) { btn.disabled = false; btn.textContent = btn.dataset.testo; }
+  if (j.serve_conferma) {
+    if (confirm('Attenzione, nel testo ' + j.avvisi.join('; ') + '.\n\nPubblico lo stesso?')) return pubblica(faseId, btn, true);
+    return false;
+  }
+  if (!j.success) return false;
+  toast(j.foto_warning ? '⚠ ' + escHtml(j.foto_warning)
+    : 'Pubblicato ✓ <a href="' + escHtml(j.post_link) + '" target="_blank" rel="noopener">Apri la pagina</a>', 6000);
+  await caricaPezzo(pezzo.id);
+  return true;
+}
+
+// ── Capitolo ──
+function apriCapitolo(id) {
+  var c = null;
+  if (id) pezzo.capitoli.forEach(function (x) { if (x.id === id) c = x; });
+  cap = { id: c ? c.id : 0, foto: c ? c.foto.map(function (f) { return { nome: f, url: fotoUrl(pezzo.id, c.id, f) }; }) : [], proposta: null };
+  capSporco = false;
+  $('cPezzoNome').textContent = pezzo.titolo === 'Nuovo pezzo' ? 'Nuovo pezzo: il titolo lo propone Sole' : pezzo.titolo;
+  $('cNota').value = c ? (c.nota || '') : '';
+  $('cTitolo').value = c ? (c.titolo || '') : '';
+  $('cTesto').value = c ? (c.testo || '') : '';
+  $('cCorreggi').value = '';
+  $('cRisultato').hidden = !(c && c.testo);
+  $('cDomande').innerHTML = ''; $('cProposta').innerHTML = ''; $('cAvvisi').innerHTML = '';
+  $('btnEliminaCap').hidden = !c;
+  $('btnSole').textContent = c && c.testo ? '✨ Sole, riscrivi il capitolo' : '✨ Sole, scrivi il capitolo';
+  disegnaFoto();
+}
+function disegnaFoto() {
+  $('fotoGriglia').innerHTML = cap.foto.map(function (f, i) {
+    return '<div><img src="' + escHtml(f.url) + '" alt=""><button data-togli="' + i + '" aria-label="Togli">×</button></div>';
+  }).join('');
+}
+$('fotoGriglia').onclick = function (e) {
+  var b = e.target.closest('[data-togli]'); if (!b) return;
+  cap.foto.splice(parseInt(b.dataset.togli, 10), 1); capSporco = true; disegnaFoto();
+};
+['cNota', 'cTitolo', 'cTesto'].forEach(function (id) { $(id).addEventListener('input', function () { capSporco = true; }); });
+
+// Foto ridotte sul telefono prima dell'invio: lato lungo 1800px, JPEG. Pesano un
+// decimo, partono anche col 4G della bottega, e sono già nel formato che vuole Google.
+function riduci(file) {
+  return new Promise(function (ok, ko) {
+    var img = new Image(), url = URL.createObjectURL(file);
+    img.onload = function () {
+      var lato = 1800, w = img.naturalWidth, h = img.naturalHeight, k = Math.min(1, lato / Math.max(w, h));
+      var cv = document.createElement('canvas'); cv.width = Math.round(w * k); cv.height = Math.round(h * k);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      URL.revokeObjectURL(url);
+      var dataUrl = cv.toDataURL('image/jpeg', 0.85);
+      ok({ b64: dataUrl.split(',')[1], url: dataUrl });
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); ko(); };
+    img.src = url;
+  });
+}
+async function aggiungiFoto(files) {
+  for (var i = 0; i < files.length; i++) {
+    if (cap.foto.length >= 12) { toast('Massimo 12 foto per capitolo'); break; }
+    try { cap.foto.push(await riduci(files[i])); capSporco = true; } catch (e) { toast('Una foto non si è aperta'); }
+  }
+  disegnaFoto();
+}
+$('btnScatta').onclick = function () { $('inScatta').click(); };
+$('btnGalleria').onclick = function () { $('inGalleria').click(); };
+['inScatta', 'inGalleria'].forEach(function (id) {
+  $(id).onchange = function () { aggiungiFoto(this.files); this.value = ''; };
+});
+
+// ── Dettatura ──
+// Oggi: riconoscimento vocale del browser (ottimo su Chrome Android, incerto su
+// Safari iPhone). Dove manca o si rifiuta, resta il 🎤 della tastiera, che funziona
+// sempre. La funzione è l'unico punto da cambiare se si passa a registrazione +
+// trascrizione lato server (vedi PIANO-RACCONTA.md, "La voce").
+var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+function mostraHintMic() { document.querySelectorAll('[data-hint-mic]').forEach(function (h) { h.hidden = false; }); }
+function attivaMic(btn) {
+  var campo = $(btn.dataset.mic);
+  if (!SR) { btn.hidden = true; mostraHintMic(); return; }
+  var rec = null;
+  btn.onclick = function (e) {
+    e.preventDefault();
+    if (rec) { rec.stop(); return; }
+    var base = campo.value ? campo.value.replace(/\s+$/, '') + ' ' : '';
+    rec = new SR(); rec.lang = 'it-IT'; rec.continuous = true; rec.interimResults = true;
+    rec.onresult = function (ev) {
+      var testo = '';
+      for (var i = 0; i < ev.results.length; i++) testo += ev.results[i][0].transcript;
+      campo.value = base + testo; capSporco = true;
+    };
+    rec.onerror = function (ev) {
+      if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
+        toast('Qui la dettatura della pagina non è disponibile: usa il 🎤 della tastiera.', 5000);
+        btn.hidden = true; mostraHintMic();
+      }
+    };
+    rec.onend = function () { rec = null; btn.classList.remove('on'); };
+    try { rec.start(); btn.classList.add('on'); } catch (err) { rec = null; }
+  };
+}
+document.querySelectorAll('[data-mic]').forEach(attivaMic);
+
+// ── Sole scrive ──
+$('btnSole').onclick = async function () {
+  var btn = this;
+  if (!cap.foto.length && !$('cNota').value.trim()) { toast('Aggiungi almeno una foto o due parole'); return; }
+  btn.disabled = true; btn.textContent = '✨ Sole sta scrivendo…';
+  var j = await api(AI, {
+    mode: 'racconta', pezzo_id: pezzo.id, fase_id: cap.id, nota: $('cNota').value,
+    foto_salvate: cap.foto.filter(function (f) { return f.nome; }).map(function (f) { return f.nome; }),
+    immagini_nuove: cap.foto.filter(function (f) { return f.b64; }).slice(0, 4).map(function (f) { return f.b64; })
+  });
+  btn.disabled = false; btn.textContent = '✨ Sole, riscrivi il capitolo';
+  if (!j.success) return;
+  capSporco = true;
+  $('cRisultato').hidden = false;
+  $('cTitolo').value = j.capitolo_titolo;
+  $('cTesto').value = j.capitolo_testo;
+  $('cDomande').innerHTML = j.domande.length
+    ? '<div class="box box-sole"><h3>Sole vorrebbe sapere</h3><ul>' + j.domande.map(function (d) { return '<li>' + escHtml(d) + '</li>'; }).join('')
+      + '</ul><p class="suggerimento">Rispondi nella nota qui sopra e premi di nuovo “Sole, riscrivi”.</p></div>' : '';
+  mostraProposta(j);
+  mostraAvvisi(j.avvisi);
+};
+
+// Sole propone anche titolo, scheda e introduzione del pezzo: si mostra solo cosa
+// cambia, e si applica al salvataggio del capitolo se la spunta resta.
+function mostraProposta(j) {
+  var righe = [];
+  if (j.titolo_pezzo && j.titolo_pezzo !== pezzo.titolo) righe.push('<div><b>Titolo:</b> ' + escHtml(j.titolo_pezzo) + '</div>');
+  Object.keys(campi).forEach(function (k) {
+    if ((j.scheda[k] || '') !== (pezzo.scheda[k] || '')) righe.push('<div><b>' + escHtml(campi[k]) + ':</b> ' + escHtml(j.scheda[k]) + '</div>');
+  });
+  if (j.storia && j.storia !== (pezzo.storia || '')) righe.push('<div><b>Introduzione:</b> ' + escHtml(j.storia) + '</div>');
+  cap.proposta = righe.length ? { titolo: j.titolo_pezzo, scheda: j.scheda, storia: j.storia } : null;
+  $('cProposta').innerHTML = righe.length
+    ? '<div class="box box-sole"><h3>Sole aggiorna anche la scheda del pezzo</h3><div class="scheda-diff">' + righe.join('') + '</div>'
+      + '<label style="display:flex;gap:8px;align-items:center;color:var(--text)"><input type="checkbox" id="cApplica" checked style="width:22px;height:22px"> Applica quando salvo</label></div>'
+    : '';
+}
+function mostraAvvisi(avvisi) {
+  $('cAvvisi').innerHTML = avvisi && avvisi.length
+    ? '<div class="box box-avviso">⚠ Controlla prima di pubblicare: ' + escHtml(avvisi.join('; ')) + '.</div>' : '';
+}
+
+$('btnCorreggi').onclick = async function () {
+  var istr = $('cCorreggi').value.trim();
+  if (!istr || !$('cTesto').value.trim()) { toast('Scrivi o detta cosa cambiare'); return; }
+  var btn = this; btn.disabled = true; btn.textContent = 'Correggo…';
+  var j = await api(AI, { mode: 'rifinisci', testo: $('cTesto').value, istruzione: istr });
+  btn.disabled = false; btn.textContent = '✎ Correggi il testo';
+  if (!j.success) return;
+  $('cTesto').value = j.testo; $('cCorreggi').value = ''; capSporco = true;
+  mostraAvvisi(j.avvisi);
+};
+
+async function salvaCapitolo() {
+  var body = {
+    mode: 'capitolo_salva', pezzo_id: pezzo.id, id: cap.id,
+    titolo: $('cTitolo').value, nota: $('cNota').value, testo: $('cTesto').value,
+    immagini: cap.foto.map(function (f) { return f.nome || f.b64; })
+  };
+  if (cap.proposta && $('cApplica') && $('cApplica').checked) body.pezzo = cap.proposta;
+  var j = await api(API, body);
+  if (!j.success) return 0;
+  capSporco = false;
+  return j.id;
+}
+$('btnSalvaCap').onclick = async function () {
+  this.disabled = true;
+  var id = await salvaCapitolo();
+  this.disabled = false;
+  if (id) { toast('Bozza salvata ✓'); await caricaPezzo(pezzo.id); vai('#/p/' + pezzo.id); }
+};
+$('btnSalvaPubblica').onclick = async function () {
+  if (!$('cTesto').value.trim()) { toast('Prima fai scrivere il capitolo a Sole (o scrivilo tu)'); return; }
+  var btn = this; btn.disabled = true;
+  var id = await salvaCapitolo();
+  btn.disabled = false;
+  if (!id) return;
+  await caricaPezzo(pezzo.id);
+  vai('#/p/' + pezzo.id);
+  pubblica(id, null);
+};
+$('btnEliminaCap').onclick = async function () {
+  if (!confirm('Eliminare questo capitolo?')) return;
+  var j = await api(API, { mode: 'capitolo_elimina', id: cap.id });
+  if (j.success) { capSporco = false; await caricaPezzo(pezzo.id); vai('#/p/' + pezzo.id); }
+};
+
+window.addEventListener('beforeunload', function (e) { if (capSporco) { e.preventDefault(); e.returnValue = ''; } });
+router();
+</script>
+</body>
+</html>

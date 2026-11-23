@@ -371,16 +371,19 @@ function ardy_riepilogo_settimana(PDO $db, array $staffDigits = []): string {
     try {
         $rows = $db->query(
             "SELECT f.fase_nome, f.created_at,
-                    TRIM(CONCAT(COALESCE(c.nome,''),' ',COALESCE(c.cognome,''))) AS cliente, c.mobile
+                    TRIM(CONCAT(COALESCE(c.nome,''),' ',COALESCE(c.cognome,''))) AS cliente, c.mobile,
+                    pz.titolo AS pezzo
                FROM fasi f
           LEFT JOIN clienti c ON c.session_id = f.session_id
+          LEFT JOIN pezzi pz ON pz.id = f.pezzo_id
               WHERE f.created_at >= (NOW() - INTERVAL 7 DAY)
                 AND COALESCE(f.stato,'pubblicata') = 'pubblicata'
            ORDER BY f.created_at DESC"
         )->fetchAll(PDO::FETCH_ASSOC);
         $out[] = "FASI/AGGIORNAMENTI pubblicati (ultimi 7 giorni): " . count($rows);
         foreach (array_slice($rows, 0, 12) as $r) {
-            $chi = trim((string)$r['cliente']) ?: '(cliente?)';
+            // I capitoli di "Racconta" non hanno cliente: si nomina il pezzo.
+            $chi = trim((string)$r['cliente']) ?: ($r['pezzo'] ? 'pezzo «' . $r['pezzo'] . '»' : '(cliente?)');
             $mob = $r['mobile'] ? ' · ' . $r['mobile'] : '';
             $out[] = "- " . substr((string)$r['created_at'], 0, 10) . " · {$chi}{$mob} → " . ($r['fase_nome'] ?: 'fase');
         }

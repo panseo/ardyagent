@@ -21,6 +21,7 @@
   var pageContext = '';
   var pageTitle   = '';
   var wpPostId    = '';
+  var isPezzo     = false;  // pagina di un pezzo di "Racconta" (tag storia-pezzo): nessun cliente da verificare
 
   // ── ESTRAI CONTESTO E POST ID ──
   function extractContext() {
@@ -358,6 +359,7 @@
       panel.classList.add('open');
       setTimeout(function () { panel.classList.add('visible'); }, 10);
       if (badge) badge.style.display = 'none';
+      if (isPezzo && !chatStarted) startPezzo();
       if (chatStarted) {
         document.getElementById('ardy-lav-input').focus();
       } else if (document.getElementById('ardy-lav-verify').style.display !== 'none') {
@@ -405,6 +407,43 @@
       'Dove siete?'
     ]);
     setTimeout(function () { document.getElementById('ardy-lav-input').focus(); }, 300);
+  }
+
+  // Pagina di un pezzo raccontato: non c'è un cliente, quindi niente scelta
+  // cliente/visitatore. È la stessa Sole del sito (raccoglie il contatto come sempre),
+  // che in più conosce la storia del pezzo: il proxy la carica lato server da wpPostId.
+  function startPezzo() {
+    chatMode    = 'generale';
+    chatStarted = true;
+    sessionId   = 'pezzo_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    document.getElementById('ardy-lav-choose').style.display = 'none';
+    document.getElementById('ardy-lav-verify').style.display = 'none';
+    document.getElementById('ardy-lav-chatarea').classList.add('active');
+    addMessage('Ciao! Sono Sole, l\'assistente virtuale (AI) di Ardy Lab 🌿 Chiedimi pure di questo pezzo: i materiali, le lavorazioni, perché abbiamo fatto certe scelte. E se hai un mobile simile, raccontamelo!', 'agent');
+    initSuggestions([
+      'Che materiali avete usato?',
+      'Perché si fa questa lavorazione?',
+      'Ho un mobile simile, potete aiutarmi?'
+    ]);
+  }
+
+  // Il tag lo mette ardy-pubblica-pezzo.php. Lo leggo qui (stessa API usata dallo
+  // snippet WPCode) invece di farlo passare dallo snippet, che vive fuori dal repo.
+  function rilevaPezzo() {
+    fetch('/wp-json/wp/v2/posts/' + wpPostId + '?_embed=wp:term')
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var gruppi = (d._embedded && d._embedded['wp:term']) || [];
+        isPezzo = gruppi.some(function (g) { return g.some(function (t) { return t.slug === 'storia-pezzo'; }); });
+        if (!isPezzo) return;
+        var toggle = document.getElementById('ardy-lav-toggle');
+        if (toggle) toggle.title = 'Chiedi a Sole di questo pezzo';
+        var h = document.querySelector('#ardy-lav-header .ardy-h-text h3');
+        var p = document.querySelector('#ardy-lav-header .ardy-h-text p');
+        if (h) h.textContent = 'Sole — la storia di questo pezzo';
+        if (p) p.textContent = 'Materiali, lavorazioni, curiosità';
+      })
+      .catch(function () {});
   }
 
   // ── VERIFICA CLIENTE (codice o telefono) ──
@@ -564,6 +603,7 @@
         // Chat generale di Sole (assistente commerciale), nessun dato cliente
         url  = GENERAL_URL;
         body = { message: text, history: history, images: [], sessionId: sessionId };
+        if (isPezzo) body.pezzoPostId = wpPostId;
       } else {
         // Chat dedicata alla lavorazione del cliente verificato
         url  = PROXY_URL;
@@ -672,6 +712,7 @@
     injectStyles();
     injectHTML();
     initLightbox();
+    rilevaPezzo();
   }
 
   if (document.readyState === 'loading') {

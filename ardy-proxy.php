@@ -350,6 +350,32 @@ if ($outreachContext) {
         . "Quando (e se) chiami `salva_lead_crm`, aggiungi in `note` che il contatto arriva dalla campagna Outreach (contatto #{$outreachContext['id']}), così Michela vede il collegamento.\n";
 }
 
+// ── Pagina di un pezzo di "Racconta" (PIANO-RACCONTA.md) ──
+// Il widget dice solo SU QUALE post si trova (pezzoPostId); cosa Sole sa del pezzo lo
+// decide il server, leggendo l'istantanea di ciò che è pubblicato (pezzi.pubblico_json).
+// Il browser non può quindi iniettare contesto, e bozze/note dettate non escono mai.
+// Il pezzo non ha cliente: qui non c'è nessun dato personale da proteggere.
+$pezzoPostId = (int)($input['pezzoPostId'] ?? 0);
+if ($pezzoPostId > 0) {
+    require_once __DIR__ . '/ardy-pezzi-lib.php';
+    try {
+        $pezzoPub = pezziProiezionePubblica(ardyDB(), $pezzoPostId);
+    } catch (PDOException $e) {
+        error_log('ARDY PROXY PEZZO: ' . $e->getMessage());
+        $pezzoPub = null;
+    }
+    if ($pezzoPub) {
+        $pt = (string)($pezzoPub['titolo'] ?? '');
+        $system .= "\n\n## SEI SULLA PAGINA DI UN PEZZO RACCONTATO\n"
+            . "Il visitatore sta leggendo la pagina che racconta il restauro di questo pezzo, scritta in bottega. Qui sotto c'è tutto ciò che è pubblicato:\n\n"
+            . pezziProiezioneTesto($pezzoPub) . "\n\n"
+            . "Come comportarti su questa pagina:\n"
+            . "- Rispondi alle domande sul pezzo (materiali, lavorazioni, prodotti, perché certe scelte) basandoti SOLO su quanto scritto qui sopra e sulla tua conoscenza generale del restauro, dicendo chiaramente quando parli in generale e non di questo pezzo. Se l'informazione non c'è, dillo e offri di girare la domanda a Michela.\n"
+            . "- Del proprietario del pezzo non sai nulla e non ne parli: non dire di chi è, dove si trova, quanto è costato il lavoro o quando sarà consegnato.\n"
+            . "- Se il visitatore ha un mobile suo (simile o no), segui il tuo normale percorso di consulenza e raccolta contatto. Quando chiami `salva_lead_crm`, scrivi in `note` che arriva dalla pagina del pezzo «{$pt}».\n";
+    }
+}
+
 // Conoscenza di bottega (legno/restauro/cura): arricchisce il linguaggio e la competenza
 // di Sole. Sta in un file a sé (sapere ≠ regole) e resta DENTRO il blocco system cacheato
 // → costo token trascurabile dal 2° messaggio in poi.
