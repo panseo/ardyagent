@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Ardy Lab — Il tuo lavoro</title>
+<!-- Area privata del cliente: fuori dai motori di ricerca, e il codice (che può
+     arrivare nel link) non deve finire nel Referer verso siti esterni. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<meta name="theme-color" content="#faf8f3">
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Stessa palette del box dorato delle pagine lavorazione sul sito: per il cliente
+     è la continuazione di quelle pagine, non un gestionale. */
+  :root {
+    --bg: #faf8f3; --carta: #ffffff; --bordo: #e8dfcc; --oro: #c8a96e; --oro-scuro: #8b6f3e;
+    --testo: #333; --testo-mid: #666; --testo-dim: #999; --avviso: #b8641c; --avviso-bg: #fdf3e7;
+    --wa: #25d366;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
+  body { background: var(--bg); color: var(--testo); font: 16px/1.6 'DM Sans', -apple-system, sans-serif; padding-bottom: 96px; }
+  header { text-align: center; padding: 28px 16px 8px; }
+  .marchio { font: 600 15px/1 'DM Sans', sans-serif; letter-spacing: 3px; color: var(--oro-scuro); text-transform: uppercase; }
+  main { max-width: 680px; margin: 0 auto; padding: 0 16px; }
+  h1 { font: 600 30px/1.2 'Crimson Pro', Georgia, serif; text-align: center; margin: 14px 0 6px; }
+  .sotto { text-align: center; color: var(--testo-mid); margin-bottom: 22px; }
+
+  .carta { background: var(--carta); border: 1px solid var(--bordo); border-radius: 14px; padding: 22px 20px; }
+  label { display: block; font-weight: 500; margin-bottom: 8px; }
+  input { width: 100%; padding: 14px; font: 600 20px/1 'DM Sans', monospace; letter-spacing: 2px; text-align: center;
+          text-transform: uppercase; border: 1px solid var(--bordo); border-radius: 10px; background: #fff; color: var(--testo); }
+  input:focus { outline: 2px solid var(--oro); border-color: var(--oro); }
+  .btn { display: block; width: 100%; margin-top: 14px; padding: 15px; border: none; border-radius: 10px; cursor: pointer;
+         background: linear-gradient(135deg, #c8a96e, #a8864a); color: #fff; font: 600 17px/1 'DM Sans', sans-serif; }
+  .btn:disabled { opacity: .6; }
+  .errore { color: #b33a3a; margin-top: 12px; text-align: center; min-height: 1.6em; }
+  .aiuto { color: var(--testo-dim); font-size: 14px; text-align: center; margin-top: 14px; }
+  .aiuto a { color: var(--oro-scuro); }
+
+  .stato { display: block; width: fit-content; margin: 0 auto 26px; padding: 6px 16px; border-radius: 30px;
+           background: #f5efe2; color: var(--oro-scuro); font-weight: 600; font-size: 15px; }
+  .fase { background: var(--carta); border: 1px solid var(--bordo); border-left: 4px solid var(--oro);
+          border-radius: 12px; padding: 18px 18px 14px; margin-bottom: 18px; }
+  .fase.comunicazione { border-left-color: var(--avviso); background: var(--avviso-bg); }
+  .fase-data { font-size: 13px; color: var(--testo-dim); letter-spacing: .5px; }
+  .fase h2 { font: 600 21px/1.3 'Crimson Pro', Georgia, serif; margin: 2px 0 8px; }
+  .fase.comunicazione h2::before { content: '⚠ '; color: var(--avviso); }
+  .fase p { margin-bottom: 10px; color: #444; }
+  .galleria { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-top: 8px; }
+  .galleria button { border: none; padding: 0; background: none; cursor: zoom-in; aspect-ratio: 1; }
+  .galleria img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; display: block; }
+  video { width: 100%; border-radius: 8px; margin-top: 8px; }
+  .vuoto { text-align: center; color: var(--testo-mid); padding: 30px 10px; }
+  .esci { display: block; margin: 26px auto 0; background: none; border: none; color: var(--testo-dim); font: 14px 'DM Sans', sans-serif; text-decoration: underline; cursor: pointer; }
+
+  .wa { position: fixed; left: 16px; right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); max-width: 648px; margin: 0 auto;
+        display: flex; align-items: center; justify-content: center; gap: 10px; padding: 15px; border-radius: 12px;
+        background: var(--wa); color: #fff; font-weight: 600; font-size: 16px; text-decoration: none; box-shadow: 0 4px 18px rgba(0,0,0,.15); }
+
+  .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.92); display: flex; align-items: center; justify-content: center; z-index: 10; }
+  .lightbox img { max-width: 96vw; max-height: 90vh; border-radius: 6px; }
+  .lightbox button { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 14px; width: 44px; height: 44px;
+                     border-radius: 50%; border: none; background: rgba(255,255,255,.15); color: #fff; font-size: 26px; cursor: pointer; }
+  .carico { text-align: center; color: var(--testo-dim); padding: 40px 0; }
+</style>
+</head>
+<body>
+
+<header><div class="marchio">Ardy Lab</div></header>
+
+<main>
+  <div class="carico" id="carico">Un momento…</div>
+
+  <!-- ═══ ACCESSO ═══ -->
+  <section id="vAccesso" hidden>
+    <h1>Il tuo lavoro in bottega</h1>
+    <p class="sotto">Qui trovi foto e aggiornamenti del tuo pezzo, fase per fase.</p>
+    <form class="carta" id="formAccesso" autocomplete="off">
+      <label for="codice">Il tuo codice personale</label>
+      <input id="codice" placeholder="ARD-XXXX-XXXX" autocapitalize="characters" spellcheck="false" maxlength="20">
+      <button class="btn" id="btnAccedi" type="submit">Entra</button>
+      <div class="errore" id="errore" role="alert"></div>
+      <p class="aiuto">Il codice te l'abbiamo mandato per email o WhatsApp.<br>
+        Non lo trovi? <a id="waAiuto" href="https://wa.me/393793756437" target="_blank" rel="noopener">Scrivici su WhatsApp</a>.</p>
+    </form>
+  </section>
+
+  <!-- ═══ LAVORO ═══ -->
+  <section id="vLavoro" hidden>
+    <h1 id="titolo"></h1>
+    <p class="sotto" id="sottotitolo"></p>
+    <span class="stato" id="stato" hidden></span>
+    <div id="fasi"></div>
+    <button class="esci" id="btnEsci" type="button">Esci da questo dispositivo</button>
+  </section>
+</main>
+
+<a class="wa" id="wa" href="https://wa.me/393793756437" target="_blank" rel="noopener" hidden>💬 Domande? Scrivici su WhatsApp</a>
+<div class="lightbox" id="lightbox" hidden><img id="lightboxImg" alt=""><button type="button" aria-label="Chiudi" id="btnChiudi">×</button></div>
+
+<script>
+'use strict';
+// Percorso assoluto: la pagina si apre da /lavoro/, un percorso relativo finirebbe in /lavoro/ardy-….
+var API = '/ardy-area-cliente-api.php';
+
+function $(id) { return document.getElementById(id); }
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function mostra(id) {
+  ['carico', 'vAccesso', 'vLavoro'].forEach(function (v) { $(v).hidden = v !== id; });
+  $('wa').hidden = id !== 'vLavoro';
+}
+function paragrafi(t) {
+  return String(t || '').split(/\n\s*\n/).filter(function (p) { return p.trim(); })
+    .map(function (p) { return '<p>' + escHtml(p.trim()).replace(/\n/g, '<br>') + '</p>'; }).join('');
+}
+function dataIt(iso) {
+  var d = new Date(iso + 'T12:00:00');
+  return isNaN(d) ? '' : d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+async function chiama(metodo, corpo) {
+  var opz = { method: metodo, credentials: 'same-origin', headers: {} };
+  var url = API;
+  if (metodo === 'GET') url += '?mode=' + encodeURIComponent(corpo.mode);
+  else { opz.headers['Content-Type'] = 'application/json'; opz.body = JSON.stringify(corpo); }
+  try { var r = await fetch(url, opz); return await r.json(); }
+  catch (e) { return { success: false, error: 'Connessione assente, riprova fra poco.' }; }
+}
+
+async function caricaLavoro() {
+  var j = await chiama('GET', { mode: 'lavoro' });
+  if (!j.success) { mostra('vAccesso'); if (j.error) $('errore').textContent = j.error; return; }
+  $('titolo').textContent = j.nome ? 'Ciao ' + j.nome + '!' : 'Il tuo lavoro';
+  $('sottotitolo').textContent = j.mobile ? 'Ecco come procede: ' + j.mobile : 'Ecco come procede il tuo lavoro.';
+  $('stato').hidden = !j.stato; $('stato').textContent = j.stato;
+  var wa = 'https://wa.me/' + j.whatsapp + '?text=' + encodeURIComponent('Ciao, ho una domanda sul mio lavoro' + (j.mobile ? ' (' + j.mobile + ')' : '') + '.');
+  $('wa').href = wa;
+  $('fasi').innerHTML = j.fasi.length ? j.fasi.slice().reverse().map(function (f) {
+    // Dalla più recente: chi torna a guardare vuole vedere subito la novità.
+    var foto = f.foto.length ? '<div class="galleria">' + f.foto.map(function (u) {
+      return '<button type="button" data-foto="' + escHtml(u) + '"><img src="' + escHtml(u) + '" alt="" loading="lazy"></button>';
+    }).join('') + '</div>' : '';
+    var video = f.video.map(function (u) { return '<video src="' + escHtml(u) + '" controls preload="metadata" playsinline></video>'; }).join('');
+    return '<article class="fase' + (f.comunicazione ? ' comunicazione' : '') + '">'
+      + '<div class="fase-data">' + escHtml(dataIt(f.data)) + '</div>'
+      + (f.titolo ? '<h2>' + escHtml(f.titolo) + '</h2>' : '')
+      + paragrafi(f.testo) + foto + video + '</article>';
+  }).join('') : '<div class="carta vuoto">Ancora nessun aggiornamento: appena iniziamo a lavorare al tuo pezzo, lo trovi qui.</div>';
+  mostra('vLavoro');
+}
+
+$('formAccesso').onsubmit = async function (e) {
+  e.preventDefault();
+  var codice = $('codice').value.trim();
+  if (!codice) { $('errore').textContent = 'Scrivi il codice che ti abbiamo mandato.'; return; }
+  await accedi(codice);
+};
+async function accedi(codice) {
+  $('btnAccedi').disabled = true; $('errore').textContent = '';
+  var j = await chiama('POST', { mode: 'accedi', codice: codice });
+  $('btnAccedi').disabled = false;
+  if (!j.success) { mostra('vAccesso'); $('codice').value = codice; $('errore').textContent = j.error || 'Accesso non riuscito.'; return; }
+  await caricaLavoro();
+}
+$('btnEsci').onclick = async function () {
+  await chiama('POST', { mode: 'esci' });
+  $('codice').value = ''; mostra('vAccesso');
+};
+
+$('fasi').onclick = function (e) {
+  var b = e.target.closest('[data-foto]'); if (!b) return;
+  $('lightboxImg').src = b.dataset.foto; $('lightbox').hidden = false;
+};
+$('lightbox').onclick = function () { $('lightbox').hidden = true; $('lightboxImg').src = ''; };
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') $('lightbox').onclick(); });
+
+// Link dalle email/WhatsApp con ?codice=…: si entra senza digitarlo. Il codice si toglie
+// SUBITO dalla barra degli indirizzi, così non resta nella cronologia né in uno screenshot.
+(function avvio() {
+  var codice = new URLSearchParams(location.search).get('codice');
+  if (codice) { history.replaceState(null, '', location.pathname); accedi(codice); }
+  else caricaLavoro();
+})();
+</script>
+</body>
+</html>

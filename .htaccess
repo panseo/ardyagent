@@ -30,6 +30,9 @@ DirectoryIndex ardy-michela-app.html
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteRule ^object-img/([0-9]+)-([0-9]+)\.(jpe?g|png|webp|gif)$ ardy-object-img.php?pid=$1&gid=$2 [L,QSA]
+    # Area cliente (ANALISI-AREA-CLIENTE.md): indirizzo corto da mettere in email e WhatsApp.
+    # Pubblica di proposito: il controllo è il codice personale, dentro l'API.
+    RewriteRule ^lavoro/?$ ardy-area-cliente.html [L,QSA]
 </IfModule>
 
 # Web App Manifest (icona schermata-home / installazione come app): MIME corretto

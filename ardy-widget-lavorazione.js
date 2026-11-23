@@ -428,7 +428,7 @@
   }
 
   // Il tag lo mette ardy-pubblica-pezzo.php. Lo leggo qui (stessa API usata dallo
-  // snippet WPCode) invece di farlo passare dallo snippet, che vive fuori dal repo.
+  // loader nelle Integrazioni di Divi) invece di farlo passare dal loader, che vive fuori dal repo.
   function rilevaPezzo() {
     fetch('/wp-json/wp/v2/posts/' + wpPostId + '?_embed=wp:term')
       .then(function (r) { return r.json(); })

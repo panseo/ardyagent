@@ -65,6 +65,8 @@ ardyagent.ardy-lab.it/
 ├── ardy-places-prova.php      # CLI: misura quanti B&B Google ha col telefono, prima di spendere
 ├── ardy-pubblica-lavorazione.php  # Pubblica fase: pagina WP + immagine in evidenza + email cliente (NO social auto)
 ├── ardy-pubblica-social.php   # Pubblica sui social (passo manuale, separato) → webhook n8n
+├── ardy-area-cliente.html     # 🔑 Area cliente su /lavoro/ (pubblica, accesso col codice ARD-…): il lavoro fase per fase
+├── ardy-area-cliente-api.php  # Area cliente: accesso col codice → cookie firmato, lettura fasi pubblicate (sola lettura)
 ├── ardy-racconta.html         # 📸 Racconta: mini-app per il telefono, storia di un pezzo da foto + voce
 ├── ardy-pezzi-api.php         # Racconta: pezzi e capitoli (CRUD, foto su disco)
 ├── ardy-pezzi-ai.php          # Racconta: Sole scrive capitolo + scheda da foto e nota; correzione a voce
@@ -579,6 +581,29 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
 
 ---
 
+## 🔑 Area cliente (ardy-area-cliente.html, `/lavoro/`)  *(nov 2026, passo 1: sola lettura)*
+
+Pagina **privata del cliente** su `https://ardyagent.ardy-lab.it/lavoro/`, che sostituirà le pagine
+"lavori in corso" su WordPress. Analisi, decisioni e passi in **`ANALISI-AREA-CLIENTE.md`**.
+
+- **Accesso col codice** `ARD-XXXX-XXXX` che il cliente ha già (nessuna password). Anche via link
+  `/lavoro/?codice=ARD-…`: la pagina toglie subito il codice dalla barra degli indirizzi.
+  Rate limit sui tentativi falliti per IP (15 ogni 10 minuti), come `ardy-verify-client.php`.
+- **Sessione**: cookie `ardy_area` (`HttpOnly`, `Secure`, `SameSite=Lax`, 180 giorni) =
+  session_id + scadenza + HMAC con `WA_LOOKUP_SECRET` (prefisso di dominio `area-cliente|`, così
+  una firma dei link lead non vale come cookie). Fail-closed se il segreto manca. Il codice non
+  finisce mai nel cookie.
+- **Cosa vede**: fasi **pubblicate** dalla più recente (testo, foto, video, data), comunicazioni
+  straordinarie evidenziate, stato del lavoro con etichette per il cliente (non quelle interne),
+  bottone fisso **WhatsApp**. Nessuna chat: le domande vanno su WhatsApp, dove Sole riconosce il
+  cliente dal telefono. Resta consultabile anche dopo la consegna.
+- **Pubblica di proposito** (fuori dal Basic Auth staff), `noindex` (meta + `X-Robots-Tag`),
+  `Referrer-Policy: no-referrer`. Riscrittura `/lavoro/` in `.htaccess` e `infra/Caddyfile`.
+- **Oggi** le foto vengono dagli URL WordPress delle fasi già pubblicate: la pubblicazione non è
+  ancora cambiata (passo 2 dell'analisi).
+
+---
+
 ## 📸 Racconta (ardy-racconta.html)  *(nov 2026)*
 
 Mini-app **per il telefono** (Michela su iPhone, Andrea su Android) per raccontare la storia di un
@@ -618,7 +643,7 @@ Il widget (`ardy-widget-lavorazione.js`) legge i tag del post: con `storia-pezzo
 lato server l'istantanea pubblica (`pezziProiezionePubblica`) e la aggiunge al prompt: Sole risponde
 su materiali e lavorazioni, non parla del proprietario, e **raccoglie il contatto come sempre**
 (`salva_lead_crm`, con la pagina d'origine nelle note). Il box informativo in cima alla pagina viene
-dallo snippet WPCode (copia in `wpcode-snippet-lavorazione.html`, va incollata a mano sul sito).
+dal loader nelle **Integrazioni di Divi** (non WPCode; copia in `wpcode-snippet-lavorazione.html`, va incollata a mano sul sito).
 
 ### Voce
 Bottone 🎤 con la dettatura del browser (Web Speech API, `it-IT`): bene su Chrome Android, incerta su

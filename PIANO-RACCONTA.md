@@ -113,13 +113,13 @@ visitatore finisce su `ardy-proxy.php`, la Sole del sito, che raccoglie il conta
 `salva_lead_crm`. È esattamente il comportamento richiesto, quindi **non serve una Sole nuova**:
 - **Widget** (`ardy-widget-lavorazione.js`): se il post ha il tag `storia-pezzo` salta la scelta
   cliente/visitatore e apre direttamente la chat con Sole, mandando anche `wpPostId`. Lo snippet
-  WPCode sul sito **non cambia**: il widget legge i tag del post da solo.
+  nelle Integrazioni di Divi **non cambia**: il widget legge i tag del post da solo.
 - **`ardy-proxy.php`**: se arriva `wpPostId`, carica **lato server** la proiezione pubblica del
   pezzo (scheda, capitoli pubblicati, FAQ: solo campi in whitelist, come `ardy-object-lib.php`) e
   la aggiunge al blocco dinamico del prompt. Il client non può iniettare contesto, al massimo
   indicare quale pezzo. Lead capture, rate limit e prompt caching restano quelli di oggi.
 - Il box informativo dello snippet ("se sei il cliente di questo lavoro…") su una pagina-pezzo
-  stona: va cambiato a mano su WPCode con una condizione sul tag. È l'unico intervento fuori repo.
+  stona: va cambiato a mano nelle Integrazioni di Divi (non WPCode) con una condizione sul tag. È l'unico intervento fuori repo.
 
 ## Fasi di lavoro
 
