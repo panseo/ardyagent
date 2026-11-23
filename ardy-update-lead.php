@@ -28,6 +28,14 @@ if (empty($sessionId)) {
 try {
     $db = ardyDB();
 
+    // Codice d'accesso all'area cliente: lo genera se il cliente non ce l'ha ancora
+    // (chi non è passato dalla chat né ha ricevuto una fase). Mai sovrascritto: è già
+    // nelle mani del cliente, cambiarlo gli toglierebbe l'accesso.
+    if (($input['azione'] ?? '') === 'genera_codice') {
+        $codice = ardy_codice_per_sessione($db, (string) $sessionId);
+        echo json_encode($codice !== '' ? ['success' => true, 'codice' => $codice] : ['success' => false, 'error' => 'Codice non generato']);
+        exit();
+    }
 
     $fields = [
         'nome', 'cognome', 'telefono', 'email',

@@ -640,38 +640,7 @@ function inviaWhatsAppCliente(string $telefono, string $nome, string $mobile, st
     return true;
 }
 
-// Recupera il codice personale del cliente (ARD-XXXX-XXXX); se manca lo genera
-// e lo salva, così ogni cliente in lavorazione ne ha uno stabile da usare in chat.
-if (!function_exists('ardy_codice_per_sessione')) {
-function ardy_codice_per_sessione(PDO $db, string $sessionId): string {
-    $sessionId = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string) $sessionId);
-    if ($sessionId === '') return '';
-    try {
-        $sel = $db->prepare("SELECT codice_accesso FROM clienti WHERE session_id = :sid LIMIT 1");
-        $sel->execute([':sid' => $sessionId]);
-        $codice = trim((string) $sel->fetchColumn());
-        if ($codice !== '') return $codice;
-        // genera un codice unico (alfabeto senza caratteri ambigui)
-        $alpha = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-        $n = strlen($alpha);
-        for ($t = 0; $t < 5; $t++) {
-            $out = '';
-            for ($i = 0; $i < 8; $i++) { $out .= $alpha[random_int(0, $n - 1)]; if ($i === 3) $out .= '-'; }
-            $cand = 'ARD-' . $out;
-            $chk = $db->prepare("SELECT 1 FROM clienti WHERE codice_accesso = :c LIMIT 1");
-            $chk->execute([':c' => $cand]);
-            if (!$chk->fetchColumn()) {
-                $db->prepare("UPDATE clienti SET codice_accesso = :c, updated_at = NOW() WHERE session_id = :sid")
-                   ->execute([':c' => $cand, ':sid' => $sessionId]);
-                return $cand;
-            }
-        }
-    } catch (PDOException $e) {
-        error_log('ARDY CODICE PER SESSIONE ERROR: ' . $e->getMessage());
-    }
-    return '';
-}
-}
+// ardy_codice_per_sessione() sta in ardy-db.php: la usa anche la dash (scheda cliente).
 
 function inviaEmailCliente(string $email, string $nome, string $mobile, string $fase, string $testo, string $link, bool $isComunicazione = false, string $codice = ''): void {
     // Oggetto con prefisso "Ardy Lab —"; accento colore e intestazione cambiano per le comunicazioni
