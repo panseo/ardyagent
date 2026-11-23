@@ -112,15 +112,29 @@ function grafCopertina(string $fotoBytes, string $frase, int $W, int $H): ?strin
 
     $frase = trim(ltrim(trim($frase), '*'));
     if ($frase !== '') {
-        // Colonna stretta (circa 60% della larghezza) e righe strette, come nel reel di Michela:
-        // la frase va su 2-3 righe e si legge come un titolo, non come una riga di testo.
-        $fs = 84 * $u; $lh = (int) round(90 * $u);
-        $ast = imagettfbbox($fs, 0, $reg, '*');
-        $rientro = $ast[2] - $ast[0];     // le righe successive partono dopo l'asterisco
-        $righe = grafRighe($frase, $reg, $fs, (int) round($W * 0.62) - $rientro);
-        $y = $top + $hLogo + (int) round(105 * $u);
-        foreach (array_slice($righe, 0, 4) as $i => $r) {
-            grafTesto($im, $fs, $m + ($i === 0 ? 0 : $rientro), $y, $reg, ($i === 0 ? '*' : '') . $r);
+        // Colonna stretta e righe strette, come nel reel di Michela: la frase va su 2-3 righe e
+        // si legge come un titolo. Sul post 4:5 la colonna è un po' più larga (lo spazio in
+        // altezza è meno). Se la frase non sta in 3 righe il corpo scende fino a starci:
+        // nessuna parola deve sparire tagliata.
+        $colonna = (int) round($W * ($H > $W * 1.5 ? 0.62 : 0.74)) - (int) round(50 * $u);
+        for ($fs = 84 * $u; ; $fs -= 4 * $u) {
+            $righe = grafRighe($frase, $reg, $fs, $colonna);
+            if (count($righe) <= 3 || $fs <= 56 * $u) break;
+        }
+        $lh = (int) round($fs * 1.07);
+        // Allineamento "dopo l'asterisco" sull'inchiostro, non sulla larghezza del carattere:
+        // ogni lettera ha il suo margine (una "a" parte in un punto diverso da una "L"), quindi
+        // ogni riga si sposta quanto serve perché il suo bordo sinistro cada esattamente sotto
+        // la prima lettera dopo l'asterisco.
+        $primo   = mb_substr($righe[0] ?? 'A', 0, 1);
+        $bbPrimo = imagettfbbox($fs, 0, $reg, $primo);
+        $avanzaAst = imagettfbbox($fs, 0, $reg, '*' . $primo)[2] - $bbPrimo[2];   // avanzamento dell'asterisco (con crenatura)
+        $bordo   = $m + $avanzaAst + $bbPrimo[0];                                  // dove inizia l'inchiostro della prima lettera
+        // Più aria tra il blocco logo/indirizzo e la frase (richiesta al collaudo del 23/11).
+        $y = $top + $hLogo + (int) round(190 * $u);
+        foreach ($righe as $i => $r) {
+            $x = $i === 0 ? $m : $bordo - imagettfbbox($fs, 0, $reg, mb_substr($r, 0, 1))[0];
+            grafTesto($im, $fs, $x, $y, $reg, ($i === 0 ? '*' : '') . $r);
             $y += $lh;
         }
     }
