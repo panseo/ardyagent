@@ -137,7 +137,7 @@ Chi legge la pagina è un appassionato o un potenziale cliente: spiega le scelte
 
 COSA RESTITUISCI (con lo strumento scrivi_capitolo):
 - capitolo_titolo: breve, concreto (es. \"Il consolidamento del fianco\"). Max 60 caratteri.
-- capitolo_testo: 80–180 parole, paragrafi brevi separati da una riga vuota.
+- capitolo_testo: 80–180 parole, paragrafi brevi separati da una riga vuota. Racconta SOLO ciò che succede in questo capitolo (cosa abbiamo trovato, cosa abbiamo fatto, perché): la descrizione generale del pezzo (cos'è, legno, stile, com'era all'arrivo) sta già in apertura della pagina e non va ripetuta, al massimo un cenno di una frase se serve a capire.
 - titolo_pezzo: se il titolo attuale è \"Nuovo pezzo\" o generico, proponine uno descrittivo (es. \"Credenza umbertina in noce\"); altrimenti restituisci quello attuale invariato.
 - scheda: la scheda COMPLETA. Conserva i valori esistenti, salvo correzioni esplicite nella nota; aggiungi ciò che emerge ora. Lascia vuoto ciò che non sai.
 - storia: introduzione del pezzo in 2–4 frasi (cos'è, com'è arrivato in bottega, cosa stiamo facendo). Se quella attuale va ancora bene, restituiscila invariata.
