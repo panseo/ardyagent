@@ -26,9 +26,9 @@ dopo il deploy (che gira anche `ardy-migrate.php`: tabella `pezzi`, colonna `fas
   (es. Whisper, pochi centesimi al mese). Risolve iPhone anche dall'icona sulla home, ma serve la chiave
   di un fornitore nuovo in `ardy-config.php`. Un'app nativa è stata scartata (account Apple 99 $/anno,
   build TestFlight che scadono ogni 90 giorni, due progetti da mantenere per due persone).
-- [ ] **Foto della bottega per l'ingresso di Racconta**: scattare una foto vera del laboratorio
-  (orizzontale, ~1600px, JPEG) e metterla in `assets/racconta-bottega.jpg` nel repo, poi deploy. Finché
-  manca si vede il disegno del banco. (Nuovo aspetto "bottega" del 23/11, ramo `racconta-aspetto-bottega`.)
+- [x] **Foto della bottega per l'ingresso di Racconta** (23/11): messa in `assets/racconta-bottega.jpg`, presa
+  per ora da un post Instagram (866×566, bassa risoluzione). Da sostituire con uno scatto vero ~1600px:
+  stesso nome file (il browser la tiene in cache fino a 30 giorni: per vederla subito, ricaricare forzando).
 - [ ] **Fase 2**: Google Business, Facebook e reel per i pezzi (riquadro per canale, salva per dopo).
 - [ ] **Togliere le lavorazioni dei clienti da WordPress** e portarle in un'area privata su ardyagent
   (`/lavoro/`): analisi e decisioni (23/11) in `ANALISI-AREA-CLIENTE.md`.
