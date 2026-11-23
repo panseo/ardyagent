@@ -646,7 +646,9 @@ separati). Le pagine dei clienti in `lavori-in-corso` restano come sono e conviv
 introduzione + scheda (marcatori `<!--ardy-pezzo-intro-->`, riscritto a ogni pubblicazione) e un
 blocco per capitolo (`<!-- ardy-fase-ID -->`, stesso stile delle fasi cliente). Prima foto =
 immagine in evidenza. I blocchi dei capitoli eliminati spariscono alla pubblicazione successiva.
-Titolo del post = titolo del pezzo.
+Titolo del post = titolo del pezzo. **Commenti chiusi** (per le domande c'è Sole). L'immagine in evidenza
+resta impostata (anteprime, condivisioni, og:image) ma **nella pagina è nascosta** con una regola CSS nel
+blocco introduzione, perché Divi la ripeterebbe uguale alla prima foto del primo capitolo.
 
 ### Sole sulla pagina del pezzo
 Il widget (`ardy-widget-lavorazione.js`) legge i tag del post: con `storia-pezzo` salta la scelta

@@ -152,7 +152,13 @@ foreach (PEZZI_SCHEDA_CAMPI as $k => $label) {
 // che i motori di risposta AI citano, quindi sta in cima e regge da solo. Sotto, chi l'ha
 // scritto e quando: fonte e data contano per Google (E-E-A-T) e per le citazioni.
 $oggi  = date('Y-m-d');
+// Divi ripete l'immagine in evidenza sotto il titolo, e la stessa foto apre il primo
+// capitolo: la si nasconde SOLO dentro la pagina del pezzo. L'immagine in evidenza resta
+// impostata, perché serve fuori: anteprime del blog, condivisioni, Google (og:image,
+// schema). Toglierla non basterebbe comunque: lo snippet WPCode "copertina-fallback"
+// rimetterebbe la prima foto. Nascosto anche "0 commenti": i commenti sono chiusi.
 $intro = INTRO_START
+    . '<style>article.tag-storia-pezzo .et_post_meta_wrapper > img,article.tag-storia-pezzo .post-meta .comments-number{display:none}</style>'
     . ($seo['in_breve'] !== ''
         ? '<p style="font-size:16px;line-height:1.7;color:#333;background:#f7f2e8;border-radius:8px;padding:14px 18px;margin:0 0 20px;"><strong>In breve.</strong> ' . esc_html($seo['in_breve']) . '</p>'
         : '')
@@ -197,6 +203,8 @@ if (!$post) {
         'post_content'  => $intro,
         'post_status'   => 'publish',
         'post_category' => [$catId],
+        'comment_status' => 'closed',   // per le domande c'è Sole, non i commenti
+        'ping_status'    => 'closed',
     ], true);
     if (is_wp_error($res)) {
         error_log('ARDY PUBBLICA PEZZO WP INSERT: ' . $res->get_error_message());
@@ -290,8 +298,9 @@ if ($seo['keyphrase'] !== '')   update_post_meta($wpPostId, '_yoast_wpseo_focusk
 // FAQPage nel grafo schema.org di Yoast (wordpress-snippets/pezzi-schema-faq.php).
 update_post_meta($wpPostId, '_ardy_faq', wp_slash(json_encode($seo['faq'], JSON_UNESCAPED_UNICODE)));
 
+// Commenti chiusi anche qui, così si allineano le pagine create prima di questa regola.
 $res = wp_update_post(['ID' => $wpPostId, 'post_title' => $titolo, 'post_content' => $content,
-                       'post_excerpt' => $seo['descrizione']], true);
+                       'post_excerpt' => $seo['descrizione'], 'comment_status' => 'closed', 'ping_status' => 'closed'], true);
 kses_init_filters();
 if (is_wp_error($res)) {
     error_log('ARDY PUBBLICA PEZZO WP UPDATE: ' . $res->get_error_message());
