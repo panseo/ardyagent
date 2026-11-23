@@ -730,6 +730,8 @@ Sempre **manuale**: niente esce da solo, ogni canale ha il suo bottone e "Salva 
   canale come apparirà, a grandi linee (Facebook con griglia foto e link, Instagram con foto 4:5 e testo
   tagliato a 125 caratteri, Google con foto e "Scopri di più", reel in cornice 9:16 col video che gira e
   il testo completo sotto). "Torna a modificare" non pubblica nulla; "Pubblica adesso" invia.
+  Nei riquadri Facebook e Google c'è anche **"Guarda l'anteprima"**, per vederla senza premere Pubblica
+  (il reel ha già il video nella pagina).
 - Instagram accetta foto tra 4:5 e 1.91:1: le foto molto verticali del telefono possono essere rifiutate.
 
 ---

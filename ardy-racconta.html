@@ -206,6 +206,7 @@
   <symbol id="i-sedia" viewBox="0 0 48 48"><path d="M14 6v28M34 6v28M14 12h20M14 20h20M10 30h28v5H10zM13 35l-2 9M35 35l2 9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-condividi" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4"/></g></symbol>
   <symbol id="i-video" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/></g></symbol>
+  <symbol id="i-occhio" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></g></symbol>
   <symbol id="i-esterno" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
 
@@ -309,6 +310,7 @@
       <textarea id="fbTesto" style="min-height:170px"></textarea>
       <p class="suggerimento">Con le foto del capitolo (fino a 4) e il link alla pagina sul sito.</p>
       <div class="spazio"></div>
+      <button class="btn btn-piccolo" type="button" data-social="facebook" data-azione="anteprima" style="margin-bottom:10px"><svg class="ico"><use href="#i-occhio"/></svg>Guarda l'anteprima</button>
       <div class="riga">
         <button class="btn" type="button" data-social="facebook" data-azione="bozza"><svg class="ico"><use href="#i-salva"/></svg>Salva per dopo</button>
         <button class="btn btn-noce" type="button" data-social="facebook" data-azione="pubblica"><svg class="ico"><use href="#i-condividi"/></svg><span>Pubblica</span></button>
@@ -321,6 +323,7 @@
       <textarea id="gTesto" maxlength="1500" style="min-height:150px"></textarea>
       <p class="suggerimento">Con la prima foto del capitolo e il bottone "Scopri di più" verso la pagina. Niente hashtag: su Google non servono.</p>
       <div class="spazio"></div>
+      <button class="btn btn-piccolo" type="button" data-social="google" data-azione="anteprima" style="margin-bottom:10px"><svg class="ico"><use href="#i-occhio"/></svg>Guarda l'anteprima</button>
       <div class="riga">
         <button class="btn" type="button" data-social="google" data-azione="bozza"><svg class="ico"><use href="#i-salva"/></svg>Salva per dopo</button>
         <button class="btn btn-noce" type="button" data-social="google" data-azione="pubblica"><svg class="ico"><use href="#i-condividi"/></svg><span>Pubblica</span></button>
@@ -620,22 +623,31 @@ async function salvaSocial(canale, stato, testo, media, opzioni, faseId) {
 }
 document.querySelector('#vSocial').addEventListener('click', async function (e) {
   var b = e.target.closest('[data-social]'); if (!b) return;
-  var canale = b.dataset.social, pubblicaOra = b.dataset.azione === 'pubblica';
+  var canale = b.dataset.social, azione = b.dataset.azione;
   var testo = (canale === 'facebook' ? $('fbTesto') : $('gTesto')).value.trim();
   if (!testo) { toast('Il testo è vuoto'); return; }
   var foto = (socialFase.foto_wp || []).slice(0, canale === 'facebook' ? 4 : 1);
   var opz = canale === 'facebook' ? { instagram: $('fbInstagram').checked } : {};
   if (canale === 'facebook' && opz.instagram && !foto.length) { toast('Instagram vuole almeno una foto'); return; }
+  var dove = canale === 'facebook' ? (opz.instagram ? 'Facebook e Instagram' : 'Facebook') : 'Google';
+  var anteprima = canale === 'facebook'
+    ? anteprimaFacebook(testo, foto, pezzo.wp_post_link) + (opz.instagram ? anteprimaInstagram(testo, foto) : '')
+    : anteprimaGoogle(testo, foto);
+  // "Guarda l'anteprima": si vede il post senza impegno; da lì si può già pubblicare,
+  // e allora si prosegue come col bottone Pubblica (senza mostrare l'anteprima due volte).
+  var giaVista = false;
+  if (azione === 'anteprima') {
+    if (!await mostraAnteprima('Così uscirà su ' + dove, anteprima)) return;
+    b = document.querySelector('#vSocial [data-social="' + canale + '"][data-azione="pubblica"]');
+    azione = 'pubblica'; giaVista = true;
+  }
+  var pubblicaOra = azione === 'pubblica';
   b.disabled = true;
   var bz = await salvaSocial(canale, 'bozza', testo, foto, opz, socialFase.id);
   if (!bz.success) { b.disabled = false; return; }
   if (!pubblicaOra) { b.disabled = false; toast('Salvato per dopo'); await caricaPezzo(pezzo.id); apriSocial(socialFase.id); return; }
   if (bz.avvisi && bz.avvisi.length && !confirm('Attenzione, nel testo ' + bz.avvisi.join('; ') + '.\n\nPubblico lo stesso?')) { b.disabled = false; return; }
-  var dove = canale === 'facebook' ? (opz.instagram ? 'Facebook e Instagram' : 'Facebook') : 'Google';
-  var anteprima = canale === 'facebook'
-    ? anteprimaFacebook(testo, foto, pezzo.wp_post_link) + (opz.instagram ? anteprimaInstagram(testo, foto) : '')
-    : anteprimaGoogle(testo, foto);
-  if (!await mostraAnteprima('Così uscirà su ' + dove, anteprima)) { b.disabled = false; return; }
+  if (!giaVista && !await mostraAnteprima('Così uscirà su ' + dove, anteprima)) { b.disabled = false; return; }
   var etichetta = b.querySelector('span'); var prima = etichetta.textContent; etichetta.textContent = 'Pubblico…';
   var j = canale === 'facebook'
     ? await api(SOCIAL, { testo_social: testo, immagini: foto, post_link: pezzo.wp_post_link || '', mobile: pezzo.titolo, fase: socialFase.titolo,
