@@ -8,6 +8,7 @@
 //   POST {mode:'racconta', pezzo_id, nota, fase_id?, foto_salvate[], immagini_nuove[]}
 //        → {success, capitolo_titolo, capitolo_testo, titolo_pezzo, scheda{}, storia, domande[], avvisi[]}
 //   POST {mode:'rifinisci', testo, istruzione} → {success, testo, avvisi[]}
+//   POST {mode:'social', pezzo_id, fase_id} → {success, facebook, google, avvisi[]}
 //   POST {mode:'seo', pezzo_id} → {success, seo{titolo,descrizione,keyphrase,in_breve,faq[],link[]}, avvisi[]}
 //        ("togli la parte sul prezzo", "più corto": la correzione a voce)
 //
@@ -62,6 +63,16 @@ if ($mode === 'seo') {
     if (!$seo) { echo json_encode(['success' => false, 'error' => 'Sole non ha risposto, riprova']); exit(); }
     echo json_encode(['success' => true, 'seo' => $seo, 'link_titoli' => PEZZI_LINK_INTERNI, 'avvisi' => pezziAvvisiPrivacy(pezziSeoTesto($seo))],
         JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit();
+}
+
+// Testi social di un capitolo già pubblicato (Facebook/Instagram e Google Business).
+if ($mode === 'social') {
+    try { $soc = pezziGeneraSocial(ardyDB(), (int) ($in['pezzo_id'] ?? 0), (int) ($in['fase_id'] ?? 0)); }
+    catch (PDOException $e) { error_log('ARDY PEZZI AI SOCIAL DB: ' . $e->getMessage()); $soc = null; }
+    if (!$soc) { echo json_encode(['success' => false, 'error' => 'Sole non ha risposto, riprova']); exit(); }
+    echo json_encode(['success' => true, 'facebook' => $soc['facebook'], 'google' => $soc['google'],
+        'avvisi' => pezziAvvisiPrivacy($soc['facebook'] . "\n" . $soc['google'])], JSON_UNESCAPED_UNICODE);
     exit();
 }
 

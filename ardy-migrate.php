@@ -464,6 +464,24 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `pezzi` (
 // Pacchetto SEO/GEO della pagina del pezzo (JSON: titolo, descrizione, keyphrase,
 // in_breve, faq[], link[]): lo scrive Sole, si ritocca in Racconta, lo usa
 // ardy-pubblica-pezzo.php per meta Yoast, "In breve", FAQ e link interni.
+// Social dei pezzi (Fase 2 di PIANO-RACCONTA.md): una riga per canale e per capitolo
+// (fase_id NULL = il reel del pezzo intero). Tiene la bozza "salva per dopo" e, dopo,
+// quando e cosa è uscito: è lo storico che la mini-app mostra come timbri.
+ddl($pdo, "CREATE TABLE IF NOT EXISTS `pezzi_social` (
+    `id`            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `pezzo_id`      BIGINT NOT NULL,
+    `fase_id`       BIGINT NULL,
+    `canale`        VARCHAR(12) NOT NULL,                  -- facebook | google | reel
+    `stato`         VARCHAR(16) NOT NULL DEFAULT 'bozza',  -- bozza | pubblicato | da_verificare
+    `testo`         TEXT NULL,
+    `media`         TEXT NULL,                             -- JSON: URL foto pubbliche, o l'URL del reel
+    `opzioni`       TEXT NULL,                             -- JSON: es. {instagram:true} per il post Facebook
+    `pubblicato_at` DATETIME NULL,
+    `created_at`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_pezzi_social (pezzo_id, fase_id, canale)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE pezzi_social");
+
 if (!colExists($pdo, 'pezzi', 'seo')) {
     ddl($pdo, "ALTER TABLE pezzi ADD COLUMN seo TEXT NULL AFTER storia", "pezzi.seo");
 } else {
