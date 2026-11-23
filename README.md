@@ -657,6 +657,14 @@ su materiali e lavorazioni, non parla del proprietario, e **raccoglie il contatt
 dal loader nelle **Integrazioni di Divi** (non WPCode; copia in `wpcode-snippet-lavorazione.html`, va incollata a mano sul sito),
 che dal 23/11 agisce solo sulle pagine col tag `storia-pezzo`.
 
+### Aspetto
+"Bottega" (23/11, disegnato prima sul canvas Claude Design "Racconta — nuovo aspetto"): chiaro e caldo
+perché si usa in laboratorio con tanta luce; carta, noce e ottone (token in `:root`), titoli Fraunces,
+metro da falegname sotto l'intestazione, stati come timbri, capitoli come tappe lungo un filo, foto
+come stampe sul banco, icone SVG a tratto invece delle emoji. In ingresso la **foto della bottega**:
+file `assets/racconta-bottega.jpg`, da caricare a mano (una foto vera del laboratorio, orizzontale,
+~1600px); finché manca, al suo posto c'è un disegno a tratto del banco.
+
 ### Voce
 Bottone 🎤 con la dettatura del browser (Web Speech API, `it-IT`): bene su Chrome Android, incerta su
 Safari iPhone. Dove manca o viene rifiutata, il bottone sparisce e si usa il 🎤 della tastiera.
