@@ -29,6 +29,10 @@
   .testata { max-width: 640px; margin: 0 auto; display: flex; align-items: center; gap: 10px; min-height: 44px; }
   .marchio { flex: 1; display: flex; align-items: center; gap: 10px; font: 700 26px/1 'Fraunces', serif; color: var(--noce-scuro); }
   header a, .link { color: var(--ottone-testo); text-decoration: none; font-size: 15px; background: none; border: none; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 4px; min-height: 44px; }
+  /* Il logo di Ardy (assets/logo.png, tratto nero su trasparente) usato come maschera:
+     così prende il colore noce del tema invece del nero del file. */
+  .logo-ardy { width: 22px; height: 33px; flex: none; background: var(--noce);
+               -webkit-mask: url(assets/logo.png) center / contain no-repeat; mask: url(assets/logo.png) center / contain no-repeat; }
   /* Il metro da falegname: tacche ogni 10px su una riga d'ottone. */
   .metro { max-width: 640px; margin: 6px auto 0; height: 12px; border-top: 1.5px solid var(--metro);
            background-image: repeating-linear-gradient(90deg, var(--metro) 0 1.5px, transparent 1.5px 10px);
@@ -95,16 +99,33 @@
                         background: var(--ottone); border: 3px solid var(--carta); }
   .filo .card.sul-sito::before { background: var(--verde); }
 
-  /* Capitolo: foto come stampe appoggiate sul banco. */
-  .foto-griglia { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
-  .foto-griglia div { position: relative; aspect-ratio: 1; padding: 5px 5px 14px; background: var(--scheda); border: 1px solid var(--bordo);
-                      border-radius: 4px; box-shadow: 0 2px 4px rgba(61,38,23,.12); }
-  .foto-griglia div:nth-child(odd) { transform: rotate(-2deg); }
-  .foto-griglia div:nth-child(even) { transform: rotate(1.5deg); }
-  .foto-griglia img { width: 100%; height: 100%; object-fit: cover; border-radius: 2px; }
-  .foto-griglia button { position: absolute; top: -6px; right: -6px; width: 30px; height: 30px; border-radius: 50%;
+  /* Capitolo: foto come stampe appoggiate sul banco (telefono); su desktop galleria
+     "da negozio": foto grande e miniature sotto, si sceglie toccando una miniatura. */
+  .principale { display: none; }
+  .miniature { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+  .miniature > div { position: relative; aspect-ratio: 1; padding: 5px 5px 14px; background: var(--scheda); border: 1px solid var(--bordo);
+                     border-radius: 4px; box-shadow: 0 2px 4px rgba(61,38,23,.12); cursor: pointer; }
+  .miniature > div:nth-child(odd) { transform: rotate(-2deg); }
+  .miniature > div:nth-child(even) { transform: rotate(1.5deg); }
+  .miniature img { width: 100%; height: 100%; object-fit: cover; border-radius: 2px; display: block; }
+  .miniature button { position: absolute; top: -6px; right: -6px; width: 30px; height: 30px; border-radius: 50%;
     border: none; background: var(--noce); color: #fff; font-size: 18px; line-height: 1; cursor: pointer; }
+  .foto-vuota { border: 1.5px dashed var(--bordo-forte); border-radius: 14px; padding: 28px 12px; text-align: center; color: var(--testo-dim); margin-bottom: 12px; }
 
+  /* Desktop: il capitolo si allarga su due colonne, foto a sinistra e testo a destra. */
+  @media (min-width: 900px) {
+    body.largo main, body.largo .testata, body.largo .metro { max-width: 1120px; }
+    .colonne { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 36px; align-items: start; }
+    .col-foto { position: sticky; top: 92px; }
+    .principale { display: block; margin-bottom: 12px; }
+    .principale img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 14px;
+                      background: var(--scheda); box-shadow: 0 6px 18px rgba(61,38,23,.16); }
+    .miniature { grid-template-columns: repeat(5, 1fr); gap: 8px; }
+    .miniature > div { padding: 0; transform: none !important; border-radius: 8px; overflow: visible; box-shadow: none; border: 2px solid transparent; }
+    .miniature > div img { border-radius: 6px; }
+    .miniature > div.scelta-foto { border-color: var(--ottone); }
+    .miniature button { width: 24px; height: 24px; font-size: 15px; top: -8px; right: -8px; }
+  }
   .campo-voce { position: relative; }
   .campo-voce textarea, .campo-voce input { padding-right: 70px; }
   .mic { position: absolute; right: 10px; top: 8px; width: 50px; height: 50px; border-radius: 50%; border: none;
@@ -156,7 +177,7 @@
 <header>
   <div class="testata">
     <button class="link" id="btnIndietro" hidden><svg class="ico"><use href="#i-indietro"/></svg>Indietro</button>
-    <div class="marchio" id="marchio"><svg class="ico" style="width:30px;height:30px;color:var(--noce)"><use href="#i-camera"/></svg>Racconta</div>
+    <div class="marchio" id="marchio"><span class="logo-ardy" aria-hidden="true"></span>Racconta</div>
     <a href="ardy-michela-app.html">Dash</a>
   </div>
   <div class="metro" aria-hidden="true"></div>
@@ -179,12 +200,8 @@
       <p class="meta" id="pMeta"></p>
     </div>
     <div class="spazio"></div>
-    <button class="btn btn-noce" id="btnNuovoCap"><svg class="ico"><use href="#i-piu"/></svg>Aggiungi un capitolo</button>
-    <h2 class="titolo-sezione">I capitoli</h2>
-    <div id="listaCapitoli" class="filo"></div>
-
-    <details class="card" id="schedaBox">
-      <summary>Scheda e introduzione</summary>
+    <details class="card" id="schedaBox" style="margin-bottom:14px">
+      <summary>Scheda, introduzione e Google <span class="badge" id="statoGoogle"></span></summary>
       <div id="schedaCampi"></div>
       <label for="pStoria">Introduzione (in cima alla pagina)</label>
       <textarea id="pStoria"></textarea>
@@ -213,6 +230,10 @@
         <button class="btn btn-piccolo" id="btnAggiornaPagina"><svg class="ico"><use href="#i-globo"/></svg>Aggiorna la pagina</button>
       </div>
     </details>
+    <button class="btn btn-noce" id="btnNuovoCap"><svg class="ico"><use href="#i-piu"/></svg>Aggiungi un capitolo</button>
+    <h2 class="titolo-sezione">I capitoli</h2>
+    <div id="listaCapitoli" class="filo"></div>
+
     <div class="spazio"></div>
     <button class="btn btn-pericolo" id="btnEliminaPezzo">Elimina pezzo</button>
     <p class="suggerimento">Lo toglie da qui. Se la pagina è già sul sito, resta online finché non la togli da WordPress.</p>
@@ -221,6 +242,8 @@
   <!-- ═══ CAPITOLO ═══ -->
   <section class="vista" id="vCapitolo">
     <p class="etichetta" id="cPezzoNome" style="margin-bottom:12px;"></p>
+    <div class="colonne">
+    <div class="col-foto">
     <div class="foto-griglia" id="fotoGriglia"></div>
     <div class="riga">
       <button class="btn" id="btnScatta"><svg class="ico"><use href="#i-camera"/></svg>Scatta</button>
@@ -228,8 +251,10 @@
     </div>
     <input type="file" id="inScatta" accept="image/*" capture="environment" hidden>
     <input type="file" id="inGalleria" accept="image/*" multiple hidden>
+    </div>
 
-    <label for="cNota">Cosa state facendo? Raccontalo a voce o scrivilo</label>
+    <div class="col-testo">
+    <label for="cNota" style="margin-top:0">Cosa state facendo? Raccontalo a voce o scrivilo</label>
     <div class="campo-voce">
       <textarea id="cNota" placeholder="Es. credenza umbertina in noce, tarli sul fianco sinistro, oggi consolidamento con resina…"></textarea>
       <button class="mic" data-mic="cNota" aria-label="Detta"><svg class="ico" style="width:22px;height:22px"><use href="#i-mic"/></svg></button>
@@ -266,6 +291,8 @@
     </div>
     <div class="spazio"></div>
     <button class="btn btn-pericolo" id="btnEliminaCap" hidden>Elimina capitolo</button>
+    </div>
+    </div>
   </section>
 </main>
 
@@ -316,6 +343,7 @@ async function router() {
   var m = location.hash.match(/^#\/p\/(\d+)(?:\/c\/(\w+))?/);
   document.querySelectorAll('.vista').forEach(function (v) { v.classList.remove('on'); });
   $('btnIndietro').hidden = !m;
+  document.body.classList.toggle('largo', !!(m && m[2]));   // capitolo: due colonne su desktop
   if (!m) { $('vLista').classList.add('on'); caricaLista(); return; }
   var id = parseInt(m[1], 10);
   if (!pezzo || pezzo.id !== id || !m[2]) await caricaPezzo(id);
@@ -391,6 +419,10 @@ async function caricaPezzo(id) {
   }).join('');
   linkInterni = j.link_interni || {};
   mostraSeo(pezzo.seo);
+  // Si vede da fuori, senza aprire il riquadro, se la pagina è pronta per Google.
+  var pronta = pezzo.seo && pezzo.seo.titolo && pezzo.seo.descrizione;
+  $('statoGoogle').textContent = pronta ? 'pronta per Google' : 'Google: da preparare';
+  $('statoGoogle').className = 'badge ' + (pronta ? 'b-ok' : 'b-mod');
   $('pStoria').value = pezzo.storia || '';
   $('pStato').value = pezzo.stato;
   $('btnAggiornaPagina').hidden = !pezzo.wp_post_link;
@@ -521,7 +553,7 @@ async function pubblica(faseId, btn, conferma) {
 function apriCapitolo(id) {
   var c = null;
   if (id) pezzo.capitoli.forEach(function (x) { if (x.id === id) c = x; });
-  cap = { id: c ? c.id : 0, foto: c ? c.foto.map(function (f) { return { nome: f, url: fotoUrl(pezzo.id, c.id, f) }; }) : [], proposta: null };
+  cap = { id: c ? c.id : 0, foto: c ? c.foto.map(function (f) { return { nome: f, url: fotoUrl(pezzo.id, c.id, f) }; }) : [], principale: 0, proposta: null };
   capSporco = false;
   $('cPezzoNome').textContent = pezzo.titolo === 'Nuovo pezzo' ? 'Nuovo pezzo: il titolo lo propone Sole' : pezzo.titolo;
   $('cNota').value = c ? (c.nota || '') : '';
@@ -535,13 +567,25 @@ function apriCapitolo(id) {
   disegnaFoto();
 }
 function disegnaFoto() {
-  $('fotoGriglia').innerHTML = cap.foto.map(function (f, i) {
-    return '<div><img src="' + escHtml(f.url) + '" alt=""><button data-togli="' + i + '" aria-label="Togli">×</button></div>';
-  }).join('');
+  if (!cap.foto.length) { $('fotoGriglia').innerHTML = '<div class="foto-vuota">Nessuna foto ancora: scatta o scegli dalla galleria.</div>'; return; }
+  var p = Math.min(cap.principale || 0, cap.foto.length - 1);
+  cap.principale = p;
+  // La foto grande si vede solo su desktop (CSS): sul telefono restano le stampe sul banco.
+  $('fotoGriglia').innerHTML = '<div class="principale"><img src="' + escHtml(cap.foto[p].url) + '" alt="Foto ' + (p + 1) + ' del capitolo"></div>'
+    + '<div class="miniature">' + cap.foto.map(function (f, i) {
+      return '<div data-scegli="' + i + '"' + (i === p ? ' class="scelta-foto"' : '') + '><img src="' + escHtml(f.url) + '" alt="Miniatura ' + (i + 1) + '">'
+        + '<button data-togli="' + i + '" aria-label="Togli la foto ' + (i + 1) + '">×</button></div>';
+    }).join('') + '</div>';
 }
 $('fotoGriglia').onclick = function (e) {
-  var b = e.target.closest('[data-togli]'); if (!b) return;
-  cap.foto.splice(parseInt(b.dataset.togli, 10), 1); capSporco = true; disegnaFoto();
+  var b = e.target.closest('[data-togli]');
+  if (b) {
+    var i = parseInt(b.dataset.togli, 10);
+    cap.foto.splice(i, 1); if (cap.principale >= i && cap.principale > 0) cap.principale--;
+    capSporco = true; disegnaFoto(); return;
+  }
+  var m = e.target.closest('[data-scegli]');
+  if (m) { cap.principale = parseInt(m.dataset.scegli, 10); disegnaFoto(); }
 };
 ['cNota', 'cTitolo', 'cTesto'].forEach(function (id) { $(id).addEventListener('input', function () { capSporco = true; }); });
 
