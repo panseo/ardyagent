@@ -65,7 +65,8 @@
 
   /* Ingresso: la foto della bottega (assets/racconta-bottega.jpg); se manca, il disegno. */
   .ingresso { background: var(--carta-chiara); border: 1px solid var(--bordo); border-radius: 18px; padding: 10px; margin-top: 14px; text-align: center; }
-  .ingresso img { display: block; width: 100%; height: 240px; object-fit: cover; border-radius: 12px; }
+  /* object-position più in basso: nella striscia bassa (lista con pezzi) resta in vista il banco. */
+  .ingresso img { display: block; width: 100%; height: 240px; object-fit: cover; object-position: 50% 70%; border-radius: 12px; }
   .ingresso svg { display: block; margin: 10px auto 0; }
   .ingresso h1 { font: 500 25px/1.2 'Fraunces', serif; color: var(--noce-scuro); margin: 14px 0 6px; }
   .ingresso p { color: var(--testo-mid); max-width: 300px; margin: 0 auto; }
