@@ -91,6 +91,7 @@ if ($isCli) {
 }
 $sessionId  = preg_replace('/[^a-zA-Z0-9_\-]/', '', $input['session_id'] ?? '');
 $progettoId = (int) ($input['progetto_id'] ?? 0);   // dash design: reel da un progetto
+$pezzoId    = (int) ($input['pezzo_id'] ?? 0);      // Racconta: reel della storia di un pezzo
 $musica     = $input['musica'] ?? '';   // nome file, 'casuale' oppure '' / 'nessuna'
 $mobile     = trim($input['mobile'] ?? '');
 $templateId = preg_replace('/[^a-zA-Z0-9_\-]/', '', $input['template_id'] ?? '');
@@ -102,11 +103,11 @@ require_once __DIR__ . '/ardy-costcap.php';
 ardyCostCap('ai');
 
 // Il reel nasce O da un cliente (session_id) O da un progetto di design (progetto_id).
-if ($sessionId === '' && $progettoId <= 0) fail('session_id o progetto_id mancante');
+if ($sessionId === '' && $progettoId <= 0 && $pezzoId <= 0) fail('session_id, progetto_id o pezzo_id mancante');
 
 // Chiave per i nomi di file di lavoro (tmp + reel finale); per i clienti resta il
 // session_id (comportamento invariato), per i progetti diventa "p<ID>".
-$workKey = $progettoId > 0 ? ('p' . $progettoId) : $sessionId;
+$workKey = $pezzoId > 0 ? ('z' . $pezzoId) : ($progettoId > 0 ? ('p' . $progettoId) : $sessionId);
 
 if (!is_file(FFMPEG)) fail('FFmpeg non trovato sul server', 500);
 
@@ -141,7 +142,18 @@ try {
 // -- Raccogli le foto dalle fasi -------------------------------------------
 try {
     $db   = ardyDB();
-    if ($progettoId > 0) {
+    if ($pezzoId > 0) {
+        // Racconta: capitoli del pezzo, foto su disco (come i progetti). Solo i capitoli
+        // già sul sito: nel reel finisce solo ciò che si è scelto di rendere pubblico.
+        $stmt = $db->prepare("SELECT id, fase_nome, foto_urls, testo_generato FROM fasi WHERE pezzo_id = ? AND stato = 'pubblicata' ORDER BY ordine ASC, created_at ASC");
+        $stmt->execute([$pezzoId]);
+        $rows = $stmt->fetchAll();
+        if ($mobile === '') {
+            $st2 = $db->prepare("SELECT titolo FROM pezzi WHERE id = ? AND deleted_at IS NULL LIMIT 1");
+            $st2->execute([$pezzoId]);
+            $mobile = trim((string)($st2->fetchColumn() ?: ''));
+        }
+    } elseif ($progettoId > 0) {
         // Dash design: fasi del progetto. Serve anche l'id fase per costruire il path
         // su disco delle foto. $mobile riusa il "titolo" del progetto per la slide-titolo.
         $stmt = $db->prepare("SELECT id, fase_nome, foto_urls, testo_generato FROM fasi WHERE progetto_id = ? AND (fase_tipo IS NULL OR fase_tipo <> 'comunicazione') ORDER BY ordine ASC, created_at ASC");
@@ -176,7 +188,10 @@ foreach ($rows as $r) {
     $urls = json_decode($r['foto_urls'] ?? '[]', true) ?: [];
     foreach ($urls as $u) {
         if (!is_string($u) || $u === '') continue;
-        if ($progettoId > 0) {
+        if ($pezzoId > 0) {
+            // foto_urls del capitolo = nomi file su disco (ardy-pezzi-api.php).
+            $items[] = ['path' => rtrim(ARDY_UPLOAD_DIR, '/') . '/pezzi/' . $pezzoId . '/fasi/' . ((int) $r['id']) . '/' . basename($u), 'fase' => $fn];
+        } elseif ($progettoId > 0) {
             // foto_urls di progetto = nomi file. Su disco (path locale) o, se assenti,
             // su B2 (b2key → URL firmato in reelLeggiFoto). Stesso layout di cartella.
             $rel = 'progetti/' . $progettoId . '/fasi/' . ((int) $r['id']) . '/' . basename($u);

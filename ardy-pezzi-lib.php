@@ -235,3 +235,66 @@ function pezziSeoTesto(array $seo): string {
     foreach ($seo['faq'] as $f) $t .= "\n" . $f['domanda'] . "\n" . $f['risposta'];
     return $t;
 }
+
+// ── Social del capitolo (Fase 2 di PIANO-RACCONTA.md) ─────────────────────────
+// Il testo della pagina è scritto per chi legge con calma; i social vogliono altro:
+// Facebook un racconto breve e caldo con qualche hashtag, Google Business un
+// aggiornamento della scheda senza hashtag (il link "Scopri di più" lo mette il bottone).
+// Sole li scrive dal testo del capitolo già pubblicato; si rivedono prima di uscire.
+
+/**
+ * Testi per Facebook/Instagram e per Google Business di UN capitolo. null se fallisce.
+ * Parte dal testo pubblicato (testo_generato), mai dalle note dettate.
+ */
+function pezziGeneraSocial(PDO $db, int $pezzoId, int $faseId): ?array {
+    $st = $db->prepare("SELECT p.titolo, p.scheda, f.fase_nome, f.testo_generato
+                          FROM pezzi p JOIN fasi f ON f.pezzo_id = p.id
+                         WHERE p.id = ? AND f.id = ? AND p.deleted_at IS NULL");
+    $st->execute([$pezzoId, $faseId]);
+    $r = $st->fetch(PDO::FETCH_ASSOC);
+    if (!$r || trim((string) $r['testo_generato']) === '') return null;
+
+    $testo = "PEZZO: " . $r['titolo'] . "\n";
+    foreach (pezziSchedaNorm($r['scheda']) as $k => $v) if ($v !== '') $testo .= PEZZI_SCHEDA_CAMPI[$k] . ': ' . $v . "\n";
+    $testo .= "\nCAPITOLO: " . $r['fase_nome'] . "\n" . mb_substr((string) $r['testo_generato'], 0, 3000);
+
+    $system = "Sei Sole, la voce di Ardy Lab, bottega di restauro a Roma. Dal capitolo appena pubblicato sul sito scrivi due post: uno per la pagina Facebook (che può uscire anche su Instagram) e uno per la scheda Google Business.
+
+" . PEZZI_REGOLE_PUBBLICO . "
+
+COSA RESTITUISCI (strumento scrivi_social):
+- facebook: 50-110 parole, caldo e concreto, apri con una frase che fa fermare chi scorre, racconta cosa abbiamo fatto oggi e perché, chiudi invitando a leggere tutta la storia sul sito (il link lo aggiungiamo noi, non scriverlo). Massimo 3 emoji. Su una riga a parte 4-7 hashtag pertinenti (#restauro #restauromobili #roma …).
+- google: 60-150 parole per la scheda Google della bottega, tono informativo e locale (cita Roma e il tipo di intervento), niente hashtag, niente emoji, niente link nel testo (c'è il bottone \"Scopri di più\").";
+    $tool = [
+        'name' => 'scrivi_social',
+        'description' => 'Restituisce i testi per Facebook/Instagram e per Google Business.',
+        'input_schema' => [
+            'type' => 'object',
+            'properties' => ['facebook' => ['type' => 'string'], 'google' => ['type' => 'string']],
+            'required' => ['facebook', 'google'],
+        ],
+    ];
+    $out = pezziClaude($system, [['type' => 'text', 'text' => $testo]], 1200, $tool);
+    if (!is_array($out)) return null;
+    $fb = trim((string) ($out['facebook'] ?? '')); $g = trim((string) ($out['google'] ?? ''));
+    // Google Business accetta al massimo 1500 caratteri: meglio tagliare qui che farsi rifiutare il post.
+    return ($fb !== '' && $g !== '') ? ['facebook' => mb_substr($fb, 0, 2000), 'google' => mb_substr($g, 0, 1500)] : null;
+}
+
+/** Storico social di un pezzo: una voce per (capitolo, canale), la più recente. */
+function pezziSocialLista(PDO $db, int $pezzoId): array {
+    $st = $db->prepare("SELECT id, fase_id, canale, stato, testo, media, opzioni, pubblicato_at, updated_at
+                          FROM pezzi_social WHERE pezzo_id = ? ORDER BY updated_at DESC");
+    $st->execute([$pezzoId]);
+    $out = [];
+    foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        $chiave = ((int) $r['fase_id']) . ':' . $r['canale'];
+        if (isset($out[$chiave])) continue;
+        $r['id'] = (int) $r['id'];
+        $r['fase_id'] = $r['fase_id'] !== null ? (int) $r['fase_id'] : null;
+        $r['media'] = json_decode((string) $r['media'], true);
+        $r['opzioni'] = json_decode((string) $r['opzioni'], true) ?: (object) [];
+        $out[$chiave] = $r;
+    }
+    return array_values($out);
+}

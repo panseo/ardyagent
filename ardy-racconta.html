@@ -143,6 +143,9 @@
   .scheda-diff div { margin: 3px 0; } .scheda-diff b { color: var(--noce); font-weight: 600; }
 
   details summary { cursor: pointer; font-weight: 600; color: var(--noce); padding: 4px 0; min-height: 32px; }
+  .striscia-foto { display: flex; gap: 8px; overflow-x: auto; margin: 6px 0 14px; padding-bottom: 4px; }
+  .striscia-foto img { width: 96px; height: 96px; object-fit: cover; border-radius: 8px; flex: none; }
+  .timbri { display: flex; gap: 6px; flex-wrap: wrap; }
   .contatore { font-weight: 400; color: var(--testo-dim); font-size: 13px; }
   .contatore.troppo { color: var(--rosso); font-weight: 600; }
   .faq-voce { border: 1px solid var(--bordo); border-radius: 12px; padding: 10px; margin-bottom: 10px; background: var(--carta-chiara); }
@@ -171,6 +174,8 @@
   <symbol id="i-salva" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/></g></symbol>
   <symbol id="i-matita" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></g></symbol>
   <symbol id="i-sedia" viewBox="0 0 48 48"><path d="M14 6v28M34 6v28M14 12h20M14 20h20M10 30h28v5H10zM13 35l-2 9M35 35l2 9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-condividi" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4"/></g></symbol>
+  <symbol id="i-video" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/></g></symbol>
   <symbol id="i-esterno" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
 
@@ -234,9 +239,64 @@
     <h2 class="titolo-sezione">I capitoli</h2>
     <div id="listaCapitoli" class="filo"></div>
 
+    <!-- Reel per Instagram: uno per pezzo, dalle foto dei capitoli già sul sito -->
+    <section class="card" id="reelBox" hidden>
+      <div class="etichetta">Reel per Instagram <span class="badge" id="reelStato" hidden></span></div>
+      <p class="suggerimento" id="reelInfo"></p>
+      <label for="reelMusica">Musica</label>
+      <select id="reelMusica"><option value="casuale">Una a caso</option><option value="nessuna">Nessuna</option></select>
+      <div class="spazio"></div>
+      <button class="btn" id="btnCreaReel" type="button"><svg class="ico"><use href="#i-video"/></svg><span>Crea il reel</span></button>
+      <div id="reelPronto" hidden>
+        <video id="reelVideo" controls playsinline preload="metadata" style="display:block;width:100%;max-width:320px;margin:14px auto 4px;border-radius:12px;background:#000"></video>
+        <label for="reelCaption">Testo del reel</label>
+        <textarea id="reelCaption" style="min-height:160px"></textarea>
+        <div class="spazio"></div>
+        <div class="riga">
+          <button class="btn" id="btnReelDopo" type="button"><svg class="ico"><use href="#i-salva"/></svg>Salva per dopo</button>
+          <button class="btn btn-noce" id="btnReelPubblica" type="button"><svg class="ico"><use href="#i-condividi"/></svg><span>Pubblica su Instagram</span></button>
+        </div>
+      </div>
+    </section>
+
     <div class="spazio"></div>
     <button class="btn btn-pericolo" id="btnEliminaPezzo">Elimina pezzo</button>
     <p class="suggerimento">Lo toglie da qui. Se la pagina è già sul sito, resta online finché non la togli da WordPress.</p>
+  </section>
+
+  <!-- ═══ CONDIVIDI UN CAPITOLO ═══ -->
+  <section class="vista" id="vSocial">
+    <p class="etichetta" id="sPezzoNome"></p>
+    <h1 class="titolo-sezione" id="sTitolo" style="font-size:24px;margin-top:6px"></h1>
+    <div class="striscia-foto" id="sFoto"></div>
+    <p class="suggerimento" id="sGenera" hidden>Sole sta scrivendo i testi…</p>
+
+    <section class="card">
+      <div class="etichetta">Facebook <span class="badge" id="fbStato" hidden></span></div>
+      <label class="scelta"><input type="checkbox" id="fbInstagram"> Pubblica anche su Instagram</label>
+      <p class="suggerimento" style="margin-top:0">Instagram rifiuta le foto più strette di 4:5: con foto molto verticali meglio solo Facebook (o il reel).</p>
+      <label for="fbTesto">Testo del post</label>
+      <textarea id="fbTesto" style="min-height:170px"></textarea>
+      <p class="suggerimento">Con le foto del capitolo (fino a 4) e il link alla pagina sul sito.</p>
+      <div class="spazio"></div>
+      <div class="riga">
+        <button class="btn" type="button" data-social="facebook" data-azione="bozza"><svg class="ico"><use href="#i-salva"/></svg>Salva per dopo</button>
+        <button class="btn btn-noce" type="button" data-social="facebook" data-azione="pubblica"><svg class="ico"><use href="#i-condividi"/></svg><span>Pubblica</span></button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="etichetta">Google Business <span class="badge" id="gStato" hidden></span></div>
+      <label for="gTesto">Testo dell'aggiornamento</label>
+      <textarea id="gTesto" maxlength="1500" style="min-height:150px"></textarea>
+      <p class="suggerimento">Con la prima foto del capitolo e il bottone "Scopri di più" verso la pagina. Niente hashtag: su Google non servono.</p>
+      <div class="spazio"></div>
+      <div class="riga">
+        <button class="btn" type="button" data-social="google" data-azione="bozza"><svg class="ico"><use href="#i-salva"/></svg>Salva per dopo</button>
+        <button class="btn btn-noce" type="button" data-social="google" data-azione="pubblica"><svg class="ico"><use href="#i-condividi"/></svg><span>Pubblica</span></button>
+      </div>
+    </section>
+    <button class="btn btn-piccolo" type="button" id="btnRigeneraSocial"><svg class="ico"><use href="#i-sole"/></svg><span>Sole, riscrivi i due testi</span></button>
   </section>
 
   <!-- ═══ CAPITOLO ═══ -->
@@ -301,6 +361,8 @@
 <script>
 'use strict';
 var API = 'ardy-pezzi-api.php', AI = 'ardy-pezzi-ai.php', PUBBLICA = 'ardy-pubblica-pezzo.php';
+// Pubblicazione sui canali: gli stessi endpoint della dash (n8n per Meta, API Google).
+var SOCIAL = 'ardy-pubblica-social.php', GBP = 'ardy-gbp-post.php', REEL = 'ardy-crea-reel.php', REEL_PUB = 'ardy-pubblica-reel.php';
 
 var pezzo = null;    // pezzo aperto (con capitoli)
 var campi = {};      // chiave → etichetta dei campi scheda (dal server)
@@ -340,7 +402,7 @@ function fotoUrl(pezzoId, faseId, file) {
 function vai(hash) { if (location.hash === hash) router(); else location.hash = hash; }
 window.addEventListener('hashchange', router);
 async function router() {
-  var m = location.hash.match(/^#\/p\/(\d+)(?:\/c\/(\w+))?/);
+  var m = location.hash.match(/^#\/p\/(\d+)(?:\/c\/(\w+))?(?:\/s\/(\d+))?/);
   document.querySelectorAll('.vista').forEach(function (v) { v.classList.remove('on'); });
   $('btnIndietro').hidden = !m;
   document.body.classList.toggle('largo', !!(m && m[2]));   // capitolo: due colonne su desktop
@@ -348,14 +410,15 @@ async function router() {
   var id = parseInt(m[1], 10);
   if (!pezzo || pezzo.id !== id || !m[2]) await caricaPezzo(id);
   if (!pezzo) { vai('#/'); return; }
-  if (m[2]) { apriCapitolo(m[2] === 'nuovo' ? 0 : parseInt(m[2], 10)); $('vCapitolo').classList.add('on'); }
+  if (m[3]) { apriSocial(parseInt(m[3], 10)); $('vSocial').classList.add('on'); }
+  else if (m[2]) { apriCapitolo(m[2] === 'nuovo' ? 0 : parseInt(m[2], 10)); $('vCapitolo').classList.add('on'); }
   else { $('vPezzo').classList.add('on'); }
   window.scrollTo(0, 0);
 }
 $('btnIndietro').onclick = function () {
   if ($('vCapitolo').classList.contains('on') && capSporco && !confirm('Ci sono modifiche non salvate. Esco lo stesso?')) return;
   capSporco = false;
-  vai($('vCapitolo').classList.contains('on') ? '#/p/' + pezzo.id : '#/');
+  vai($('vCapitolo').classList.contains('on') || $('vSocial').classList.contains('on') ? '#/p/' + pezzo.id : '#/');
 };
 
 // ── Lista ──
@@ -427,6 +490,7 @@ async function caricaPezzo(id) {
   $('pStato').value = pezzo.stato;
   $('btnAggiornaPagina').hidden = !pezzo.wp_post_link;
   disegnaCapitoli();
+  disegnaReel();
 }
 
 function badgeCapitolo(c) {
@@ -442,16 +506,158 @@ function disegnaCapitoli() {
     return '<div class="card' + (daPubblicare ? '' : ' sul-sito') + '"><div class="pezzo-card" data-cap="' + c.id + '">' + img + '<div>'
       + '<div class="titolo-card">' + escHtml(c.titolo || 'Capitolo senza titolo') + '</div>'
       + '<div class="meta">' + escHtml((c.created_at || '').slice(0, 10).split('-').reverse().join('/')) + ' · ' + c.foto.length + ' foto</div>'
-      + badgeCapitolo(c) + '</div></div>'
+      + '<div class="timbri">' + badgeCapitolo(c) + timbriSocial(c.id) + '</div></div></div>'
       + (daPubblicare ? '<div class="spazio"></div><button class="btn btn-piccolo" data-pubblica="' + c.id + '"><svg class="ico"><use href="#i-globo"/></svg>Pubblica sul sito</button>' : '')
+      + (c.stato === 'pubblicata' ? '<div class="spazio"></div><button class="btn btn-piccolo" data-condividi="' + c.id + '"><svg class="ico"><use href="#i-condividi"/></svg>Condividi sui social</button>' : '')
       + '</div>';
   }).join('');
 }
 $('listaCapitoli').onclick = function (e) {
+  var sc = e.target.closest('[data-condividi]');
+  if (sc) { vai('#/p/' + pezzo.id + '/s/' + sc.dataset.condividi); return; }
   var p = e.target.closest('[data-pubblica]');
   if (p) { pubblica(parseInt(p.dataset.pubblica, 10), p); return; }
   var c = e.target.closest('[data-cap]'); if (c) vai('#/p/' + pezzo.id + '/c/' + c.dataset.cap);
 };
+// ── Social ──
+// Storico per (capitolo, canale) dal server: timbri sulle card e testi da riprendere.
+function socialDi(faseId, canale) {
+  return (pezzo.social || []).filter(function (r) { return r.fase_id === faseId && r.canale === canale; })[0] || null;
+}
+function timbroSocial(r, nome) {
+  if (!r) return '';
+  // Con il nome del canale sulle card dei capitoli; senza, dentro il riquadro del canale stesso.
+  var pre = nome ? nome + ' ' : '';
+  if (r.stato === 'pubblicato') return '<span class="badge b-ok">' + pre + (nome ? '' : 'uscito il ') + escHtml((r.pubblicato_at || '').slice(8, 10) + '/' + (r.pubblicato_at || '').slice(5, 7)) + '</span>';
+  if (r.stato === 'da_verificare') return '<span class="badge b-mod">' + pre + 'da verificare</span>';
+  return '<span class="badge b-bozza">' + pre + 'in attesa</span>';
+}
+function timbriSocial(faseId) {
+  return timbroSocial(socialDi(faseId, 'facebook'), 'Facebook') + timbroSocial(socialDi(faseId, 'google'), 'Google');
+}
+function mostraTimbro(id, r, nome) {
+  var html = timbroSocial(r, nome), el = $(id);
+  el.hidden = !html; if (html) { var t = document.createElement('div'); t.innerHTML = html; el.className = t.firstChild.className; el.textContent = t.firstChild.textContent; }
+}
+
+var socialFase = null;   // capitolo aperto nella vista Condividi
+async function apriSocial(faseId) {
+  socialFase = null;
+  pezzo.capitoli.forEach(function (c) { if (c.id === faseId) socialFase = c; });
+  if (!socialFase) { vai('#/p/' + pezzo.id); return; }
+  $('sPezzoNome').textContent = pezzo.titolo;
+  $('sTitolo').textContent = socialFase.titolo || 'Capitolo';
+  $('sFoto').innerHTML = (socialFase.foto_wp || []).map(function (u) { return '<img src="' + escHtml(u) + '" alt="">'; }).join('')
+    || '<p class="suggerimento">Questo capitolo non ha foto sul sito: i post usciranno solo col testo.</p>';
+  var fb = socialDi(faseId, 'facebook'), g = socialDi(faseId, 'google');
+  mostraTimbro('fbStato', fb, ''); mostraTimbro('gStato', g, '');
+  $('fbInstagram').checked = !!(fb && fb.opzioni && fb.opzioni.instagram);
+  // Testi già scritti (bozza o già usciti) si riprendono; se non c'è niente li scrive Sole adesso.
+  $('fbTesto').value = fb ? (fb.testo || '') : '';
+  $('gTesto').value = g ? (g.testo || '') : '';
+  if (!$('fbTesto').value && !$('gTesto').value) await generaSocial();
+}
+async function generaSocial() {
+  $('sGenera').hidden = false;
+  var j = await api(AI, { mode: 'social', pezzo_id: pezzo.id, fase_id: socialFase.id });
+  $('sGenera').hidden = true;
+  if (!j.success) return;
+  $('fbTesto').value = j.facebook; $('gTesto').value = j.google;
+  if (j.avvisi && j.avvisi.length) toast('⚠ Controlla: ' + escHtml(j.avvisi.join('; ')), 6000);
+}
+$('btnRigeneraSocial').onclick = async function () {
+  if (($('fbTesto').value || $('gTesto').value) && !confirm('Sole riscrive tutti e due i testi da capo. Procedo?')) return;
+  await generaSocial();
+};
+
+// Salva sempre prima come bozza (il testo è al sicuro e torna il controllo anonimato),
+// poi, se richiesto, pubblica con l'endpoint del canale e registra l'esito.
+async function salvaSocial(canale, stato, testo, media, opzioni, faseId) {
+  return api(API, { mode: 'social_salva', pezzo_id: pezzo.id, fase_id: faseId, canale: canale, stato: stato, testo: testo, media: media, opzioni: opzioni || {} });
+}
+document.querySelector('#vSocial').addEventListener('click', async function (e) {
+  var b = e.target.closest('[data-social]'); if (!b) return;
+  var canale = b.dataset.social, pubblicaOra = b.dataset.azione === 'pubblica';
+  var testo = (canale === 'facebook' ? $('fbTesto') : $('gTesto')).value.trim();
+  if (!testo) { toast('Il testo è vuoto'); return; }
+  var foto = (socialFase.foto_wp || []).slice(0, canale === 'facebook' ? 4 : 1);
+  var opz = canale === 'facebook' ? { instagram: $('fbInstagram').checked } : {};
+  if (canale === 'facebook' && opz.instagram && !foto.length) { toast('Instagram vuole almeno una foto'); return; }
+  b.disabled = true;
+  var bz = await salvaSocial(canale, 'bozza', testo, foto, opz, socialFase.id);
+  if (!bz.success) { b.disabled = false; return; }
+  if (!pubblicaOra) { b.disabled = false; toast('Salvato per dopo'); await caricaPezzo(pezzo.id); apriSocial(socialFase.id); return; }
+  if (bz.avvisi && bz.avvisi.length && !confirm('Attenzione, nel testo ' + bz.avvisi.join('; ') + '.\n\nPubblico lo stesso?')) { b.disabled = false; return; }
+  var dove = canale === 'facebook' ? (opz.instagram ? 'Facebook e Instagram' : 'Facebook') : 'Google';
+  if (!confirm('Pubblico adesso su ' + dove + '?')) { b.disabled = false; return; }
+  var etichetta = b.querySelector('span'); var prima = etichetta.textContent; etichetta.textContent = 'Pubblico…';
+  var j = canale === 'facebook'
+    ? await api(SOCIAL, { testo_social: testo, immagini: foto, post_link: pezzo.wp_post_link || '', mobile: pezzo.titolo, fase: socialFase.titolo,
+                          piattaforme: opz.instagram ? ['facebook', 'instagram'] : ['facebook'] })
+    : await api(GBP, { testo: testo, immagini: foto, post_link: pezzo.wp_post_link || '', mobile: pezzo.titolo, fase: socialFase.titolo });
+  etichetta.textContent = prima; b.disabled = false;
+  if (!j.success) return;
+  // Meta a volte risponde "ok" senza confermare: si registra come da verificare.
+  var esito = (canale === 'facebook' && j.confermato === false) ? 'da_verificare' : 'pubblicato';
+  await salvaSocial(canale, esito, testo, foto, opz, socialFase.id);
+  toast(esito === 'pubblicato' ? 'Pubblicato su ' + dove : 'Inviato a ' + dove + ': controlla che sia uscito', 6000);
+  await caricaPezzo(pezzo.id); apriSocial(socialFase.id);
+});
+
+// ── Reel per Instagram ──
+// Uno per pezzo, montato sul server (FFmpeg) dalle foto dei capitoli già sul sito.
+var musicheCaricate = false;
+function disegnaReel() {
+  var foto = pezzo.capitoli.filter(function (c) { return c.stato === 'pubblicata'; }).reduce(function (n, c) { return n + c.foto.length; }, 0);
+  $('reelBox').hidden = !pezzo.wp_post_link;
+  $('reelInfo').textContent = foto >= 2
+    ? 'Si monta con le ' + foto + ' foto dei capitoli già sul sito, con titolo e musica. Ci vuole circa un minuto.'
+    : 'Servono almeno 2 foto nei capitoli già pubblicati sul sito.';
+  $('btnCreaReel').disabled = foto < 2;
+  var r = socialDi(null, 'reel');
+  mostraTimbro('reelStato', r, '');
+  $('reelPronto').hidden = !(r && r.media && r.media[0]);
+  if (r && r.media && r.media[0]) { $('reelVideo').src = r.media[0]; $('reelCaption').value = r.testo || ''; }
+  if (!musicheCaricate) {
+    musicheCaricate = true;
+    fetch('ardy-lista-musica.php').then(function (x) { return x.json(); }).then(function (l) {
+      (l || []).forEach(function (m) { var o = document.createElement('option'); o.value = m.file; o.textContent = m.label; $('reelMusica').appendChild(o); });
+    }).catch(function () {});
+  }
+}
+$('btnCreaReel').onclick = async function () {
+  var btn = this, et = btn.querySelector('span');
+  if (!$('reelPronto').hidden && !confirm('Rifaccio il reel da capo?')) return;
+  btn.disabled = true; et.textContent = 'Monto il reel… (circa un minuto)';
+  var j = await api(REEL, { pezzo_id: pezzo.id, musica: $('reelMusica').value });
+  btn.disabled = false; et.textContent = 'Crea il reel';
+  if (!j.success) return;
+  await salvaSocial('reel', 'bozza', j.caption || '', [j.reel_url], { musica: j.musica || '' }, null);
+  await caricaPezzo(pezzo.id);
+  toast('Reel pronto: guardalo e rileggi il testo');
+};
+$('btnReelDopo').onclick = async function () {
+  var r = socialDi(null, 'reel'); if (!r) return;
+  var j = await salvaSocial('reel', 'bozza', $('reelCaption').value, r.media, r.opzioni, null);
+  if (j.success) { toast('Salvato per dopo'); await caricaPezzo(pezzo.id); }
+};
+$('btnReelPubblica').onclick = async function () {
+  var r = socialDi(null, 'reel'); if (!r || !r.media || !r.media[0]) return;
+  var testo = $('reelCaption').value.trim();
+  if (!testo) { toast('Scrivi il testo del reel'); return; }
+  var bz = await salvaSocial('reel', 'bozza', testo, r.media, r.opzioni, null);
+  if (!bz.success) return;
+  if (bz.avvisi && bz.avvisi.length && !confirm('Attenzione, nel testo ' + bz.avvisi.join('; ') + '.\n\nPubblico lo stesso?')) return;
+  if (!confirm('Pubblico adesso il reel su Instagram?')) return;
+  var btn = this, et = btn.querySelector('span'); btn.disabled = true; et.textContent = 'Pubblico…';
+  var j = await api(REEL_PUB, { reel_url: r.media[0], caption: testo, mobile: pezzo.titolo });
+  btn.disabled = false; et.textContent = 'Pubblica su Instagram';
+  if (!j.success) return;
+  await salvaSocial('reel', 'pubblicato', testo, r.media, r.opzioni, null);
+  toast('Reel inviato a Instagram', 6000);
+  await caricaPezzo(pezzo.id);
+};
+
 $('btnNuovoCap').onclick = function () { vai('#/p/' + pezzo.id + '/c/nuovo'); };
 
 function leggiScheda() {

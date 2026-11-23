@@ -170,6 +170,10 @@ foto_urls (JSON), video_urls (JSON), created_at
 > `bozza` finché non vanno sul sito; `wp_pubblicata_at NULL` su un capitolo `pubblicata` = modificato,
 > da ripubblicare.
 
+#### `pezzi_social`  *(nov 2026)*
+Storico e bozze dei social dei pezzi: `pezzo_id, fase_id (NULL = reel), canale (facebook|google|reel),
+stato (bozza|pubblicato|da_verificare), testo, media (JSON URL), opzioni (JSON), pubblicato_at`.
+
 #### `pezzi`  *(nov 2026)*
 I pezzi di **📸 Racconta** (vedi sezione dedicata). **Nessun collegamento a `clienti`**, di proposito.
 
@@ -701,8 +705,22 @@ prima pubblicazione), si ritocca in Racconta (Scheda → "Per Google e gli assis
   Cloudflare) blocca i crawler che **addestrano** modelli (GPTBot, ClaudeBot, Google-Extended…) ma
   lascia passare Google, Bing e i crawler di **ricerca** AI: è l'impostazione giusta per il GEO.
 
-### Non ancora (Fase 2 del piano)
-Google Business, Facebook e reel per i pezzi; per ora solo la pagina sul sito.
+### Social: Facebook, Instagram, Google Business  *(nov 2026, Fase 2)*
+Sempre **manuale**: niente esce da solo, ogni canale ha il suo bottone e "Salva per dopo".
+- **Per capitolo** (solo se è sul sito): bottone **Condividi sui social** → vista con le foto pubbliche
+  del capitolo (`fasi.foto_wp_urls`) e due riquadri:
+  - **Facebook** (spunta "anche su Instagram", spenta di default): testo + fino a 4 foto + link alla
+    pagina → `ardy-pubblica-social.php` (n8n). Se n8n non conferma, lo stato è "da verificare".
+  - **Google Business**: testo senza hashtag (max 1500 caratteri) + prima foto + "Scopri di più" verso
+    la pagina → `ardy-gbp-post.php`.
+  I testi li scrive Sole dal testo pubblicato del capitolo (`pezziGeneraSocial()`, `mode:'social'`).
+- **Reel del pezzo** (riquadro nella pagina del pezzo, quando è sul sito e ci sono ≥2 foto pubblicate):
+  `ardy-crea-reel.php` con `pezzo_id` (foto dei capitoli pubblicati, da disco; titolo = titolo del
+  pezzo; musica a scelta), anteprima video, didascalia rivedibile → `ardy-pubblica-reel.php` (n8n).
+- **Storico** in `pezzi_social` (una riga per capitolo e canale; `fase_id` NULL = reel): prima di
+  pubblicare si salva sempre la bozza (`ardy-pezzi-api.php`, `mode:'social_salva'`, che ritorna anche
+  gli avvisi anonimato), poi si registra l'esito. Timbri sulle card ("Facebook 23/11", "Google in attesa").
+- Instagram accetta foto tra 4:5 e 1.91:1: le foto molto verticali del telefono possono essere rifiutate.
 
 ---
 

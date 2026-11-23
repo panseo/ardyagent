@@ -13,6 +13,7 @@
 //   POST {mode:'elimina', id}                     → cestino (soft delete); la pagina WP resta
 //   POST {mode:'capitolo_salva', pezzo_id, id?, titolo, nota, testo, immagini[], pezzo?{titolo,scheda,storia}}
 //   POST {mode:'capitolo_elimina', id}
+//   POST {mode:'social_salva', pezzo_id, fase_id?, canale, stato, testo, media[], opzioni{}} → {success, avvisi[]}
 //
 // Capitolo: fase_nome = titolo, testo_breve = la nota dettata (materiale grezzo, mai
 // pubblicato), testo_generato = il testo scritto da Sole e rivisto (quello che va sul sito).
@@ -64,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['file'])) {
 /** Capitoli di un pezzo, in ordine, con le foto decodificate. */
 function pezziCapitoli(PDO $db, int $pezzoId): array {
     $st = $db->prepare(
-        "SELECT id, fase_nome AS titolo, testo_breve AS nota, testo_generato AS testo, foto_urls, stato,
+        "SELECT id, fase_nome AS titolo, testo_breve AS nota, testo_generato AS testo, foto_urls, foto_wp_urls, stato,
                 wp_pubblicata_at, created_at
            FROM fasi WHERE pezzo_id = ? ORDER BY ordine ASC, created_at ASC"
     );
@@ -73,7 +74,10 @@ function pezziCapitoli(PDO $db, int $pezzoId): array {
     foreach ($rows as &$r) {
         $r['id']   = (int) $r['id'];
         $r['foto'] = json_decode($r['foto_urls'] ?? '[]', true) ?: [];
-        unset($r['foto_urls']);
+        // URL pubblici su WordPress (dopo la pubblicazione): sono quelli che possono
+        // scaricare Facebook, Instagram e Google; le foto su disco stanno dietro login.
+        $r['foto_wp'] = json_decode($r['foto_wp_urls'] ?? '[]', true) ?: [];
+        unset($r['foto_urls'], $r['foto_wp_urls']);
     }
     return $rows;
 }
@@ -126,6 +130,7 @@ try {
             $p['scheda']   = pezziSchedaNorm($p['scheda']);
             $p['seo']      = pezziSeoNorm($p['seo']);
             $p['capitoli'] = pezziCapitoli($db, $id);
+            $p['social']   = pezziSocialLista($db, $id);
             echo json_encode(['success' => true, 'pezzo' => $p, 'campi' => PEZZI_SCHEDA_CAMPI, 'link_interni' => PEZZI_LINK_INTERNI],
                 JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             exit();
@@ -245,6 +250,43 @@ try {
         $db->prepare("UPDATE pezzi SET updated_at = NOW() WHERE id = ?")->execute([$pezzoId]);
 
         echo json_encode(['success' => true, 'id' => $id, 'foto' => $fotoFiles]);
+        exit();
+    }
+
+    // Social: salva la bozza ("salva per dopo") o registra l'esito di una pubblicazione.
+    // La pubblicazione vera la fanno gli endpoint di sempre (ardy-pubblica-social.php,
+    // ardy-gbp-post.php, ardy-pubblica-reel.php): qui si tiene lo storico, e prima di
+    // pubblicare si passa sempre da qui con stato 'bozza', così il testo è al sicuro e
+    // torna il controllo anonimato.
+    if ($mode === 'social_salva') {
+        $pezzoId = (int) ($in['pezzo_id'] ?? 0);
+        $faseId  = (int) ($in['fase_id'] ?? 0) ?: null;
+        $canale  = (string) ($in['canale'] ?? '');
+        $stato   = (string) ($in['stato'] ?? 'bozza');
+        if (!in_array($canale, ['facebook', 'google', 'reel'], true)) pezziFail('canale non valido');
+        if (!in_array($stato, ['bozza', 'pubblicato', 'da_verificare'], true)) pezziFail('stato non valido');
+        $chk = $db->prepare("SELECT id FROM pezzi WHERE id = ? AND deleted_at IS NULL");
+        $chk->execute([$pezzoId]);
+        if ($chk->fetchColumn() === false) pezziFail('Pezzo non trovato');
+        $testo = mb_substr(trim((string) ($in['testo'] ?? '')), 0, 3000);
+        $media = is_array($in['media'] ?? null) ? array_values(array_filter($in['media'], fn($u) => is_string($u) && preg_match('#^https://#', $u))) : [];
+        $opz   = is_array($in['opzioni'] ?? null) ? array_intersect_key($in['opzioni'], ['instagram' => 1, 'musica' => 1]) : [];
+
+        // Una voce per (capitolo, canale): si aggiorna finché non è uscita; dopo una
+        // pubblicazione la volta successiva ne nasce una nuova (lo storico resta).
+        $sel = $db->prepare("SELECT id FROM pezzi_social WHERE pezzo_id = ? AND " . ($faseId ? "fase_id = ?" : "fase_id IS NULL")
+            . " AND canale = ? AND stato = 'bozza' ORDER BY id DESC LIMIT 1");
+        $sel->execute($faseId ? [$pezzoId, $faseId, $canale] : [$pezzoId, $canale]);
+        $sid = (int) ($sel->fetchColumn() ?: 0);
+        $pubAt = $stato === 'bozza' ? null : date('Y-m-d H:i:s');
+        if ($sid > 0) {
+            $db->prepare("UPDATE pezzi_social SET stato = ?, testo = ?, media = ?, opzioni = ?, pubblicato_at = ? WHERE id = ?")
+               ->execute([$stato, $testo, json_encode($media, JSON_UNESCAPED_SLASHES), json_encode((object) $opz), $pubAt, $sid]);
+        } else {
+            $db->prepare("INSERT INTO pezzi_social (pezzo_id, fase_id, canale, stato, testo, media, opzioni, pubblicato_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+               ->execute([$pezzoId, $faseId, $canale, $stato, $testo, json_encode($media, JSON_UNESCAPED_SLASHES), json_encode((object) $opz), $pubAt]);
+        }
+        echo json_encode(['success' => true, 'avvisi' => pezziAvvisiPrivacy($testo)]);
         exit();
     }
 

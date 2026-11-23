@@ -39,7 +39,14 @@ dopo il deploy (che gira anche `ardy-migrate.php`: tabella `pezzi`, colonna `fas
   4. Google Search Console → Controllo URL → "Richiedi indicizzazione" per la prima pagina-pezzo; le
      successive le trova dalla sitemap. (Facoltativo: Cloudflare → AI Crawl Control → Content-Signal
      `ai-input=yes`, per dire esplicitamente che le pagine si possono usare nelle risposte AI.)
-- [ ] **Fase 2**: Google Business, Facebook e reel per i pezzi (riquadro per canale, salva per dopo).
+- [ ] **Collaudo social dei pezzi** (Fase 2, ramo `racconta-social`, 23/11) dopo il deploy:
+  1. Pezzo → capitolo sul sito → **Condividi sui social** → controllare i testi di Sole.
+  2. **Google**: Pubblica → verificare il post sulla scheda Google (foto, "Scopri di più").
+  3. **Facebook** (senza Instagram): Pubblica → verificare il post sulla pagina, con foto e link.
+  4. **Reel**: Crea il reel → guardarlo → Pubblica su Instagram → verificare dove esce (il ramo Reels di
+     n8n potrebbe pubblicare anche su Facebook: da controllare nel workflow).
+  5. Instagram come post foto: provare con un capitolo a foto orizzontali; con foto verticali 3:4 Instagram
+     può rifiutare. Se serve: generare in `ardy-pubblica-pezzo.php` una copia 4:5 per Instagram.
 - [ ] **Togliere le lavorazioni dei clienti da WordPress** e portarle in un'area privata su ardyagent
   (`/lavoro/`): analisi e decisioni (23/11) in `ANALISI-AREA-CLIENTE.md`.
   - [x] Passo 1 scritto (23/11): area in sola lettura (`ardy-area-cliente.html` + `-api.php`).

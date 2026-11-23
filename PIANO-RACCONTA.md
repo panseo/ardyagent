@@ -1,7 +1,7 @@
 # Piano — "Racconta": la storia di un pezzo, da foto e voce
 
 > Stato: **Fase 1 scritta** (23/11/2026, ramo `racconta-fase1`), da collaudare dal vivo: vedi
-> `TODO-PROSSIMI-TASK.md`. Fase 2 (social) non iniziata.
+> `TODO-PROSSIMI-TASK.md`. Fase 2 (social) scritta il 23/11 (ramo `racconta-social`), da collaudare.
 >
 > Problema: la dash principale si usa poco per raccontare i lavori. Ogni pubblicazione passa dalla
 > scheda cliente (sezione Lavorazione → fisarmonica "Crea e pubblica nuova fase") e un pezzo senza
