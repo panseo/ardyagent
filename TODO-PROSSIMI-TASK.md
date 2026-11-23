@@ -28,9 +28,12 @@ dopo il deploy (che gira anche `ardy-migrate.php`: tabella `pezzi`, colonna `fas
 - [ ] **Togliere le lavorazioni dei clienti da WordPress** e portarle in un'area privata su ardyagent
   (`/lavoro/`): analisi e decisioni (23/11) in `ANALISI-AREA-CLIENTE.md`.
   - [x] Passo 1 scritto (23/11): area in sola lettura (`ardy-area-cliente.html` + `-api.php`).
-  - [ ] **Collaudo passo 1** dopo il deploy: `https://ardyagent.ardy-lab.it/lavoro/` con il codice di un
-    cliente vero (fasi, foto, video, comunicazioni, stato), link `/lavoro/?codice=…`, codice sbagliato,
-    "Esci", da iPhone e Android. Controllare anche che `/lavoro/` NON chieda la password della dash.
+  - [x] Deploy passo 1 (23/11): `/lavoro/` si apre senza password della dash, API in produzione ok.
+  - [ ] **Collaudo col prossimo cliente** (rimandato 23/11): entrare in `/lavoro/` col suo codice e
+    controllare fasi, foto, video, comunicazioni, stato; link `/lavoro/?codice=…` dal telefono (iPhone e
+    Android); codice sbagliato; "Esci".
+  - [x] **Codice d'accesso in dash** (23/11): scheda cliente → 🪵 Lavorazione → riquadro "🔑 Area
+    cliente" con codice, Copia link, Copia codice, Apri, e "Genera codice" per chi non l'ha ancora.
   - [ ] Passo 2: la pubblicazione delle fasi va nell'area (foto su disco, link nell'area in email/WA/Sole/dossier).
   - [ ] Passo 3: redirect dei vecchi post cliente su WordPress, poi ritiro. Passo 4: pulizia.
 

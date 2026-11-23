@@ -599,6 +599,11 @@ Pagina **privata del cliente** su `https://ardyagent.ardy-lab.it/lavoro/`, che s
   cliente dal telefono. Resta consultabile anche dopo la consegna.
 - **Pubblica di proposito** (fuori dal Basic Auth staff), `noindex` (meta + `X-Robots-Tag`),
   `Referrer-Policy: no-referrer`. Riscrittura `/lavoro/` in `.htaccess` e `infra/Caddyfile`.
+- **In dash**: scheda cliente → 🪵 Lavorazione → riquadro **🔑 Area cliente** con il codice,
+  "Copia link" (`/lavoro/?codice=…`, pronto da mandare), "Copia codice", "Apri", e **Genera codice**
+  per chi non l'ha ancora (`ardy-update-lead.php`, `azione:'genera_codice'`; un codice esistente non
+  si rigenera mai). Il codice arriva alla dash da `ardy-crm-api.php` (`CodiceAccesso`); la funzione
+  `ardy_codice_per_sessione()` sta in `ardy-db.php`, condivisa con la pubblicazione delle fasi.
 - **Oggi** le foto vengono dagli URL WordPress delle fasi già pubblicate: la pubblicazione non è
   ancora cambiata (passo 2 dell'analisi).
 

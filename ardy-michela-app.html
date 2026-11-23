@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Ardy">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="ardy-michela-app.css?v=20260705c">
+<link rel="stylesheet" href="ardy-michela-app.css?v=20261123">
 </head>
 <body>
 
@@ -364,6 +364,8 @@
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
               <a href="#" class="lav-post-link" id="lavPostLink" target="_blank" style="display:none;">Vedi post →</a>
             </div>
+            <!-- Area cliente (/lavoro/): il codice con cui il cliente vede il suo lavoro -->
+            <div class="area-codice-box" id="areaCodiceBox"></div>
             <div class="lav-date-box">
               <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
                 <div class="lav-title">📅 Periodo del lavoro</div>
@@ -1121,6 +1123,7 @@ function aggiornaSezioniVisibili(stato) {
     const linkEl  = document.getElementById('lavPostLink');
     if (lavWpPostLink) { linkEl.href = lavWpPostLink; linkEl.style.display = 'inline'; }
     else { linkEl.style.display = 'none'; }
+    renderAreaCodice();
     document.getElementById('avvioNote').value = '';
     document.getElementById('avvioPreview').innerHTML = '';
     avvioImmagini = [];
@@ -5299,6 +5302,50 @@ function renderLibGestione() {
 }
 
 // ─── TOAST ────────────────────────────────────────────────
+// ─── AREA CLIENTE: codice d'accesso ───────────────────────
+// Il cliente entra in /lavoro/ col suo codice ARD-XXXX-XXXX. Qui Michela lo vede, copia
+// il link già pronto da mandargli, o lo genera se il cliente non ce l'ha ancora. Un
+// codice esistente non si rigenera mai: il cliente lo ha già, cambiarlo lo chiuderebbe fuori.
+const AREA_URL = 'https://ardyagent.ardy-lab.it/lavoro/';
+function renderAreaCodice() {
+  const box = document.getElementById('areaCodiceBox');
+  if (!box || !currentLead) return;
+  const cod = (currentLead.CodiceAccesso || '').trim();
+  box.innerHTML = cod
+    ? `<span class="area-codice-label">🔑 Area cliente</span>
+       <span class="area-codice">${escHtml(cod)}</span>
+       <button class="btn btn--sm" onclick="copiaAreaCliente('link')">📋 Copia link</button>
+       <button class="btn btn--sm" onclick="copiaAreaCliente('codice')">Copia codice</button>
+       <a class="btn btn--link btn--sm" href="${escHtml(AREA_URL)}?codice=${encodeURIComponent(cod)}" target="_blank" rel="noopener">Apri ↗</a>`
+    : `<span class="area-codice-label">🔑 Area cliente</span>
+       <span class="area-codice-vuoto">nessun codice ancora</span>
+       <button class="btn btn--sm" onclick="generaCodiceArea()">Genera codice</button>`;
+}
+function copiaAreaCliente(cosa) {
+  const cod = (currentLead && currentLead.CodiceAccesso || '').trim();
+  if (!cod) return;
+  const testo = cosa === 'link' ? AREA_URL + '?codice=' + encodeURIComponent(cod) : cod;
+  navigator.clipboard.writeText(testo)
+    .then(() => showToast(cosa === 'link' ? '📋 Link area cliente copiato' : '📋 Codice copiato', 'success'))
+    .catch(() => showToast('⚠ Copia non riuscita', 'error'));
+}
+async function generaCodiceArea() {
+  if (!currentLead) return;
+  try {
+    const r = await fetch('ardy-update-lead.php', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: currentLead.Session_ID, azione: 'genera_codice' })
+    });
+    const d = await r.json();
+    if (!d.success) { showToast('⚠ ' + (d.error || 'Codice non generato'), 'error'); return; }
+    currentLead.CodiceAccesso = d.codice;
+    renderAreaCodice();
+    showToast('🔑 Codice generato', 'success');
+  } catch (e) {
+    showToast('⚠ Errore di rete', 'error');
+  }
+}
+
 function showToast(msg, type = '') {
   const t = document.getElementById('toast');
   t.textContent = msg;
