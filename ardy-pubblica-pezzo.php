@@ -8,6 +8,8 @@
 //   POST {pezzo_id, fase_id?, conferma?}
 //     - crea la pagina se non c'è (titolo + introduzione + scheda);
 //     - riscrive sempre il blocco introduzione/scheda (delimitato da marcatori);
+//     - senza fase_id ("Aggiorna la pagina") rifà anche i blocchi dei capitoli già online,
+//       con le foto già su WordPress (impaginazione nuova anche ai capitoli vecchi);
 //     - con fase_id aggiunge il capitolo, o lo SOSTITUISCE se era già pubblicato
 //       (marcatori <!-- ardy-fase-ID -->, come ardy-pubblica-fase-progetto.php);
 //     - toglie i blocchi dei capitoli eliminati dalla mini-app;
@@ -60,7 +62,7 @@ try {
     $st->execute([$pezzoId]);
     $pezzo = $st->fetch(PDO::FETCH_ASSOC);
     if (!$pezzo) { echo json_encode(['success' => false, 'error' => 'Pezzo non trovato']); exit(); }
-    $cs = $db->prepare("SELECT id, fase_nome, testo_generato, foto_urls, stato, wp_pubblicata_at, created_at
+    $cs = $db->prepare("SELECT id, fase_nome, testo_generato, foto_urls, foto_wp_urls, stato, wp_pubblicata_at, created_at
                           FROM fasi WHERE pezzo_id = ? ORDER BY ordine ASC, created_at ASC");
     $cs->execute([$pezzoId]);
     $capitoli = $cs->fetchAll(PDO::FETCH_ASSOC);
@@ -141,6 +143,39 @@ function pezzoParagrafi(string $t): string {
     return $out;
 }
 
+// Blocco HTML di un capitolo: data, titolo, poi foto e testo affiancati su desktop
+// (galleria "da negozio" a sinistra, testo a destra), in colonna sul telefono. La
+// galleria è solo HTML + CSS (radio + label): niente script nel contenuto, che WordPress
+// e Divi potrebbero alterare. La foto grande apre il lightbox del widget a schermo intero.
+// Su UNA riga per lo stesso motivo del CSS: wpautop non deve spezzare la struttura.
+function pezzoBloccoCapitolo(array $c, array $urls, string $titoloPezzo): string {
+    $id    = (int) $c['id'];
+    $nome  = trim((string) $c['fase_nome']);
+    $ts    = strtotime((string) $c['created_at']) ?: time();
+    $alt   = fn($i) => $titoloPezzo . ($nome !== '' ? ': ' . $nome : '') . ' (foto ' . ($i + 1) . ')';
+    $gal   = '';
+    if ($urls) {
+        $radio = ''; $grandi = ''; $pollici = '';
+        foreach (array_values($urls) as $i => $u) {
+            $grandi .= '<a href="' . esc_url($u) . '" class="ardy-galleria-item" data-ardy-galleria="1"><img src="' . esc_url($u) . '" alt="' . esc_attr($alt($i)) . '" loading="lazy" /></a>';
+            if (count($urls) > 1) {
+                $radio   .= '<input type="radio" name="ardy-g' . $id . '" id="ardy-g' . $id . '-' . $i . '"' . ($i === 0 ? ' checked' : '') . ' />';
+                $pollici .= '<label for="ardy-g' . $id . '-' . $i . '"><img src="' . esc_url($u) . '" alt="" loading="lazy" /></label>';
+            }
+        }
+        $gal = '<div class="ardy-gal' . (count($urls) > 1 ? '' : ' ardy-solo') . '">' . $radio
+             . '<div class="ardy-main">' . $grandi . '</div>'
+             . ($pollici !== '' ? '<div class="ardy-pollici">' . $pollici . '</div>' : '') . '</div>';
+    }
+    return '<!-- ardy-fase-' . $id . ' -->'
+        . '<div style="border-left:3px solid #c8a96e;padding:16px 20px;margin:24px 0;background:#fafaf8;">'
+        . '<p style="font-size:12px;color:#999;margin:0 0 4px;font-family:monospace;"><time datetime="' . esc_attr(date('Y-m-d', $ts)) . '">' . esc_html(date('d/m/Y', $ts)) . '</time></p>'
+        . ($nome !== '' ? '<h2 style="font-size:20px;margin:0 0 12px;">' . esc_html($nome) . '</h2>' : '')
+        . '<div class="ardy-cap-corpo' . ($gal !== '' ? ' con-foto' : '') . '">' . $gal
+        . '<div style="font-size:15px;line-height:1.7;color:#333;">' . pezzoParagrafi((string) $c['testo_generato']) . '</div></div>'
+        . '</div><!-- /ardy-fase-' . $id . ' -->';
+}
+
 // ── Blocco introduzione + scheda ──
 $righeScheda = '';
 foreach (PEZZI_SCHEDA_CAMPI as $k => $label) {
@@ -158,11 +193,15 @@ $oggi  = date('Y-m-d');
 // schema). Toglierla non basterebbe comunque: lo snippet WPCode "copertina-fallback"
 // rimetterebbe la prima foto. Nascosto anche "0 commenti": i commenti sono chiusi.
 $intro = INTRO_START
-    . '<style>article.tag-storia-pezzo .et_post_meta_wrapper > img,article.tag-storia-pezzo .post-meta .comments-number{display:none}</style>'
+    // Più la galleria dei capitoli (vedi pezzoBloccoCapitolo): tutto su UNA riga, così
+    // wpautop non ci infila <br>/<p>. Le regole nth-of-type coprono le 12 foto massime.
+    . '<style>article.tag-storia-pezzo .et_post_meta_wrapper > img,article.tag-storia-pezzo .post-meta .comments-number{display:none}.ardy-cap-corpo{display:block}@media(min-width:768px){.ardy-cap-corpo.con-foto{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:28px;align-items:start}}.ardy-gal{margin:0 0 14px}.ardy-gal input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}.ardy-main a{display:none}.ardy-solo .ardy-main a{display:block}.ardy-main img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;margin:0}.ardy-pollici{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:8px}.ardy-pollici label{display:block;cursor:pointer;border-radius:5px;outline-offset:1px}.ardy-pollici img{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:4px;margin:0}.ardy-gal input:nth-of-type(1):checked~.ardy-main a:nth-child(1){display:block}.ardy-gal input:nth-of-type(1):checked~.ardy-pollici label:nth-child(1){outline:2px solid #c8a96e}.ardy-gal input:nth-of-type(2):checked~.ardy-main a:nth-child(2){display:block}.ardy-gal input:nth-of-type(2):checked~.ardy-pollici label:nth-child(2){outline:2px solid #c8a96e}.ardy-gal input:nth-of-type(3):checked~.ardy-main a:nth-child(3){display:block}.ardy-gal input:nth-of-type(3):checked~.ardy-pollici label:nth-child(3){outline:2px solid #c8a96e}.ardy-gal input:nth-of-type(4):checked~.ardy-main a:nth-child(4){display:block}.ardy-gal input:nth-of-type(4):checked~.ardy-pollici label:nth-child(4){outline:2px solid #c8a96e}.ardy-gal input:nth-of-type(5):checked~.ardy-main a:nth-child(5){display:block}.ardy-gal input:nth-of-type(5):checked~.ardy-pollici label:nth-child(5){outline:2px solid #c8a96e}.ardy-gal input:nth-of-type(6):checked~.ardy-main a:nth-child(6){display:block}.ardy-gal input:nth-of-type(6):checked~.ardy-pollici label:nth-child(6){outline:2px solid #c8a96e}.ardy-gal input:nth-of-type(7):checked~.ardy-main a:nth-child(7){display:block}.ardy-gal input:nth-of-type(7):checked~.ardy-pollici label:nth-child(7){outline:2px solid #c8a96e}.ardy-gal input:nth-of-type(8):checked~.ardy-main a:nth-child(8){display:block}.ardy-gal input:nth-of-type(8):checked~.ardy-pollici label:nth-child(8){outline:2px solid #c8a96e}.ardy-gal input:nth-of-type(9):checked~.ardy-main a:nth-child(9){display:block}.ardy-gal input:nth-of-type(9):checked~.ardy-pollici label:nth-child(9){outline:2px solid #c8a96e}.ardy-gal input:nth-of-type(10):checked~.ardy-main a:nth-child(10){display:block}.ardy-gal input:nth-of-type(10):checked~.ardy-pollici label:nth-child(10){outline:2px solid #c8a96e}.ardy-gal input:nth-of-type(11):checked~.ardy-main a:nth-child(11){display:block}.ardy-gal input:nth-of-type(11):checked~.ardy-pollici label:nth-child(11){outline:2px solid #c8a96e}.ardy-gal input:nth-of-type(12):checked~.ardy-main a:nth-child(12){display:block}.ardy-gal input:nth-of-type(12):checked~.ardy-pollici label:nth-child(12){outline:2px solid #c8a96e}</style>'
+    // UN solo paragrafo d'apertura: "In breve" se c'è (è quello scritto per Google e le AI),
+    // altrimenti l'introduzione. Mostrarli entrambi ripeteva tre volte la stessa storia
+    // (in breve, introduzione, inizio del primo capitolo): visto al collaudo del 23/11.
     . ($seo['in_breve'] !== ''
-        ? '<p style="font-size:16px;line-height:1.7;color:#333;background:#f7f2e8;border-radius:8px;padding:14px 18px;margin:0 0 20px;"><strong>In breve.</strong> ' . esc_html($seo['in_breve']) . '</p>'
-        : '')
-    . '<div style="font-family:Georgia,serif;font-size:16px;line-height:1.7;color:#444;margin-bottom:24px;">' . pezzoParagrafi($storia) . '</div>'
+        ? '<p style="font-size:16px;line-height:1.7;color:#333;background:#f7f2e8;border-radius:8px;padding:14px 18px;margin:0 0 24px;"><strong>In breve.</strong> ' . esc_html($seo['in_breve']) . '</p>'
+        : '<div style="font-family:Georgia,serif;font-size:16px;line-height:1.7;color:#444;margin-bottom:24px;">' . pezzoParagrafi($storia) . '</div>')
     . ($righeScheda !== '' ? '<h2 style="font-size:20px;margin:0 0 10px;">Scheda del pezzo</h2><table style="font-size:14px;margin:0 0 16px;border-collapse:collapse;">' . $righeScheda . '</table>' : '')
     . '<p style="font-size:13px;color:#888;margin:0 0 28px;">Raccontato da <a href="https://ardy-lab.it/chi-siamo/">Ardy Lab</a>, bottega di restauro a Roma · aggiornato il <time datetime="' . esc_attr($oggi) . '">' . esc_html(date('d/m/Y')) . '</time></p>'
     . INTRO_END;
@@ -248,7 +287,7 @@ $fotoUrlPubbliche = [];
 if ($capitolo) {
     $tmpDir = rtrim(ARDY_UPLOAD_DIR, '/') . '/pezzi/' . $pezzoId . '/_wp_tmp/';
     if (!is_dir($tmpDir)) @mkdir($tmpDir, 0755, true);
-    $fotoHtml = '';
+
     foreach ($fotoPronte as $f) {
         $tname = 'f_' . uniqid() . '.' . $f['ext'];
         if (file_put_contents($tmpDir . $tname, $f['bytes']) === false) continue;
@@ -259,7 +298,7 @@ if ($capitolo) {
         // salvato anche sull'allegato, così lo ritrova chi riusa la foto dalla libreria media.
         $alt = $titolo . (trim((string) $capitolo['fase_nome']) !== '' ? ': ' . trim((string) $capitolo['fase_nome']) : '') . ' (foto ' . ($fotoPubblicate + 1) . ')';
         update_post_meta($attachId, '_wp_attachment_image_alt', $alt);
-        $fotoHtml .= '<img src="' . esc_url($url) . '" alt="' . esc_attr($alt) . '" style="max-width:100%;margin:10px 0;border-radius:6px;" />' . "\n";
+
         $fotoUrlPubbliche[] = $url;
         $fotoPubblicate++;
         if (!has_post_thumbnail($wpPostId)) set_post_thumbnail($wpPostId, $attachId);
@@ -269,21 +308,31 @@ if ($capitolo) {
 
     $mStart = '<!-- ardy-fase-' . $faseId . ' -->';
     $mEnd   = '<!-- /ardy-fase-' . $faseId . ' -->';
-    $data   = date('d/m/Y', strtotime((string) $capitolo['created_at']) ?: time());
-    $dataIso = date('Y-m-d', strtotime((string) $capitolo['created_at']) ?: time());
-    $blocco = $mStart . '
-<div style="border-left:3px solid #c8a96e;padding:16px 20px;margin:24px 0;background:#fafaf8;">
-  <p style="font-size:12px;color:#999;margin:0 0 4px;font-family:monospace;"><time datetime="' . esc_attr($dataIso) . '">' . esc_html($data) . '</time></p>'
-    . (trim((string) $capitolo['fase_nome']) !== '' ? '<h2 style="font-size:20px;margin:0 0 10px;">' . esc_html(trim((string) $capitolo['fase_nome'])) . '</h2>' : '')
-    . '<div style="font-size:15px;line-height:1.7;color:#333;">' . pezzoParagrafi((string) $capitolo['testo_generato']) . '</div>'
-    . $fotoHtml . '
-</div>' . $mEnd;
+    $blocco = pezzoBloccoCapitolo($capitolo, $fotoUrlPubbliche, $titolo);
 
     $s = strpos($content, $mStart);
     $e = $s !== false ? strpos($content, $mEnd, $s) : false;
     $content = ($s !== false && $e !== false)
         ? substr($content, 0, $s) . $blocco . substr($content, $e + strlen($mEnd))
         : $content . "\n" . $blocco;
+}
+
+// "Aggiorna la pagina" (nessun capitolo indicato): si rifanno anche i blocchi dei capitoli
+// già online, con le foto che sono GIÀ su WordPress (nessun nuovo caricamento, niente
+// doppioni in libreria). Così un cambio di impaginazione arriva anche ai capitoli vecchi.
+// Si saltano quelli modificati dopo la pubblicazione (wp_pubblicata_at NULL): le modifiche
+// non ancora riviste non devono uscire da qui.
+if (!$capitolo) {
+    foreach ($capitoli as $c) {
+        if ($c['wp_pubblicata_at'] === null) continue;
+        $mS = '<!-- ardy-fase-' . (int) $c['id'] . ' -->';
+        $mE = '<!-- /ardy-fase-' . (int) $c['id'] . ' -->';
+        $s = strpos($content, $mS);
+        $e = $s !== false ? strpos($content, $mE, $s) : false;
+        if ($s === false || $e === false) continue;
+        $urls = json_decode((string) ($c['foto_wp_urls'] ?? ''), true) ?: [];
+        $content = substr($content, 0, $s) . pezzoBloccoCapitolo($c, $urls, $titolo) . substr($content, $e + strlen($mE));
+    }
 }
 
 $content = rtrim($content) . "\n" . $coda;

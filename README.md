@@ -653,6 +653,12 @@ immagine in evidenza. I blocchi dei capitoli eliminati spariscono alla pubblicaz
 Titolo del post = titolo del pezzo. **Commenti chiusi** (per le domande c'è Sole). L'immagine in evidenza
 resta impostata (anteprime, condivisioni, og:image) ma **nella pagina è nascosta** con una regola CSS nel
 blocco introduzione, perché Divi la ripeterebbe uguale alla prima foto del primo capitolo.
+In apertura **un solo paragrafo**: "In breve" se c'è, altrimenti l'introduzione (mostrarli entrambi ripeteva la
+storia tre volte). Ogni capitolo (`pezzoBloccoCapitolo()`): su desktop **galleria a sinistra e testo a destra**,
+sul telefono in colonna; la galleria è solo HTML+CSS (radio + label, regole `nth-of-type` per 12 foto, su una
+riga sola perché wpautop non la spezzi), la foto grande apre il lightbox del widget. **"Aggiorna la pagina"**
+rifà anche i blocchi dei capitoli già online con le foto già su WordPress (niente nuovi caricamenti), saltando
+quelli modificati e non ancora ripubblicati.
 
 ### Sole sulla pagina del pezzo
 Il widget (`ardy-widget-lavorazione.js`) legge i tag del post: con `storia-pezzo` salta la scelta
