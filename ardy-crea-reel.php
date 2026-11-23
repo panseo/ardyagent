@@ -11,7 +11,8 @@ set_time_limit(600);
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-net.php';
-require_once __DIR__ . '/ardy-storage.php';   // foto di progetto su B2 (fallback disco)
+require_once __DIR__ . '/ardy-storage.php';
+require_once __DIR__ . '/ardy-grafica-lib.php';   // stile dei reel di Michela (Inter, logo bianco, frase con *)   // foto di progetto su B2 (fallback disco)
 
 header('Access-Control-Allow-Origin: https://ardyagent.ardy-lab.it');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -95,6 +96,8 @@ $pezzoId    = (int) ($input['pezzo_id'] ?? 0);      // Racconta: reel della stor
 $musica     = $input['musica'] ?? '';   // nome file, 'casuale' oppure '' / 'nessuna'
 $mobile     = trim($input['mobile'] ?? '');
 $templateId = preg_replace('/[^a-zA-Z0-9_\-]/', '', $input['template_id'] ?? '');
+// Frase della copertina ("*Let's give Vintage a second life"); vuota = il nome del pezzo.
+$frase      = mb_substr(trim((string) ($input['frase'] ?? '')), 0, 120);
 
 // Tetto di spesa (SECURITY-AUDIT §9.12): ogni reel è un render ffmpeg pesante più
 // una didascalia Claude. All'ingresso, prima di occupare CPU e disco. La CLI di
@@ -219,7 +222,8 @@ function trovaFont(): ?string {
     foreach ($sys as $f) if (is_file($f)) return $f;
     return null;
 }
-$font = trovaFont();
+// Inter (stile di Michela) se c'è, altrimenti il primo font disponibile.
+$font = grafFont('medium') ?? trovaFont();
 // Le scritte si disegnano con GD (il drawtext di FFmpeg non è sempre incluso
 // nei build statici). Servono GD + supporto FreeType per i font TTF.
 $gdOk = $font && function_exists('imagettftext') && function_exists('imagecreatefromjpeg');
@@ -260,7 +264,9 @@ foreach ($items as $it) {
     @unlink($src);
     if ($rc === 0 && is_file($norm)) {
         // Didascalia della fase disegnata con GD (in basso)
-        if ($gdOk && $showCaption && $it['fase'] !== '') gdCaption($norm, $it['fase'], $font);
+        if ($gdOk && $showCaption && $it['fase'] !== '') {
+            if (grafDisponibile()) grafDidascalia($norm, $it['fase']); else gdCaption($norm, $it['fase'], $font);
+        }
         $normFiles[] = $norm; $usedItems[] = $it; $idx++;
     }
 }
@@ -270,7 +276,15 @@ if (count($normFiles) < 2) { pulisci($tmpDir); fail('Non sono riuscito a elabora
 $logo = __DIR__ . '/assets/logo.png';
 
 // -- Slide-titolo iniziale (nome mobile + logo su sfondo sfocato) -----------
-$titleSlide = $showTitolo ? slideTitolo($tmpDir, $normFiles[0], $logo, $font, $mobile) : null;
+// Copertina nello stile di Michela: la prima foto a tutto schermo (non sfocata), logo
+// bianco, indirizzo, servizi e la frase con l'asterisco. Senza GD+Inter, la vecchia slide.
+$titleSlide = null;
+if ($showTitolo) {
+    $primaBytes = reelLeggiFoto($usedItems[0]);
+    $cop = is_string($primaBytes) ? grafCopertina($primaBytes, $frase !== '' ? $frase : $mobile, REEL_W, REEL_H) : null;
+    if ($cop !== null && file_put_contents($tmpDir . 'slide_title.jpg', $cop) !== false) $titleSlide = $tmpDir . 'slide_title.jpg';
+    else $titleSlide = slideTitolo($tmpDir, $normFiles[0], $logo, $font, $mobile);
+}
 
 // -- Slide finale "Prima -> Dopo" (prima e ultima foto + logo) -------------
 $finalSlide = null;
@@ -542,7 +556,8 @@ function slideFinale(string $tmpDir, string $primaImg, string $dopoImg, string $
             . '[top][bot]vstack=inputs=2[stk]';
     $next   = '[stk]';
 
-    if (is_file($logo)) {
+    // Il logo (tratto nero) su due foto non si vedeva: se c'è GD lo si mette bianco dopo.
+    if (is_file($logo) && !grafDisponibile()) {
         $inputs .= ' -i ' . escapeshellarg($logo);
         $fc     .= ';[2:v]scale=240:-1[lg];[stk][lg]overlay=(W-w)/2:H-h-60[vl]';
         $next    = '[vl]';
@@ -556,6 +571,10 @@ function slideFinale(string $tmpDir, string $primaImg, string $dopoImg, string $
     if (gdOk($font)) {
         gdLabel($out, 'PRIMA', $font, 40, 40);
         gdLabel($out, 'DOPO',  $font, 40, 1000);
+    }
+    if (grafDisponibile() && ($im = @imagecreatefromjpeg($out))) {
+        grafLogoBianco($im, (int) ((imagesx($im) - 70) / 2), imagesy($im) - 160, 105);
+        imagejpeg($im, $out, 92); imagedestroy($im);
     }
     return $out;
 }

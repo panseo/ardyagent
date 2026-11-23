@@ -71,6 +71,8 @@ ardyagent.ardy-lab.it/
 ├── ardy-pezzi-api.php         # Racconta: pezzi e capitoli (CRUD, foto su disco)
 ├── ardy-pezzi-ai.php          # Racconta: Sole scrive capitolo + scheda da foto e nota; correzione a voce
 ├── ardy-pubblica-pezzo.php    # Racconta: pagina WP del pezzo (lavori-in-corso + tag storia-pezzo) + istantanea per Sole
+├── ardy-pezzi-copertina.php   # Racconta: copertina 4:5 del capitolo (prima foto + logo + frase) → anteprima o caricata su WP
+├── ardy-grafica-lib.php       # Grafica nello stile dei reel di Michela (Inter, logo bianco, frase con *): reel + copertine
 ├── ardy-pezzi-lib.php         # Racconta: libreria interna (scheda, controllo anonimato, proiezione pubblica per Sole)
 ├── ardy-social-bozze.php      # Bozze post social "salva per dopo" persistite in DB (tabella social_bozze) — multi-dispositivo
 ├── ardy-social-foto.php       # Carica una foto del post social → URL pubblico WP Media (serve a IG/FB via API)
@@ -733,6 +735,16 @@ Sempre **manuale**: niente esce da solo, ogni canale ha il suo bottone e "Salva 
   Nei riquadri Facebook e Google c'è anche **"Guarda l'anteprima"**, per vederla senza premere Pubblica
   (il reel ha già il video nella pagina).
 - Instagram accetta foto tra 4:5 e 1.91:1: le foto molto verticali del telefono possono essere rifiutate.
+- **Grafica nello stile dei reel di Michela** (`ardy-grafica-lib.php`, font **Inter** in `assets/fonts/`,
+  licenza OFL in `OFL-Inter.txt`): foto a tutto campo, logo Ardy bianco, indirizzo ("Via Joyce 4, 00143 /
+  Roma (RM), Italia") e servizi ("Restauro, Design / Corsi & Interior") in piccolo, frase grande con
+  l'asterisco. **Copertina del capitolo**: la prima foto diventa un 4:5 (1080×1350, va bene anche per
+  Instagram) con la frase che propone Sole (`frase` in `pezziGeneraSocial`), modificabile nella pagina
+  Condividi con anteprima; alla pubblicazione `ardy-pezzi-copertina.php` la carica su WordPress (cache per
+  capitolo+frase, niente doppioni) e prende il posto della prima foto; le altre escono pulite. **Reel**
+  (tutti: clienti, progetti, pezzi): copertina con la stessa grafica (parametro `frase`, default il nome
+  del pezzo/mobile), didascalie in Inter in basso a sinistra, logo bianco sulla slide Prima/Dopo. Senza
+  GD+FreeType o senza Inter si torna alla grafica di prima.
 
 ---
 

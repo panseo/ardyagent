@@ -71,7 +71,7 @@ if ($mode === 'social') {
     try { $soc = pezziGeneraSocial(ardyDB(), (int) ($in['pezzo_id'] ?? 0), (int) ($in['fase_id'] ?? 0)); }
     catch (PDOException $e) { error_log('ARDY PEZZI AI SOCIAL DB: ' . $e->getMessage()); $soc = null; }
     if (!$soc) { echo json_encode(['success' => false, 'error' => 'Sole non ha risposto, riprova']); exit(); }
-    echo json_encode(['success' => true, 'facebook' => $soc['facebook'], 'google' => $soc['google'],
+    echo json_encode(['success' => true, 'facebook' => $soc['facebook'], 'google' => $soc['google'], 'frase' => $soc['frase'],
         'avvisi' => pezziAvvisiPrivacy($soc['facebook'] . "\n" . $soc['google'])], JSON_UNESCAPED_UNICODE);
     exit();
 }
