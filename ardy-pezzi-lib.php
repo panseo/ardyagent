@@ -264,21 +264,23 @@ function pezziGeneraSocial(PDO $db, int $pezzoId, int $faseId): ?array {
 
 COSA RESTITUISCI (strumento scrivi_social):
 - facebook: 50-110 parole, caldo e concreto, apri con una frase che fa fermare chi scorre, racconta cosa abbiamo fatto oggi e perché, chiudi invitando a leggere tutta la storia sul sito (il link lo aggiungiamo noi, non scriverlo). Massimo 3 emoji. Su una riga a parte 4-7 hashtag pertinenti (#restauro #restauromobili #roma …).
+- frase: la frase da scrivere SULLA FOTO di copertina, nello stile dei reel della bottega (\"Let's give Vintage a second life\"): 2-6 parole, evocativa, in italiano, senza punto finale, senza emoji, senza asterisco (lo aggiungiamo noi). Es. \"Il rosso che resta\", \"Una seconda vita in faggio\".
 - google: 60-150 parole per la scheda Google della bottega, tono informativo e locale (cita Roma e il tipo di intervento), niente hashtag, niente emoji, niente link nel testo (c'è il bottone \"Scopri di più\").";
     $tool = [
         'name' => 'scrivi_social',
         'description' => 'Restituisce i testi per Facebook/Instagram e per Google Business.',
         'input_schema' => [
             'type' => 'object',
-            'properties' => ['facebook' => ['type' => 'string'], 'google' => ['type' => 'string']],
-            'required' => ['facebook', 'google'],
+            'properties' => ['facebook' => ['type' => 'string'], 'google' => ['type' => 'string'], 'frase' => ['type' => 'string']],
+            'required' => ['facebook', 'google', 'frase'],
         ],
     ];
     $out = pezziClaude($system, [['type' => 'text', 'text' => $testo]], 1200, $tool);
     if (!is_array($out)) return null;
     $fb = trim((string) ($out['facebook'] ?? '')); $g = trim((string) ($out['google'] ?? ''));
     // Google Business accetta al massimo 1500 caratteri: meglio tagliare qui che farsi rifiutare il post.
-    return ($fb !== '' && $g !== '') ? ['facebook' => mb_substr($fb, 0, 2000), 'google' => mb_substr($g, 0, 1500)] : null;
+    $frase = mb_substr(trim(ltrim(trim((string) ($out['frase'] ?? '')), '*'), " .\"'"), 0, 60);
+    return ($fb !== '' && $g !== '') ? ['facebook' => mb_substr($fb, 0, 2000), 'google' => mb_substr($g, 0, 1500), 'frase' => $frase] : null;
 }
 
 /** Storico social di un pezzo: una voce per (capitolo, canale), la più recente. */

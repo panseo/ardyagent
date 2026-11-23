@@ -45,6 +45,10 @@ dopo il deploy (che gira anche `ardy-migrate.php`: tabella `pezzi`, colonna `fas
   3. **Facebook** (senza Instagram): Pubblica → verificare il post sulla pagina, con foto e link.
   4. **Reel**: Crea il reel → guardarlo → Pubblica su Instagram → verificare dove esce (il ramo Reels di
      n8n potrebbe pubblicare anche su Facebook: da controllare nel workflow).
+  6. **Grafica stile Michela** (ramo `grafica-stile-michela`): nella pagina Condividi controllare l'anteprima
+     della copertina con la frase; pubblicare e verificare che sui social la prima foto sia la copertina;
+     creare un reel e controllare copertina, didascalie e slide Prima/Dopo. Controllare anche un reel della
+     dash clienti (usa la stessa grafica).
   5. Instagram come post foto: provare con un capitolo a foto orizzontali; con foto verticali 3:4 Instagram
      può rifiutare. Se serve: generare in `ardy-pubblica-pezzo.php` una copia 4:5 per Instagram.
 - [ ] **Togliere le lavorazioni dei clienti da WordPress** e portarle in un'area privata su ardyagent

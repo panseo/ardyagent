@@ -270,7 +270,7 @@ try {
         if ($chk->fetchColumn() === false) pezziFail('Pezzo non trovato');
         $testo = mb_substr(trim((string) ($in['testo'] ?? '')), 0, 3000);
         $media = is_array($in['media'] ?? null) ? array_values(array_filter($in['media'], fn($u) => is_string($u) && preg_match('#^https://#', $u))) : [];
-        $opz   = is_array($in['opzioni'] ?? null) ? array_intersect_key($in['opzioni'], ['instagram' => 1, 'musica' => 1]) : [];
+        $opz   = is_array($in['opzioni'] ?? null) ? array_intersect_key($in['opzioni'], ['instagram' => 1, 'musica' => 1, 'frase' => 1]) : [];
 
         // Una voce per (capitolo, canale): si aggiorna finché non è uscita; dopo una
         // pubblicazione la volta successiva ne nasce una nuova (lo storico resta).

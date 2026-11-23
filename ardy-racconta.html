@@ -274,6 +274,8 @@
     <section class="card" id="reelBox" hidden>
       <div class="etichetta">Reel per Instagram <span class="badge" id="reelStato" hidden></span></div>
       <p class="suggerimento" id="reelInfo"></p>
+      <label for="reelFrase">Frase sulla copertina del reel</label>
+      <input type="text" id="reelFrase" maxlength="80" placeholder="Es. Una seconda vita in faggio">
       <label for="reelMusica">Musica</label>
       <select id="reelMusica"><option value="casuale">Una a caso</option><option value="nessuna">Nessuna</option></select>
       <div class="spazio"></div>
@@ -301,6 +303,18 @@
     <h1 class="titolo-sezione" id="sTitolo" style="font-size:24px;margin-top:6px"></h1>
     <div class="striscia-foto" id="sFoto"></div>
     <p class="suggerimento" id="sGenera" hidden>Sole sta scrivendo i testi…</p>
+
+    <!-- Copertina: la prima foto con logo, indirizzo e frase, nello stile dei reel di Michela -->
+    <section class="card" id="copBox">
+      <div class="etichetta">Copertina del post</div>
+      <img id="copImg" alt="Copertina del capitolo" style="display:block;width:100%;max-width:300px;aspect-ratio:4/5;object-fit:cover;margin:10px auto;border-radius:8px;background:var(--chip)">
+      <label for="copFrase">Frase sulla foto</label>
+      <div class="riga">
+        <input type="text" id="copFrase" maxlength="60" placeholder="Es. Il rosso che resta">
+        <button class="btn btn-piccolo" type="button" id="btnCopAggiorna" style="flex:none">Aggiorna</button>
+      </div>
+      <p class="suggerimento">Va solo sulla prima foto; le altre escono pulite. Lascia vuoto per non mettere la frase.</p>
+    </section>
 
     <section class="card">
       <div class="etichetta">Facebook <span class="badge" id="fbStato" hidden></span></div>
@@ -598,6 +612,9 @@ async function apriSocial(faseId) {
   var fb = socialDi(faseId, 'facebook'), g = socialDi(faseId, 'google');
   mostraTimbro('fbStato', fb, ''); mostraTimbro('gStato', g, '');
   $('fbInstagram').checked = !!(fb && fb.opzioni && fb.opzioni.instagram);
+  $('copBox').hidden = !(socialFase.foto || []).length;
+  $('copFrase').value = (fb && fb.opzioni && fb.opzioni.frase) || (g && g.opzioni && g.opzioni.frase) || '';
+  aggiornaCopertina();
   // Testi già scritti (bozza o già usciti) si riprendono; se non c'è niente li scrive Sole adesso.
   $('fbTesto').value = fb ? (fb.testo || '') : '';
   $('gTesto').value = g ? (g.testo || '') : '';
@@ -609,12 +626,21 @@ async function generaSocial() {
   $('sGenera').hidden = true;
   if (!j.success) return;
   $('fbTesto').value = j.facebook || ''; $('gTesto').value = j.google || '';
+  if (j.frase && !$('copFrase').value) { $('copFrase').value = j.frase; aggiornaCopertina(); }
   if (j.avvisi && j.avvisi.length) toast('⚠ Controlla: ' + escHtml(j.avvisi.join('; ')), 6000);
 }
 $('btnRigeneraSocial').onclick = async function () {
   if (($('fbTesto').value || $('gTesto').value) && !confirm('Sole riscrive tutti e due i testi da capo. Procedo?')) return;
   await generaSocial();
 };
+
+// Copertina: l'anteprima la genera il server al volo (stessa grafica che andrà online).
+function urlCopertina() {
+  return 'ardy-pezzi-copertina.php?pezzo_id=' + pezzo.id + '&fase_id=' + socialFase.id + '&frase=' + encodeURIComponent($('copFrase').value.trim());
+}
+function aggiornaCopertina() { if (!$('copBox').hidden) $('copImg').src = urlCopertina(); }
+$('btnCopAggiorna').onclick = aggiornaCopertina;
+$('copFrase').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); aggiornaCopertina(); } });
 
 // Salva sempre prima come bozza (il testo è al sicuro e torna il controllo anonimato),
 // poi, se richiesto, pubblica con l'endpoint del canale e registra l'esito.
@@ -627,12 +653,15 @@ document.querySelector('#vSocial').addEventListener('click', async function (e) 
   var testo = (canale === 'facebook' ? $('fbTesto') : $('gTesto')).value.trim();
   if (!testo) { toast('Il testo è vuoto'); return; }
   var foto = (socialFase.foto_wp || []).slice(0, canale === 'facebook' ? 4 : 1);
-  var opz = canale === 'facebook' ? { instagram: $('fbInstagram').checked } : {};
+  var frase = $('copFrase').value.trim();
+  var opz = canale === 'facebook' ? { instagram: $('fbInstagram').checked, frase: frase } : { frase: frase };
+  // In anteprima la prima foto è già la copertina con la grafica (generata al volo).
+  var fotoAnteprima = foto.length && !$('copBox').hidden ? [urlCopertina()].concat(foto.slice(1)) : foto;
   if (canale === 'facebook' && opz.instagram && !foto.length) { toast('Instagram vuole almeno una foto'); return; }
   var dove = canale === 'facebook' ? (opz.instagram ? 'Facebook e Instagram' : 'Facebook') : 'Google';
   var anteprima = canale === 'facebook'
-    ? anteprimaFacebook(testo, foto, pezzo.wp_post_link) + (opz.instagram ? anteprimaInstagram(testo, foto) : '')
-    : anteprimaGoogle(testo, foto);
+    ? anteprimaFacebook(testo, fotoAnteprima, pezzo.wp_post_link) + (opz.instagram ? anteprimaInstagram(testo, fotoAnteprima) : '')
+    : anteprimaGoogle(testo, fotoAnteprima);
   // "Guarda l'anteprima": si vede il post senza impegno; da lì si può già pubblicare,
   // e allora si prosegue come col bottone Pubblica (senza mostrare l'anteprima due volte).
   var giaVista = false;
@@ -649,6 +678,12 @@ document.querySelector('#vSocial').addEventListener('click', async function (e) 
   if (bz.avvisi && bz.avvisi.length && !confirm('Attenzione, nel testo ' + bz.avvisi.join('; ') + '.\n\nPubblico lo stesso?')) { b.disabled = false; return; }
   if (!giaVista && !await mostraAnteprima('Così uscirà su ' + dove, anteprima)) { b.disabled = false; return; }
   var etichetta = b.querySelector('span'); var prima = etichetta.textContent; etichetta.textContent = 'Pubblico…';
+  // La copertina va caricata su WordPress (URL pubblico) e prende il posto della prima foto.
+  if (foto.length && !$('copBox').hidden) {
+    var cp = await api('ardy-pezzi-copertina.php', { pezzo_id: pezzo.id, fase_id: socialFase.id, frase: frase });
+    if (!cp.success) { etichetta.textContent = prima; b.disabled = false; return; }
+    foto = [cp.url].concat(foto.slice(1));
+  }
   var j = canale === 'facebook'
     ? await api(SOCIAL, { testo_social: testo, immagini: foto, post_link: pezzo.wp_post_link || '', mobile: pezzo.titolo, fase: socialFase.titolo,
                           piattaforme: opz.instagram ? ['facebook', 'instagram'] : ['facebook'] })
@@ -732,6 +767,8 @@ function disegnaReel() {
   mostraTimbro('reelStato', r, '');
   $('reelPronto').hidden = !(r && r.media && r.media[0]);
   if (r && r.media && r.media[0]) { $('reelVideo').src = r.media[0]; $('reelCaption').value = r.testo || ''; }
+  // Ogni pezzo la sua frase: quella del reel salvato, altrimenti il titolo del pezzo.
+  $('reelFrase').value = (r && r.opzioni && r.opzioni.frase) || pezzo.titolo || '';
   if (!musicheCaricate) {
     musicheCaricate = true;
     fetch('ardy-lista-musica.php').then(function (x) { return x.json(); }).then(function (l) {
@@ -743,10 +780,10 @@ $('btnCreaReel').onclick = async function () {
   var btn = this, et = btn.querySelector('span');
   if (!$('reelPronto').hidden && !confirm('Rifaccio il reel da capo?')) return;
   btn.disabled = true; et.textContent = 'Monto il reel… (circa un minuto)';
-  var j = await api(REEL, { pezzo_id: pezzo.id, musica: $('reelMusica').value });
+  var j = await api(REEL, { pezzo_id: pezzo.id, musica: $('reelMusica').value, frase: $('reelFrase').value.trim() });
   btn.disabled = false; et.textContent = 'Crea il reel';
   if (!j.success) return;
-  await salvaSocial('reel', 'bozza', j.caption || '', [j.reel_url], { musica: j.musica || '' }, null);
+  await salvaSocial('reel', 'bozza', j.caption || '', [j.reel_url], { musica: j.musica || '', frase: $('reelFrase').value.trim() }, null);
   await caricaPezzo(pezzo.id);
   toast('Reel pronto: guardalo e rileggi il testo');
 };
