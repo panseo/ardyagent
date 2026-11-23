@@ -461,6 +461,15 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `pezzi` (
     INDEX idx_pezzi_wp (wp_post_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE pezzi");
 
+// Pacchetto SEO/GEO della pagina del pezzo (JSON: titolo, descrizione, keyphrase,
+// in_breve, faq[], link[]): lo scrive Sole, si ritocca in Racconta, lo usa
+// ardy-pubblica-pezzo.php per meta Yoast, "In breve", FAQ e link interni.
+if (!colExists($pdo, 'pezzi', 'seo')) {
+    ddl($pdo, "ALTER TABLE pezzi ADD COLUMN seo TEXT NULL AFTER storia", "pezzi.seo");
+} else {
+    echo "  skip pezzi.seo\n"; $skip++;
+}
+
 // Colonne WordPress sul progetto: id e link dell'articolo "madre" (pubblicato dalla
 // galleria + descrizione; le fasi-racconto poi vi si agganciano in append).
 $progettiWpCols = [

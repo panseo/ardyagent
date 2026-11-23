@@ -36,6 +36,7 @@ base per la **centralizzazione** dei widget front-end (vedi sotto).
 | `corsi-dato-strutturato.php` | Corsi dato strutturato | 15240 | php | everywhere | Schema.org `Course` sui corsi (SEO, hook `wp_head`) | ❌ No (backup-only) |
 | `snippet-yoast.php` | Snippet yoast | 15241 | php | everywhere | Schema `LocalBusiness` via filtro `wpseo_schema_organization` (SEO) | ❌ No (backup-only) |
 | `performance.php` | performance | 15267 | php | everywhere | Ottimizzazioni performance (hook WP) | ❌ No (backup-only) |
+| `pezzi-schema-faq.php` | Ardy — schema FAQ pezzi *(da creare, 11/2026)* | — | php | everywhere | Filtro `wpseo_schema_graph`: sulle pagine col tag `storia-pezzo` aggiunge un nodo `FAQPage` con le FAQ del meta `_ardy_faq` (scritto da `ardy-pubblica-pezzo.php`) | ❌ No (backup-only) |
 | `lavorazioni-copertina-fallback.php` | *(già incollato in WPCode)* | — | php | everywhere | Filtro `get_post_thumbnail_id`: sulle pagine categoria "lavori-in-corso" senza copertina, usa al volo la prima foto del post per i box di anteprima Divi | ❌ No (backup-only) |
 
 > **Nota:** il *loader della pagina lavorazione* NON è in questi snippet (la vecchia nota nel

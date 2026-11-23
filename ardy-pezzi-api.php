@@ -9,7 +9,7 @@
 //   GET  ?mode=dettaglio&id=N                     → pezzo + capitoli
 //   GET  ?file=..&pezzo_id=N&fase_id=M            → serve una foto da disco
 //   POST {mode:'crea', titolo?}                   → nuovo pezzo
-//   POST {mode:'salva', id, titolo, scheda{}, storia, stato}
+//   POST {mode:'salva', id, titolo, scheda{}, storia, seo{}, stato}
 //   POST {mode:'elimina', id}                     → cestino (soft delete); la pagina WP resta
 //   POST {mode:'capitolo_salva', pezzo_id, id?, titolo, nota, testo, immagini[], pezzo?{titolo,scheda,storia}}
 //   POST {mode:'capitolo_elimina', id}
@@ -117,15 +117,17 @@ try {
 
         if ($mode === 'dettaglio') {
             $id = (int) ($_GET['id'] ?? 0);
-            $st = $db->prepare("SELECT id, titolo, scheda, storia, stato, wp_post_id, wp_post_link, created_by, created_at
+            $st = $db->prepare("SELECT id, titolo, scheda, storia, seo, stato, wp_post_id, wp_post_link, created_by, created_at
                                   FROM pezzi WHERE id = ? AND deleted_at IS NULL");
             $st->execute([$id]);
             $p = $st->fetch(PDO::FETCH_ASSOC);
             if (!$p) pezziFail('Pezzo non trovato');
             $p['id']       = (int) $p['id'];
             $p['scheda']   = pezziSchedaNorm($p['scheda']);
+            $p['seo']      = pezziSeoNorm($p['seo']);
             $p['capitoli'] = pezziCapitoli($db, $id);
-            echo json_encode(['success' => true, 'pezzo' => $p, 'campi' => PEZZI_SCHEDA_CAMPI]);
+            echo json_encode(['success' => true, 'pezzo' => $p, 'campi' => PEZZI_SCHEDA_CAMPI, 'link_interni' => PEZZI_LINK_INTERNI],
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             exit();
         }
 
@@ -141,6 +143,7 @@ try {
         if (array_key_exists('titolo', $dati)) { $set[] = 'titolo = :t';  $par[':t'] = mb_substr(trim((string) $dati['titolo']), 0, 200); }
         if (array_key_exists('scheda', $dati)) { $set[] = 'scheda = :s';  $par[':s'] = json_encode(pezziSchedaNorm($dati['scheda']), JSON_UNESCAPED_UNICODE); }
         if (array_key_exists('storia', $dati)) { $set[] = 'storia = :st'; $par[':st'] = mb_substr(trim((string) $dati['storia']), 0, 8000); }
+        if (array_key_exists('seo', $dati))    { $set[] = 'seo = :seo';   $par[':seo'] = json_encode(pezziSeoNorm($dati['seo']), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); }
         if (array_key_exists('stato', $dati))  { $set[] = 'stato = :ss';  $par[':ss'] = ($dati['stato'] === 'finito') ? 'finito' : 'in_corso'; }
         if (!$set) return;
         $db->prepare("UPDATE pezzi SET " . implode(', ', $set) . " WHERE id = :id AND deleted_at IS NULL")->execute($par);
@@ -157,7 +160,7 @@ try {
     if ($mode === 'salva') {
         $id = (int) ($in['id'] ?? 0);
         if ($id <= 0) pezziFail('id mancante');
-        $salvaPezzo($id, array_intersect_key($in, array_flip(['titolo', 'scheda', 'storia', 'stato'])));
+        $salvaPezzo($id, array_intersect_key($in, array_flip(['titolo', 'scheda', 'storia', 'seo', 'stato'])));
         echo json_encode(['success' => true]);
         exit();
     }
