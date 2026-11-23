@@ -48,6 +48,9 @@ ardyagent.ardy-lab.it {
 
 	# URL "pulito" foto vendita per WooCommerce (equivalente RewriteRule .htaccess)
 	rewrite /object-img/([0-9]+)-([0-9]+)\.(jpe?g|png|webp|gif)$ /ardy-object-img.php?pid={re.1}&gid={re.2}
+	# Area cliente: stesso indirizzo corto di .htaccess (pubblica, il controllo è il codice).
+	rewrite /lavoro /ardy-area-cliente.html
+	rewrite /lavoro/ /ardy-area-cliente.html
 
 	# MIME corretto per il manifest PWA
 	@webmanifest path *.webmanifest

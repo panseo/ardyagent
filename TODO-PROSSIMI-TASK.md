@@ -6,7 +6,8 @@ Mini-app `ardy-racconta.html` + `ardy-pezzi-*.php` + `ardy-pubblica-pezzo.php`, 
 (widget + `ardy-proxy.php`). Piano in `PIANO-RACCONTA.md`. Nessun test automatico: tutto da provare
 dopo il deploy (che gira anche `ardy-migrate.php`: tabella `pezzi`, colonna `fasi.pezzo_id`).
 
-- [ ] **Incollare lo snippet aggiornato su WPCode** (`wpcode-snippet-lavorazione.html`): box informativo
+- [ ] **Sostituire il loader della pagina lavorazione** con `wpcode-snippet-lavorazione.html` (non è in WPCode: sta in
+  Divi → Opzioni del tema → Integrazione, riquadro del codice in fondo ai post; sostituire il contenuto, non aggiungere un secondo snippet). Box informativo
   diverso sulle pagine con tag `storia-pezzo`. Senza, la pagina del pezzo dice "se sei il cliente…".
 - [ ] **Giro completo dal telefono di Andrea (Android)**: nuovo pezzo → 2-3 foto → nota dettata col 🎤
   della pagina → Sole scrive → correzione a voce → Salva e pubblica → pagina su ardy-lab.it.
@@ -24,6 +25,14 @@ dopo il deploy (che gira anche `ardy-migrate.php`: tabella `pezzi`, colonna `fas
   di un fornitore nuovo in `ardy-config.php`. Un'app nativa è stata scartata (account Apple 99 $/anno,
   build TestFlight che scadono ogni 90 giorni, due progetti da mantenere per due persone).
 - [ ] **Fase 2**: Google Business, Facebook e reel per i pezzi (riquadro per canale, salva per dopo).
+- [ ] **Togliere le lavorazioni dei clienti da WordPress** e portarle in un'area privata su ardyagent
+  (`/lavoro/`): analisi e decisioni (23/11) in `ANALISI-AREA-CLIENTE.md`.
+  - [x] Passo 1 scritto (23/11): area in sola lettura (`ardy-area-cliente.html` + `-api.php`).
+  - [ ] **Collaudo passo 1** dopo il deploy: `https://ardyagent.ardy-lab.it/lavoro/` con il codice di un
+    cliente vero (fasi, foto, video, comunicazioni, stato), link `/lavoro/?codice=…`, codice sbagliato,
+    "Esci", da iPhone e Android. Controllare anche che `/lavoro/` NON chieda la password della dash.
+  - [ ] Passo 2: la pubblicazione delle fasi va nell'area (foto su disco, link nell'area in email/WA/Sole/dossier).
+  - [ ] Passo 3: redirect dei vecchi post cliente su WordPress, poi ritiro. Passo 4: pulizia.
 
 ---
 
