@@ -1,3 +1,32 @@
+# Ardy Lab — Task aperti & note utili
+
+## 📸 Racconta — Fase 1 scritta (23/11), da collaudare dal vivo
+
+Mini-app `ardy-racconta.html` + `ardy-pezzi-*.php` + `ardy-pubblica-pezzo.php`, Sole sulle pagine-pezzo
+(widget + `ardy-proxy.php`). Piano in `PIANO-RACCONTA.md`. Nessun test automatico: tutto da provare
+dopo il deploy (che gira anche `ardy-migrate.php`: tabella `pezzi`, colonna `fasi.pezzo_id`).
+
+- [ ] **Incollare lo snippet aggiornato su WPCode** (`wpcode-snippet-lavorazione.html`): box informativo
+  diverso sulle pagine con tag `storia-pezzo`. Senza, la pagina del pezzo dice "se sei il cliente…".
+- [ ] **Giro completo dal telefono di Andrea (Android)**: nuovo pezzo → 2-3 foto → nota dettata col 🎤
+  della pagina → Sole scrive → correzione a voce → Salva e pubblica → pagina su ardy-lab.it.
+- [ ] **Stesso giro dall'iPhone di Michela**: il 🎤 della pagina funziona in Safari? Se no, il bottone
+  sparisce e si detta dalla tastiera: è accettabile nell'uso vero? Provare anche dall'icona sulla home.
+- [ ] **Anonimato**: dettare apposta un nome, un indirizzo e un prezzo → Sole deve toglierli; scriverli
+  poi a mano nel testo → la pubblicazione deve chiedere conferma.
+- [ ] **Pagina sul sito**: aspetto con Divi (tabella scheda, blocchi capitolo), tag `storia-pezzo`,
+  permalink, immagine in evidenza; ripubblicare un capitolo modificato → sostituito, non duplicato.
+- [ ] **Sole sulla pagina del pezzo**: si apre senza chiedere "sei il cliente?", risponde su materiali e
+  lavorazioni, non inventa, e su "ho un mobile simile" raccoglie il contatto (scheda in dash con la
+  pagina d'origine nelle note).
+- [ ] **Da decidere — voce uguale per tutti**: registrazione nel browser + trascrizione lato server
+  (es. Whisper, pochi centesimi al mese). Risolve iPhone anche dall'icona sulla home, ma serve la chiave
+  di un fornitore nuovo in `ardy-config.php`. Un'app nativa è stata scartata (account Apple 99 $/anno,
+  build TestFlight che scadono ogni 90 giorni, due progetti da mantenere per due persone).
+- [ ] **Fase 2**: Google Business, Facebook e reel per i pezzi (riquadro per canale, salva per dopo).
+
+---
+
 Il conto che fa fede per la fattura resta la **console Google**.
 
 ---

@@ -64,6 +64,11 @@ ardyagent.ardy-lab.it/
 ├── ardy-places-prova.php      # CLI: misura quanti B&B Google ha col telefono, prima di spendere
 ├── ardy-pubblica-lavorazione.php  # Pubblica fase: pagina WP + immagine in evidenza + email cliente (NO social auto)
 ├── ardy-pubblica-social.php   # Pubblica sui social (passo manuale, separato) → webhook n8n
+├── ardy-racconta.html         # 📸 Racconta: mini-app per il telefono, storia di un pezzo da foto + voce
+├── ardy-pezzi-api.php         # Racconta: pezzi e capitoli (CRUD, foto su disco)
+├── ardy-pezzi-ai.php          # Racconta: Sole scrive capitolo + scheda da foto e nota; correzione a voce
+├── ardy-pubblica-pezzo.php    # Racconta: pagina WP del pezzo (lavori-in-corso + tag storia-pezzo) + istantanea per Sole
+├── ardy-pezzi-lib.php         # Racconta: libreria interna (scheda, controllo anonimato, proiezione pubblica per Sole)
 ├── ardy-social-bozze.php      # Bozze post social "salva per dopo" persistite in DB (tabella social_bozze) — multi-dispositivo
 ├── ardy-social-foto.php       # Carica una foto del post social → URL pubblico WP Media (serve a IG/FB via API)
 ├── ardy-conversazioni.php     # Conversazione unificata di un cliente (WA + chat sito) per la scheda; aggiorna il marker "conversazione vista"
@@ -156,6 +161,23 @@ foto_urls (JSON), video_urls (JSON), created_at
 ```
 > `fase_tipo='comunicazione'` distingue le **comunicazioni straordinarie** (imprevisti segnalati
 > al cliente prima di procedere) dalle normali fasi di avanzamento. Le comunicazioni non entrano nel reel.
+>
+> Una fase ha **un solo proprietario**: un cliente (`session_id`), un progetto design (`progetto_id`)
+> o un pezzo di Racconta (`pezzo_id`). Le colonne `stato`/`wp_pubblicata_at` per i capitoli dei pezzi:
+> `bozza` finché non vanno sul sito; `wp_pubblicata_at NULL` su un capitolo `pubblicata` = modificato,
+> da ripubblicare.
+
+#### `pezzi`  *(nov 2026)*
+I pezzi di **📸 Racconta** (vedi sezione dedicata). **Nessun collegamento a `clienti`**, di proposito.
+
+```
+id, titolo, scheda (JSON: tipologia, epoca, stile, materiali, dimensioni, problemi, tecniche, prodotti),
+storia, stato ('in_corso'|'finito'), wp_post_id, wp_post_link, pubblico_json, created_by,
+created_at, updated_at, deleted_at
+```
+> `pubblico_json` è l'**istantanea di ciò che sta sulla pagina**, scritta da `ardy-pubblica-pezzo.php`:
+> è l'unica cosa che legge la Sole del sito. Bozze, note dettate e modifiche non ripubblicate non
+> escono mai.
 
 #### `sopralluoghi`  *(giu 2026)*
 **Più sopralluoghi per cliente** (1°, 2°, sopralluogo colori…), ognuno con la sua data/ora ed evento
@@ -553,6 +575,58 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
 > Lo stato **PAGATO** è stato rimosso (coincideva con CONSEGNATO): il "saldato / non moroso" si
 > gestisce dal modulo **💸 MOROSI** (`solleciti_pagamento.stato`, asse separato). 'PAGATO' resta
 > riconosciuto solo come alias legacy d'archivio per eventuali schede già marcate così.
+
+---
+
+## 📸 Racconta (ardy-racconta.html)  *(nov 2026)*
+
+Mini-app **per il telefono** (Michela su iPhone, Andrea su Android) per raccontare la storia di un
+**pezzo in lavorazione** da foto + voce, senza passare dalla scheda cliente. Piano e decisioni in
+**`PIANO-RACCONTA.md`**. Si apre dal bottone **📸 RACCONTA** nell'header della dash, dietro lo stesso
+Basic Auth.
+
+**Il soggetto è il pezzo, non il cliente**: tabella `pezzi` senza legami con `clienti` (binari
+separati). Le pagine dei clienti in `lavori-in-corso` restano come sono e convivono.
+
+### Flusso
+1. **＋ Nuovo pezzo** apre subito il primo capitolo: foto (📷 scatta / 🖼 galleria, ridotte a 1800px
+   JPEG sul telefono) + nota a voce o scritta.
+2. **✨ Sole, scrivi il capitolo** (`ardy-pezzi-ai.php`, `mode:'racconta'`, foto come immagini al
+   modello, uscita strutturata con `tool_choice` forzato): titolo e testo del capitolo, titolo
+   proposto per il pezzo, scheda aggiornata, introduzione, fino a 3 domande. **Propone, non salva**:
+   la mini-app mostra solo cosa cambia nella scheda e lo applica al salvataggio se la spunta resta.
+3. **Correggi a voce** (`mode:'rifinisci'`): "più corto", "togli la parte sul colore".
+4. **💾 Salva bozza** o **🌐 Salva e pubblica**. Un capitolo modificato dopo la pubblicazione torna
+   "da ripubblicare"; la ripubblicazione sostituisce il blocco, non lo duplica.
+
+### Anonimato (due reti)
+- Il prompt di Sole toglie nomi, indirizzi, telefoni, prezzi e tempi anche se dettati.
+- `pezziAvvisiPrivacy()` (regex su telefono, email, €, indirizzi, "signora/cliente") controlla tutto
+  ciò che sta per andare online: con avvisi, `ardy-pubblica-pezzo.php` chiede conferma prima di pubblicare.
+
+### Pagina sul sito
+`ardy-pubblica-pezzo.php` crea un post in **`lavori-in-corso`** con il tag **`storia-pezzo`**: blocco
+introduzione + scheda (marcatori `<!--ardy-pezzo-intro-->`, riscritto a ogni pubblicazione) e un
+blocco per capitolo (`<!-- ardy-fase-ID -->`, stesso stile delle fasi cliente). Prima foto =
+immagine in evidenza. I blocchi dei capitoli eliminati spariscono alla pubblicazione successiva.
+Titolo del post = titolo del pezzo.
+
+### Sole sulla pagina del pezzo
+Il widget (`ardy-widget-lavorazione.js`) legge i tag del post: con `storia-pezzo` salta la scelta
+"sei il cliente?" e apre la **Sole del sito** (`ardy-proxy.php`) mandando `pezzoPostId`. Il proxy carica
+lato server l'istantanea pubblica (`pezziProiezionePubblica`) e la aggiunge al prompt: Sole risponde
+su materiali e lavorazioni, non parla del proprietario, e **raccoglie il contatto come sempre**
+(`salva_lead_crm`, con la pagina d'origine nelle note). Il box informativo in cima alla pagina viene
+dallo snippet WPCode (copia in `wpcode-snippet-lavorazione.html`, va incollata a mano sul sito).
+
+### Voce
+Bottone 🎤 con la dettatura del browser (Web Speech API, `it-IT`): bene su Chrome Android, incerta su
+Safari iPhone. Dove manca o viene rifiutata, il bottone sparisce e si usa il 🎤 della tastiera.
+Niente manifest né modalità "app" sulla pagina: dall'icona sulla home, Safari in modalità app spegne la
+dettatura. Alternativa valutata: registrazione + trascrizione lato server (vedi `TODO-PROSSIMI-TASK.md`).
+
+### Non ancora (Fase 2 del piano)
+Google Business, Facebook e reel per i pezzi; per ora solo la pagina sul sito.
 
 ---
 

@@ -439,6 +439,28 @@ ddl($pdo, "CREATE TABLE IF NOT EXISTS `progetto_foto_vendita` (
     INDEX idx_fotovendita_progetto (progetto_id, ordine)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE progetto_foto_vendita");
 
+// "Racconta" (PIANO-RACCONTA.md): la storia di un PEZZO in lavorazione, raccontata da
+// foto + voce e pubblicata nella categoria lavori-in-corso. Il soggetto non è un
+// cliente: nessun collegamento a `clienti`, di proposito (binari separati, decisione
+// 23/11), così sulla pagina pubblica non può finire nulla della scheda cliente.
+// I capitoli sono righe di `fasi` con pezzo_id (stesso motore di progetti e clienti).
+ddl($pdo, "CREATE TABLE IF NOT EXISTS `pezzi` (
+    `id`           BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `titolo`       VARCHAR(200) NOT NULL DEFAULT '',
+    `scheda`       TEXT NULL,                          -- JSON: tipologia, epoca, stile, materiali, problemi, tecniche, prodotti, dimensioni
+    `storia`       TEXT NULL,                          -- introduzione della pagina pubblica
+    `stato`        VARCHAR(20)  NOT NULL DEFAULT 'in_corso',  -- in_corso | finito
+    `wp_post_id`   BIGINT NULL,
+    `wp_post_link` VARCHAR(500) NULL,
+    `pubblico_json` MEDIUMTEXT NULL,                   -- istantanea di ciò che è sul sito: l'UNICA cosa che legge Sole
+    `created_by`   VARCHAR(60)  NULL,                  -- utente Basic Auth (Michela/Andrea)
+    `created_at`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `deleted_at`   DATETIME NULL,
+    INDEX idx_pezzi_deleted_updated (deleted_at, updated_at),
+    INDEX idx_pezzi_wp (wp_post_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", "CREATE pezzi");
+
 // Colonne WordPress sul progetto: id e link dell'articolo "madre" (pubblicato dalla
 // galleria + descrizione; le fasi-racconto poi vi si agganciano in append).
 $progettiWpCols = [
@@ -650,12 +672,18 @@ $fasiCols = [
     'foto_wp_urls' => "ALTER TABLE fasi ADD COLUMN foto_wp_urls TEXT NULL",
     // Quando la fase è stata mandata ai social (badge in dash, evita il doppio invio).
     'social_pubblicata_at' => "ALTER TABLE fasi ADD COLUMN social_pubblicata_at DATETIME NULL",
+    // Terzo proprietario possibile di una fase: un PEZZO di "Racconta" (capitolo della
+    // sua storia). Stessa scelta di progetto_id: colonna nullable, non tabella gemella.
+    'pezzo_id' => "ALTER TABLE fasi ADD COLUMN pezzo_id BIGINT NULL AFTER progetto_id",
 ];
 foreach ($fasiCols as $col => $sql) {
     if (!colExists($pdo, 'fasi', $col)) {
         ddl($pdo, $sql, "fasi.$col");
         if ($col === 'progetto_id') {
             ddl($pdo, "CREATE INDEX idx_fasi_progetto ON fasi (progetto_id, ordine)", "INDEX fasi.progetto_id");
+        }
+        if ($col === 'pezzo_id') {
+            ddl($pdo, "CREATE INDEX idx_fasi_pezzo ON fasi (pezzo_id, ordine)", "INDEX fasi.pezzo_id");
         }
     } else {
         echo "  skip fasi.$col\n"; $skip++;
