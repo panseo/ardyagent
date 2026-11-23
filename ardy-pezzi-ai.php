@@ -8,6 +8,7 @@
 //   POST {mode:'racconta', pezzo_id, nota, fase_id?, foto_salvate[], immagini_nuove[]}
 //        → {success, capitolo_titolo, capitolo_testo, titolo_pezzo, scheda{}, storia, domande[], avvisi[]}
 //   POST {mode:'rifinisci', testo, istruzione} → {success, testo, avvisi[]}
+//   POST {mode:'seo', pezzo_id} → {success, seo{titolo,descrizione,keyphrase,in_breve,faq[],link[]}, avvisi[]}
 //        ("togli la parte sul prezzo", "più corto": la correzione a voce)
 //
 // Uscita strutturata con tool_choice forzato: niente JSON da ripescare nel testo.
@@ -15,7 +16,6 @@
 // -----------------------------------------------------------
 
 require_once __DIR__ . '/ardy-db.php';
-require_once __DIR__ . '/ardy-sanitize.php';
 require_once __DIR__ . '/ardy-pezzi-lib.php';
 
 header('Access-Control-Allow-Origin: https://ardyagent.ardy-lab.it');
@@ -30,55 +30,14 @@ require_once __DIR__ . '/ardy-auth.php';
 ardyRequireAuth();
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo json_encode(['success' => false, 'error' => 'Metodo non valido']); exit(); }
 set_time_limit(120);
-// Tetto di spesa AI (SECURITY-AUDIT §9.12): entrambi i mode chiamano Claude.
+// Tetto di spesa AI (SECURITY-AUDIT §9.12): tutti i mode chiamano Claude.
 require_once __DIR__ . '/ardy-costcap.php';
 ardyCostCap('ai');
 
 const PEZZI_AI_MAX_FOTO = 4;   // bastano a capire il pezzo; oltre si paga senza guadagno
 
-/** Chiamata a Claude. Con $tool forza quell'uscita strutturata e ne ritorna l'input; senza, il testo. */
-function pezziClaude(string $system, array $content, int $maxTokens, ?array $tool = null) {
-    if (!defined('ARDY_API_KEY') || ARDY_API_KEY === '') return null;
-    $body = [
-        'model'      => 'claude-sonnet-4-6',   // stesso modello del resto del repo
-        'max_tokens' => $maxTokens,
-        'system'     => $system,
-        'messages'   => [['role' => 'user', 'content' => $content]],
-    ];
-    if ($tool) {
-        $body['tools']       = [$tool];
-        $body['tool_choice'] = ['type' => 'tool', 'name' => $tool['name']];
-    }
-    $ch = curl_init('https://api.anthropic.com/v1/messages');
-    curl_setopt_array($ch, [
-        CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => json_encode($body),
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT        => 90,
-        CURLOPT_HTTPHEADER     => [
-            'Content-Type: application/json',
-            'x-api-key: ' . ARDY_API_KEY,
-            'anthropic-version: 2023-06-01',
-        ],
-    ]);
-    $res  = curl_exec($ch);
-    $http = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    if ($http !== 200) { error_log('ARDY PEZZI AI: HTTP ' . $http . ' — ' . substr((string) $res, 0, 300)); return null; }
-    $data = json_decode($res, true);
-    foreach ($data['content'] ?? [] as $b) {
-        if ($tool && ($b['type'] ?? '') === 'tool_use') return $b['input'] ?? null;
-        if (!$tool && ($b['type'] ?? '') === 'text')    return ardy_strip_tool_syntax(trim((string) $b['text']));
-    }
-    return null;
-}
-
-// Regole comuni a scrittura e correzione: valgono per tutto ciò che può finire sul sito.
-const PEZZI_REGOLE_PUBBLICO = "REGOLE PER TUTTO CIÒ CHE VA SUL SITO (inderogabili):
-- Anonimato: MAI nomi di persone (proprietari, clienti, parenti), indirizzi, zone o luoghi riconducibili a chi possiede il pezzo, numeri di telefono, email. Se la nota li contiene, ignorali: \"la credenza della signora Rossi\" diventa \"questa credenza\".
-- MAI prezzi, costi, preventivi, tempi di consegna.
-- Non inventare. Tecniche e prodotti: solo quelli detti nella nota. Epoca e stile: solo se detti, o riconoscibili con buona sicurezza dalle foto, e allora con prudenza (\"probabilmente\", \"circa\").
-- Tono: caldo, concreto, artigianale, prima persona plurale (\"abbiamo\", \"in bottega\"). Niente enfasi pubblicitaria, niente emoji, niente hashtag.";
+// pezziClaude() e PEZZI_REGOLE_PUBBLICO stanno in ardy-pezzi-lib.php: li usa anche
+// ardy-pubblica-pezzo.php per il pacchetto SEO/GEO.
 
 $in   = json_decode(file_get_contents('php://input'), true) ?: [];
 $mode = $in['mode'] ?? '';
@@ -92,6 +51,17 @@ if ($mode === 'rifinisci') {
         "TESTO:\n" . mb_substr($testo, 0, 6000) . "\n\nISTRUZIONE:\n" . mb_substr($istruzione, 0, 1000)]], 1200);
     if (!is_string($out) || $out === '') { echo json_encode(['success' => false, 'error' => 'Sole non ha risposto, riprova']); exit(); }
     echo json_encode(['success' => true, 'testo' => $out, 'avvisi' => pezziAvvisiPrivacy($out)]);
+    exit();
+}
+
+// Pacchetto SEO/GEO (titolo e descrizione per Google, in breve, FAQ, link interni).
+// Lo restituisce e basta: si salva dalla mini-app, dopo averlo riletto.
+if ($mode === 'seo') {
+    try { $seo = pezziGeneraSeo(ardyDB(), (int) ($in['pezzo_id'] ?? 0)); }
+    catch (PDOException $e) { error_log('ARDY PEZZI AI SEO DB: ' . $e->getMessage()); $seo = null; }
+    if (!$seo) { echo json_encode(['success' => false, 'error' => 'Sole non ha risposto, riprova']); exit(); }
+    echo json_encode(['success' => true, 'seo' => $seo, 'link_titoli' => PEZZI_LINK_INTERNI, 'avvisi' => pezziAvvisiPrivacy(pezziSeoTesto($seo))],
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit();
 }
 

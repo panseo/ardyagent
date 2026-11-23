@@ -11,6 +11,9 @@
 //     - con fase_id aggiunge il capitolo, o lo SOSTITUISCE se era già pubblicato
 //       (marcatori <!-- ardy-fase-ID -->, come ardy-pubblica-fase-progetto.php);
 //     - toglie i blocchi dei capitoli eliminati dalla mini-app;
+//     - SEO/GEO: genera il pacchetto se manca (pezziGeneraSeo), scrive titolo, descrizione e
+//       frase chiave per Yoast, l'estratto, "In breve" in apertura, FAQ + link interni +
+//       invito in fondo, alt descrittivi alle foto, e le FAQ in _ardy_faq per lo schema;
 //     - scrive pezzi.pubblico_json, l'istantanea di ciò che è sul sito: è l'unica
 //       cosa che la Sole del sito legge (ardy-pezzi-lib.php).
 //   Se il testo da pubblicare contiene dati sospetti (telefono, prezzi, nomi…) e non
@@ -43,6 +46,8 @@ set_time_limit(180);
 
 const INTRO_START = '<!--ardy-pezzo-intro-->';
 const INTRO_END   = '<!--/ardy-pezzo-intro-->';
+const FAQ_START   = '<!--ardy-pezzo-faq-->';
+const FAQ_END     = '<!--/ardy-pezzo-faq-->';
 
 $in       = json_decode(file_get_contents('php://input'), true) ?: [];
 $pezzoId  = (int) ($in['pezzo_id'] ?? 0);
@@ -51,7 +56,7 @@ $conferma = !empty($in['conferma']);
 
 try {
     $db = ardyDB();
-    $st = $db->prepare("SELECT id, titolo, scheda, storia, wp_post_id, pubblico_json FROM pezzi WHERE id = ? AND deleted_at IS NULL");
+    $st = $db->prepare("SELECT id, titolo, scheda, storia, seo, wp_post_id, pubblico_json FROM pezzi WHERE id = ? AND deleted_at IS NULL");
     $st->execute([$pezzoId]);
     $pezzo = $st->fetch(PDO::FETCH_ASSOC);
     if (!$pezzo) { echo json_encode(['success' => false, 'error' => 'Pezzo non trovato']); exit(); }
@@ -76,8 +81,26 @@ if ($faseId > 0) {
     if (trim((string) $capitolo['testo_generato']) === '') { echo json_encode(['success' => false, 'error' => 'Il capitolo non ha ancora un testo: fallo scrivere a Sole o scrivilo tu']); exit(); }
 }
 
-// Seconda rete sull'anonimato, su tutto ciò che sta per andare online.
-$daControllare = $titolo . "\n" . $storia . "\n" . implode("\n", $scheda)
+// Pacchetto SEO/GEO (ardy-pezzi-lib.php): se il pezzo non ce l'ha ancora, lo scrive Sole
+// adesso, così nessuna pagina va online senza titolo e descrizione per Google. Si
+// genera una volta sola: dopo si ritocca a mano in Racconta e qui si riusa com'è.
+$seo = pezziSeoNorm($pezzo['seo']);
+if (!pezziSeoPronto($seo)) {
+    require_once __DIR__ . '/ardy-costcap.php';
+    ardyCostCap('ai');   // è una chiamata a Claude: stesso tetto di spesa degli altri endpoint AI
+    $nuovo = pezziGeneraSeo($db, $pezzoId);
+    if ($nuovo) {
+        $seo = $nuovo;
+        try {
+            $db->prepare("UPDATE pezzi SET seo = ? WHERE id = ?")
+               ->execute([json_encode($seo, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $pezzoId]);
+        } catch (PDOException $e) { error_log('ARDY PUBBLICA PEZZO SEO DB: ' . $e->getMessage()); }
+    }
+    // Se Sole non risponde si pubblica lo stesso: Yoast ripiega sul titolo del post.
+}
+
+// Seconda rete sull'anonimato, su tutto ciò che sta per andare online (SEO compreso).
+$daControllare = $titolo . "\n" . $storia . "\n" . implode("\n", $scheda) . "\n" . pezziSeoTesto($seo)
     . ($capitolo ? "\n" . $capitolo['fase_nome'] . "\n" . $capitolo['testo_generato'] : '');
 $avvisi = pezziAvvisiPrivacy($daControllare);
 if ($avvisi && !$conferma) {
@@ -125,10 +148,38 @@ foreach (PEZZI_SCHEDA_CAMPI as $k => $label) {
     $righeScheda .= '<tr><td style="padding:6px 14px 6px 0;color:#8b6f3e;white-space:nowrap;vertical-align:top;">' . esc_html($label)
         . '</td><td style="padding:6px 0;color:#444;">' . esc_html($scheda[$k]) . '</td></tr>';
 }
+// "In breve" in apertura: la risposta diretta a "cos'è e cosa avete fatto". È il passaggio
+// che i motori di risposta AI citano, quindi sta in cima e regge da solo. Sotto, chi l'ha
+// scritto e quando: fonte e data contano per Google (E-E-A-T) e per le citazioni.
+$oggi  = date('Y-m-d');
 $intro = INTRO_START
+    . ($seo['in_breve'] !== ''
+        ? '<p style="font-size:16px;line-height:1.7;color:#333;background:#f7f2e8;border-radius:8px;padding:14px 18px;margin:0 0 20px;"><strong>In breve.</strong> ' . esc_html($seo['in_breve']) . '</p>'
+        : '')
     . '<div style="font-family:Georgia,serif;font-size:16px;line-height:1.7;color:#444;margin-bottom:24px;">' . pezzoParagrafi($storia) . '</div>'
-    . ($righeScheda !== '' ? '<table style="font-size:14px;margin:0 0 32px;border-collapse:collapse;">' . $righeScheda . '</table>' : '')
+    . ($righeScheda !== '' ? '<h2 style="font-size:20px;margin:0 0 10px;">Scheda del pezzo</h2><table style="font-size:14px;margin:0 0 16px;border-collapse:collapse;">' . $righeScheda . '</table>' : '')
+    . '<p style="font-size:13px;color:#888;margin:0 0 28px;">Raccontato da <a href="https://ardy-lab.it/chi-siamo/">Ardy Lab</a>, bottega di restauro a Roma · aggiornato il <time datetime="' . esc_attr($oggi) . '">' . esc_html(date('d/m/Y')) . '</time></p>'
     . INTRO_END;
+
+// Domande frequenti + link alle pagine servizio + invito: sempre IN FONDO alla pagina,
+// dopo l'ultimo capitolo (si toglie e si riaccoda a ogni pubblicazione).
+$faqHtml = '';
+foreach ($seo['faq'] as $f) {
+    $faqHtml .= '<h3 style="font-size:17px;margin:18px 0 6px;">' . esc_html($f['domanda']) . '</h3>'
+        . '<p style="font-size:15px;line-height:1.7;color:#333;margin:0;">' . esc_html($f['risposta']) . '</p>';
+}
+$linkHtml = '';
+foreach ($seo['link'] as $u) {
+    $linkHtml .= '<li><a href="' . esc_url($u) . '">' . esc_html(PEZZI_LINK_INTERNI[$u]) . '</a></li>';
+}
+$coda = FAQ_START
+    . ($faqHtml !== '' ? '<h2 style="font-size:22px;margin:40px 0 4px;">Domande frequenti</h2>' . $faqHtml : '')
+    . '<div style="margin:36px 0 8px;padding:18px 20px;border-radius:8px;background:#f7f2e8;">'
+    . '<p style="margin:0 0 8px;font-size:16px;"><strong>Hai un mobile simile?</strong> Raccontacelo: ti diciamo come si può recuperare, senza impegno. '
+    . 'Scrivi a Sole dal bottone in basso a destra o dalla <a href="https://ardy-lab.it/ardy-agent/">chat di Ardy Lab</a>.</p>'
+    . ($linkHtml !== '' ? '<p style="margin:10px 0 4px;font-size:14px;color:#555;">Per approfondire:</p><ul style="margin:0;font-size:15px;">' . $linkHtml . '</ul>' : '')
+    . '</div>'
+    . FAQ_END;
 
 kses_remove_filters();   // contenuto generato da noi: niente strip di style/img
 
@@ -168,6 +219,11 @@ $content = ($a !== false && $b !== false)
     ? substr($content, 0, $a) . $intro . substr($content, $b + strlen(INTRO_END))
     : $intro . "\n" . $content;
 
+// Il blocco finale (FAQ + invito) si toglie qui e si riaccoda in fondo dopo i capitoli.
+$a = strpos($content, FAQ_START);
+$b = $a !== false ? strpos($content, FAQ_END, $a) : false;
+if ($a !== false && $b !== false) $content = substr($content, 0, $a) . substr($content, $b + strlen(FAQ_END));
+
 // Capitoli eliminati dalla mini-app: i loro blocchi spariscono dalla pagina.
 $idVivi = array_map(fn($c) => (int) $c['id'], $capitoli);
 if (preg_match_all('/<!-- ardy-fase-(\d+) -->/', $content, $m)) {
@@ -191,7 +247,11 @@ if ($capitolo) {
         $attachId = media_handle_sideload(['name' => $tname, 'type' => $f['mime'], 'tmp_name' => $tmpDir . $tname, 'error' => 0, 'size' => strlen($f['bytes'])], $wpPostId);
         if (is_wp_error($attachId)) { @unlink($tmpDir . $tname); error_log('ARDY PUBBLICA PEZZO SIDELOAD: ' . $attachId->get_error_message()); continue; }
         $url = (string) wp_get_attachment_url($attachId);
-        $fotoHtml .= '<img src="' . esc_url($url) . '" alt="' . esc_attr($titolo) . '" style="max-width:100%;margin:10px 0;border-radius:6px;" />' . "\n";
+        // Testo alternativo descrittivo e diverso per ogni foto (Google Immagini + accessibilità),
+        // salvato anche sull'allegato, così lo ritrova chi riusa la foto dalla libreria media.
+        $alt = $titolo . (trim((string) $capitolo['fase_nome']) !== '' ? ': ' . trim((string) $capitolo['fase_nome']) : '') . ' (foto ' . ($fotoPubblicate + 1) . ')';
+        update_post_meta($attachId, '_wp_attachment_image_alt', $alt);
+        $fotoHtml .= '<img src="' . esc_url($url) . '" alt="' . esc_attr($alt) . '" style="max-width:100%;margin:10px 0;border-radius:6px;" />' . "\n";
         $fotoUrlPubbliche[] = $url;
         $fotoPubblicate++;
         if (!has_post_thumbnail($wpPostId)) set_post_thumbnail($wpPostId, $attachId);
@@ -202,10 +262,11 @@ if ($capitolo) {
     $mStart = '<!-- ardy-fase-' . $faseId . ' -->';
     $mEnd   = '<!-- /ardy-fase-' . $faseId . ' -->';
     $data   = date('d/m/Y', strtotime((string) $capitolo['created_at']) ?: time());
+    $dataIso = date('Y-m-d', strtotime((string) $capitolo['created_at']) ?: time());
     $blocco = $mStart . '
 <div style="border-left:3px solid #c8a96e;padding:16px 20px;margin:24px 0;background:#fafaf8;">
-  <p style="font-size:12px;color:#999;margin-bottom:8px;font-family:monospace;">' . esc_html($data)
-    . (trim((string) $capitolo['fase_nome']) !== '' ? ' — ' . esc_html(trim((string) $capitolo['fase_nome'])) : '') . '</p>'
+  <p style="font-size:12px;color:#999;margin:0 0 4px;font-family:monospace;"><time datetime="' . esc_attr($dataIso) . '">' . esc_html($data) . '</time></p>'
+    . (trim((string) $capitolo['fase_nome']) !== '' ? '<h2 style="font-size:20px;margin:0 0 10px;">' . esc_html(trim((string) $capitolo['fase_nome'])) . '</h2>' : '')
     . '<div style="font-size:15px;line-height:1.7;color:#333;">' . pezzoParagrafi((string) $capitolo['testo_generato']) . '</div>'
     . $fotoHtml . '
 </div>' . $mEnd;
@@ -217,7 +278,20 @@ if ($capitolo) {
         : $content . "\n" . $blocco;
 }
 
-$res = wp_update_post(['ID' => $wpPostId, 'post_title' => $titolo, 'post_content' => $content], true);
+$content = rtrim($content) . "\n" . $coda;
+
+// Meta per Yoast PRIMA del salvataggio, così Yoast li legge quando ricostruisce l'indice
+// della pagina (titolo e descrizione nei risultati di Google, frase chiave per l'analisi).
+// L'estratto è la stessa descrizione: lo usano anteprime, feed e condivisioni.
+if ($seo['titolo'] !== '')      update_post_meta($wpPostId, '_yoast_wpseo_title', $seo['titolo']);
+if ($seo['descrizione'] !== '') update_post_meta($wpPostId, '_yoast_wpseo_metadesc', $seo['descrizione']);
+if ($seo['keyphrase'] !== '')   update_post_meta($wpPostId, '_yoast_wpseo_focuskw', $seo['keyphrase']);
+// Le FAQ anche come dato: lo snippet WPCode "Ardy — schema FAQ pezzi" le trasforma in
+// FAQPage nel grafo schema.org di Yoast (wordpress-snippets/pezzi-schema-faq.php).
+update_post_meta($wpPostId, '_ardy_faq', wp_slash(json_encode($seo['faq'], JSON_UNESCAPED_UNICODE)));
+
+$res = wp_update_post(['ID' => $wpPostId, 'post_title' => $titolo, 'post_content' => $content,
+                       'post_excerpt' => $seo['descrizione']], true);
 kses_init_filters();
 if (is_wp_error($res)) {
     error_log('ARDY PUBBLICA PEZZO WP UPDATE: ' . $res->get_error_message());
@@ -241,7 +315,8 @@ foreach ($capitoli as $c) {
     if ($cid === $faseId || $c['wp_pubblicata_at'] !== null) $capPubblici[] = $voce;
     elseif (isset($prec[$cid]))                               $capPubblici[] = $prec[$cid];
 }
-$istantanea = ['titolo' => $titolo, 'scheda' => $scheda, 'storia' => $storia, 'link' => $postLink, 'capitoli' => $capPubblici];
+$istantanea = ['titolo' => $titolo, 'scheda' => $scheda, 'storia' => $storia, 'in_breve' => $seo['in_breve'],
+               'faq' => $seo['faq'], 'link' => $postLink, 'capitoli' => $capPubblici];
 
 try {
     $db->prepare("UPDATE pezzi SET wp_post_id = ?, wp_post_link = ?, pubblico_json = ? WHERE id = ?")

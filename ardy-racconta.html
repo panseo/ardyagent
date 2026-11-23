@@ -122,6 +122,13 @@
   .scheda-diff div { margin: 3px 0; } .scheda-diff b { color: var(--noce); font-weight: 600; }
 
   details summary { cursor: pointer; font-weight: 600; color: var(--noce); padding: 4px 0; min-height: 32px; }
+  .contatore { font-weight: 400; color: var(--testo-dim); font-size: 13px; }
+  .contatore.troppo { color: var(--rosso); font-weight: 600; }
+  .faq-voce { border: 1px solid var(--bordo); border-radius: 12px; padding: 10px; margin-bottom: 10px; background: var(--carta-chiara); }
+  .faq-voce input { margin-bottom: 8px; }
+  .faq-voce textarea { min-height: 70px; }
+  .scelta { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 15px; color: var(--inchiostro); }
+  .scelta input { width: 22px; height: 22px; accent-color: var(--noce); }
   .toast { position: fixed; left: 16px; right: 16px; bottom: max(20px, env(safe-area-inset-bottom)); z-index: 20;
     background: var(--noce-scuro); color: #fbf6ec; border-radius: 14px; padding: 14px; font-size: 15px;
     display: none; max-width: 600px; margin: 0 auto; box-shadow: 0 6px 20px rgba(43,30,22,.25); }
@@ -181,6 +188,23 @@
       <div id="schedaCampi"></div>
       <label for="pStoria">Introduzione (in cima alla pagina)</label>
       <textarea id="pStoria"></textarea>
+      <h3 class="etichetta" style="margin-top:22px">Per Google e gli assistenti AI</h3>
+      <p class="suggerimento">Lo prepara Sole alla prima pubblicazione; qui lo rileggi e lo ritocchi.</p>
+      <div class="spazio"></div>
+      <button class="btn btn-piccolo" id="btnSeo" type="button"><svg class="ico"><use href="#i-sole"/></svg><span>Sole, prepara la parte per Google</span></button>
+      <label for="seoTitolo">Titolo su Google <span class="contatore" data-per="seoTitolo" data-max="60"></span></label>
+      <input type="text" id="seoTitolo" maxlength="70">
+      <label for="seoDescr">Descrizione su Google <span class="contatore" data-per="seoDescr" data-max="155"></span></label>
+      <textarea id="seoDescr" maxlength="170" style="min-height:80px"></textarea>
+      <label for="seoKey">Cosa scriverebbe una persona per trovarlo</label>
+      <input type="text" id="seoKey" maxlength="80" placeholder="es. restauro seggiola bambino">
+      <label for="seoBreve">In breve (le prime righe della pagina)</label>
+      <textarea id="seoBreve" maxlength="600" style="min-height:90px"></textarea>
+      <label>Domande frequenti</label>
+      <div id="seoFaq"></div>
+      <button class="btn btn-piccolo" id="btnFaqAggiungi" type="button"><svg class="ico"><use href="#i-piu"/></svg>Aggiungi una domanda</button>
+      <label>Link alle pagine del sito (massimo 2)</label>
+      <div id="seoLink"></div>
       <label for="pStato">Stato</label>
       <select id="pStato"><option value="in_corso">In lavorazione</option><option value="finito">Finito</option></select>
       <div class="spazio"></div>
@@ -365,6 +389,8 @@ async function caricaPezzo(id) {
   $('schedaCampi').innerHTML = Object.keys(campi).map(function (k) {
     return '<label for="s_' + k + '">' + escHtml(campi[k]) + '</label><input type="text" id="s_' + k + '" value="' + escHtml(pezzo.scheda[k]) + '">';
   }).join('');
+  linkInterni = j.link_interni || {};
+  mostraSeo(pezzo.seo);
   $('pStoria').value = pezzo.storia || '';
   $('pStato').value = pezzo.stato;
   $('btnAggiornaPagina').hidden = !pezzo.wp_post_link;
@@ -400,7 +426,7 @@ function leggiScheda() {
   var s = {}; Object.keys(campi).forEach(function (k) { s[k] = $('s_' + k).value; }); return s;
 }
 $('btnSalvaScheda').onclick = async function () {
-  var j = await api(API, { mode: 'salva', id: pezzo.id, titolo: $('pTitolo').value, scheda: leggiScheda(), storia: $('pStoria').value, stato: $('pStato').value });
+  var j = await api(API, { mode: 'salva', id: pezzo.id, titolo: $('pTitolo').value, scheda: leggiScheda(), storia: $('pStoria').value, seo: leggiSeo(), stato: $('pStato').value });
   if (j.success) { toast('Salvato ✓'); await caricaPezzo(pezzo.id); }
 };
 $('pTitolo').onchange = function () { api(API, { mode: 'salva', id: pezzo.id, titolo: $('pTitolo').value }); };
@@ -412,6 +438,65 @@ $('btnEliminaPezzo').onclick = async function () {
   if (!confirm('Eliminare "' + pezzo.titolo + '" dalla lista?')) return;
   var j = await api(API, { mode: 'elimina', id: pezzo.id });
   if (j.success) { pezzo = null; vai('#/'); }
+};
+
+// ── Parte per Google e gli assistenti AI (pacchetto SEO/GEO) ──
+// Titolo e descrizione per i risultati di ricerca, la frase che la gente cerca, il
+// riassunto "in breve" che gli assistenti AI citano, le domande frequenti e i link alle
+// pagine servizio. Lo scrive Sole; qui si ritocca e si salva con "Salva".
+var linkInterni = {};
+function mostraSeo(seo) {
+  seo = seo || {};
+  $('seoTitolo').value = seo.titolo || '';
+  $('seoDescr').value = seo.descrizione || '';
+  $('seoKey').value = seo.keyphrase || '';
+  $('seoBreve').value = seo.in_breve || '';
+  $('seoFaq').innerHTML = '';
+  (seo.faq || []).forEach(function (f) { aggiungiFaq(f.domanda, f.risposta); });
+  var scelti = seo.link || [];
+  $('seoLink').innerHTML = Object.keys(linkInterni).map(function (u, i) {
+    return '<label class="scelta"><input type="checkbox" data-link="' + escHtml(u) + '"' + (scelti.indexOf(u) >= 0 ? ' checked' : '') + '>'
+      + escHtml(linkInterni[u]) + '</label>';
+  }).join('');
+  aggiornaContatori();
+}
+function aggiungiFaq(d, r) {
+  var v = document.createElement('div'); v.className = 'faq-voce';
+  v.innerHTML = '<input type="text" placeholder="Domanda" aria-label="Domanda" value="' + escHtml(d || '') + '">'
+    + '<textarea placeholder="Risposta" aria-label="Risposta">' + escHtml(r || '') + '</textarea>'
+    + '<button class="link" type="button" data-togli-faq>Togli questa domanda</button>';
+  $('seoFaq').appendChild(v);
+}
+$('btnFaqAggiungi').onclick = function () { aggiungiFaq('', ''); };
+$('seoFaq').onclick = function (e) { var b = e.target.closest('[data-togli-faq]'); if (b) b.parentNode.remove(); };
+$('seoLink').onchange = function (e) {
+  var scelti = $('seoLink').querySelectorAll('input:checked');
+  if (scelti.length > 2) { e.target.checked = false; toast('Al massimo 2 link'); }
+};
+function leggiSeo() {
+  return {
+    titolo: $('seoTitolo').value, descrizione: $('seoDescr').value, keyphrase: $('seoKey').value, in_breve: $('seoBreve').value,
+    faq: [].map.call($('seoFaq').querySelectorAll('.faq-voce'), function (v) {
+      return { domanda: v.querySelector('input').value, risposta: v.querySelector('textarea').value };
+    }),
+    link: [].map.call($('seoLink').querySelectorAll('input:checked'), function (c) { return c.dataset.link; })
+  };
+}
+// Google taglia oltre ~60 caratteri il titolo e ~155 la descrizione: il contatore lo dice prima.
+function aggiornaContatori() {
+  document.querySelectorAll('.contatore').forEach(function (c) {
+    var n = $(c.dataset.per).value.length, max = parseInt(c.dataset.max, 10);
+    c.textContent = n + '/' + max; c.classList.toggle('troppo', n > max);
+  });
+}
+['seoTitolo', 'seoDescr'].forEach(function (id) { $(id).addEventListener('input', aggiornaContatori); });
+$('btnSeo').onclick = async function () {
+  var btn = this; btn.disabled = true; btn.querySelector('span').textContent = 'Sole sta scrivendo…';
+  var j = await api(AI, { mode: 'seo', pezzo_id: pezzo.id });
+  btn.disabled = false; btn.querySelector('span').textContent = 'Sole, prepara la parte per Google';
+  if (!j.success) return;
+  mostraSeo(j.seo);
+  toast(j.avvisi && j.avvisi.length ? '⚠ Controlla: ' + escHtml(j.avvisi.join('; ')) : 'Pronto: rileggi e premi Salva', 5000);
 };
 
 // ── Pubblicazione sul sito (con la seconda rete sull'anonimato) ──

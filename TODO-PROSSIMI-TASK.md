@@ -29,6 +29,16 @@ dopo il deploy (che gira anche `ardy-migrate.php`: tabella `pezzi`, colonna `fas
 - [x] **Foto della bottega per l'ingresso di Racconta** (23/11): messa in `assets/racconta-bottega.jpg`, presa
   per ora da un post Instagram (866×566, bassa risoluzione). Da sostituire con uno scatto vero ~1600px:
   stesso nome file (il browser la tiene in cache fino a 30 giorni: per vederla subito, ricaricare forzando).
+- [ ] **SEO/GEO delle pagine-pezzo** (ramo `racconta-seo-geo`, 23/11), dopo il deploy:
+  1. WPCode → Aggiungi snippet → PHP, "Esegui ovunque", nome "Ardy — schema FAQ pezzi", codice di
+     `wordpress-snippets/pezzi-schema-faq.php` (senza la riga `<?php` iniziale se WPCode la aggiunge da sé).
+  2. Racconta → pezzo "Seggiola per bambino" → Scheda → "Sole, prepara la parte per Google" → rileggere →
+     Salva → "Aggiorna la pagina": la pagina già online prende In breve, FAQ, link e meta Yoast.
+  3. Controllare la pagina: titolo e descrizione nell'anteprima Yoast, "In breve" in cima, FAQ in fondo;
+     poi <https://search.google.com/test/rich-results> sull'URL (deve vedere FAQPage e Article).
+  4. Google Search Console → Controllo URL → "Richiedi indicizzazione" per la prima pagina-pezzo; le
+     successive le trova dalla sitemap. (Facoltativo: Cloudflare → AI Crawl Control → Content-Signal
+     `ai-input=yes`, per dire esplicitamente che le pagine si possono usare nelle risposte AI.)
 - [ ] **Fase 2**: Google Business, Facebook e reel per i pezzi (riquadro per canale, salva per dopo).
 - [ ] **Togliere le lavorazioni dei clienti da WordPress** e portarle in un'area privata su ardyagent
   (`/lavoro/`): analisi e decisioni (23/11) in `ANALISI-AREA-CLIENTE.md`.

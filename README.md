@@ -672,6 +672,29 @@ Safari iPhone. Dove manca o viene rifiutata, il bottone sparisce e si usa il �
 Niente manifest né modalità "app" sulla pagina: dall'icona sulla home, Safari in modalità app spegne la
 dettatura. Alternativa valutata: registrazione + trascrizione lato server (vedi `TODO-PROSSIMI-TASK.md`).
 
+### SEO e GEO della pagina  *(nov 2026)*
+La pagina deve farsi trovare su Google e farsi **citare dagli assistenti AI** (ChatGPT search,
+Perplexity, AI Overviews). Il **pacchetto SEO/GEO** (`pezzi.seo`, JSON) lo scrive Sole una volta
+(`pezziGeneraSeo()` in `ardy-pezzi-lib.php`, `mode:'seo'` in `ardy-pezzi-ai.php`, oppure da solo alla
+prima pubblicazione), si ritocca in Racconta (Scheda → "Per Google e gli assistenti AI", contatori
+60/155) e `ardy-pubblica-pezzo.php` lo applica:
+- **Yoast**: `_yoast_wpseo_title`, `_yoast_wpseo_metadesc`, `_yoast_wpseo_focuskw` (scritti prima di
+  `wp_update_post`, così Yoast ricostruisce l'indice con i valori nuovi); estratto = descrizione.
+- **In apertura**: "In breve" (2-3 frasi fattuali, la parte che un assistente AI cita) e, sotto la
+  scheda, "Raccontato da Ardy Lab… aggiornato il <time>" (fonte e data).
+- **Struttura**: "Scheda del pezzo" e ogni capitolo come `<h2>`, date in `<time datetime>`, alt
+  descrittivi e diversi per ogni foto (anche su `_wp_attachment_image_alt`).
+- **In fondo** (blocco `<!--ardy-pezzo-faq-->`, riaccodato dopo i capitoli a ogni pubblicazione):
+  "Domande frequenti" (`<h3>` + risposta), invito "Hai un mobile simile?" con link alla chat, e 0-2
+  link a pagine servizio scelti da una **whitelist** (`PEZZI_LINK_INTERNI`).
+- **Schema**: le FAQ in `_ardy_faq` → nodo `FAQPage` nel grafo Yoast, tramite lo snippet WPCode
+  `wordpress-snippets/pezzi-schema-faq.php` (da incollare a mano).
+- Il controllo anonimato copre anche i testi SEO; "In breve" e FAQ finiscono anche nell'istantanea
+  che legge Sole sul sito.
+- Indicizzazione: le pagine sono `index, follow` e nella sitemap di Yoast. Il `robots.txt` (gestito da
+  Cloudflare) blocca i crawler che **addestrano** modelli (GPTBot, ClaudeBot, Google-Extended…) ma
+  lascia passare Google, Bing e i crawler di **ricerca** AI: è l'impostazione giusta per il GEO.
+
 ### Non ancora (Fase 2 del piano)
 Google Business, Facebook e reel per i pezzi; per ora solo la pagina sul sito.
 
