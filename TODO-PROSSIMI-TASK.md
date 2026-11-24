@@ -6,7 +6,7 @@ Mini-app `ardy-racconta.html` + `ardy-pezzi-*.php` + `ardy-pubblica-pezzo.php`, 
 (widget + `ardy-proxy.php`). Piano in `PIANO-RACCONTA.md`. Nessun test automatico: tutto da provare
 dopo il deploy (che gira anche `ardy-migrate.php`: tabella `pezzi`, colonna `fasi.pezzo_id`).
 
-- [ ] **Sostituire il loader in Divi** (Opzioni del tema → Integrazione, codice in fondo ai post) con
+- [x] **Sostituire il loader in Divi** (fatto il 23/11) (Opzioni del tema → Integrazione, codice in fondo ai post) con
   `wpcode-snippet-lavorazione.html`, riscritto il 23/11: agisce **solo** sulle pagine col tag `storia-pezzo`
   (box + Sole). La versione che c'era (filtro sulla categoria 102) toglie: le pagine cliente non hanno
   più box né chat, le domande vanno su WhatsApp. Dopo: aprire una pagina cliente (nessun bottone 🪑)
@@ -32,13 +32,17 @@ dopo il deploy (che gira anche `ardy-migrate.php`: tabella `pezzi`, colonna `fas
 - [ ] **SEO/GEO delle pagine-pezzo** (ramo `racconta-seo-geo`, 23/11), dopo il deploy:
   1. WPCode → Aggiungi snippet → PHP, "Esegui ovunque", nome "Ardy — schema FAQ pezzi", codice di
      `wordpress-snippets/pezzi-schema-faq.php` (senza la riga `<?php` iniziale se WPCode la aggiunge da sé).
-  2. Racconta → pezzo "Seggiola per bambino" → Scheda → "Sole, prepara la parte per Google" → rileggere →
-     Salva → "Aggiorna la pagina": la pagina già online prende In breve, FAQ, link e meta Yoast.
+  2. ✅ (24/11) Seggiola ripubblicata: "In breve" online e titolo Yoast attivo ("Restauro seggiola bambino in
+     faggio laccato a Roma").
   3. Controllare la pagina: titolo e descrizione nell'anteprima Yoast, "In breve" in cima, FAQ in fondo;
      poi <https://search.google.com/test/rich-results> sull'URL (deve vedere FAQPage e Article).
   4. Google Search Console → Controllo URL → "Richiedi indicizzazione" per la prima pagina-pezzo; le
      successive le trova dalla sitemap. (Facoltativo: Cloudflare → AI Crawl Control → Content-Signal
      `ai-input=yes`, per dire esplicitamente che le pagine si possono usare nelle risposte AI.)
+- [ ] **Reel su Instagram: leggere l'esito** — `ardy-pubblica-reel.php` considera riuscito l'invio se n8n
+  risponde 200; il 24/11 il reel della seggiola non risultava sul profilo. Allinearlo a
+  `ardySocialInterpretaEsito()` di `ardy-pubblica-social.php` (stato "da verificare" se Instagram non
+  conferma) e controllare nelle Esecuzioni di n8n il ramo Reels (attesa dello stato FINISHED del video?).
 - [ ] **Collaudo social dei pezzi** (Fase 2, ramo `racconta-social`, 23/11) dopo il deploy:
   1. Pezzo → capitolo sul sito → **Condividi sui social** → controllare i testi di Sole.
   2. **Google**: Pubblica → verificare il post sulla scheda Google (foto, "Scopri di più").

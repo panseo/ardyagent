@@ -1,14 +1,125 @@
-# Handoff — Ardy Outreach, stato al 17/08/2026
+# Handoff — Ardy Agent, stato al 24/11/2026
 
 Documento di passaggio di consegne. Serve a far ripartire una sessione nuova (o una persona)
-senza rileggersi mesi di chat: cosa c'è, perché è fatto così, cosa non va toccato e cosa
-resta da fare.
+senza rileggersi le chat: cosa c'è, perché è fatto così, cosa non va toccato e cosa resta da fare.
 
-> **Per una sessione nuova**: leggi questo file, poi `README.md` §*Ardy Outreach* per il
-> dettaglio e `TODO-PROSSIMI-TASK.md` per la coda. Il codice sta su GitHub in
-> `panseo/ardyagent`, ramo `main`.
+> **Per una sessione nuova**: leggi la **Parte A** (lavoro del 23-24/11: Racconta, area cliente,
+> social, grafica), poi `TODO-PROSSIMI-TASK.md` per la coda e `README.md` per il dettaglio di ogni
+> pezzo. La **Parte B** è l'handoff precedente (Ardy Outreach, 17/08), ancora valido. Il codice sta
+> su GitHub in `panseo/ardyagent`, ramo `main`.
+>
+> **Si risponde sempre in italiano** (l'utente l'ha dovuto chiedere più volte).
 
 ---
+
+# Parte A — Racconta, area cliente, social e grafica (23-24/11/2026)
+
+## A1. In breve
+
+La dash principale si usava poco per raccontare i lavori. In due giorni sono nati:
+
+1. **📸 Racconta** (`ardy-racconta.html`): mini-app da telefono. Foto + nota a voce di un **pezzo**
+   (non di un cliente) → Sole scrive il capitolo → pagina pubblica su WordPress con Sole che risponde
+   ai visitatori e raccoglie contatti → SEO/GEO → Facebook, Instagram, Google Business, reel. Tutto
+   **manuale**: ogni canale ha il suo bottone e un'anteprima prima di pubblicare.
+2. **🔑 Area cliente** su `https://ardyagent.ardy-lab.it/lavoro/`: il cliente vede il suo lavoro col
+   codice `ARD-XXXX-XXXX`. È il primo passo per togliere le lavorazioni dei clienti da WordPress.
+3. **Grafica nello stile dei reel di Michela** (Inter, logo bianco, frase con l'asterisco) per reel e
+   copertine, con dissolvenze nei reel.
+
+Piani e analisi: `PIANO-RACCONTA.md`, `ANALISI-AREA-CLIENTE.md`. Canvas di design delle schermate:
+<https://claude.ai/artifact/11RprfUqraXfvzF3NmnNt7> (privato).
+
+## A2. Racconta — com'è fatto
+
+| Pezzo | File |
+|---|---|
+| Mini-app (lista, pezzo, capitolo, condividi) | `ardy-racconta.html` |
+| API pezzi, capitoli, foto, storico social | `ardy-pezzi-api.php` |
+| Sole: capitolo+scheda, correzione a voce, pacchetto SEO, testi social + frase | `ardy-pezzi-ai.php` |
+| Pagina WordPress (lavori-in-corso + tag `storia-pezzo`) | `ardy-pubblica-pezzo.php` |
+| Copertina 4:5 del capitolo per i social | `ardy-pezzi-copertina.php` |
+| Libreria (scheda, anonimato, proiezione pubblica, SEO, social, Claude) | `ardy-pezzi-lib.php` |
+| Grafica reel/copertine + montaggio con dissolvenze | `ardy-grafica-lib.php` |
+| Sole sulla pagina-pezzo | `ardy-widget-lavorazione.js` + `ardy-proxy.php` (`pezzoPostId`) |
+
+**DB** (`ardy-migrate.php`): `pezzi` (con `seo`, `pubblico_json`), `fasi.pezzo_id` (terzo proprietario
+di una fase dopo cliente e progetto), `pezzi_social` (bozze e storico per capitolo e canale).
+
+**Scelte da non disfare senza motivo:**
+- **Binari separati**: un pezzo non ha alcun legame con `clienti`.
+- **Sole sul sito legge solo `pubblico_json`**, l'istantanea di ciò che è online: bozze e note
+  dettate non escono mai. Ogni capitolo ripubblicato aggiorna l'istantanea.
+- **Anonimato in due reti**: il prompt toglie nomi/indirizzi/prezzi; `pezziAvvisiPrivacy()` (regex)
+  chiede conferma prima di pubblicare se ne trova ancora (pagina, SEO, social).
+- **Pagina WP**: un solo paragrafo d'apertura ("In breve"), capitoli con galleria a sinistra e testo a
+  destra (solo HTML+CSS, su una riga perché `wpautop` non la spezzi), FAQ + link interni da whitelist
+  in fondo, meta Yoast, commenti chiusi, immagine in evidenza tenuta ma nascosta nella pagina (Divi la
+  ripeterebbe). **"Aggiorna la pagina"** rifà anche i capitoli già online con le foto già su WP.
+- **Social sempre manuali**: prima si salva la bozza (`social_salva`, ritorna gli avvisi), poi anteprima,
+  poi pubblicazione con gli endpoint di sempre (`ardy-pubblica-social.php`, `ardy-gbp-post.php`,
+  `ardy-pubblica-reel.php`), poi l'esito. Instagram è spento di default (rifiuta foto più strette di 4:5;
+  la copertina 4:5 risolve la prima foto).
+- **Voce**: dettatura del browser, ripiego sul microfono della tastiera (iPhone). App nativa scartata.
+
+## A3. Area cliente — dove siamo
+
+- **Passo 1 fatto e online**: `ardy-area-cliente.html` + `ardy-area-cliente-api.php`, riscrittura
+  `/lavoro/` in `.htaccess` e `infra/Caddyfile`. Accesso col codice (anche `/lavoro/?codice=…`), cookie
+  firmato HMAC, fasi pubblicate dalla più recente, bottone WhatsApp, nessuna chat. Il codice si vede e
+  si genera in dash (scheda → Lavorazione → "🔑 Area cliente"); `ardy_codice_per_sessione()` sta in `ardy-db.php`.
+- **Articoli cliente su WordPress cancellati** (24/11: erano tutti di prova o consegnati). Le loro foto
+  restano nella libreria media e l'area le mostra: **non svuotare la libreria media**.
+- **⚠️ Passo 2 prima del prossimo cliente**: oggi "Avvia la pagina lavorazione" creerebbe di nuovo un
+  articolo WP. Va fatto: pubblicazione fasi → area (foto su disco), link dell'area in email/WhatsApp/
+  Sole/dossier, reel e social ricablati. Poi redirect dei vecchi URL e pulizia (passi 3-4 dell'analisi).
+- Collaudo dell'area col prossimo cliente vero (nel TODO).
+
+## A4. WordPress (fuori repo, fatto a mano)
+
+- **Loader in Divi** (Opzioni del tema → Integrazione → codice in fondo ai post), copia in
+  `wpcode-snippet-lavorazione.html`: agisce **solo** sui post col tag `storia-pezzo`. Fatto il 23/11.
+- Snippet WPCode **"Ardy — schema FAQ pezzi"** (`wordpress-snippets/pezzi-schema-faq.php`): da
+  verificare che sia stato creato (FAQPage nel Rich Results Test).
+- Lo snippet WPCode `lavorazioni-copertina-fallback` resta: usa la prima foto come copertina.
+
+## A5. Grafica e reel
+
+- `ardy-grafica-lib.php` (Deny): copertina con logo bianco, indirizzo, servizi, frase con `*` allineata
+  sull'inchiostro e corpo che si riduce per stare in 3 righe; foto piene; Prima/Dopo; clip con zoom lento;
+  unione con `xfade` (0,7 s). Font **Inter** in `assets/fonts/` (OFL), preso da Fontsource perché Google
+  Fonts dà solo WOFF.
+- `ardy-crea-reel.php` usa tutto questo per **tutti** i reel (clienti, progetti, pezzi); se manca GD/Inter
+  o `xfade` fallisce, ripiega sul montaggio di prima (log `ARDY REEL XFADE`).
+- Stile copiato dai reel di @ardy.lab: solo l'apertura ha i testi, poi immagini pulite a tutto schermo.
+
+## A6. Cosa resta aperto (in ordine)
+
+1. **Passo 2 dell'area cliente** (sopra): bloccante prima del prossimo cliente.
+2. **Collaudi dal vivo** nel TODO: social (Google, Facebook, reel), grafica e dissolvenze sul server,
+   area cliente col prossimo cliente, voce su iPhone.
+3. **Reel su Instagram**: `ardy-pubblica-reel.php` considera riuscito l'invio se n8n risponde 200, senza
+   leggere l'esito (a differenza dei post). Da allineare a `ardySocialInterpretaEsito()` così lo stato
+   diventa "da verificare" quando Instagram non conferma.
+4. Foto della bottega ad alta risoluzione al posto di `assets/racconta-bottega.jpg` (stesso nome).
+5. Facoltativi: Content-Signal `ai-input=yes` su Cloudflare; trascrizione voce lato server.
+
+## A7. Come si è lavorato (ambiente)
+
+- **PHP non è installato sul PC di sviluppo**: `php -l` si lancia con
+  `docker run --rm -v "$PWD":/app -w /app php:8.3-cli php -l <file>`. Immagini locali già costruite:
+  `php-gd` (GD+FreeType) e `php-gd-ff` (+FFmpeg) per provare grafica e reel.
+- **`gh` non è installato**: si lavora su un ramo, poi merge `--no-ff` su `main` in locale e push.
+  L'utente chiede il merge esplicitamente ("Sì, merge") e poi fa il deploy lui:
+  `runuser -u micoperibg -- bash -c 'cd ~/repositories/ardyagent && git pull origin main && ./deploy.sh'`
+- Le mini-app si provano nel browser integrato servendo la cartella con `python3 -m http.server` e
+  simulando `fetch`; le API con PHP + MySQL in container quando serve.
+- Michela usa **iPhone**, Andrea **Android**.
+
+---
+
+# Parte B — Ardy Outreach (handoff del 17/08/2026, ancora valido)
+
 
 ## 1. Cos'è il progetto, in breve
 
