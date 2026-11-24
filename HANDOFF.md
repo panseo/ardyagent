@@ -70,9 +70,10 @@ di una fase dopo cliente e progetto), `pezzi_social` (bozze e storico per capito
   si genera in dash (scheda → Lavorazione → "🔑 Area cliente"); `ardy_codice_per_sessione()` sta in `ardy-db.php`.
 - **Articoli cliente su WordPress cancellati** (24/11: erano tutti di prova o consegnati). Le loro foto
   restano nella libreria media e l'area le mostra: **non svuotare la libreria media**.
-- **⚠️ Passo 2 prima del prossimo cliente**: oggi "Avvia la pagina lavorazione" creerebbe di nuovo un
-  articolo WP. Va fatto: pubblicazione fasi → area (foto su disco), link dell'area in email/WhatsApp/
-  Sole/dossier, reel e social ricablati. Poi redirect dei vecchi URL e pulizia (passi 3-4 dell'analisi).
+- **Passo 2 scritto il 24/11** (ramo `area-cliente-passo2`): le fasi vanno solo nell'area, foto sul server
+  (`ardy-fasi-foto-lib.php`), link dell'area in email/WhatsApp/Sole/dossier, social e reel ricablati, la
+  dash dice "Avvia l'area del cliente". **Da collaudare** (lista nel TODO). Poi redirect dei vecchi URL e
+  pulizia (passi 3-4 dell'analisi).
 - Collaudo dell'area col prossimo cliente vero (nel TODO).
 
 ## A4. WordPress (fuori repo, fatto a mano)
@@ -95,7 +96,7 @@ di una fase dopo cliente e progetto), `pezzi_social` (bozze e storico per capito
 
 ## A6. Cosa resta aperto (in ordine)
 
-1. **Passo 2 dell'area cliente** (sopra): bloccante prima del prossimo cliente.
+1. **Passo 2 dell'area cliente**: scritto il 24/11, da collaudare dopo il deploy (lista nel TODO).
 2. **Collaudi dal vivo** nel TODO: social (Google, Facebook, reel), grafica e dissolvenze sul server,
    area cliente col prossimo cliente, voce su iPhone.
 3. **Reel su Instagram**: `ardy-pubblica-reel.php` considera riuscito l'invio se n8n risponde 200, senza

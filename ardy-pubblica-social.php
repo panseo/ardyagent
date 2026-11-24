@@ -27,6 +27,28 @@ $immagini    = $input['immagini']  ?? [];
 $cliente     = $input['cliente']   ?? '';
 $testo       = $input['testo']     ?? $testoSocial;
 
+// Foto delle fasi cliente dal passo 2 dell'area cliente: stanno sul server dietro la
+// password dello staff, e Facebook/Instagram/Google non le potrebbero scaricare. Si
+// rendono pubbliche adesso, solo quelle scelte per questo post (ardy-fasi-foto-lib.php).
+// WordPress si carica qui, nello scope globale, e solo se serve davvero.
+require_once __DIR__ . '/ardy-fasi-foto-lib.php';
+if (fasiFotoServeWp(is_array($immagini) ? $immagini : [])) {
+    if (!file_exists(ARDY_WP_LOAD)) {
+        echo json_encode(['success' => false, 'error' => 'wp-load.php non trovato']);
+        exit();
+    }
+    $_SERVER['HTTP_HOST']   = 'ardy-lab.it';   // stesso fix anti-redirect degli altri endpoint
+    $_SERVER['REQUEST_URI'] = '/';
+    define('WP_USE_THEMES', false);
+    require_once ARDY_WP_LOAD;
+    require_once ABSPATH . 'wp-admin/includes/media.php';
+    require_once ABSPATH . 'wp-admin/includes/file.php';
+    require_once ABSPATH . 'wp-admin/includes/image.php';
+    $immagini = fasiFotoPubbliche($immagini);
+}
+// L'area del cliente è privata: il suo link non va mai in un post pubblico.
+if (strpos($postLink, 'ardyagent.ardy-lab.it') !== false) $postLink = '';
+
 // Piattaforme di destinazione: si può pubblicare anche su un solo social.
 // Whitelist + default a entrambi se non specificato (retro-compatibilità).
 $VALIDE      = ['facebook', 'instagram'];

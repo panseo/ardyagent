@@ -21,6 +21,7 @@
 // -----------------------------------------------------------
 
 require_once __DIR__ . '/ardy-config.php';
+require_once __DIR__ . '/ardy-fasi-foto-lib.php';   // fasiLinkArea()
 require_once __DIR__ . '/ardy-db.php';
 
 date_default_timezone_set('Europe/Rome');
@@ -112,7 +113,9 @@ function ardy_genera_dossier(PDO $db, string $sessionId, bool $perCliente = fals
         'Prossimo appuntamento' => ardy_dossier_data($c['sopralluogo_at'] ?? ''),
         'Inizio lavoro'        => ardy_dossier_data($c['inizio_lavoro'] ?? ''),
         'Fine lavoro prevista' => ardy_dossier_data($c['fine_lavoro_prevista'] ?? ''),
-        'Pagina lavoro'        => $c['wp_post_link'] ?? '',
+        // Area riservata del cliente (/lavoro/, passo 2 area cliente): link col codice dentro.
+        'Area cliente'         => trim((string) ($c['codice_accesso'] ?? '')) !== '' ? fasiLinkArea(trim((string) $c['codice_accesso'])) : '',
+        'Pagina lavoro (vecchio articolo)' => $c['wp_post_link'] ?? '',
     ];
     foreach ($righe as $k => $v) {
         if (trim((string) $v) !== '') $md .= "- **{$k}:** {$v}\n";

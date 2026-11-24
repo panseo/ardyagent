@@ -384,11 +384,11 @@
               </div>
               <div id="lavScadenzaHint" class="lav-scadenza-hint" style="display:none;"></div>
 
-              <!-- Avvio pagina lavorazione: crea il PRIMO post WP con foto + notifica cliente.
-                   Sparisce appena esiste già un post (da qui in poi si aggiorna dalle fasi sotto). -->
+              <!-- Avvio lavorazione: pubblica la PRIMA fase nell'area del cliente (/lavoro/) con foto
+                   + notifica. Sparisce appena c'è una fase pubblicata (o un vecchio articolo WP). -->
               <div id="avvioLavWrap" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
-                <div class="lav-title" style="margin-bottom:8px;">✦ Avvia la pagina lavorazione</div>
-                <p style="font-size:11px;color:var(--text-dim);margin:0 0 10px;">Pubblica subito su WordPress il primo aggiornamento (con foto) e avvisa il cliente via email e WhatsApp. Le fasi successive aggiorneranno questa stessa pagina.</p>
+                <div class="lav-title" style="margin-bottom:8px;">✦ Avvia l'area del cliente</div>
+                <p style="font-size:11px;color:var(--text-dim);margin:0 0 10px;">Pubblica il primo aggiornamento (con foto) nell'area riservata del cliente e lo avvisa via email e WhatsApp col link e il suo codice. Le fasi successive si aggiungono nella stessa area. Niente va sul sito.</p>
                 <textarea class="lav-textarea" id="avvioNote" placeholder="2-3 righe sull'avvio del lavoro (facoltativo)..." style="min-height:60px;"></textarea>
                 <div class="lav-foto-buttons">
                   <label class="lav-foto-btn" for="avvioFotoCamera">
@@ -1159,8 +1159,10 @@ function aggiornaSezioniVisibili(stato) {
   if (showReel) { caricaListaMusica(); caricaTemplate(); }
   if (showReel) document.getElementById('reelResult').classList.remove('visible');
 
-  // FAQ: solo a lavoro concluso (CONSEGNATO; PAGATO è alias legacy)
-  const showFaq = ['CONSEGNATO','PAGATO'].includes(s);
+  // FAQ: solo a lavoro concluso (CONSEGNATO; PAGATO è alias legacy), e solo per chi ha
+  // ancora un articolo su WordPress: le FAQ si pubblicano lì (ardy-crea-faq.php). I clienti
+  // dal passo 2 dell'area cliente (24/11) l'articolo non ce l'hanno.
+  const showFaq = ['CONSEGNATO','PAGATO'].includes(s) && !!currentLead.wp_post_id;
   document.getElementById('acc-faq').style.display = showFaq ? '' : 'none';
   if (showFaq) { document.getElementById('faqResult').classList.remove('visible'); aggiornaStatoFaq(); }
 
@@ -2250,11 +2252,21 @@ function aggiornaContatoreFotoAvvio() {
   if (count) count.textContent = avvioImmagini.length ? `📸 ${avvioImmagini.length} foto pronte da pubblicare` : '';
 }
 
-// Mostra il box "Avvia la pagina lavorazione" solo finché non esiste ancora un post:
-// da quel momento in poi si aggiorna con "Crea e pubblica nuova fase" più sotto.
+// Mostra il box "Avvia l'area del cliente" solo finché non c'è ancora niente di pubblicato:
+// da quel momento in poi si aggiorna con "Crea e pubblica nuova fase" più sotto. Dal passo 2
+// (24/11) non nasce più un articolo WP, quindi conta l'esistenza di fasi pubblicate; il vecchio
+// wp_post_id vale ancora per i clienti che l'articolo l'avevano già.
 function aggiornaVisibilitaAvvio() {
   const wrap = document.getElementById('avvioLavWrap');
-  if (wrap) wrap.style.display = lavWpPostId ? 'none' : '';
+  if (wrap) wrap.style.display = (lavWpPostId || fasiPubblicateCache.length) ? 'none' : '';
+}
+// Il server genera il codice d'accesso alla prima pubblicazione, se mancava: la dash lo
+// mostra subito nel riquadro "🔑 Area cliente" senza ricaricare la scheda.
+function aggiornaCodiceDaPubblicazione(data) {
+  if (currentLead && data && data.codice && !currentLead.CodiceAccesso) {
+    currentLead.CodiceAccesso = data.codice;
+    renderAreaCodice();
+  }
 }
 
 async function pubblicaAvvioLavoro() {
@@ -2277,7 +2289,6 @@ async function pubblicaAvvioLavoro() {
     mobile:      mobile,
     email:       currentLead.Email ?? '',
     nome:        `${currentLead.Nome ?? ''} ${currentLead.Cognome ?? ''}`.trim(),
-    wp_post_id:  lavWpPostId,
     immagini:    avvioImmagini,
     video_urls:  [],
   };
@@ -2291,21 +2302,13 @@ async function pubblicaAvvioLavoro() {
     const data = await res.json();
 
     if (data.success) {
-      lavWpPostId   = data.wp_post_id;
-      lavWpPostLink = data.post_link;
-
-      const linkEl = document.getElementById('lavPostLink');
-      linkEl.href = lavWpPostLink;
-      linkEl.style.display = 'inline';
-
+      aggiornaCodiceDaPubblicazione(data);
       document.getElementById('avvioNote').value = '';
       document.getElementById('avvioPreview').innerHTML = '';
       avvioImmagini = [];
       aggiornaContatoreFotoAvvio();
-      aggiornaVisibilitaAvvio();
-
-      caricaFasiPubblicate(currentLead.Session_ID ?? '');
-      showToast('✓ Pagina lavorazione pubblicata: cliente avvisato', 'success');
+      await caricaFasiPubblicate(currentLead.Session_ID ?? '');
+      showToast('✓ Prima fase nell\'area del cliente: cliente avvisato', 'success');
     } else {
       showToast('⚠ Errore: ' + (data.error ?? 'sconosciuto'), 'error');
     }
@@ -2647,12 +2650,14 @@ async function caricaFasiPubblicate(sessionId) {
   cont.innerHTML = '';
   wrap.style.display = 'none';
   fasiPubblicateCache = [];
+  aggiornaVisibilitaAvvio();   // cambio scheda: non tenere lo stato del cliente di prima
   if (!sessionId) return;
   try {
     const r = await fetch('ardy-get-fasi.php?session_id=' + encodeURIComponent(sessionId));
     const fasi = await r.json();
     if (!Array.isArray(fasi) || !fasi.length) return;
     fasiPubblicateCache = fasi;
+    aggiornaVisibilitaAvvio();
     const link = currentLead && currentLead.wp_post_link;
     cont.innerHTML = fasi.map((f, idx) => {
       const fid    = (f.id != null && f.id !== '') ? String(f.id) : ('idx' + idx);
@@ -3035,7 +3040,6 @@ async function pubblicaFase(tipo) {
     prezzo:      prezzo,
     email:       currentLead.Email    ?? '',
     nome:        `${currentLead.Nome ?? ''} ${currentLead.Cognome ?? ''}`.trim(),
-    wp_post_id:  lavWpPostId,
     immagini:    lavImmagini,
     video_urls:  lavVideoUrls,
     fase_id:     (!isCom && faseBozzaIdInCorso) ? faseBozzaIdInCorso : null,
@@ -3050,13 +3054,7 @@ async function pubblicaFase(tipo) {
     const data = await res.json();
 
     if (data.success) {
-      lavWpPostId   = data.wp_post_id;
-      lavWpPostLink = data.post_link;
-      aggiornaVisibilitaAvvio();
-
-      const linkEl = document.getElementById('lavPostLink');
-      linkEl.href = lavWpPostLink;
-      linkEl.style.display = 'inline';
+      aggiornaCodiceDaPubblicazione(data);
 
       const result = document.getElementById('lavResult');
       const titolo = isCom ? '⚠ Comunicazione inviata!' : '✓ Pubblicato!';
@@ -3286,10 +3284,9 @@ async function caricaListaMusica() {
 }
 
 async function creaReel() {
-  if (!currentLead || !lavWpPostId) {
-    showToast('⚠ Pubblica almeno una fase prima di creare il reel', 'error');
-    return;
-  }
+  // Le foto bastano o no lo dice il server ("Servono almeno 2 foto pubblicate"): dal passo 2
+  // dell'area cliente non c'è più un articolo WP da cui dedurlo.
+  if (!currentLead) return;
   const btn = document.getElementById('btnReel');
   const out = document.getElementById('reelResult');
   btn.disabled = true;
@@ -3484,7 +3481,8 @@ function mostraPannelloSocial(data) {
     immagini:     Array.isArray(data.immagini) ? data.immagini : [],
     fase:         data.fase || '',
     mobile:       data.mobile || '',
-    post_link:    data.post_link || '',
+    // Mai il link dell'area (privata) in un post pubblico: solo un vecchio articolo WP, se c'è.
+    post_link:    (currentLead && currentLead.wp_post_link) || '',
     cliente:      data.cliente || '',
     piattaforme:  (Array.isArray(data.piattaforme) && data.piattaforme.length) ? data.piattaforme : ['facebook','instagram'],
   };

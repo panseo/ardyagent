@@ -967,8 +967,14 @@ while ($iteration < $maxIterations) {
                                 $fase = $qf->fetchColumn();
                                 if ($fase) $info['ultima_fase'] = $fase;
                             } catch (PDOException $e) { /* tabella fasi assente: ignora */ }
-                            if (!empty($cli['wp_post_link'])) $info['pagina_lavoro'] = $cli['wp_post_link'];
-                            $toolResult = 'Cliente trovato. Rispondi con tono caldo e personalizzato: saluta per nome, riassumi lo stato del lavoro e, se c\'è una pagina lavoro, condividi il link. Dati: ' . json_encode($info, JSON_UNESCAPED_UNICODE);
+                            // Dal passo 2 dell'area cliente (24/11) foto e fasi stanno nell'area privata
+                            // /lavoro/: il cliente ha appena dato il suo codice, quindi il link col codice
+                            // dentro è suo. Anche chi aveva un articolo WP lo ritrova lì (stesse fasi).
+                            if (!empty($info['ultima_fase']) || !empty($cli['wp_post_link'])) {
+                                require_once __DIR__ . '/ardy-fasi-foto-lib.php';
+                                $info['area_cliente'] = fasiLinkArea($codice);
+                            }
+                            $toolResult = 'Cliente trovato. Rispondi con tono caldo e personalizzato: saluta per nome, riassumi lo stato del lavoro e, se c\'è il link della sua area riservata (area_cliente), condividilo: lì trova foto e fasi. Dati: ' . json_encode($info, JSON_UNESCAPED_UNICODE);
                             // Contesto completo (client-safe: niente note interne) per dare a Sole
                             // il quadro del cliente verificato. Usalo come background, non recitarlo.
                             try {

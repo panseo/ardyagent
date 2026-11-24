@@ -79,12 +79,27 @@ dopo il deploy (che gira anche `ardy-migrate.php`: tabella `pezzi`, colonna `fas
     Android); codice sbagliato; "Esci".
   - [x] **Codice d'accesso in dash** (23/11): scheda cliente → 🪵 Lavorazione → riquadro "🔑 Area
     cliente" con codice, Copia link, Copia codice, Apri, e "Genera codice" per chi non l'ha ancora.
-  - [ ] Passo 2: la pubblicazione delle fasi va nell'area (foto su disco, link nell'area in email/WA/Sole/dossier).
-    **Da fare prima che il prossimo cliente arrivi a "Avvia la pagina lavorazione"**: oggi quel bottone
-    creerebbe di nuovo un articolo WP in `lavori-in-corso`. Il 23/11 gli articoli cliente su WP sono stati
+  - [x] Passo 2 scritto (24/11, ramo `area-cliente-passo2`): fasi nell'area, foto su disco, link dell'area in
+    email/WA/Sole/dossier, social/Google/reel ricablati, `ardy-uploads/` chiusa al web. Vedi README.
+  - [ ] **Collaudo del passo 2 dopo il deploy** (con una scheda di prova col proprio telefono/email):
+    1. Scheda in lavorazione → "✦ Avvia l'area del cliente" con 2 foto → nessun articolo nuovo su WP; email e
+       WhatsApp col link `/lavoro/?codice=…`; il riquadro 🔑 mostra il codice; il box Avvio sparisce.
+    2. Il link apre l'area con fase e foto (da telefono); in dash le foto della fase si vedono.
+    3. "Crea e pubblica nuova fase" → si aggiunge nell'area.
+    4. Pubblicare quella fase su Facebook e su Google → le foto escono (copiate su WP solo ora), nessun
+       link dell'area nel post, Google con "Scopri di più" verso la home.
+    5. Reel di quella scheda (a CONSEGNATO) → le foto nuove ci sono.
+    6. `https://ardyagent.ardy-lab.it/ardy-uploads/` → 403 (cartella chiusa); le foto della scheda (📷 Foto
+       della scheda), i pezzi di Racconta e i progetti si vedono ancora in dash.
+    7. Sole sul sito col codice e Sole su WhatsApp → danno il link dell'area.
+    8. Template WhatsApp `WA_TEMPLATE_FASI` su Meta: rileggere il testo, se dice "sul nostro sito" va
+       aggiornato (il link è nel corpo, {{4}}: nessuna nuova approvazione per il link). Il 23/11 gli articoli cliente su WP sono stati
     cancellati (tutti clienti di prova o consegnati, nessuno in lavorazione): le foto restano nella libreria
     media (caricate senza articolo) e l'area `/lavoro/` le mostra ancora. **Non svuotare la libreria media**.
   - [ ] Passo 3: redirect dei vecchi post cliente su WordPress, poi ritiro. Passo 4: pulizia.
+  - [ ] Video delle fasi sul server invece che su WP (servirli a pezzi con Range da PHP): oggi restano nella
+    libreria media senza articolo. FAQ dei clienti nuovi: senza articolo non hanno dove andare (pannello
+    nascosto): decidere se servono ancora.
 
 ---
 

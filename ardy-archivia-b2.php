@@ -130,6 +130,12 @@ function archFileCliente(PDO $db, string $session): array {
         if (is_file($p) && filesize($p) > 0) $file[] = ['path' => $p, 'rel' => 'foto-lead/' . basename($p)];
     }
 
+    // Dal passo 2 dell'area cliente (24/11) le foto delle fasi restano sul server e non su
+    // WordPress: vanno nell'archivio anche loro. (I file ".wp" accanto sono solo promemoria.)
+    foreach (glob($dirLead . 'lavorazioni/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', GLOB_BRACE) ?: [] as $p) {
+        if (is_file($p) && filesize($p) > 0) $file[] = ['path' => $p, 'rel' => 'foto-fasi/' . basename($p)];
+    }
+
     return ['file' => $file, 'saltati' => $saltat];
 }
 
@@ -316,8 +322,9 @@ try {
     } else {
         $dossier = ardy_genera_dossier($db, (string) $valId);
         if ($dossier !== null) ardyStorageArchivia($prefisso . '/dossier.md', $dossier, 'text/markdown; charset=utf-8');
-        // Le foto delle fasi cliente sono già su WordPress (foto_urls = URL): non si
-        // ricaricano, se ne conserva l'indirizzo.
+        // Le foto delle fasi cliente pubblicate prima del passo 2 sono su WordPress
+        // (foto_urls = URL): non si ricaricano, se ne conserva l'indirizzo. Quelle nuove
+        // sono già tra i file (foto-fasi/).
         $st = $db->prepare("SELECT fase_nome, foto_urls, wp_pubblicata_at FROM fasi WHERE session_id = ? ORDER BY id ASC");
         $st->execute([$valId]);
         $manifest['fasi_su_wordpress'] = $st->fetchAll();

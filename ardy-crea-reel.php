@@ -13,7 +13,8 @@ require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-net.php';
 require_once __DIR__ . '/ardy-storage.php';
 require_once __DIR__ . '/ardy-pezzi-lib.php';      // pezziClaude(), PEZZI_REGOLE_PUBBLICO (sottotitoli)
-require_once __DIR__ . '/ardy-grafica-lib.php';   // stile dei reel di Michela (Inter, logo bianco, frase con *)   // foto di progetto su B2 (fallback disco)
+require_once __DIR__ . '/ardy-grafica-lib.php';
+require_once __DIR__ . '/ardy-fasi-foto-lib.php';  // foto delle fasi cliente sul server (passo 2 area cliente)   // stile dei reel di Michela (Inter, logo bianco, frase con *)   // foto di progetto su B2 (fallback disco)
 
 header('Access-Control-Allow-Origin: https://ardyagent.ardy-lab.it');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -202,6 +203,10 @@ foreach ($rows as $r) {
             // su B2 (b2key → URL firmato in reelLeggiFoto). Stesso layout di cartella.
             $rel = 'progetti/' . $progettoId . '/fasi/' . ((int) $r['id']) . '/' . basename($u);
             $items[] = ['path' => rtrim(ARDY_UPLOAD_DIR, '/') . '/' . $rel, 'b2key' => $rel, 'fase' => $fn, 'testo' => $ft];
+        } elseif (($int = fasiFotoDaUrl($u)) !== null) {
+            // Cliente dal passo 2 dell'area cliente: la foto è sul server, dietro la
+            // password dello staff. Si legge dal disco, non via HTTP.
+            $items[] = ['path' => $int['path'], 'fase' => $fn, 'testo' => $ft];
         } else {
             $items[] = ['url' => $u, 'fase' => $fn, 'testo' => $ft];
         }

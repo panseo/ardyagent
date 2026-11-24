@@ -1,12 +1,14 @@
 <?php
 // -----------------------------------------------------------
-// ARDY LAB — Pubblica Lavorazione su WordPress
-// v2.0 — Ordine caricamento corretto + webhook n8n
+// ARDY LAB — Pubblica una fase della lavorazione di un cliente
+// Dal passo 2 dell'area cliente (24/11/2026, ANALISI-AREA-CLIENTE.md) la fase NON va
+// più su WordPress: niente articolo in "lavori in corso", foto sul server
+// (ardy-fasi-foto-lib.php), e il cliente la vede nella sua area /lavoro/, col link che
+// riceve per email e WhatsApp. Le foto diventano pubbliche solo se si pubblicano sui
+// social (lo fanno ardy-pubblica-social.php e ardy-gbp-post.php al momento dell'invio).
 // -----------------------------------------------------------
 
 date_default_timezone_set('Europe/Rome');
-
-define('ARDY_WP_LOAD', '/home/micoperibg/public_html/archivio/wp-load.php');
 
 // -----------------------------------------------------------
 // 1. CONFIG E DATABASE (nessun conflitto)
@@ -17,9 +19,10 @@ require_once __DIR__ . '/ardy-net.php';
 require_once __DIR__ . '/ardy-email.php';
 require_once __DIR__ . '/ardy-storage.php';   // pulizia copie bozza su B2 dopo il publish
 require_once __DIR__ . '/ardy-img.php';       // WEBP → JPEG: i social non prendono il WEBP
+require_once __DIR__ . '/ardy-fasi-foto-lib.php';
 
 // -----------------------------------------------------------
-// 2. CORS E PREFLIGHT (deve rispondere PRIMA di caricare WP)
+// 2. CORS E PREFLIGHT
 // -----------------------------------------------------------
 header('Access-Control-Allow-Origin: https://ardyagent.ardy-lab.it');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -37,8 +40,8 @@ require_once __DIR__ . '/ardy-auth.php';
 ardyRequireAuth();
 // Tetto di spesa (SECURITY-AUDIT §9.12): ogni pubblicazione fa 2-3 chiamate Claude
 // e un'email al cliente. Si controlla qui all'ingresso e non accanto alle
-// chiamate, perché a quel punto le foto sono già caricate su WordPress e
-// fermarsi lascerebbe media orfani.
+// chiamate, perché a quel punto le foto sono già salvate e fermarsi
+// lascerebbe file orfani.
 require_once __DIR__ . '/ardy-costcap.php';
 ardyCostCap('ai');
 
@@ -52,10 +55,9 @@ $faseNome     = $input['fase_nome']  ?? '';
 $clienteEmail = $input['email']      ?? '';
 $clienteNome  = $input['nome']       ?? '';
 $mobileTitolo = $input['mobile']     ?? '';
-$wpPostId     = !empty($input['wp_post_id']) ? (int)$input['wp_post_id'] : null;
 $faseId       = !empty($input['fase_id'])    ? (int)$input['fase_id']    : null; // se presente: pubblica una bozza esistente invece di crearne una nuova
 $immagini     = $input['immagini']   ?? [];
-$videoUrls    = $input['video_urls'] ?? [];   // URL video già caricati via ardy-upload-video.php
+$videoUrls    = $input['video_urls'] ?? [];   // URL video già caricati via ardy-upload-video.php (restano su WP, vedi README)
 $prezzo       = parseImportoLavorazione((string)($input['prezzo'] ?? '')); // dato interno, non va al cliente
 
 // Tipo di pubblicazione: 'fase' (avanzamento normale) o 'comunicazione' (comunicazione straordinaria)
@@ -72,22 +74,7 @@ if (empty($sessionId) || empty($noteBrevi)) {
 }
 
 // -----------------------------------------------------------
-// 4. CARICA WORDPRESS (con fix anti-redirect)
-// -----------------------------------------------------------
-if (!file_exists(ARDY_WP_LOAD)) {
-    echo json_encode(['success' => false, 'error' => 'wp-load.php non trovato']);
-    exit();
-}
-
-// Impedisce a WordPress di fare redirect al dominio principale
-$_SERVER['HTTP_HOST']   = 'ardy-lab.it';
-$_SERVER['REQUEST_URI'] = '/';
-define('WP_USE_THEMES', false);
-
-require_once ARDY_WP_LOAD;
-
-// -----------------------------------------------------------
-// 5. PHPMAILER (DOPO WordPress, con guardia anti-conflitto)
+// 5. PHPMAILER (con guardia: un'altra libreria potrebbe averlo già caricato)
 // -----------------------------------------------------------
 if (!class_exists('PHPMailer\PHPMailer\PHPMailer')) {
     require_once __DIR__ . '/phpmailer/src/PHPMailer.php';
@@ -99,10 +86,13 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
 // -----------------------------------------------------------
-// 6. SALVA IMMAGINI E CARICA SU WP MEDIA LIBRARY
+// 6. SALVA LE FOTO SUL SERVER
 // -----------------------------------------------------------
+// Restano in ARDY_UPLOAD_DIR/<sessione>/lavorazioni/ (la cartella di sempre); in
+// fasi.foto_urls va il loro indirizzo interno, che la dash apre con la sua password e
+// l'area del cliente traduce nel proprio (ardy-area-cliente-api.php?mode=foto).
 $cleanSession = preg_replace('/[^a-zA-Z0-9_\-]/', '', $sessionId);
-$sessionDir   = ARDY_UPLOAD_DIR . $cleanSession . '/lavorazioni/';
+$sessionDir   = fasiFotoDir($cleanSession);
 if (!is_dir($sessionDir) && !mkdir($sessionDir, 0755, true) && !is_dir($sessionDir)) {
     echo json_encode(['success' => false, 'error' => 'Impossibile creare la cartella di upload']);
     exit();
@@ -110,7 +100,6 @@ if (!is_dir($sessionDir) && !mkdir($sessionDir, 0755, true) && !is_dir($sessionD
 ardyHardenUploadDir(rtrim(ARDY_UPLOAD_DIR, '/')); // niente esecuzione script tra gli upload
 
 $savedImageUrls = [];
-$savedImageIds  = [];   // ID attachment WP, in parallelo a $savedImageUrls
 $allowedMimes   = ['image/jpeg', 'image/png', 'image/webp'];
 $maxImmagini    = 15;                 // numero massimo di foto per pubblicazione
 $maxByte        = 12 * 1024 * 1024;   // dimensione massima per foto (12 MB)
@@ -120,52 +109,23 @@ if (is_array($immagini) && count($immagini) > $maxImmagini) {
     $immagini = array_slice($immagini, 0, $maxImmagini);
 }
 
-require_once ABSPATH . 'wp-admin/includes/media.php';
-require_once ABSPATH . 'wp-admin/includes/file.php';
-require_once ABSPATH . 'wp-admin/includes/image.php';
-
-foreach ($immagini as $idx => $imgData) {
-    $decoded = base64_decode($imgData, true);
+foreach ((is_array($immagini) ? $immagini : []) as $idx => $imgData) {
+    $decoded = base64_decode((string) $imgData, true);
     if (!$decoded) continue;
     if (strlen($decoded) > $maxByte) continue;   // salta foto troppo grandi
-    $finfo   = new finfo(FILEINFO_MIME_TYPE);
-    $mime    = $finfo->buffer($decoded);
-    if (!in_array($mime, $allowedMimes)) continue;
-    // WEBP → JPEG: queste foto vanno anche sui social, e Google/Instagram il WEBP
+    $mime = (new finfo(FILEINFO_MIME_TYPE))->buffer($decoded);
+    if (!in_array($mime, $allowedMimes, true)) continue;
+    // WEBP → JPEG: queste foto possono finire sui social, e Google/Instagram il WEBP
     // non lo accettano (Google risponde 500 senza spiegare). Vedi ardy-img.php.
     $norm    = ardyImgNormalizza($decoded, $mime);
-    $decoded = $norm['bytes'];
-    $mime    = $norm['mime'];
-    $ext     = $norm['ext'];
-    $filename = date('Ymd_His') . '_' . uniqid() . '_' . $idx . '.' . $ext;
-    $filepath = $sessionDir . $filename;
-    if (file_put_contents($filepath, $decoded) === false) continue;
-
-    // Carica su WP Media Library
-    $attachment = [
-        'post_mime_type' => $mime,
-        'post_title'     => sanitize_file_name($filename),
-        'post_content'   => '',
-        'post_status'    => 'inherit',
-    ];
-    $wpFile = [
-        'name'     => $filename,
-        'type'     => $mime,
-        'tmp_name' => $filepath,
-        'error'    => 0,
-        'size'     => filesize($filepath),
-    ];
-    $attachId = media_handle_sideload($wpFile, 0);
-    if (!is_wp_error($attachId)) {
-        $savedImageUrls[] = wp_get_attachment_url($attachId);
-        $savedImageIds[]  = $attachId;
-    } else {
-        // Prima questi errori erano silenziosi: ora li logghiamo per diagnosi.
-        error_log('ARDY PUBBLICA SIDELOAD ERROR (img ' . $idx . ', mime ' . $mime . '): ' . $attachId->get_error_message());
-    }
+    // Prima le riduceva WordPress; ora lo si fa qui (lato lungo 2000 px).
+    $bytes   = ardyCompressImage($norm['bytes'], $norm['mime']);
+    $filename = date('Ymd_His') . '_' . uniqid() . '_' . $idx . '.' . $norm['ext'];
+    if (file_put_contents($sessionDir . $filename, $bytes) === false) continue;
+    $savedImageUrls[] = fasiFotoUrl($cleanSession, $filename);
 }
 error_log('ARDY PUBBLICA IMG: ricevute=' . (is_array($immagini) ? count($immagini) : 0)
-    . ' salvate_su_wp=' . count($savedImageIds));
+    . ' salvate=' . count($savedImageUrls));
 
 // -----------------------------------------------------------
 // 7. GENERA TESTO CON CLAUDE
@@ -179,135 +139,29 @@ if ($isComunicazione) {
     $testoSocial   = generaTestoSocial($noteBrevi, $faseNome, $mobileTitolo);
 }
 
-// -----------------------------------------------------------
-// 8. COSTRUISCI BLOCCO HTML DELLA FASE
-// -----------------------------------------------------------
-$dataOra  = date('d/m/Y H:i');
-
-// Niente più tentativo di impostare l'immagine in evidenza da qui: il fallback
-// per le anteprime (box del blog Divi) è gestito lato WordPress con un filtro
-// che usa la prima foto del post — vedi wordpress-snippets/lavorazioni-copertina-fallback.php.
-// Tutte le foto della fase entrano quindi nella galleria, nessuna esclusa.
-$fotoHtml = ardyBuildGalleriaFoto($savedImageUrls);
-
-// Video della fase (già caricati su WP Media Library via ardy-upload-video.php).
-// Accetta solo URL http(s) per evitare injection nel post.
+// Video della fase (caricati via ardy-upload-video.php, che li mette ancora nella
+// libreria media di WordPress). Solo URL http(s).
 $videoUrlsClean = [];
 if (is_array($videoUrls)) {
     foreach (array_slice($videoUrls, 0, 5) as $vurl) {
         if (is_string($vurl) && preg_match('#^https?://#i', $vurl)) $videoUrlsClean[] = $vurl;
     }
 }
-$videoHtml = '';
-if (!empty($videoUrlsClean)) {
-    foreach ($videoUrlsClean as $vurl) {
-        $videoHtml .= '<video controls preload="metadata" playsinline '
-            . 'style="max-width:100%;margin:10px 0;border-radius:6px;display:block;">'
-            . '<source src="' . esc_url($vurl) . '" />'
-            . 'Il tuo browser non supporta il video.'
-            . '</video>' . "\n";
-    }
-}
-
-if ($isComunicazione) {
-    // Blocco "Comunicazione importante": bordo arancione, icona ⚠, intestazione dedicata
-    $nuovoBlocko = '
-<div style="border-left:4px solid #e08a3c;padding:16px 20px;margin:24px 0;background:#fff7ef;">
-  <p style="font-size:13px;color:#c4701a;margin-bottom:8px;font-family:sans-serif;font-weight:bold;">⚠ Comunicazione importante</p>
-  <p style="font-size:12px;color:#999;margin-bottom:8px;font-family:monospace;">' . esc_html($dataOra) . ' — ' . esc_html($faseNome) . '</p>
-  <div style="font-size:15px;line-height:1.7;color:#333;">' . nl2br(esc_html($testoGenerato)) . '</div>
-  ' . $fotoHtml . $videoHtml . '
-</div>';
-} else {
-    $nuovoBlocko = '
-<div style="border-left:3px solid #c8a96e;padding:16px 20px;margin:24px 0;background:#fafaf8;">
-  <p style="font-size:12px;color:#999;margin-bottom:8px;font-family:monospace;">' . esc_html($dataOra) . ' — ' . esc_html($faseNome) . '</p>
-  <div style="font-size:15px;line-height:1.7;color:#333;">' . nl2br(esc_html($testoGenerato)) . '</div>
-  ' . $fotoHtml . $videoHtml . '
-</div>';
-}
 
 // -----------------------------------------------------------
-// 9. CREA O AGGIORNA POST WORDPRESS
+// 8. LINK DELL'AREA DEL CLIENTE
 // -----------------------------------------------------------
-// La categoria "Lavori in corso" pilota anche il permalink pubblico e i
-// controlli lato tema (widget chat cliente, pulsante flottante) che si
-// basano sullo slug/ID categoria. La cerchiamo per slug invece di un ID
-// fisso: se viene ricreata da WP admin con un ID diverso (es. dopo una
-// pulizia che l'ha cancellata per sbaglio), l'endpoint si autoallinea
-// invece di pubblicare pagine senza categoria (→ link ?p=ID invece che
-// /lavori-in-corso/...).
-$catSlug = 'lavori-in-corso';
-$catTerm = get_category_by_slug($catSlug);
-if ($catTerm && !is_wp_error($catTerm)) {
-    $categoria = (int) $catTerm->term_id;
-} else {
-    $newCat   = wp_insert_term('Lavori in corso', 'category', ['slug' => $catSlug]);
-    $categoria = !is_wp_error($newCat) ? (int) $newCat['term_id'] : (int) get_option('default_category');
-    error_log('ARDY PUBBLICA: categoria "lavori-in-corso" non trovata, ricreata con ID ' . $categoria);
-}
-
-// Questo endpoint gira senza utente WordPress loggato: di default WP applica
-// kses al contenuto e rimuove <video>/<source>, gli attributi style e può
-// alterare gli <img>. Il contenuto qui è generato dal nostro sistema (testo
-// Claude + URL immagini/video nostri), quindi disattiviamo il filtro attorno
-// all'inserimento per non perdere foto, video e impaginazione.
-kses_remove_filters();
-
-if ($wpPostId) {
-    $postAttuale      = get_post($wpPostId);
-    $contenutoAttuale = $postAttuale ? $postAttuale->post_content : '';
-    $nuovoContenuto   = $contenutoAttuale . "\n" . $nuovoBlocko;
-
-    $result = wp_update_post([
-        'ID'           => $wpPostId,
-        'post_content' => $nuovoContenuto,
-    ], true);
-
-    if (is_wp_error($result)) {
-        error_log('ARDY PUBBLICA WP UPDATE ERROR: ' . $result->get_error_message());
-        echo json_encode(['success' => false, 'error' => 'Aggiornamento della pagina non riuscito']);
-        exit();
-    }
-    $postLink = get_permalink($wpPostId);
-
-} else {
-    $titoloPost = generaTitoloLavorazione($mobileTitolo, $faseNome, $testoGenerato);
-    $introHtml  = '<div style="font-family:Georgia,serif;font-size:16px;line-height:1.7;color:#444;margin-bottom:32px;">Segui qui l\'avanzamento della lavorazione del tuo mobile. Aggiorniamo questa pagina ad ogni fase completata.</div>' . $nuovoBlocko;
-
-    $result = wp_insert_post([
-        'post_title'    => $titoloPost,
-        'post_content'  => $introHtml,
-        'post_status'   => 'publish',
-        'post_category' => [$categoria],
-    ], true);
-
-    if (is_wp_error($result)) {
-        error_log('ARDY PUBBLICA WP INSERT ERROR: ' . $result->get_error_message());
-        echo json_encode(['success' => false, 'error' => 'Pubblicazione della pagina non riuscita']);
-        exit();
-    }
-
-    $wpPostId = $result;
-    $postLink = get_permalink($wpPostId);
-}
-
-// Riattiva i filtri kses per il resto della richiesta.
-kses_init_filters();
-
-if (!$wpPostId) {
-    echo json_encode(['success' => false, 'error' => 'Errore pubblicazione WordPress']);
-    exit();
-}
+// Il codice personale fa da chiave: il link lo contiene già, così il cliente entra con
+// un tocco. Se manca lo si genera adesso (ardy_codice_per_sessione, in ardy-db.php).
+$codiceCliente = '';
+try { $codiceCliente = ardy_codice_per_sessione(ardyDB(), $sessionId); }
+catch (Throwable $e) { error_log('ARDY CODICE LAVORAZIONE: ' . $e->getMessage()); }
+$postLink = fasiLinkArea($codiceCliente);
 
 // -----------------------------------------------------------
-// 10. NOTIFICHE AL CLIENTE (email + WhatsApp)
+// 9. NOTIFICHE AL CLIENTE (email + WhatsApp)
 // -----------------------------------------------------------
 if ($clienteEmail) {
-    // Recupera (o genera) il codice personale del cliente, da includere nell'email.
-    $codiceCliente = '';
-    try { $codiceCliente = ardy_codice_per_sessione(ardyDB(), $sessionId); }
-    catch (Throwable $e) { error_log('ARDY CODICE LAVORAZIONE: ' . $e->getMessage()); }
     inviaEmailCliente($clienteEmail, $clienteNome, $mobileTitolo, $faseNome, $testoGenerato, $postLink, $isComunicazione, $codiceCliente);
 }
 
@@ -339,7 +193,7 @@ try {
     $db = ardyDB();
     ardyEnsureFasiStatoOrdine($db);
 
-    // Cattura i nomi delle foto bozza PRIMA di sovrascrivere foto_urls con gli URL WP:
+    // Cattura i nomi delle foto bozza PRIMA di sovrascrivere foto_urls con quelle pubblicate:
     // servono per ripulire le copie bozza su B2 dopo la pubblicazione.
     $bozzaFotoPrev = [];
     if ($faseId) {
@@ -388,7 +242,7 @@ try {
 }
 
 // Pubblicata una bozza: pulisce la cartella temporanea delle sue foto
-// (ora sono su WP e in foto_urls definitivo). Niente file orfani su disco.
+// (ora sono in lavorazioni/ e in foto_urls definitivo). Niente file orfani su disco.
 if ($faseId && defined('ARDY_UPLOAD_DIR')) {
     $bozzaDir = rtrim(ARDY_UPLOAD_DIR, '/') . '/' . $cleanSession . '/fasi-bozza/' . (int) $faseId . '/';
     if (is_dir($bozzaDir)) {
@@ -406,16 +260,8 @@ if ($faseId && defined('ARDY_UPLOAD_DIR')) {
     }
 }
 
-// -----------------------------------------------------------
-// 11b. AGGIORNA CRM
-// -----------------------------------------------------------
-try {
-    $db = ardyDB();
-    $db->prepare("UPDATE clienti SET wp_post_id=:wid, wp_post_link=:wlink, updated_at=NOW() WHERE session_id=:sid")
-       ->execute([':wid' => (string)$wpPostId, ':wlink' => $postLink, ':sid' => $sessionId]);
-} catch (PDOException $e) {
-    error_log('ARDY CRM UPDATE ERROR: ' . $e->getMessage());
-}
+// clienti.wp_post_id/wp_post_link non si toccano più: restano solo per i clienti che
+// avevano già un articolo su WordPress (passo 3: redirect di quei post verso l'area).
 
 // -----------------------------------------------------------
 // 12. RISPOSTA
@@ -427,8 +273,8 @@ try {
 echo json_encode([
     'success'      => true,
     'tipo'         => $tipo,
-    'wp_post_id'   => (string)$wpPostId,
-    'post_link'    => $postLink,
+    'post_link'    => $postLink,   // link dell'area del cliente (non più l'articolo WP)
+    'codice'       => $codiceCliente,
     'testo'        => $testoGenerato,
     'testo_social' => $testoSocial,
     'immagini'     => $savedImageUrls,
@@ -455,89 +301,6 @@ function parseImportoLavorazione(string $s): ?float {
         $s = str_replace(',', '.', $s);
     }
     return is_numeric($s) ? (float)$s : null;
-}
-
-// Titolo editoriale dell'articolo, generato UNA SOLA VOLTA alla creazione del post
-// (le fasi successive si accodano, il titolo resta). Prima era un template fisso
-// ("Lavorazione — [mobile]"), identico su ogni scheda con lo stesso tipo di mobile:
-// bruttino da leggere sul blog e sempre uguale. Fallback al vecchio formato se la
-// chiamata fallisce o il risultato non torna utilizzabile — un post senza titolo
-// non deve mai succedere.
-function generaTitoloLavorazione(string $mobile, string $faseNome, string $testo): string {
-    $fallback = 'Lavorazione — ' . $mobile;
-    if (!defined('ARDY_API_KEY') || ARDY_API_KEY === '') return $fallback;
-
-    $prompt = "Sei un copywriter che scrive titoli per il blog di Ardy Lab, bottega artigianale di restauro mobili antichi a Roma.
-Scrivi UN SOLO titolo per l'articolo che racconterà (a puntate, nelle prossime settimane) il restauro di questo mobile. Lo legge chi visita il sito, non un addetto ai lavori.
-
-Mobile: {$mobile}
-Prima fase pubblicata: {$faseNome}
-Testo di apertura dell'articolo: {$testo}
-
-Regole:
-- Massimo 70 caratteri.
-- Concreto e caldo, mai clickbait o sensazionalistico. Niente punto finale, niente virgolette.
-- Puoi citare il tipo di mobile e un dettaglio reale (epoca, materiale, tecnica) SOLO se emerge dal testo: non inventare nulla.
-- Rispondi SOLO con il titolo, nient'altro.";
-
-    $payload = json_encode([
-        'model'      => 'claude-sonnet-4-6',
-        'max_tokens' => 60,
-        'messages'   => [['role' => 'user', 'content' => $prompt]]
-    ]);
-    $ch = curl_init('https://api.anthropic.com/v1/messages');
-    curl_setopt($ch, CURLOPT_POST,           true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS,     $payload);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT,        30);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Content-Type: application/json',
-        'x-api-key: ' . ARDY_API_KEY,
-        'anthropic-version: 2023-06-01'
-    ]);
-    $res      = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    if ($httpCode !== 200) { error_log('ARDY GENERA TITOLO LAVORAZIONE: HTTP ' . $httpCode); return $fallback; }
-
-    $data   = json_decode($res, true);
-    $titolo = trim((string) ($data['content'][0]['text'] ?? ''), " \t\n\r\0\x0B\"'.");
-    $titolo = preg_replace('/\s+/', ' ', $titolo);
-    if ($titolo === '' || mb_strlen($titolo) > 120) return $fallback;
-    return $titolo;
-}
-
-/**
- * Costruisce l'HTML della galleria foto di una fase.
- *  - 0 foto  → stringa vuota
- *  - 1 foto  → immagine singola a tutta larghezza (cliccabile per ingrandire)
- *  - 2+ foto → griglia responsive di anteprime quadrate (lightbox nel widget)
- * Ogni foto è un <a> con href alla versione piena e classe .ardy-galleria-item:
- * il widget lavorazione intercetta il click e apre il lightbox; se il JS non
- * carica, il link apre comunque la foto a piena risoluzione (degrado elegante).
- */
-function ardyBuildGalleriaFoto(array $urls): string {
-    $urls = array_values(array_filter($urls, function ($u) { return is_string($u) && $u !== ''; }));
-    $n = count($urls);
-    if ($n === 0) return '';
-
-    if ($n === 1) {
-        return '<a href="' . esc_url($urls[0]) . '" class="ardy-galleria-item" data-ardy-galleria="1" '
-            . 'style="display:block;margin:12px 0;">'
-            . '<img src="' . esc_url($urls[0]) . '" loading="lazy" alt="" '
-            . 'style="max-width:100%;border-radius:6px;display:block;" /></a>' . "\n";
-    }
-
-    $items = '';
-    foreach ($urls as $url) {
-        $items .= '<a href="' . esc_url($url) . '" class="ardy-galleria-item" data-ardy-galleria="1" '
-            . 'style="display:block;overflow:hidden;border-radius:6px;position:relative;">'
-            . '<img src="' . esc_url($url) . '" loading="lazy" alt="" '
-            . 'style="width:100%;aspect-ratio:1/1;object-fit:cover;display:block;" /></a>';
-    }
-    return '<div class="ardy-galleria" '
-        . 'style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin:14px 0;">'
-        . $items . '</div>' . "\n";
 }
 
 function generaTestoFase(string $noteBrevi, string $faseNome, string $mobile): string {
@@ -585,7 +348,7 @@ function ardy_wa_param_clean(string $t): string {
 
 // Notifica WhatsApp al cliente sull'avanzamento di una fase.
 // Usa il template Meta a 4 variabili WA_TEMPLATE_FASI:
-//   {{1}} nome · {{2}} mobile/oggetto · {{3}} fase · {{4}} link pagina lavorazione
+//   {{1}} nome · {{2}} mobile/oggetto · {{3}} fase · {{4}} link dell'area del cliente
 function inviaWhatsAppCliente(string $telefono, string $nome, string $mobile, string $fase, string $link): bool {
     if (!defined('WA_TOKEN') || !defined('WA_PHONE_NUMBER_ID') || WA_TOKEN === '' || WA_PHONE_NUMBER_ID === '') {
         error_log('ARDY PUBBLICA WA CLIENTE: config WA mancante');
@@ -649,17 +412,17 @@ function inviaEmailCliente(string $email, string $nome, string $mobile, string $
         : 'Ardy Lab — 🪵 Aggiornamento lavorazione — ' . $mobile;
     $accent    = $isComunicazione ? '#e08a3c' : '#c8a96e';
     $kicker    = $isComunicazione ? 'Comunicazione importante' : 'Aggiornamento lavorazione';
-    $ctaLabel  = $isComunicazione ? 'Leggi sulla pagina della lavorazione →' : 'Vedi la lavorazione completa →';
+    $ctaLabel  = $isComunicazione ? 'Leggi nella tua area →' : 'Vedi la lavorazione completa →';
     $saluto    = trim($nome) !== '' ? 'Ciao ' . htmlspecialchars($nome) . ',' : 'Ciao,';
 
-    // "Come funziona la pagina": spiega al cliente cosa può fare con il link.
+    // "Come funziona l'area": spiega al cliente cosa può fare con il link.
     // Per le comunicazioni straordinarie il taglio è diverso (deve leggere/approvare),
     // per le fasi normali invita a seguire l'avanzamento e le foto.
     $comeFunziona = $isComunicazione
         ? '
-  <p style="font-size:14px;line-height:1.7;color:#555;margin:18px 0 0;">Apri la pagina della lavorazione qui sopra per leggere tutti i dettagli. Se serve una tua conferma per procedere, ti basta <strong>rispondere a questa email</strong> o scrivere a Sole in chat: ti ricontattiamo noi.</p>'
+  <p style="font-size:14px;line-height:1.7;color:#555;margin:18px 0 0;">Apri la tua area qui sopra per leggere tutti i dettagli. Se serve una tua conferma per procedere, ti basta <strong>rispondere a questa email</strong> o scriverci su WhatsApp: ti ricontattiamo noi.</p>'
         : '
-  <p style="font-size:14px;line-height:1.7;color:#555;margin:18px 0 0;"><strong>Cosa trovi nella pagina.</strong> Aprendo il link qui sopra segui l\'avanzamento del tuo mobile passo dopo passo: aggiungiamo le <strong>foto</strong> e una descrizione a ogni fase completata, così puoi vedere come procede il lavoro comodamente da casa. La pagina resta tua e si aggiorna da sola a ogni passaggio.</p>';
+  <p style="font-size:14px;line-height:1.7;color:#555;margin:18px 0 0;"><strong>Cosa trovi nella tua area.</strong> Aprendo il link qui sopra segui l\'avanzamento del tuo mobile passo dopo passo: aggiungiamo le <strong>foto</strong> e una descrizione a ogni fase completata, così puoi vedere come procede il lavoro comodamente da casa. L\'area è riservata a te (si entra col tuo codice personale, già dentro il link) e si aggiorna da sola a ogni passaggio.</p>';
 
     // Footer cliente condiviso: codice personale + WhatsApp + social (helper in ardy-email.php).
     $footerCliente = ardy_email_footer_cliente($codice, $accent);
