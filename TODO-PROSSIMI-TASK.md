@@ -56,6 +56,11 @@ dopo il deploy (che gira anche `ardy-migrate.php`: tabella `pezzi`, colonna `fas
      Reel (ramo `reel-stile-dissolvenze`): dopo la copertina foto a tutto schermo senza testi, zoom lento,
      dissolvenze morbide, Prima/Dopo nello stile nuovo. Se il reel esce con i tagli secchi di prima, nel log
      del server cercare `ARDY REEL XFADE` (FFmpeg senza xfade: va aggiornato).
+  7. **Sottotitoli nel reel** (ramo `reel-sottotitoli`, 24/11): creare un reel di un pezzo e uno della dash
+     clienti → sotto ogni foto max 3 parole che raccontano il restauro, ferme mentre la foto fa lo zoom,
+     leggibili sopra la didascalia di Instagram. Controllare che Sole non metta nomi o luoghi e che le
+     frasi seguano le foto. Provato in locale solo il disegno e il montaggio (docker `php-gd-ff`): la
+     chiamata a Sole si vede solo sul server. Da valutare dopo: poterli correggere prima di creare il reel.
   5. Instagram come post foto: provare con un capitolo a foto orizzontali; con foto verticali 3:4 Instagram
      può rifiutare. Se serve: generare in `ardy-pubblica-pezzo.php` una copia 4:5 per Instagram.
 - [ ] **Togliere le lavorazioni dei clienti da WordPress** e portarle in un'area privata su ardyagent
