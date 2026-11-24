@@ -49,6 +49,9 @@ dopo il deploy (che gira anche `ardy-migrate.php`: tabella `pezzi`, colonna `fas
      della copertina con la frase; pubblicare e verificare che sui social la prima foto sia la copertina;
      creare un reel e controllare copertina, didascalie e slide Prima/Dopo. Controllare anche un reel della
      dash clienti (usa la stessa grafica).
+     Reel (ramo `reel-stile-dissolvenze`): dopo la copertina foto a tutto schermo senza testi, zoom lento,
+     dissolvenze morbide, Prima/Dopo nello stile nuovo. Se il reel esce con i tagli secchi di prima, nel log
+     del server cercare `ARDY REEL XFADE` (FFmpeg senza xfade: va aggiornato).
   5. Instagram come post foto: provare con un capitolo a foto orizzontali; con foto verticali 3:4 Instagram
      può rifiutare. Se serve: generare in `ardy-pubblica-pezzo.php` una copia 4:5 per Instagram.
 - [ ] **Togliere le lavorazioni dei clienti da WordPress** e portarle in un'area privata su ardyagent
