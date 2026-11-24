@@ -9,7 +9,7 @@
 // Input JSON (POST):
 //   testo      (string, obbligatorio)  — testo del post
 //   immagini   (array URL) | immagine (string URL) — opzionale, usa la prima
-//   post_link  (string URL) — opzionale, bottone "Scopri di più" → pagina lavorazione
+//   post_link  (string URL) — opzionale, bottone "Scopri di più" → pagina pubblica (mai l'area cliente)
 //   fase, mobile, cliente — opzionali, solo per log
 //
 // Risposta: { success: bool, name?: string, error?: string }
@@ -48,6 +48,28 @@ if ($testo === '') {
     echo json_encode(['success' => false, 'error' => 'Testo del post mancante']);
     exit();
 }
+
+// Foto delle fasi cliente dal passo 2 dell'area cliente: stanno sul server dietro la
+// password dello staff, e Google non le potrebbe scaricare. Si
+// rendono pubbliche adesso, solo quelle scelte per questo post (ardy-fasi-foto-lib.php).
+// WordPress si carica qui, nello scope globale, e solo se serve davvero.
+require_once __DIR__ . '/ardy-fasi-foto-lib.php';
+if (fasiFotoServeWp([$immagine])) {
+    if (!file_exists(ARDY_WP_LOAD)) {
+        echo json_encode(['success' => false, 'error' => 'wp-load.php non trovato']);
+        exit();
+    }
+    $_SERVER['HTTP_HOST']   = 'ardy-lab.it';   // stesso fix anti-redirect degli altri endpoint
+    $_SERVER['REQUEST_URI'] = '/';
+    define('WP_USE_THEMES', false);
+    require_once ARDY_WP_LOAD;
+    require_once ABSPATH . 'wp-admin/includes/media.php';
+    require_once ABSPATH . 'wp-admin/includes/file.php';
+    require_once ABSPATH . 'wp-admin/includes/image.php';
+    $immagine = fasiFotoPubbliche([$immagine])[0] ?? '';
+}
+// L'area del cliente è privata: il suo link non va mai in un post pubblico.
+if (strpos($postLink, 'ardyagent.ardy-lab.it') !== false) $postLink = 'https://ardy-lab.it/';
 
 $res = gbp_create_local_post($testo, $immagine, $postLink);
 

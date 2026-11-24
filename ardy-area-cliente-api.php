@@ -3,11 +3,12 @@
 // ARDY LAB — Area cliente (ardyagent.ardy-lab.it/lavoro/): API pubblica
 // Il cliente vede il suo lavoro (fasi, foto, comunicazioni) entrando col codice di
 // accesso ARD-XXXX-XXXX che ha già ricevuto. Sostituirà le pagine "lavori in corso"
-// su WordPress: vedi ANALISI-AREA-CLIENTE.md. Passo 1: SOLA LETTURA, la
-// pubblicazione delle fasi non cambia.
+// su WordPress: vedi ANALISI-AREA-CLIENTE.md. Dal passo 2 (24/11) le fasi nuove
+// arrivano solo qui, con le foto sul server (ardy-fasi-foto-lib.php).
 //
 //   POST {mode:'accedi', codice}  → verifica il codice, imposta il cookie di sessione
 //   GET  ?mode=lavoro             → il lavoro del cliente col cookie valido
+//   GET  ?mode=foto&f=<file>      → una foto di una fase, solo del cliente del cookie
 //   POST {mode:'esci'}            → cancella il cookie
 //
 // PUBBLICO di proposito (fuori dal Basic Auth staff): il controllo è il codice, poi
@@ -18,6 +19,7 @@
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
 require_once __DIR__ . '/ardy-net.php';   // ardyClientIp() (IP reale dietro Cloudflare)
+require_once __DIR__ . '/ardy-fasi-foto-lib.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Robots-Tag: noindex, nofollow');
@@ -92,11 +94,22 @@ function areaNormalizzaCodice(string $raw): string {
     return preg_match('/^ARD([A-Z0-9]{4})([A-Z0-9]{4})$/', $s, $m) ? 'ARD-' . $m[1] . '-' . $m[2] : '';
 }
 
-/** Solo URL http(s): foto e video delle fasi già pubblicate stanno su WordPress. */
-function areaUrlValidi($json): array {
+/**
+ * Solo URL http(s). Le foto delle fasi dal passo 2 hanno l'indirizzo interno della dash
+ * (dietro la password dello staff): qui diventano quello dell'area, che le serve solo al
+ * cliente giusto. Quelle delle fasi vecchie stanno su WordPress e passano com'erano.
+ */
+function areaUrlValidi($json, string $sid): array {
     $out = [];
     foreach ((json_decode((string) $json, true) ?: []) as $u) {
-        if (is_string($u) && preg_match('#^https?://#i', $u)) $out[] = $u;
+        if (!is_string($u) || !preg_match('#^https?://#i', $u)) continue;
+        if (strpos($u, FASI_FOTO_ENDPOINT . '?') === 0) {
+            $int = fasiFotoDaUrl($u);
+            // Un indirizzo interno di un'altra sessione non deve mai comparire qui.
+            if ($int === null || $int['session'] !== fasiFotoSessione($sid)) continue;
+            $u = '/ardy-area-cliente-api.php?mode=foto&f=' . rawurlencode($int['file']);   // assoluto: la pagina sta su /lavoro/
+        }
+        $out[] = $u;
     }
     return $out;
 }
@@ -142,6 +155,23 @@ try {
         areaEsci(['success' => true]);
     }
 
+    if ($mode === 'foto') {
+        // La sessione viene dal cookie, mai dalla richiesta: un cliente non può chiedere
+        // le foto di un altro nemmeno conoscendone il nome file.
+        $sid = areaLeggiCookie();
+        $f   = (string) ($_GET['f'] ?? '');
+        if ($sid === '' || !fasiFotoNomeValido($f)) { http_response_code(403); exit(); }
+        $path = fasiFotoDir($sid) . $f;
+        if (!is_file($path)) { http_response_code(404); exit(); }
+        $mime = (new finfo(FILEINFO_MIME_TYPE))->file($path);
+        if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) { http_response_code(403); exit(); }
+        header('Content-Type: ' . $mime);
+        header('Content-Length: ' . filesize($path));
+        header('Cache-Control: private, max-age=86400');   // sovrascrive il no-store dell'API
+        readfile($path);
+        exit();
+    }
+
     if ($mode === 'lavoro') {
         $sid = areaLeggiCookie();
         if ($sid === '') areaEsci(['success' => false, 'accesso' => false]);
@@ -169,8 +199,8 @@ try {
                 'titolo'        => trim((string) $f['fase_nome']),
                 'comunicazione' => ($f['fase_tipo'] ?? '') === 'comunicazione',
                 'testo'         => trim((string) $f['testo_generato']),
-                'foto'          => areaUrlValidi($f['foto_urls']),
-                'video'         => areaUrlValidi($f['video_urls']),
+                'foto'          => areaUrlValidi($f['foto_urls'], $sid),
+                'video'         => areaUrlValidi($f['video_urls'], $sid),
                 'data'          => substr((string) $f['created_at'], 0, 10),
             ];
         }

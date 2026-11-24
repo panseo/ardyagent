@@ -66,7 +66,9 @@ ardyagent.ardy-lab.it/
 ├── ardy-pubblica-lavorazione.php  # Pubblica fase: pagina WP + immagine in evidenza + email cliente (NO social auto)
 ├── ardy-pubblica-social.php   # Pubblica sui social (passo manuale, separato) → webhook n8n
 ├── ardy-area-cliente.html     # 🔑 Area cliente su /lavoro/ (pubblica, accesso col codice ARD-…): il lavoro fase per fase
-├── ardy-area-cliente-api.php  # Area cliente: accesso col codice → cookie firmato, lettura fasi pubblicate (sola lettura)
+├── ardy-area-cliente-api.php  # Area cliente: accesso col codice → cookie firmato, fasi pubblicate, foto dal disco (mode=foto)
+├── ardy-fase-foto.php         # Foto delle fasi cliente sul server, per lo staff (Basic Auth): l'indirizzo salvato in fasi.foto_urls
+├── ardy-fasi-foto-lib.php     # (Deny) foto delle fasi cliente: cartella, indirizzo interno, copia su WP solo per i social, link dell'area
 ├── ardy-racconta.html         # 📸 Racconta: mini-app per il telefono, storia di un pezzo da foto + voce
 ├── ardy-pezzi-api.php         # Racconta: pezzi e capitoli (CRUD, foto su disco)
 ├── ardy-pezzi-ai.php          # Racconta: Sole scrive capitolo + scheda da foto e nota; correzione a voce
@@ -593,10 +595,10 @@ Single-file HTML con CSS esterno (`ardy-michela-app.css`).
 
 ---
 
-## 🔑 Area cliente (ardy-area-cliente.html, `/lavoro/`)  *(nov 2026, passo 1: sola lettura)*
+## 🔑 Area cliente (ardy-area-cliente.html, `/lavoro/`)  *(nov 2026, passi 1 e 2)*
 
-Pagina **privata del cliente** su `https://ardyagent.ardy-lab.it/lavoro/`, che sostituirà le pagine
-"lavori in corso" su WordPress. Analisi, decisioni e passi in **`ANALISI-AREA-CLIENTE.md`**.
+Pagina **privata del cliente** su `https://ardyagent.ardy-lab.it/lavoro/`, che sostituisce le pagine
+"lavori in corso" su WordPress: dal passo 2 (24/11) le fasi nuove arrivano **solo** qui. Analisi, decisioni e passi in **`ANALISI-AREA-CLIENTE.md`**.
 
 - **Accesso col codice** `ARD-XXXX-XXXX` che il cliente ha già (nessuna password). Anche via link
   `/lavoro/?codice=ARD-…`: la pagina toglie subito il codice dalla barra degli indirizzi.
@@ -616,8 +618,35 @@ Pagina **privata del cliente** su `https://ardyagent.ardy-lab.it/lavoro/`, che s
   per chi non l'ha ancora (`ardy-update-lead.php`, `azione:'genera_codice'`; un codice esistente non
   si rigenera mai). Il codice arriva alla dash da `ardy-crm-api.php` (`CodiceAccesso`); la funzione
   `ardy_codice_per_sessione()` sta in `ardy-db.php`, condivisa con la pubblicazione delle fasi.
-- **Oggi** le foto vengono dagli URL WordPress delle fasi già pubblicate: la pubblicazione non è
-  ancora cambiata (passo 2 dell'analisi).
+- **Passo 2 (24/11): la pubblicazione delle fasi va nell'area.** `ardy-pubblica-lavorazione.php` non
+  carica più WordPress: niente articolo, niente libreria media. Le foto restano su disco in
+  `ARDY_UPLOAD_DIR/<sessione>/lavorazioni/` (ridotte a 2000 px, WEBP→JPEG) e in `fasi.foto_urls` va
+  il loro **indirizzo interno** `ardy-fase-foto.php?s=…&f=…` (Basic Auth: la dash le mostra come
+  prima). Helper in `ardy-fasi-foto-lib.php` (Deny). Email e WhatsApp mandano il **link dell'area col
+  codice dentro** (`fasiLinkArea()`); il codice si genera alla prima pubblicazione se mancava e torna
+  alla dash (`codice`). `clienti.wp_post_id/wp_post_link` non si scrivono più: restano solo per chi
+  aveva già l'articolo.
+  - **Area**: `areaUrlValidi()` traduce l'indirizzo interno in `/ardy-area-cliente-api.php?mode=foto&f=…`,
+    che serve la foto **solo dalla cartella della sessione del cookie** (mai dalla richiesta); un
+    indirizzo interno di un'altra sessione viene scartato. Le foto delle fasi vecchie (URL WP) passano
+    com'erano.
+  - **Social e Google**: `ardy-pubblica-social.php` e `ardy-gbp-post.php`, se tra le immagini c'è una foto
+    interna, caricano WordPress e la copiano nella libreria media **solo in quel momento**
+    (`fasiFotoPubbliche()`; l'URL si ricorda in un file `<foto>.wp`, così la stessa foto non si ricarica).
+    Il link dell'area non va mai in un post: Facebook/Instagram lo tolgono, Google usa la home.
+  - **Reel**: `ardy-crea-reel.php` legge le foto interne dal disco. **Archivio B2**: le foto delle fasi
+    (`lavorazioni/`) entrano tra i file come `foto-fasi/`.
+  - **Sole e dossier**: sul sito (`cerca_cliente` in `ardy-proxy.php`) Sole dà `area_cliente`; su WhatsApp
+    `ardy-wa-lookup.php` passa `cliente.link_area` (prompt in `ardy-whatsapp-system.txt`); il dossier ha
+    la riga "Area cliente".
+  - **Dash**: il box diventa **"✦ Avvia l'area del cliente"** e sparisce appena c'è una fase pubblicata
+    (non più quando c'è un articolo). Il pannello **FAQ** si vede solo per chi ha ancora un articolo WP
+    (le FAQ si pubblicano lì). Il reel non chiede più un articolo: decide il server (≥2 foto).
+  - **`ardy-uploads/` chiusa al web** (`RewriteRule … [F]` in `.htaccess`, `@uploads_dir` nel Caddyfile):
+    le foto passano sempre da un endpoint che controlla chi chiede.
+  - **Video**: `ardy-upload-video.php` li mette ancora nella libreria media di WordPress (senza articolo,
+    URL difficile da indovinare ma pubblico). Portarli sul server vuol dire servirli a pezzi (Range) da
+    PHP: lavoro a parte.
 
 ---
 

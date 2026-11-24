@@ -3,7 +3,8 @@
 > Domanda (23/11/2026): le pagine "lavori in corso" dei clienti vanno tolte dal sito. Al loro posto,
 > eventualmente, una sezione su `ardyagent.ardy-lab.it` dove instradare il cliente. Come si fa?
 >
-> Stato: **passo 1 scritto** (area in sola lettura, ramo `area-cliente-lettura`), da collaudare. Decisioni prese il 23/11 (§7): foto sul server, accesso
+> Stato: **passo 1 online** (23/11), **passo 2 scritto** (24/11, ramo `area-cliente-passo2`): le fasi
+> nuove vanno solo nell'area, foto sul server, link dell'area in email/WhatsApp/Sole/dossier. Da fare: passi 3-4. Decisioni prese il 23/11 (§7): foto sul server, accesso
 > col solo codice, area aperta anche dopo la consegna, **nessuna chat nell'area** (le domande si fanno
 > su WhatsApp come oggi), categoria non rinominata.
 

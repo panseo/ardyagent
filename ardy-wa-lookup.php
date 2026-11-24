@@ -14,6 +14,7 @@ date_default_timezone_set('Europe/Rome');
 
 require_once __DIR__ . '/ardy-config.php';
 require_once __DIR__ . '/ardy-db.php';
+require_once __DIR__ . '/ardy-fasi-foto-lib.php';   // fasiLinkArea()
 
 // Calendar opzionale: incluso solo se le credenziali ci sono (altrimenti ardy-gcal.php
 // va in errore sulle costanti). Deve stare a livello GLOBALE: il file usa variabili
@@ -93,7 +94,7 @@ try {
     ardyEnsureTelefonoLast9($db);
     $stmt = $db->prepare(
         "SELECT session_id, nome, cognome, telefono, email, servizio, mobile, zona, stato,
-                wp_post_id, wp_post_link, primo_contatto_wa_at
+                wp_post_id, wp_post_link, codice_accesso, primo_contatto_wa_at
            FROM clienti
           WHERE telefono_last9 = :p
             AND deleted_at IS NULL
@@ -334,7 +335,10 @@ $clienteOut = [
     'mobile'       => $row['mobile'] ?? '',
     'zona'         => $row['zona'] ?? '',
     'stato'        => $row['stato'] ?? '',
-    'wp_post_link' => $row['wp_post_link'] ?? '',
+    'wp_post_link' => $row['wp_post_link'] ?? '',   // solo clienti con un vecchio articolo WP
+    // Area riservata /lavoro/ col codice dentro (passo 2 area cliente, 24/11): su WhatsApp il
+    // cliente è già riconosciuto dal telefono, quindi il link personale glielo si può dare.
+    'link_area'    => trim((string) ($row['codice_accesso'] ?? '')) !== '' ? fasiLinkArea(trim((string) $row['codice_accesso'])) : '',
     'ultima_fase'  => $ultimaFase,
 ];
 
