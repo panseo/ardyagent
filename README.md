@@ -748,6 +748,17 @@ Sempre **manuale**: niente esce da solo, ogni canale ha il suo bottone e "Salva 
   (`xfade`, `grafClip()`/`grafUnisci()`), slide finale Prima/Dopo a tutto campo con "*Prima"/"*Dopo" in
   Inter e logo bianco. Senza GD+FreeType o senza Inter, o con un FFmpeg senza `xfade`, si torna al
   montaggio di prima (concat secco).
+  **Sottotitoli** (dal 24/11): sotto ogni foto **al massimo 3 parole** che, lette in fila, raccontano il
+  restauro ("Com'era arrivata" → "Via la vecchia vernice" → "Cera a mano"). Li scrive Sole
+  (`reelSottotitoli()` in `ardy-crea-reel.php`, via `pezziClaude()` con le regole di anonimato di
+  `PEZZI_REGOLE_PUBBLICO`) guardando le foto in miniatura (384 px) e leggendo i testi delle fasi; il
+  limite di 3 parole è fatto rispettare anche nel codice. Grafica: `grafSottotitolo()`, Inter Medium
+  bianco con ombra, più piccolo della frase di copertina, a sinistra sul suo margine, a ¾ dell'altezza
+  (più in basso lo coprono didascalia e bottoni di Instagram), con una velatura leggera dal basso. È un
+  PNG trasparente che `grafClip()` sovrappone **dopo** lo zoom, così la scritta resta ferma mentre la foto
+  si avvicina. Se Sole non risponde: il nome della fase sulla prima foto di ogni fase. Si spengono con
+  "didascalie" del template di stile (`mostra_didascalie`). La risposta dell'endpoint li riporta in
+  `sottotitoli`.
 
 ---
 

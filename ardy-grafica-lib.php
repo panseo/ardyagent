@@ -201,6 +201,43 @@ function grafPrimaDopo(string $primaBytes, string $dopoBytes, int $W, int $H): ?
     return $out;
 }
 
+/**
+ * Sottotitolo di una foto del reel: al massimo 3 parole che, slide dopo slide, raccontano il
+ * restauro. Stesso Inter bianco con ombra della copertina, ma più piccolo, a sinistra sul
+ * margine della frase. Sta all'altezza di tre quarti: più in basso lo coprirebbero la
+ * didascalia e i bottoni di Instagram. È un PNG trasparente W×H che si sovrappone alla clip
+ * dopo lo zoom: disegnato sulla foto si ingrandirebbe e scivolerebbe con lei.
+ * Ritorna i byte PNG, o null se GD non c'è o il testo è vuoto.
+ */
+function grafSottotitolo(string $testo, int $W, int $H): ?string {
+    $parole = preg_split('/\s+/u', trim($testo), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    $testo = implode(' ', array_slice($parole, 0, 3));
+    if (!grafDisponibile() || $testo === '' || !function_exists('imagepng')) return null;
+    $im = imagecreatetruecolor($W, $H);
+    imagealphablending($im, false); imagesavealpha($im, true);
+    imagefill($im, 0, 0, imagecolorallocatealpha($im, 0, 0, 0, 127));
+    $u = $W / 1080; $m = (int) round(80 * $u);
+    // Velatura leggera sotto la scritta: si legge anche sulle foto chiare (legno grezzo, pareti).
+    $y = (int) round($H * 0.75);
+    imagealphablending($im, false);
+    for ($r = (int) round($H * 0.60); $r < $H; $r++) {
+        $al = (int) round(127 - 52 * min(1, ($r - $H * 0.60) / ($H * 0.18)));
+        imagefilledrectangle($im, 0, $r, $W, $r, imagecolorallocatealpha($im, 0, 0, 0, $al));
+    }
+    imagealphablending($im, true);
+    $font = grafFont('medium') ?? grafFont();
+    // Corpo fisso (la metà abbondante della frase di copertina); scende solo se tre parole
+    // lunghe non stanno su una riga.
+    for ($fs = 50 * $u; $fs > 30 * $u; $fs -= 2 * $u) {
+        $bb = imagettfbbox($fs, 0, $font, $testo);
+        if ($bb[2] - $bb[0] <= $W - 2 * $m) break;
+    }
+    grafTesto($im, $fs, $m, $y, $font, $testo);
+    ob_start(); imagepng($im); $out = ob_get_clean();
+    imagedestroy($im);
+    return $out;
+}
+
 /** Esegue un comando (proc_open: su PHP-FPM exec/shell_exec sono spesso disabilitate). */
 function grafEsegui(string $cmd, ?array &$out = null): int {
     $p = @proc_open($cmd, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
@@ -216,14 +253,18 @@ function grafEsegui(string $cmd, ?array &$out = null): int {
  * l'immagine si ingrandisce prima del zoompan per non avere il tremolio a scatti tipico
  * dello zoom su risoluzioni piccole.
  */
-function grafClip(string $ffmpeg, string $img, float $sec, string $out, bool $zoom, int $W, int $H): bool {
+function grafClip(string $ffmpeg, string $img, float $sec, string $out, bool $zoom, int $W, int $H, ?string $sopra = null): bool {
     $fps = 30; $frames = (int) ceil($sec * $fps);
     $vf = $zoom
         ? 'scale=' . ($W * 3 / 2) . ':' . ($H * 3 / 2) . ',zoompan=z=\'1+0.06*on/' . $frames . '\':d=' . $frames
           . ':x=\'iw/2-(iw/zoom/2)\':y=\'ih/2-(ih/zoom/2)\':s=' . $W . 'x' . $H . ':fps=' . $fps . ',format=yuv420p,setsar=1'
         : 'scale=' . $W . ':' . $H . ',format=yuv420p,setsar=1';
+    // Il sottotitolo (PNG trasparente) si posa sopra dopo lo zoom, quindi resta fermo.
+    $filtro = $sopra !== null
+        ? ' -i ' . escapeshellarg($sopra) . ' -filter_complex ' . escapeshellarg('[0:v]' . $vf . '[b];[b][1:v]overlay=0:0,format=yuv420p')
+        : ' -vf ' . escapeshellarg($vf);
     $cmd = $ffmpeg . ' -y ' . ($zoom ? '' : '-loop 1 ') . '-i ' . escapeshellarg($img)
-         . ($zoom ? '' : ' -t ' . $sec) . ' -r ' . $fps . ' -vf ' . escapeshellarg($vf)
+         . $filtro . ($zoom ? '' : ' -t ' . $sec) . ' -r ' . $fps
          . ($zoom ? ' -frames:v ' . $frames : '')
          . ' -c:v libx264 -preset veryfast -crf 20 ' . escapeshellarg($out) . ' 2>&1';
     return grafEsegui($cmd, $o) === 0 && is_file($out);
