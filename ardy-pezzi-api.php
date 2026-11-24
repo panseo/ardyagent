@@ -5,7 +5,7 @@
 // (PIANO-RACCONTA.md). I capitoli sono righe di `fasi` con pezzo_id: stesso
 // motore di clienti e progetti, terzo proprietario possibile.
 //
-//   GET  ?mode=lista                              → pezzi (non eliminati), con copertina e conteggi
+//   GET  ?mode=lista                              → pezzi (non eliminati), con copertina, conteggi e canali{google,instagram,facebook}
 //   GET  ?mode=dettaglio&id=N                     → pezzo + capitoli
 //   GET  ?file=..&pezzo_id=N&fase_id=M            → serve una foto da disco
 //   POST {mode:'crea', titolo?}                   → nuovo pezzo
@@ -114,6 +114,26 @@ try {
                     if ($foto) $r['copertina'] = ['fase_id' => (int) $fid, 'file' => (string) $foto[0]];
                 }
                 unset($r['cop']);
+                $r['canali'] = ['google' => null, 'instagram' => null, 'facebook' => null];
+            }
+            unset($r);
+            // Dove è uscito ogni pezzo, per le icone della lista: 'pubblicato', 'da_verificare'
+            // (inviato ma non confermato) o null. Instagram non ha un canale suo: ci arriva il
+            // post di Facebook con la spunta "anche su Instagram", oppure il reel.
+            if ($rows) {
+                $pos = [];
+                foreach ($rows as $i => $r) $pos[$r['id']] = $i;
+                $ph = implode(',', array_fill(0, count($pos), '?'));
+                $st = $db->prepare("SELECT pezzo_id, canale, stato, opzioni FROM pezzi_social WHERE stato <> 'bozza' AND pezzo_id IN ($ph)");
+                $st->execute(array_keys($pos));
+                foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $s) {
+                    $opz = json_decode((string) $s['opzioni'], true) ?: [];
+                    $dove = $s['canale'] === 'reel' ? ['instagram']
+                          : ($s['canale'] === 'facebook' ? (!empty($opz['instagram']) ? ['facebook', 'instagram'] : ['facebook']) : ['google']);
+                    $c = &$rows[$pos[(int) $s['pezzo_id']]]['canali'];
+                    foreach ($dove as $d) if ($c[$d] !== 'pubblicato') $c[$d] = $s['stato'];
+                    unset($c);
+                }
             }
             echo json_encode(['success' => true, 'pezzi' => $rows]);
             exit();

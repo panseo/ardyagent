@@ -677,7 +677,11 @@ perché si usa in laboratorio con tanta luce; carta, noce e ottone (token in `:r
 metro da falegname sotto l'intestazione, stati come timbri, capitoli come tappe lungo un filo, foto
 come stampe sul banco, icone SVG a tratto invece delle emoji. Logo di Ardy (`assets/logo.png`) accanto a
 "Racconta", colorato noce con una maschera CSS. Nel pezzo il riquadro **"Scheda, introduzione e Google"**
-sta subito sotto il titolo, con un timbro che dice se la pagina è pronta per Google. Su **desktop**
+sta subito sotto il titolo, con un timbro che dice se la pagina è pronta per Google. Nella **lista dei
+pezzi** (24/11), accanto al timbro del sito, tre icone **Google, Instagram, Facebook**: verdi se il pezzo
+è uscito lì, color ruggine se inviato ma non confermato ("da verificare"), pallide se non ancora. Le
+calcola `?mode=lista` (campo `canali`) da `pezzi_social`: Instagram viene dal post Facebook con la spunta
+"anche su Instagram" o dal reel. Su **desktop**
 (≥900px) il capitolo va su due colonne: a sinistra la foto grande con le miniature sotto (si sceglie
 cliccando), a destra nota, Sole e testo; sul telefono resta una colonna con le foto-stampa. In ingresso la **foto della bottega**:
 file `assets/racconta-bottega.jpg` (oggi una foto del laboratorio presa da Instagram, 866×566: da

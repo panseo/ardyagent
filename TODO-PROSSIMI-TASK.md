@@ -59,6 +59,10 @@ dopo il deploy (che gira anche `ardy-migrate.php`: tabella `pezzi`, colonna `fas
   8. **Testi social che sparivano** (ramo `racconta-testo-facebook`, 24/11): aprire Condividi su un capitolo
      con Google già uscito → il testo di Facebook deve comparire da solo; chiudere e riaprire → c'è ancora
      (riquadro "in attesa"). Correggere a mano, uscire dal campo, riaprire → resta la correzione.
+  9. **Icone dei canali nella lista dei pezzi** (ramo `racconta-icone-canali`, 24/11): la seggiola deve
+     mostrare Google (e Facebook se uscito) pieni; il reel su Instagram oggi risulta "pubblicato" anche se
+     non è uscito (vedi la voce sull'esito dei reel), quindi l'icona Instagram può mentire finché non si
+     sistema `ardy-pubblica-reel.php`.
   7. **Sottotitoli nel reel** (ramo `reel-sottotitoli`, 24/11): creare un reel di un pezzo e uno della dash
      clienti → sotto ogni foto max 3 parole che raccontano il restauro, ferme mentre la foto fa lo zoom,
      leggibili sopra la didascalia di Instagram. Controllare che Sole non metta nomi o luoghi e che le
