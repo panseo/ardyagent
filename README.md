@@ -721,7 +721,11 @@ Sempre **manuale**: niente esce da solo, ogni canale ha il suo bottone e "Salva 
     pagina → `ardy-pubblica-social.php` (n8n). Se n8n non conferma, lo stato è "da verificare".
   - **Google Business**: testo senza hashtag (max 1500 caratteri) + prima foto + "Scopri di più" verso
     la pagina → `ardy-gbp-post.php`.
-  I testi li scrive Sole dal testo pubblicato del capitolo (`pezziGeneraSocial()`, `mode:'social'`).
+  I testi li scrive Sole dal testo pubblicato del capitolo (`pezziGeneraSocial()`, `mode:'social'`):
+  all'apertura scrive quelli che mancano (basta che ne manchi uno, anche se l'altro canale è già uscito)
+  e li **salva subito come bozza**; anche un testo corretto a mano si salva da solo quando si esce dal
+  campo (`salvaBozzaSilenziosa()`). Non per un canale già uscito: la bozza nuova diventerebbe la voce più
+  recente e il riquadro mostrerebbe "in attesa" invece di "uscito il"; lì vale "Salva per dopo".
 - **Reel del pezzo** (riquadro nella pagina del pezzo, quando è sul sito e ci sono ≥2 foto pubblicate):
   `ardy-crea-reel.php` con `pezzo_id` (foto dei capitoli pubblicati, da disco; titolo = titolo del
   pezzo; musica a scelta), anteprima video, didascalia rivedibile → `ardy-pubblica-reel.php` (n8n).

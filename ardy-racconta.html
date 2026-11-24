@@ -615,24 +615,58 @@ async function apriSocial(faseId) {
   $('copBox').hidden = !(socialFase.foto || []).length;
   $('copFrase').value = (fb && fb.opzioni && fb.opzioni.frase) || (g && g.opzioni && g.opzioni.frase) || '';
   aggiornaCopertina();
-  // Testi già scritti (bozza o già usciti) si riprendono; se non c'è niente li scrive Sole adesso.
+  // Testi già scritti (bozza o già usciti) si riprendono; quelli che mancano li scrive Sole adesso.
+  // Basta che ne manchi uno: con Google già uscito, il testo di Facebook va scritto lo stesso.
   $('fbTesto').value = fb ? (fb.testo || '') : '';
   $('gTesto').value = g ? (g.testo || '') : '';
-  if (!$('fbTesto').value && !$('gTesto').value) await generaSocial();
+  if (!$('fbTesto').value || !$('gTesto').value) await generaSocial(false);
 }
-async function generaSocial() {
+// tutti=false riempie solo i testi vuoti; true (il bottone "riscrivi") li rifà entrambi.
+async function generaSocial(tutti) {
   $('sGenera').hidden = false;
   var j = await api(AI, { mode: 'social', pezzo_id: pezzo.id, fase_id: socialFase.id });
   $('sGenera').hidden = true;
   if (!j.success) return;
-  $('fbTesto').value = j.facebook || ''; $('gTesto').value = j.google || '';
+  var scritti = [];
+  if (j.facebook && (tutti || !$('fbTesto').value)) { $('fbTesto').value = j.facebook; scritti.push('facebook'); }
+  if (j.google && (tutti || !$('gTesto').value)) { $('gTesto').value = j.google; scritti.push('google'); }
   if (j.frase && !$('copFrase').value) { $('copFrase').value = j.frase; aggiornaCopertina(); }
   if (j.avvisi && j.avvisi.length) toast('⚠ Controlla: ' + escHtml(j.avvisi.join('; ')), 6000);
+  // Quello che scrive Sole si salva subito come bozza: chiudendo e riaprendo il capitolo il
+  // testo c'è ancora, senza dover ricordarsi di "Salva per dopo".
+  for (var i = 0; i < scritti.length; i++) await salvaBozzaSilenziosa(scritti[i]);
 }
 $('btnRigeneraSocial').onclick = async function () {
   if (($('fbTesto').value || $('gTesto').value) && !confirm('Sole riscrive tutti e due i testi da capo. Procedo?')) return;
-  await generaSocial();
+  await generaSocial(true);
 };
+// Bozza salvata senza chiedere: dopo i testi di Sole e quando si corregge un testo a mano.
+// Solo se il canale non è già uscito: una bozza nuova diventerebbe la voce più recente e il
+// riquadro mostrerebbe "in attesa" al posto di "uscito il". Per un canale già pubblicato il
+// testo nuovo si salva con "Salva per dopo" o con la pubblicazione, come sempre.
+async function salvaBozzaSilenziosa(canale) {
+  if (!socialFase) return;
+  var r = socialDi(socialFase.id, canale);
+  if (r && r.stato !== 'bozza') return;
+  var testo = (canale === 'facebook' ? $('fbTesto') : $('gTesto')).value.trim();
+  if (!testo) return;
+  var frase = $('copFrase').value.trim();
+  var foto = (socialFase.foto_wp || []).slice(0, canale === 'facebook' ? 4 : 1);
+  var opz = canale === 'facebook' ? { instagram: $('fbInstagram').checked, frase: frase } : { frase: frase };
+  var j = await salvaSocial(canale, 'bozza', testo, foto, opz, socialFase.id);
+  // Si aggiorna la copia locale, così il riquadro mostra "in attesa" e alla riapertura il
+  // testo si riprende anche prima di ricaricare il pezzo.
+  if (j.success) {
+    var ora = { fase_id: socialFase.id, canale: canale, stato: 'bozza', testo: testo, media: foto, opzioni: opz };
+    pezzo.social = [ora].concat((pezzo.social || []).filter(function (x) { return x !== r; }));
+    mostraTimbro(canale === 'facebook' ? 'fbStato' : 'gStato', ora, '');
+  }
+}
+// "change" scatta anche toccando Pubblica subito dopo aver scritto: il bottone aspetta che
+// questo salvataggio finisca, altrimenti due inserimenti in parallelo farebbero due bozze.
+var bozzaInCorso = Promise.resolve();
+$('fbTesto').addEventListener('change', function () { bozzaInCorso = salvaBozzaSilenziosa('facebook'); });
+$('gTesto').addEventListener('change', function () { bozzaInCorso = salvaBozzaSilenziosa('google'); });
 
 // Copertina: l'anteprima la genera il server al volo (stessa grafica che andrà online).
 function urlCopertina() {
@@ -649,6 +683,7 @@ async function salvaSocial(canale, stato, testo, media, opzioni, faseId) {
 }
 document.querySelector('#vSocial').addEventListener('click', async function (e) {
   var b = e.target.closest('[data-social]'); if (!b) return;
+  await bozzaInCorso;
   var canale = b.dataset.social, azione = b.dataset.azione;
   var testo = (canale === 'facebook' ? $('fbTesto') : $('gTesto')).value.trim();
   if (!testo) { toast('Il testo è vuoto'); return; }

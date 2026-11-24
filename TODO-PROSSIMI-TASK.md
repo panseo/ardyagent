@@ -56,6 +56,9 @@ dopo il deploy (che gira anche `ardy-migrate.php`: tabella `pezzi`, colonna `fas
      Reel (ramo `reel-stile-dissolvenze`): dopo la copertina foto a tutto schermo senza testi, zoom lento,
      dissolvenze morbide, Prima/Dopo nello stile nuovo. Se il reel esce con i tagli secchi di prima, nel log
      del server cercare `ARDY REEL XFADE` (FFmpeg senza xfade: va aggiornato).
+  8. **Testi social che sparivano** (ramo `racconta-testo-facebook`, 24/11): aprire Condividi su un capitolo
+     con Google già uscito → il testo di Facebook deve comparire da solo; chiudere e riaprire → c'è ancora
+     (riquadro "in attesa"). Correggere a mano, uscire dal campo, riaprire → resta la correzione.
   7. **Sottotitoli nel reel** (ramo `reel-sottotitoli`, 24/11): creare un reel di un pezzo e uno della dash
      clienti → sotto ogni foto max 3 parole che raccontano il restauro, ferme mentre la foto fa lo zoom,
      leggibili sopra la didascalia di Instagram. Controllare che Sole non metta nomi o luoghi e che le
