@@ -159,3 +159,102 @@ function grafDidascalia(string $jpgPath, string $testo): void {
     imagejpeg($im, $jpgPath, 92);
     imagedestroy($im);
 }
+
+// ── Reel nello stile di Michela: foto piene, zoom lento, dissolvenze ─────────────
+// Nei reel della bottega solo l'apertura ha logo e frase; poi le immagini sono a tutto
+// schermo e pulite, e si passa dall'una all'altra senza scatti. Qui: foto ritagliate a
+// riempimento 9:16 (niente bande sfocate né didascalie), un leggero zoom su ogni foto
+// (effetto Ken Burns: una foto ferma sembra una ripresa) e dissolvenze incrociate.
+
+const GRAF_DISSOLVENZA = 0.7;   // secondi di sovrapposizione tra una slide e la successiva
+
+/** Foto a riempimento W×H in JPEG, senza testi. null se GD non c'è. */
+function grafPiena(string $fotoBytes, int $W, int $H): ?string {
+    if (!grafDisponibile()) return null;
+    $src = @imagecreatefromstring($fotoBytes);
+    if (!$src) return null;
+    $im = grafRiempi($src, $W, $H);
+    imagedestroy($src);
+    ob_start(); imagejpeg($im, null, 92); $out = ob_get_clean();
+    imagedestroy($im);
+    return $out;
+}
+
+/** Slide finale Prima/Dopo: due metà a tutto campo, "*Prima" e "*Dopo" in Inter, logo bianco. */
+function grafPrimaDopo(string $primaBytes, string $dopoBytes, int $W, int $H): ?string {
+    if (!grafDisponibile()) return null;
+    $a = @imagecreatefromstring($primaBytes); $b = @imagecreatefromstring($dopoBytes);
+    if (!$a || !$b) return null;
+    $meta = (int) ($H / 2);
+    $im = imagecreatetruecolor($W, $H);
+    $sa = grafRiempi($a, $W, $meta); $sb = grafRiempi($b, $W, $H - $meta);
+    imagecopy($im, $sa, 0, 0, 0, 0, $W, $meta); imagecopy($im, $sb, 0, $meta, 0, 0, $W, $H - $meta);
+    imagedestroy($a); imagedestroy($b); imagedestroy($sa); imagedestroy($sb);
+    $u = $W / 1080; $m = (int) round(80 * $u); $reg = grafFont('regular');
+    grafVela($im, 0, (int) round($meta * 0.45), 60, 127);
+    grafVela($im, $meta, $meta + (int) round($meta * 0.45), 60, 127);
+    grafTesto($im, 84 * $u, $m, (int) round(170 * $u), $reg, '*Prima');
+    grafTesto($im, 84 * $u, $m, $meta + (int) round(170 * $u), $reg, '*Dopo');
+    grafLogoBianco($im, $W - $m - (int) round(70 * $u), $H - (int) round(190 * $u), (int) round(105 * $u));
+    ob_start(); imagejpeg($im, null, 92); $out = ob_get_clean();
+    imagedestroy($im);
+    return $out;
+}
+
+/** Esegue un comando (proc_open: su PHP-FPM exec/shell_exec sono spesso disabilitate). */
+function grafEsegui(string $cmd, ?array &$out = null): int {
+    $p = @proc_open($cmd, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+    if (!is_resource($p)) { $out = ['proc_open non disponibile']; return 127; }
+    $txt = stream_get_contents($pipes[1]) . "\n" . stream_get_contents($pipes[2]);
+    fclose($pipes[1]); fclose($pipes[2]);
+    $out = preg_split("/\r?\n/", trim($txt)) ?: [];
+    return proc_close($p);
+}
+
+/**
+ * Una mini-clip da un'immagine. Con $zoom, avvicinamento lento (1,00 → 1,06) sul centro:
+ * l'immagine si ingrandisce prima del zoompan per non avere il tremolio a scatti tipico
+ * dello zoom su risoluzioni piccole.
+ */
+function grafClip(string $ffmpeg, string $img, float $sec, string $out, bool $zoom, int $W, int $H): bool {
+    $fps = 30; $frames = (int) ceil($sec * $fps);
+    $vf = $zoom
+        ? 'scale=' . ($W * 3 / 2) . ':' . ($H * 3 / 2) . ',zoompan=z=\'1+0.06*on/' . $frames . '\':d=' . $frames
+          . ':x=\'iw/2-(iw/zoom/2)\':y=\'ih/2-(ih/zoom/2)\':s=' . $W . 'x' . $H . ':fps=' . $fps . ',format=yuv420p,setsar=1'
+        : 'scale=' . $W . ':' . $H . ',format=yuv420p,setsar=1';
+    $cmd = $ffmpeg . ' -y ' . ($zoom ? '' : '-loop 1 ') . '-i ' . escapeshellarg($img)
+         . ($zoom ? '' : ' -t ' . $sec) . ' -r ' . $fps . ' -vf ' . escapeshellarg($vf)
+         . ($zoom ? ' -frames:v ' . $frames : '')
+         . ' -c:v libx264 -preset veryfast -crf 20 ' . escapeshellarg($out) . ' 2>&1';
+    return grafEsegui($cmd, $o) === 0 && is_file($out);
+}
+
+/**
+ * Unisce le clip con dissolvenze incrociate (xfade). Ritorna la durata totale, o null se
+ * xfade non è riuscito (versioni vecchie di FFmpeg): chi chiama ripiega sul concat.
+ */
+function grafUnisci(string $ffmpeg, array $clip, array $durate, string $out): ?float {
+    $n = count($clip);
+    if ($n === 1) return copy($clip[0], $out) ? (float) $durate[0] : null;
+    $T = GRAF_DISSOLVENZA;
+    $in = ''; $fc = '';
+    foreach ($clip as $k => $c) {
+        $in .= ' -i ' . escapeshellarg($c);
+        $fc .= '[' . $k . ':v]settb=AVTB,fps=30,format=yuv420p[c' . $k . '];';
+    }
+    $durata = (float) $durate[0]; $prec = '[c0]';
+    for ($k = 1; $k < $n; $k++) {
+        $offset = round($durata - $T, 3);
+        $lab = $k === $n - 1 ? '[v]' : '[x' . $k . ']';
+        $fc .= $prec . '[c' . $k . ']xfade=transition=fade:duration=' . $T . ':offset=' . $offset . $lab . ';';
+        $prec = $lab;
+        $durata += (float) $durate[$k] - $T;
+    }
+    $cmd = $ffmpeg . ' -y' . $in . ' -filter_complex ' . escapeshellarg(rtrim($fc, ';'))
+         . ' -map ' . escapeshellarg('[v]') . ' -c:v libx264 -preset veryfast -crf 20 -pix_fmt yuv420p ' . escapeshellarg($out) . ' 2>&1';
+    if (grafEsegui($cmd, $o) !== 0 || !is_file($out)) {
+        error_log('ARDY REEL XFADE: ' . implode(' | ', array_slice($o, -5)));
+        return null;
+    }
+    return $durata;
+}

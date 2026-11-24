@@ -249,6 +249,12 @@ $idx = 0;
 foreach ($items as $it) {
     $bin = reelLeggiFoto($it); // cliente: URL pubblico · progetto: file su disco
     if (!is_string($bin) || strlen($bin) < 100) continue;
+    // Stile di Michela: foto a tutto schermo e pulite (niente bande sfocate né didascalie).
+    if (grafDisponibile() && ($piena = grafPiena($bin, REEL_W, REEL_H)) !== null) {
+        $norm = $tmpDir . sprintf('norm_%03d.jpg', $idx);
+        if (file_put_contents($norm, $piena) !== false) { $normFiles[] = $norm; $usedItems[] = $it; $idx++; }
+        continue;
+    }
     $src = $tmpDir . 'src_' . $idx . '.img';
     file_put_contents($src, $bin);
 
@@ -296,50 +302,73 @@ if ($showFinale) {
         $dopoSrc  = $tmpDir . 'dopo.img';
         file_put_contents($primaSrc, $primaBin);
         file_put_contents($dopoSrc, $dopoBin);
-        $finalSlide = slideFinale($tmpDir, $primaSrc, $dopoSrc, $logo, $font);
+        $pd = grafPrimaDopo($primaBin, $dopoBin, REEL_W, REEL_H);
+        if ($pd !== null && file_put_contents($tmpDir . 'slide_final.jpg', $pd) !== false) $finalSlide = $tmpDir . 'slide_final.jpg';
+        else $finalSlide = slideFinale($tmpDir, $primaSrc, $dopoSrc, $logo, $font);
     }
 }
 
 // -- Sequenza completa con durate per-slide --------------------------------
 $slides = [];
 if ($titleSlide) $slides[] = ['f' => $titleSlide, 'd' => $secTitolo];
-foreach ($normFiles as $nf) $slides[] = ['f' => $nf, 'd' => $secFoto];
+foreach ($normFiles as $nf) $slides[] = ['f' => $nf, 'd' => $secFoto, 'zoom' => true];
 if ($finalSlide) $slides[] = ['f' => $finalSlide, 'd' => $secFinale];
 
 $durataTot = 0.0;
 foreach ($slides as $s) $durataTot += $s['d'];
 
-// -- Step 1: una mini-clip video per ogni slide (metodo robusto) -----------
-// Trasformare ogni immagine in una clip e poi concatenarle (stessi codec)
-// è molto più affidabile del concat di immagini, che a volte non avanza.
-$clipLines = '';
-foreach ($slides as $k => $s) {
-    $clip = $tmpDir . sprintf('clip_%03d.mp4', $k);
-    $cmd = FFMPEG . ' -y -loop 1 -i ' . escapeshellarg($s['f'])
-         . ' -t ' . $s['d'] . ' -r 30'
-         . ' -vf ' . escapeshellarg('scale=' . REEL_W . ':' . REEL_H . ',format=yuv420p,setsar=1')
-         . ' -c:v libx264 -preset veryfast '
-         . escapeshellarg($clip) . ' 2>&1';
-    $rcc = runCmd($cmd, $oc);
-    if ($rcc !== 0 || !is_file($clip)) {
-        error_log('ARDY REEL CLIP ERROR: ' . implode("\n", $oc));
-        pulisci($tmpDir);
-        fail('Errore creazione clip video', 500);
-    }
-    $clipLines .= "file '" . $clip . "'\n";
-}
-$listFile = $tmpDir . 'list.txt';
-file_put_contents($listFile, $clipLines);
-
-// -- Step 2: concatena le clip (copia, niente riconversione) ---------------
+// -- Montaggio nello stile di Michela: zoom lento sulle foto e dissolvenze ---
+// Le transizioni a scatti (concat secco) diventano dissolvenze incrociate di
+// GRAF_DISSOLVENZA secondi; ogni foto ha un leggero avvicinamento. Se qualcosa non
+// va (FFmpeg vecchio senza xfade, GD assente) si ripiega sul montaggio di prima.
 $videoRaw = $tmpDir . 'raw.mp4';
-$cmd = FFMPEG . ' -y -f concat -safe 0 -i ' . escapeshellarg($listFile)
-     . ' -c copy ' . escapeshellarg($videoRaw) . ' 2>&1';
-$rc1 = runCmd($cmd, $o1);
-if ($rc1 !== 0 || !is_file($videoRaw)) {
-    error_log('ARDY REEL CONCAT ERROR: ' . implode("\n", $o1));
-    pulisci($tmpDir);
-    fail('Errore nel montaggio video', 500);
+$montato  = false;
+if (grafDisponibile()) {
+    $clipFx = []; $dur = [];
+    foreach ($slides as $k => $s) {
+        $c = $tmpDir . sprintf('fx_%03d.mp4', $k);
+        if (!grafClip(FFMPEG, $s['f'], (float) $s['d'], $c, !empty($s['zoom']), REEL_W, REEL_H)) { $clipFx = []; break; }
+        $clipFx[] = $c; $dur[] = (float) $s['d'];
+    }
+    if ($clipFx) {
+        $tot = grafUnisci(FFMPEG, $clipFx, $dur, $videoRaw);
+        if ($tot !== null) { $durataTot = $tot; $montato = true; }
+    }
+}
+
+if (!$montato) {
+    // -- Step 1: una mini-clip video per ogni slide (metodo robusto) -----------
+    // Trasformare ogni immagine in una clip e poi concatenarle (stessi codec)
+    // è molto più affidabile del concat di immagini, che a volte non avanza.
+    $clipLines = '';
+    foreach ($slides as $k => $s) {
+        $clip = $tmpDir . sprintf('clip_%03d.mp4', $k);
+        $cmd = FFMPEG . ' -y -loop 1 -i ' . escapeshellarg($s['f'])
+             . ' -t ' . $s['d'] . ' -r 30'
+             . ' -vf ' . escapeshellarg('scale=' . REEL_W . ':' . REEL_H . ',format=yuv420p,setsar=1')
+             . ' -c:v libx264 -preset veryfast '
+             . escapeshellarg($clip) . ' 2>&1';
+        $rcc = runCmd($cmd, $oc);
+        if ($rcc !== 0 || !is_file($clip)) {
+            error_log('ARDY REEL CLIP ERROR: ' . implode("\n", $oc));
+            pulisci($tmpDir);
+            fail('Errore creazione clip video', 500);
+        }
+        $clipLines .= "file '" . $clip . "'\n";
+    }
+    $listFile = $tmpDir . 'list.txt';
+    file_put_contents($listFile, $clipLines);
+
+    // -- Step 2: concatena le clip (copia, niente riconversione) ---------------
+    $videoRaw = $tmpDir . 'raw.mp4';
+    $cmd = FFMPEG . ' -y -f concat -safe 0 -i ' . escapeshellarg($listFile)
+         . ' -c copy ' . escapeshellarg($videoRaw) . ' 2>&1';
+    $rc1 = runCmd($cmd, $o1);
+    if ($rc1 !== 0 || !is_file($videoRaw)) {
+        error_log('ARDY REEL CONCAT ERROR: ' . implode("\n", $o1));
+        pulisci($tmpDir);
+        fail('Errore nel montaggio video', 500);
+    }
 }
 
 // -- Risolvi la traccia musicale -------------------------------------------

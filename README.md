@@ -743,8 +743,11 @@ Sempre **manuale**: niente esce da solo, ogni canale ha il suo bottone e "Salva 
   Condividi con anteprima; alla pubblicazione `ardy-pezzi-copertina.php` la carica su WordPress (cache per
   capitolo+frase, niente doppioni) e prende il posto della prima foto; le altre escono pulite. **Reel**
   (tutti: clienti, progetti, pezzi): copertina con la stessa grafica (parametro `frase`, default il nome
-  del pezzo/mobile), didascalie in Inter in basso a sinistra, logo bianco sulla slide Prima/Dopo. Senza
-  GD+FreeType o senza Inter si torna alla grafica di prima.
+  del pezzo/mobile); poi, come nei reel di Michela, **foto a tutto schermo e pulite** (niente bande sfocate
+  né didascalie) con un **leggero zoom** (Ken Burns), **dissolvenze incrociate** di 0,7 s tra le slide
+  (`xfade`, `grafClip()`/`grafUnisci()`), slide finale Prima/Dopo a tutto campo con "*Prima"/"*Dopo" in
+  Inter e logo bianco. Senza GD+FreeType o senza Inter, o con un FFmpeg senza `xfade`, si torna al
+  montaggio di prima (concat secco).
 
 ---
 
